@@ -440,6 +440,15 @@ class DefaultHaRepository(
             // isOn to false so tap-toggle doesn't try to flip them; the dedicated
             // picker overlay is the only way to change the option.
             Domain.SELECT, Domain.INPUT_SELECT -> false
+            // Counter / timer / input_text / input_datetime — Helpers-screen
+            // rendered only. No meaningful on/off mapping; the bespoke
+            // per-kind controls on the Helpers screen handle interaction.
+            Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
+            // Timer: 'active' is the running state, 'paused' is suspended,
+            // 'idle' is stopped. Treat 'active' as on so a hypothetical
+            // pin-to-favorites + tap could be wired later without further
+            // changes to isOn semantics.
+            Domain.TIMER -> raw.state.equals("active", ignoreCase = true)
         }
         val available = raw.state != "unavailable" && raw.state != "unknown"
         val pct = computePercentWithState(id.domain, raw.attributes, raw.state)
@@ -561,7 +570,13 @@ class DefaultHaRepository(
         Domain.SWITCH, Domain.INPUT_BOOLEAN, Domain.AUTOMATION, Domain.LOCK,
         Domain.SCENE, Domain.SCRIPT, Domain.BUTTON, Domain.INPUT_BUTTON,
         Domain.SENSOR, Domain.BINARY_SENSOR,
-        Domain.SELECT, Domain.INPUT_SELECT -> null
+        Domain.SELECT, Domain.INPUT_SELECT,
+        // Helper-only domains rendered exclusively on the Helpers
+        // screen; the card stack doesn't try to compute a percent
+        // for these. Counter / timer have integer / time values that
+        // don't map to a 0..100 percent; input_text / input_datetime
+        // are text-shaped.
+        Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> null
     }
 
     /**
@@ -647,6 +662,8 @@ class DefaultHaRepository(
         // Repurposing rawState string for display + threading it through the VM at
         // service-call time keeps the precision intact.
         Domain.NUMBER, Domain.INPUT_NUMBER -> null
+        // Helper-only domains: no numeric raw the card stack needs.
+        Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> null
     }
 
     /**
@@ -722,6 +739,9 @@ class DefaultHaRepository(
         // scalar. Returning false routes them away from the percent / switch paths into
         // the dedicated SelectCard.
         Domain.SELECT, Domain.INPUT_SELECT -> false
+        // Helper-only domains rendered exclusively on the Helpers screen; not
+        // scalar from the card stack's perspective.
+        Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
     }
 
     override fun observe(entities: Set<EntityId>): Flow<Map<EntityId, EntityState>> =
@@ -851,6 +871,9 @@ class DefaultHaRepository(
                             stateStr.equals("on", ignoreCase = true)
                         // Settable enums — no on/off concept.
                         Domain.SELECT, Domain.INPUT_SELECT -> false
+                        // Helper-only — Helpers screen renders these bespoke.
+                        Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
+                        Domain.TIMER -> stateStr.equals("active", ignoreCase = true)
                     },
                     percent = pct,
                     raw = rawNum,

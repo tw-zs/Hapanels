@@ -47,7 +47,15 @@ import kotlinx.coroutines.delay
  * with the red tint.
  */
 @Composable
-fun BatteryIndicator(modifier: Modifier = Modifier) {
+fun BatteryIndicator(
+    modifier: Modifier = Modifier,
+    /** Optional tap handler. When non-null the indicator becomes
+     *  r1Pressable; the chrome-row + dashboard sites use this to
+     *  navigate into the Device screen so the user can adjust
+     *  brightness, volume, flashlight in one extra tap. Null (or
+     *  no-op) keeps the indicator non-interactive. */
+    onClick: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     var pct by remember { mutableStateOf<Int?>(null) }
     var charging by remember { mutableStateOf(false) }
@@ -80,6 +88,13 @@ fun BatteryIndicator(modifier: Modifier = Modifier) {
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
             .border(1.dp, R1.Hairline, R1.ShapeS)
+            .then(
+                // r1Pressable only when a click handler is provided so
+                // the non-interactive call sites stay non-interactive
+                // (no haptic, no scale-on-press).
+                if (onClick != null) Modifier.r1Pressable(onClick = onClick)
+                else Modifier,
+            )
             .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(

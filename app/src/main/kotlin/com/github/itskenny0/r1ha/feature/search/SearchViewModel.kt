@@ -51,8 +51,15 @@ class SearchViewModel(
         Domain.LIGHT, Domain.SWITCH, Domain.FAN, Domain.COVER, Domain.MEDIA_PLAYER,
         Domain.LOCK, Domain.INPUT_BOOLEAN, Domain.HUMIDIFIER, Domain.CLIMATE,
         Domain.WATER_HEATER, Domain.VACUUM, Domain.VALVE, Domain.NUMBER,
-        Domain.INPUT_NUMBER, Domain.SELECT, Domain.INPUT_SELECT -> Bucket.CONTROLS
-        Domain.SENSOR, Domain.BINARY_SENSOR -> Bucket.SENSORS
+        Domain.INPUT_NUMBER, Domain.SELECT, Domain.INPUT_SELECT,
+        // Counter + timer are controllable too (counter.increment etc.,
+        // timer.start etc.) so they live under CONTROLS for filtering.
+        Domain.COUNTER, Domain.TIMER -> Bucket.CONTROLS
+        Domain.SENSOR, Domain.BINARY_SENSOR,
+        // input_text / input_datetime are read-only from this app's
+        // perspective; group them under SENSORS so they match the
+        // 'just a value to display' user mental model.
+        Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> Bucket.SENSORS
         Domain.SCENE, Domain.SCRIPT, Domain.BUTTON, Domain.INPUT_BUTTON,
         Domain.AUTOMATION -> Bucket.ACTIONS
     }

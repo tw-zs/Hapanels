@@ -650,6 +650,11 @@ private fun domainAccentFor(domain: Domain): Color = when (domain) {
     Domain.MEDIA_PLAYER, Domain.HUMIDIFIER, Domain.SCRIPT, Domain.SENSOR,
     Domain.VALVE, Domain.SELECT, Domain.INPUT_SELECT -> R1.AccentCool
     Domain.BINARY_SENSOR -> R1.AccentNeutral
+    // Helper-only domains — Helpers screen renders these; this picker
+    // entry is only reached on the niche path of a user manually
+    // adding their entity_id to favorites JSON. Neutral tint.
+    Domain.COUNTER, Domain.TIMER,
+    Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> R1.AccentNeutral
 }
 
 private fun domainLabel(domain: Domain): String = when (domain) {
@@ -676,4 +681,8 @@ private fun domainLabel(domain: Domain): String = when (domain) {
     Domain.WATER_HEATER -> "HEATER"
     Domain.SELECT -> "SELECT"
     Domain.INPUT_SELECT -> "SELECT"
+    Domain.COUNTER -> "COUNTER"
+    Domain.TIMER -> "TIMER"
+    Domain.INPUT_TEXT -> "TEXT"
+    Domain.INPUT_DATETIME -> "DATETIME"
 }

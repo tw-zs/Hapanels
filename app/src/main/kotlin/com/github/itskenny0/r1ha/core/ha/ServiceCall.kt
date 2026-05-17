@@ -117,6 +117,16 @@ data class ServiceCall(
                     "update_entity",
                     JsonObject(emptyMap()),
                 )
+                // Helper-only domains — Helpers screen dispatches their own
+                // services (counter.increment, timer.start, etc.). The card
+                // stack doesn't reach setPercent for these; defensive
+                // homeassistant.update_entity no-op keeps the call safe.
+                Domain.COUNTER, Domain.TIMER,
+                Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> ServiceCall(
+                    target,
+                    "update_entity",
+                    JsonObject(emptyMap()),
+                )
             }
         }
 
@@ -310,6 +320,16 @@ data class ServiceCall(
                 "update_entity",
                 JsonObject(emptyMap()),
             )
+            // Helper-only domains — Helpers screen dispatches the real
+            // services (counter.increment, timer.start, etc.); the card
+            // stack never reaches tapAction for these so this is purely
+            // defensive.
+            Domain.COUNTER, Domain.TIMER,
+            Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> ServiceCall(
+                target,
+                "update_entity",
+                JsonObject(emptyMap()),
+            )
         }
 
         /**
@@ -368,6 +388,13 @@ data class ServiceCall(
             )
             // Select — no on/off concept. Defensive no-op refresh.
             Domain.SELECT, Domain.INPUT_SELECT -> ServiceCall(
+                target,
+                "update_entity",
+                JsonObject(emptyMap()),
+            )
+            // Helper-only — Helpers screen owns dispatch for these.
+            Domain.COUNTER, Domain.TIMER,
+            Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> ServiceCall(
                 target,
                 "update_entity",
                 JsonObject(emptyMap()),

@@ -67,6 +67,12 @@ fun EntityCard(
         // Select / input_select route to SelectCard before reaching the glyph map.
         // Glyph itself isn't used there but the when has to be exhaustive.
         Domain.SELECT, Domain.INPUT_SELECT -> CardRenderModel.Glyph.SWITCH
+        // Helper-only domains — never reach the card stack via the
+        // normal favourites flow (kind-filtered ★ on Helpers excludes
+        // them); the glyph value is only used when the when is
+        // exhaustive. Pick something sensible-but-irrelevant.
+        Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> CardRenderModel.Glyph.NUMBER
+        Domain.TIMER -> CardRenderModel.Glyph.SWITCH
     }
     val accentRole = when (state.id.domain) {
         Domain.LIGHT -> CardRenderModel.AccentRole.WARM
@@ -102,6 +108,12 @@ fun EntityCard(
         // warm-orange action / control crowd in the deck while still reading as
         // interactive (vs. neutral which conveys read-only).
         Domain.SELECT, Domain.INPUT_SELECT -> CardRenderModel.AccentRole.COOL
+        // Helper-only domains — defensive accent. Helpers screen is the
+        // canonical surface; if a user ever forces one onto the card
+        // stack (e.g. via raw favourites JSON), neutral is least
+        // confusing.
+        Domain.COUNTER, Domain.TIMER,
+        Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> CardRenderModel.AccentRole.NEUTRAL
     }
     // When the entity is unavailable, dim the whole card and overlay a "UNAVAILABLE" label so
     // the user doesn't think the card is just at 0%. The themes themselves don't honour

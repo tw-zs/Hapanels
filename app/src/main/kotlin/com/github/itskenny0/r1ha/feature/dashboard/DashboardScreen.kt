@@ -60,6 +60,10 @@ fun DashboardScreen(
      *  (production, today's kWh, top consumers). Same data the
      *  DRAW tile already shows, just expanded. */
     onOpenEnergy: () -> Unit = {},
+    /** Tap the battery indicator in the top bar → Device screen
+     *  (brightness, volume, flashlight). Only fires when the
+     *  indicator is visible (hideStatusBar + opt-in). */
+    onOpenDevice: () -> Unit = {},
     /** Cards icon — opens the card stack from anywhere on the
      *  dashboard. Critical for the kiosk-mode 'Start on Dashboard'
      *  path where the back button has no card stack on the back
@@ -118,6 +122,7 @@ fun DashboardScreen(
             // of charge level just by sitting on the dashboard.
             showBatteryIndicator = appSettings.behavior.hideStatusBar &&
                 appSettings.behavior.showBatteryWhenStatusBarHidden,
+            onOpenDevice = onOpenDevice,
         )
         if (ui.loading && ui.weather == null && ui.persons == null && ui.nextEvent == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -413,6 +418,7 @@ private fun DashboardTopBar(
     onOpenSettings: () -> Unit,
     onOpenAssist: () -> Unit,
     showBatteryIndicator: Boolean = false,
+    onOpenDevice: () -> Unit = {},
 ) {
     // Match R1TopBar's vertical metrics so the dashboard top edge
     // aligns with every other sub-screen on the device.
@@ -455,7 +461,7 @@ private fun DashboardTopBar(
             // the action chips so charge level reads naturally
             // left-to-right past the title.
             if (showBatteryIndicator) {
-                com.github.itskenny0.r1ha.ui.components.BatteryIndicator()
+                com.github.itskenny0.r1ha.ui.components.BatteryIndicator(onClick = onOpenDevice)
                 Spacer(Modifier.width(8.dp))
             }
             // 🎤 Assist — same affordance as on the card stack chrome,

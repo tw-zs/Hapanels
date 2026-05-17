@@ -468,6 +468,9 @@ fun AppNavGraph(
                 onOpenEnergy = {
                     navController.navigate(Routes.ENERGY) { launchSingleTop = true }
                 },
+                onOpenDevice = {
+                    navController.navigate(Routes.DEVICE) { launchSingleTop = true }
+                },
                 onOpenCardStack = {
                     // Kiosk-mode escape hatch — Dashboard is the start
                     // destination so there's nothing to pop back to.

@@ -669,6 +669,7 @@ fun CardStackScreen(
                 // shows battery and we'd be redundant.
                 showBatteryIndicator = appSettings.behavior.hideStatusBar &&
                     appSettings.behavior.showBatteryWhenStatusBarHidden,
+                onOpenDevice = onOpenDevice,
             )
             // Tab strip — chip per page. Tap to switch active. Long-press opens a
             // management overlay (add / rename / delete). The '+' chip on the
@@ -2289,6 +2290,11 @@ private fun ChromeRow(
      *  indicator via Settings → Behaviour. Defaults to false so previews
      *  + the typical "status bar visible" path stay un-cluttered. */
     showBatteryIndicator: Boolean = false,
+    /** Tap the battery pill to open the Device screen — local controls
+     *  for brightness, volume, flashlight. Defaults to a no-op for
+     *  previews so the indicator stays non-interactive when the
+     *  caller doesn't wire it. */
+    onOpenDevice: () -> Unit = {},
 ) {
     Row(
         modifier = Modifier
@@ -2358,7 +2364,7 @@ private fun ChromeRow(
         // status bar AND opted into the pill. Sits before the edit pencil so the
         // habitual pencil-tap target doesn't shift when the indicator toggles.
         if (showBatteryIndicator) {
-            com.github.itskenny0.r1ha.ui.components.BatteryIndicator()
+            com.github.itskenny0.r1ha.ui.components.BatteryIndicator(onClick = onOpenDevice)
             Spacer(Modifier.width(6.dp))
         }
 

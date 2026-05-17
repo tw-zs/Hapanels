@@ -92,14 +92,48 @@ enum class Domain(val prefix: String) {
     SELECT("select"),
     /** Helper-domain twin of [SELECT] — `input_select.*` shares the same service shape. */
     INPUT_SELECT("input_select"),
+    /**
+     * HA `counter.*` helpers — increment / decrement / reset with a
+     * configurable step. The Helpers screen has bespoke ± rendering;
+     * the card stack does not render counters (no card archetype), so
+     * the HelpersScreen.CARD_STACK_FRIENDLY_KINDS guard hides the ★
+     * pin affordance for this kind. Declared here so EntityId
+     * construction succeeds for counter.* entities and the Helpers
+     * VM doesn't throw on first load.
+     */
+    COUNTER("counter"),
+    /**
+     * HA `timer.*` helpers — start / pause / cancel countdown timers.
+     * Same story as [COUNTER]: bespoke rendering on the Helpers
+     * screen; no card-stack archetype yet. Declared here so the
+     * EntityId for any timer.* entity is constructible.
+     */
+    TIMER("timer"),
+    /**
+     * HA `input_text.*` helpers — free-form text values. Read-only on
+     * the Helpers screen (text-editing is poor UX on a wheel-input
+     * device); not card-stack-friendly. Declared so EntityId works.
+     */
+    INPUT_TEXT("input_text"),
+    /**
+     * HA `input_datetime.*` helpers — date / time values. Read-only
+     * here too. Declared so EntityId construction succeeds for the
+     * Helpers VM's domain loop.
+     */
+    INPUT_DATETIME("input_datetime"),
     ;
 
     /** Action-only domains — UI renders them as fire-and-forget ActionCard tiles. */
     val isAction: Boolean get() =
         this == SCENE || this == SCRIPT || this == BUTTON || this == INPUT_BUTTON
 
-    /** Read-only sensor domains — UI renders them as SensorCard. No wheel, no tap. */
-    val isSensor: Boolean get() = this == SENSOR || this == BINARY_SENSOR
+    /** Read-only sensor domains — UI renders them as SensorCard. No wheel, no tap.
+     *  Includes input_text / input_datetime since they're effectively read-only
+     *  text values from the card stack's perspective (no editing UX on a wheel-
+     *  driven device); the Helpers screen handles them with bespoke rendering. */
+    val isSensor: Boolean get() =
+        this == SENSOR || this == BINARY_SENSOR ||
+            this == INPUT_TEXT || this == INPUT_DATETIME
 
     /** Settable-enum domains — UI renders them as SelectCard. Wheel cycles options;
      *  tap opens a full-screen picker. */

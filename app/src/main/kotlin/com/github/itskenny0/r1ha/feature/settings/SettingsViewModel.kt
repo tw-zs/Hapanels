@@ -77,6 +77,12 @@ class SettingsViewModel(
             it.copy(behavior = it.behavior.copy(quickTileEntityId = cleaned))
         }
 
+    /** Whether opening Assist auto-focuses the input + pops the
+     *  keyboard. Off by default; the user can flip this on if they
+     *  prefer keyboard-first interaction. */
+    fun setAssistAutoOpenKeyboard(enabled: Boolean) =
+        update { it.copy(behavior = it.behavior.copy(assistAutoOpenKeyboard = enabled)) }
+
     /**
      * Generic mutator for the [AdvancedSettings] sub-struct. The dev-menu screen
      * uses this to update fields one at a time without each field needing its own

@@ -140,6 +140,7 @@ class SettingsRepository private constructor(
          *  preferences API can store; we map empty → null at read
          *  time). */
         val behaviorQuickTileEntityId = stringPreferencesKey("behavior.quick_tile_entity_id")
+        val behaviorAssistAutoOpenKeyboard = booleanPreferencesKey("behavior.assist_auto_open_keyboard")
         val advancedJson = stringPreferencesKey("advanced.json")
         val dashboardJson = stringPreferencesKey("dashboard.json")
         val integrationsJson = stringPreferencesKey("integrations.json")
@@ -234,6 +235,7 @@ class SettingsRepository private constructor(
                         ?.let { runCatching { ToastLogLevel.valueOf(it) }.getOrNull() }
                         ?: ToastLogLevel.OFF,
                     quickTileEntityId = p[K.behaviorQuickTileEntityId]?.takeIf { it.isNotBlank() },
+                    assistAutoOpenKeyboard = p[K.behaviorAssistAutoOpenKeyboard] ?: false,
                 ),
                 theme = p[K.theme]?.let { runCatching { ThemeId.valueOf(it) }.getOrNull() } ?: ThemeId.PRAGMATIC_HYBRID,
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
@@ -338,6 +340,7 @@ class SettingsRepository private constructor(
                 p[K.behaviorWheelTogglesSwitches] = next.behavior.wheelTogglesSwitches
                 p[K.behaviorToastLogLevel] = next.behavior.toastLogLevel.name
                 p[K.behaviorQuickTileEntityId] = next.behavior.quickTileEntityId.orEmpty()
+                p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard
                 p[K.uiTextHistoryLen] = next.ui.textHistoryLength
                 p[K.uiHideCardTail] = next.ui.hideCardTailAbove
                 p[K.uiMaxDecimals] = next.ui.maxDecimalPlaces

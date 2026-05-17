@@ -77,9 +77,19 @@ fun AssistScreen(
         }
     }
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(80)
-        runCatching { focus.requestFocus() }
+    // Honour the user's auto-open preference. Default OFF: opening
+    // Assist no longer pops the keyboard automatically — the user
+    // reported the empty-state recentering jarringly when the IME
+    // shrinks the transcript area on a phone. Tapping the input
+    // field on entry is one extra tap but keeps the layout stable.
+    val appSettings by settings.settings.collectAsState(
+        initial = com.github.itskenny0.r1ha.core.prefs.AppSettings(),
+    )
+    LaunchedEffect(appSettings.behavior.assistAutoOpenKeyboard) {
+        if (appSettings.behavior.assistAutoOpenKeyboard) {
+            kotlinx.coroutines.delay(80)
+            runCatching { focus.requestFocus() }
+        }
     }
     Column(
         modifier = Modifier
@@ -94,11 +104,18 @@ fun AssistScreen(
         // doesn't look broken before the first send.
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (ui.messages.isEmpty()) {
+                // Empty-state anchors near the top of the transcript
+                // area (not vertically centred) — when the IME opens
+                // and shrinks the parent Box, a Center arrangement
+                // re-runs and the content visibly jumps upward,
+                // which the user reported as 'viewport scrolls up
+                // way too high'. Top-anchored content stays put
+                // regardless of how the transcript area resizes.
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 22.dp),
-                    verticalArrangement = Arrangement.Center,
+                        .padding(horizontal = 22.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(text = "HA ASSIST", style = R1.sectionHeader, color = R1.AccentWarm)

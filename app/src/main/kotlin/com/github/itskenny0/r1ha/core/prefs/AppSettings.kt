@@ -148,6 +148,17 @@ data class Behavior(
      * common 'one toggle I want everywhere' use case the R1 client serves.
      */
     val quickTileEntityId: String? = null,
+    /**
+     * When on, opening the Assist screen immediately focuses the
+     * input field — which pops up the soft keyboard on devices
+     * with one. Off by default: the user reported the auto-open
+     * being intrusive on phones (the empty-state recenters
+     * jarringly when the IME shrinks the transcript area). With
+     * this off they tap the input field themselves to start
+     * typing; voice input via the 🎤 button always works without
+     * the keyboard.
+     */
+    val assistAutoOpenKeyboard: Boolean = false,
 )
 
 /**

@@ -514,6 +514,18 @@ fun SettingsScreen(
                     onCheckedChange = { vm.setWheelTogglesSwitches(it) },
                 )
             }
+            item {
+                SwitchRow(
+                    label = "Assist · open keyboard on entry",
+                    subtitle = "Off (default): tapping into Assist shows the screen but " +
+                        "leaves the keyboard closed — useful on phones where the IME " +
+                        "popping up otherwise re-centers the empty state jarringly. " +
+                        "On: opening Assist focuses the input field immediately. " +
+                        "Voice input (🎤) works regardless of this setting.",
+                    checked = s.behavior.assistAutoOpenKeyboard,
+                    onCheckedChange = { vm.setAssistAutoOpenKeyboard(it) },
+                )
+            }
             item { ToastLogLevelRow(current = s.behavior.toastLogLevel, onSelect = { vm.setToastLogLevel(it) }) }
 
             // ── Quick Settings tile ─────────────────────────────────

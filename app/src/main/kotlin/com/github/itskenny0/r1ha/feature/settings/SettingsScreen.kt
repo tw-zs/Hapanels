@@ -1303,14 +1303,39 @@ private fun NavRow(
             .padding(horizontal = 22.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = R1.bodyEmph, color = R1.Ink, modifier = Modifier.weight(1f))
+        // Label gets a fixed maxLines = 1 so a long supplementary
+        // value can't squeeze it down to one-character-per-line.
+        // Without this, e.g. 'Device' next to 'Local — brightness,
+        // volume, flashlight' wrapped vertically D / e / v / i / c /
+        // e because the value claimed all remaining width and the
+        // label's weight(1f) collapsed to whatever was left. The
+        // label is the primary identifier; the value is annotation
+        // and should ellipsize first.
+        Text(
+            label,
+            style = R1.bodyEmph,
+            color = R1.Ink,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
         if (value != null) {
+            // Value takes the remaining width via weight(1f) and
+            // right-aligns with single-line ellipsis. Long values
+            // gracefully truncate rather than push the label out.
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = value,
                 style = R1.body,
                 color = R1.InkSoft,
-                modifier = Modifier.padding(end = 8.dp),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
             )
+        } else {
+            Spacer(Modifier.weight(1f))
         }
         com.github.itskenny0.r1ha.ui.components.Chevron(
             direction = com.github.itskenny0.r1ha.ui.components.ChevronDirection.Right,

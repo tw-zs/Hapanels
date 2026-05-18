@@ -121,9 +121,19 @@ private fun ThemeRow(
                 color = if (isSelected) R1.AccentWarm else R1.InkSoft,
             )
             Spacer(Modifier.height(2.dp))
+            // Short description so the user knows what the theme actually does
+            // without having to switch and see. The body line used to just
+            // restate the title in a different case, which was redundant once
+            // the title sat directly above it.
             Text(
-                text = theme.id.name.lowercase().replace('_', ' ')
-                    .replaceFirstChar { it.uppercase() },
+                text = when (theme.id) {
+                    com.github.itskenny0.r1ha.core.prefs.ThemeId.PRAGMATIC_HYBRID ->
+                        "Default: feature-complete, dark grey ground"
+                    com.github.itskenny0.r1ha.core.prefs.ThemeId.MINIMAL_DARK ->
+                        "Black ground, monochrome accent"
+                    com.github.itskenny0.r1ha.core.prefs.ThemeId.COLORFUL_CARDS ->
+                        "Per-entity gradient sky behind each card"
+                },
                 style = R1.body,
                 color = R1.Ink,
             )
@@ -137,7 +147,7 @@ private fun ThemeRow(
                 .size(width = 92.dp, height = 112.dp)
                 .clip(R1.ShapeS)
                 .border(
-                    width = if (isSelected) 1.dp else 1.dp,
+                    width = 1.dp,
                     color = if (isSelected) R1.AccentWarm else R1.Hairline,
                     shape = R1.ShapeS,
                 ),

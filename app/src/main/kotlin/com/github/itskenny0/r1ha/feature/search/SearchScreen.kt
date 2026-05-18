@@ -328,14 +328,21 @@ private fun SearchResultRow(
         // History drill-in glyph — opens the full-screen history view
         // for this entity. Separate tap target from the action/toggle
         // path so the user can investigate a sensor's recent state
-        // without tripping the toggle action on adjacent rows.
+        // without tripping the toggle action on adjacent rows. Hand-
+        // drawn HistoryChartGlyph (was 📈 emoji) so the icon stays
+        // monochrome and reads at the same hairline weight as the
+        // surrounding chrome — the colour-emoji font was painting a
+        // green/red chart icon that visibly broke the row's tone.
         Box(
             modifier = Modifier
                 .size(32.dp)
                 .r1Pressable(onClick = onHistory),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "📈", style = R1.labelMicro, color = R1.InkSoft)
+            com.github.itskenny0.r1ha.ui.components.HistoryChartGlyph(
+                size = 14.dp,
+                tint = R1.InkSoft,
+            )
         }
         // Star tap target — adds the entity to the active page's
         // favourites. Separate from the row's main r1RowPressable so a

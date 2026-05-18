@@ -464,10 +464,12 @@ private fun DashboardTopBar(
                 com.github.itskenny0.r1ha.ui.components.BatteryIndicator(onClick = onOpenDevice)
                 Spacer(Modifier.width(8.dp))
             }
-            // 🎤 Assist — same affordance as on the card stack chrome,
-            // so the action is consistent across surfaces. Sits before
-            // CARDS so it's the closer-to-centre 'talk to HA' tap target
-            // for thumb reach on a wall-mounted R1.
+            // Assist — same affordance as on the card stack chrome, so the
+            // action is consistent across surfaces. Sits before CARDS so it's
+            // the closer-to-centre 'talk to HA' tap target for thumb reach on
+            // a wall-mounted R1. Uses the hand-drawn AssistMicGlyph (same
+            // as the chrome) rather than the 🎤 emoji so the dashboard
+            // doesn't switch to colour-emoji rendering mid-row.
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -475,7 +477,7 @@ private fun DashboardTopBar(
                     .r1Pressable(onClick = onOpenAssist),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "🎤", style = R1.labelMicro, color = R1.InkSoft)
+                com.github.itskenny0.r1ha.ui.components.AssistMicGlyph(size = 16.dp)
             }
             Spacer(Modifier.width(4.dp))
             // CARDS — opens the card stack. Most-frequent action from the

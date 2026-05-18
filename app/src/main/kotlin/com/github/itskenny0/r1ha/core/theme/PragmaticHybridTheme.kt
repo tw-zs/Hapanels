@@ -118,13 +118,20 @@ object PragmaticHybridTheme : R1Theme {
                     )
                 }
                 Spacer(Modifier.height(20.dp))
-                // Hide the giant percent readout on media_player cards that are
-                // currently playing — the now-playing block + the right-side meter
-                // already convey volume, so a 72 sp '100 %' on top of that
-                // squeezed the now-playing block into a thumbnail-sized strip.
+                // Hide the giant percent readout on every media_player card —
+                // the right-side volume meter already conveys the volume %
+                // and the now-playing block (always rendered for media,
+                // below) carries the useful info. Earlier this also gated
+                // on title-or-picture being non-null, but the user reported
+                // the now-playing block disappearing on bigger screens
+                // when state momentarily passed through a 'no title yet'
+                // window — the conditional then re-enabled BigReadout for
+                // 72 sp of vertical space, squeezing the now-playing
+                // strip back in only after the next state-changed event.
+                // Removing the conditional keeps the layout stable
+                // regardless of title-load timing.
                 val hideBigReadoutForMedia = model.domainGlyph ==
-                    CardRenderModel.Glyph.MEDIA_PLAYER &&
-                    (!model.mediaTitle.isNullOrBlank() || !model.mediaPicture.isNullOrBlank())
+                    CardRenderModel.Glyph.MEDIA_PLAYER
                 if (!hideBigReadoutForMedia) {
                     BigReadout(
                         percent = model.percent,
@@ -201,25 +208,31 @@ object PragmaticHybridTheme : R1Theme {
                         }
                     }
                 }
-                // Media-player extras: now-playing block (album art + title/artist +
-                // live progress) above the transport row. Both render only on
-                // media_player cards; the now-playing block hides cleanly when nothing
-                // is playing (no media_title means nothing to show).
+                // Media-player extras: now-playing block (album art +
+                // title/artist + live progress) above the transport row.
+                // Both render unconditionally for media_player cards —
+                // the title-or-picture conditional was reported missing
+                // on bigger screens (user observed the same entity
+                // showing the full block on R1 but only the transport
+                // row on a phone). Even when title + picture are both
+                // null/blank MediaNowPlayingCompact gracefully renders
+                // its empty state (the AsyncBitmap shows a ♪
+                // placeholder, the text rows hide their own empty
+                // strings), which is preferable to a missing block
+                // mid-state-transition.
                 if (model.domainGlyph == CardRenderModel.Glyph.MEDIA_PLAYER) {
-                    if (!model.mediaTitle.isNullOrBlank() || !model.mediaPicture.isNullOrBlank()) {
-                        Spacer(Modifier.height(10.dp))
-                        com.github.itskenny0.r1ha.ui.components.MediaNowPlayingCompact(
-                            title = model.mediaTitle,
-                            artist = model.mediaArtist,
-                            album = model.mediaAlbumName,
-                            picture = model.mediaPicture,
-                            durationSec = model.mediaDurationSec,
-                            positionSec = model.mediaPositionSec,
-                            positionUpdatedAt = model.mediaPositionUpdatedAt,
-                            isPlaying = model.mediaIsPlaying,
-                            accent = accent,
-                        )
-                    }
+                    Spacer(Modifier.height(10.dp))
+                    com.github.itskenny0.r1ha.ui.components.MediaNowPlayingCompact(
+                        title = model.mediaTitle,
+                        artist = model.mediaArtist,
+                        album = model.mediaAlbumName,
+                        picture = model.mediaPicture,
+                        durationSec = model.mediaDurationSec,
+                        positionSec = model.mediaPositionSec,
+                        positionUpdatedAt = model.mediaPositionUpdatedAt,
+                        isPlaying = model.mediaIsPlaying,
+                        accent = accent,
+                    )
                     Spacer(Modifier.height(8.dp))
                     MediaControlsRow(
                         entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),

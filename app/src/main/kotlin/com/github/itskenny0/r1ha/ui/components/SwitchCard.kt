@@ -136,10 +136,12 @@ fun SwitchCard(
         // transport at all. Render now-playing info + the same MediaControlsRow as
         // the scalar path so play/pause/next/prev/mute still work end-to-end.
         if (state.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER) {
-            if (!state.mediaTitle.isNullOrBlank() || !state.mediaPicture.isNullOrBlank()) {
-                Spacer(Modifier.height(14.dp))
-                MediaNowPlayingInline(state = state, accent = accent)
-            }
+            // Always render the inline now-playing block — the previous
+            // title-or-picture conditional left the block missing for
+            // the same entity on bigger screens that showed it on R1.
+            // MediaNowPlayingInline already hides its own empty rows.
+            Spacer(Modifier.height(14.dp))
+            MediaNowPlayingInline(state = state, accent = accent)
             Spacer(Modifier.height(10.dp))
             com.github.itskenny0.r1ha.core.theme.MediaControlsRow(
                 entityId = state.id,

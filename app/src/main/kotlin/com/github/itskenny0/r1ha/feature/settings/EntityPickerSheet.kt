@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -77,7 +78,14 @@ fun EntityPickerSheet(
             .fillMaxSize()
             .background(R1.Bg.copy(alpha = 0.92f))
             .r1Pressable(onClick = onDismiss, hapticOnClick = false)
-            .systemBarsPadding(),
+            .systemBarsPadding()
+            // The sheet auto-focuses the search field on open, which pops the
+            // IME. Without imePadding() the centred Column would partially sit
+            // behind the keyboard (the activity uses enableEdgeToEdge so the
+            // window doesn't auto-resize). imePadding() shrinks the available
+            // height by the IME inset so the Column re-centres above the
+            // keyboard's top edge.
+            .imePadding(),
         contentAlignment = Alignment.Center,
     ) {
         Column(

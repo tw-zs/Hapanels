@@ -91,6 +91,15 @@ fun AssistScreen(
             runCatching { focus.requestFocus() }
         }
     }
+    // Collect pre-filled drafts pushed by other screens (e.g. SearchScreen's
+    // empty-state 'Ask Assist about <query>' CTA). The bus uses SharedFlow with
+    // capacity 1 + DROP_OLDEST, so a draft staged before AssistScreen first
+    // composes still gets picked up on its first frame.
+    LaunchedEffect(Unit) {
+        com.github.itskenny0.r1ha.core.util.AssistDraftBus.drafts.collect { staged ->
+            vm.setDraft(staged)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()

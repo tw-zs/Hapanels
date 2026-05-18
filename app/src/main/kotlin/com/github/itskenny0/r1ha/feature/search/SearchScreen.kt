@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -66,6 +67,11 @@ fun SearchScreen(
     /** Opens the full-screen History drill-in for [entityId]. Routed
      *  from the small chart-glyph button on each result row. */
     onOpenHistory: (entityId: String) -> Unit = {},
+    /** Opens the HA Assist surface. Surfaced from the empty-state
+     *  fallback CTA: when the user's search returns nothing, offer to
+     *  ask Assist instead (the query is staged via AssistDraftBus so
+     *  the Assist screen lands with the prompt pre-filled). */
+    onOpenAssist: () -> Unit = {},
 ) {
     val vm: SearchViewModel = viewModel(factory = SearchViewModel.factory(haRepository, settings))
     val ui by vm.ui.collectAsState()
@@ -214,12 +220,39 @@ fun SearchScreen(
                 modifier = Modifier.fillMaxSize().padding(22.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = if (ui.query.isNotBlank()) "No matches for '${ui.query}'."
-                    else "No ${ui.bucket.name.lowercase()} entities.",
-                    style = R1.body,
-                    color = R1.InkMuted,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (ui.query.isNotBlank()) "No matches for '${ui.query}'."
+                        else "No ${ui.bucket.name.lowercase()} entities.",
+                        style = R1.body,
+                        color = R1.InkMuted,
+                    )
+                    // Fallback to Assist when the user's query didn't match any
+                    // entity. Conversational intent ('turn off all the kitchen
+                    // lights', 'is it raining tomorrow') routes naturally to
+                    // HA's conversation engine even when no single entity_id
+                    // matches the substring search; stage the query on
+                    // AssistDraftBus and navigate.
+                    if (ui.query.isNotBlank()) {
+                        Spacer(Modifier.height(14.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(R1.ShapeS)
+                                .background(R1.AccentWarm.copy(alpha = 0.18f))
+                                .r1Pressable(onClick = {
+                                    com.github.itskenny0.r1ha.core.util.AssistDraftBus.push(ui.query)
+                                    onOpenAssist()
+                                })
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = "Ask Assist about \"${ui.query}\"",
+                                style = R1.body,
+                                color = R1.AccentWarm,
+                            )
+                        }
+                    }
+                }
             }
             else -> LazyColumn(
                 state = listState,

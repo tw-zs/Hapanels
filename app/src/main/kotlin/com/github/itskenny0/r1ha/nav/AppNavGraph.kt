@@ -362,6 +362,9 @@ fun AppNavGraph(
                 onOpenHistory = { eid ->
                     navController.navigate(Routes.historyRoute(eid)) { launchSingleTop = true }
                 },
+                onOpenAssist = {
+                    navController.navigate(Routes.ASSIST) { launchSingleTop = true }
+                },
             )
         }
         composable(Routes.AUTOMATIONS) {

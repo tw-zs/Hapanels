@@ -188,7 +188,13 @@ private fun BatteryCard(ui: DeviceViewModel.UiState) {
             )
             if (ui.isCharging) {
                 Spacer(Modifier.height(2.dp))
-                Text(text = "⚡", style = R1.body, color = R1.AccentGreen)
+                // Hand-drawn bolt (filled path) so the colour follows R1.AccentGreen.
+                // The ⚡ emoji shipped its own yellow tint that clashed with the green
+                // "CHARGING" label above it on the same card.
+                com.github.itskenny0.r1ha.ui.components.ChargingBoltGlyph(
+                    size = 14.dp,
+                    tint = R1.AccentGreen,
+                )
             }
         }
     }
@@ -309,7 +315,15 @@ private fun FlashlightCard(on: Boolean, onToggle: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = if (on) "🔦" else "·", style = R1.numeralXl, color = if (on) R1.AccentWarm else R1.InkMuted)
+        // Hand-drawn glyph (not the 🔦 emoji) so the icon stays monochrome and reads at
+        // hairline weight against the surrounding chrome — the colour-emoji font rendered
+        // a chunky orange torch with its own drop-shadow that clashed with everything else
+        // on the screen.
+        com.github.itskenny0.r1ha.ui.components.FlashlightGlyph(
+            size = 28.dp,
+            emitting = on,
+            tint = if (on) R1.AccentWarm else R1.InkMuted,
+        )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = "FLASHLIGHT", style = R1.labelMicro, color = R1.InkSoft)

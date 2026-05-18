@@ -172,7 +172,10 @@ private fun UrlEntryForm(
     onErrorDismiss: () -> Unit,
     onUseLongLivedToken: (() -> Unit)? = null,
 ) {
-    var urlText by rememberSaveable { mutableStateOf("http://") }
+    // Start empty so the placeholder ("http://homeassistant.local:8123") is what the
+    // user sees first — they can type a bare host like "192.168.1.10" and let the
+    // normaliser pick the protocol + port, or paste a full URL if they prefer.
+    var urlText by rememberSaveable { mutableStateOf("") }
     val scrollState = androidx.compose.foundation.rememberScrollState()
     val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
     LaunchedEffect(imeBottom) {
@@ -206,7 +209,7 @@ private fun UrlEntryForm(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Local IP or hostname. Default HA port is 8123.",
+            text = "Examples:\n• 192.168.1.10\n• homeassistant.local\n• ha.mydomain.com\n\nProtocol and port are optional. Local hosts default to http:// :8123; public domains default to https:// :443.",
             style = com.github.itskenny0.r1ha.core.theme.R1.body,
             color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
         )

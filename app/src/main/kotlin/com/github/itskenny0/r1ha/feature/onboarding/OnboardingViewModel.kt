@@ -57,13 +57,12 @@ class OnboardingViewModel(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Normalises whatever the user typed into a usable server base URL. */
-    private fun normalizeUrl(raw: String): String {
-        val trimmed = raw.trim().trimEnd('/')
-        if (trimmed.isBlank()) return ""
-        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed
-        return "http://$trimmed"
-    }
+    /**
+     * Normalises whatever the user typed into a usable server base URL. The string
+     * logic lives in [normalizeServerUrl] in UrlNormalizer.kt so it's unit-testable
+     * without the VM's lifecycle / coroutine harness.
+     */
+    private fun normalizeUrl(raw: String): String = normalizeServerUrl(raw)
 
     /** Validates [rawUrl], probes reachability, then constructs the OAuth authorize URL. */
     fun probe(rawUrl: String) {

@@ -18,7 +18,7 @@ Where the official [Home Assistant Companion app](https://github.com/home-assist
 - **Weather**: every `weather.*` entity with condition glyph (☀ ⛅ ☁ ☂ ❄ ⚡ …), temperature, humidity, wind, pressure, and a 7-day daily forecast strip when HA exposes the legacy `forecast` attribute.
 - **Who's home**: `person.*` + `device_tracker.*` in one directory, home / away coloured per state, with GPS-accuracy chip and source-type chip on device_trackers.
 - **Calendars**: `calendar.*` entities with NOW pill for currently-happening events. Tap a row to drill into the next 14 days of events via HA's `/api/calendars/<id>` endpoint.
-- **Recent Activity**: HA's logbook reverse-chronologically, 12 h / 24 h / 3 d windows, full-text search. Tap a row for detail toast; long-press to open that entity's `/history` in HA's web UI.
+- **Recent Activity**: HA's logbook reverse-chronologically, 12 h / 24 h / 3 d windows, full-text search. Tap a row to drill into that entity's history; long-press to open it in HA's web UI.
 - **Notifications**: every `persistent_notification.*` entity with title, message, timestamp, and DISMISS chip. Auto-refreshes every 30 s while open.
 - **Areas**: HA's area registry with entity count per area, expandable rows showing the full entity list. Powered by a server-side Jinja template against `/api/template`.
 - **Zones**: `zone.*` registry with an abstract Canvas map at the top (each zone a circle sized by its radius, positioned by its lat/lon, occupied zones filled in accent), plus a per-zone occupancy list (which persons / device_trackers are in each zone right now). An OUTSIDE bucket collects `not_home` people.

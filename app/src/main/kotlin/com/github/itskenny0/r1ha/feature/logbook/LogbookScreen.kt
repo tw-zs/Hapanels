@@ -243,6 +243,11 @@ private fun LogbookRow(
             .background(R1.SurfaceMuted)
             // Tap = expand detail toast. Long-press = open the entity's
             // /history view in HA's web UI via the system browser.
+            // Tap = drill into the entity's native History view (or fall back
+            // to a detail toast when the row has no entity_id, typical for
+            // system events). Long-press = open the entity's /history view in
+            // HA's web UI via the system browser, for users who want the full
+            // HA-native graph view alongside this app.
             .r1RowPressable(onTap = onTap, onLongPress = onLongPress)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,

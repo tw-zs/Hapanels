@@ -325,7 +325,25 @@ private fun friendlySwitchStateWord(state: EntityState): String {
             "error" -> "ERROR"
             else -> raw.uppercase()
         }
-        com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> if (state.isOn) "UNLOCKED" else "LOCKED"
+        com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> when (raw) {
+            "locked" -> "LOCKED"
+            "unlocked" -> "UNLOCKED"
+            // Mid-transition states. HA reports these during the actuator's
+            // mechanical travel; collapsing them to LOCKED / UNLOCKED via isOn
+            // (the previous behaviour) read wrong because isOn = unlocked, so
+            // a locking-in-progress lock falsely showed 'LOCKED' before the
+            // bolt actually engaged.
+            "locking" -> "LOCKING"
+            "unlocking" -> "UNLOCKING"
+            // Some integrations expose intermediate motion-detected / opening
+            // states; pass through if we ever see one.
+            "opening" -> "OPENING"
+            // Mechanical failure state — the lock got stuck mid-travel.
+            // Surfacing JAMMED is much more useful than the old 'LOCKED' for
+            // a user trying to figure out why the lock isn't responding.
+            "jammed" -> "JAMMED"
+            else -> raw.uppercase()
+        }
         com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE,
         com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER -> raw.uppercase()
         com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> when (raw) {

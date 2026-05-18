@@ -2,6 +2,8 @@ package com.github.itskenny0.r1ha.feature.assist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -100,6 +104,31 @@ fun AssistScreen(
             vm.setDraft(staged)
         }
     }
+    // Keyboard-aware scroll-to-latest. The outer Column uses imePadding(), which
+    // shrinks the transcript Box as the IME animates open. The
+    // LaunchedEffect(messages.size) above only fires when a *new* message lands,
+    // so a user opening the keyboard mid-conversation could see the most recent
+    // bubble vanish above the now-smaller LazyColumn's top edge. Bind a second
+    // effect to the binary IME-open state and re-scroll to the last item once
+    // the IME finishes settling.
+    //
+    // Binary key (imeBottomPx > 0) is deliberate: WindowInsets.ime.getBottom
+    // returns the live animating pixel value, which would re-fire the effect on
+    // every frame and fight the IME's own animation. The Boolean flips once on
+    // open and once on close, so the effect fires twice total — and we only
+    // act on the open transition.
+    val imeBottomPx = WindowInsets.ime
+        .getBottom(androidx.compose.ui.platform.LocalDensity.current)
+    val isImeOpen = imeBottomPx > 0
+    LaunchedEffect(isImeOpen) {
+        if (isImeOpen && ui.messages.isNotEmpty()) {
+            // Give the IME animation (~250 ms on stock Android) a beat to settle
+            // before we scroll; otherwise the LazyColumn's shrinking size and
+            // our scroll target race and the resulting position is off.
+            kotlinx.coroutines.delay(280)
+            runCatching { listState.animateScrollToItem(ui.messages.size - 1) }
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -113,16 +142,22 @@ fun AssistScreen(
         // doesn't look broken before the first send.
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (ui.messages.isEmpty()) {
-                // Empty-state anchors near the top of the transcript
-                // area (not vertically centred) — when the IME opens
-                // and shrinks the parent Box, a Center arrangement
-                // re-runs and the content visibly jumps upward,
-                // which the user reported as 'viewport scrolls up
-                // way too high'. Top-anchored content stays put
+                // Empty-state anchors near the top of the transcript area (not
+                // vertically centred) — when the IME opens and shrinks the
+                // parent Box, a Center arrangement re-runs and the content
+                // visibly jumps upward, which the user reported as 'viewport
+                // scrolls up way too high'. Top-anchored content stays put
                 // regardless of how the transcript area resizes.
+                //
+                // verticalScroll wrapper keeps the bottom example-prompt chips
+                // reachable when the IME's imePadding() shrinks the parent
+                // below the natural content height. Without it the bottom
+                // chips slide under the input bar with no way to scroll to
+                // them.
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 22.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.Top,
                     horizontalAlignment = Alignment.CenterHorizontally,

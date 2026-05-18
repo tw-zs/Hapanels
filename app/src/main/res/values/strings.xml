@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">R1 HA</string>
+    <string name="app_name">R1HA</string>
 
     <!-- App-shortcut labels — surfaced when the user long-presses the
          launcher icon. Each routes through MainActivity's extras-based

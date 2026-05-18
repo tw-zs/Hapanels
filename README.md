@@ -1,6 +1,6 @@
 # R1HA: A native Kotlin Home Assistant client, designed for small screens
 
-![Rabbit R1: Home Assistant client](r1ha.png)
+![R1HA: native Kotlin Home Assistant client](r1ha.png)
 
 A native Home Assistant client originally built for the Rabbit R1, and equally at home on any Android 13+ phone or tablet. On the R1 the physical scroll wheel adjusts every scalar HA entity (light brightness, fan speed, cover position, media volume); on touch devices the same controls respond to drag and tap.
 

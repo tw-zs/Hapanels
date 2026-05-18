@@ -3,7 +3,7 @@ package com.github.itskenny0.r1ha.core.util
 import android.util.Log
 
 /**
- * Single point for runtime logging. All R1 HA logs share the same tag so a developer can
+ * Single point for runtime logging. All R1HA logs share the same tag so a developer can
  * filter live with `adb logcat | grep R1HA`. Verbose / debug logs are stripped from release
  * builds by the ProGuard rule in `proguard-rules.pro`; `i` / `w` / `e` survive so production
  * crash troubleshooting is possible.

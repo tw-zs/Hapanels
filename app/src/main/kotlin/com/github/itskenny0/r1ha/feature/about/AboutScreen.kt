@@ -67,6 +67,18 @@ fun AboutScreen(
             item { Section("APP") }
             item { InfoRow("Version", BuildConfig.VERSION_NAME, mono = true) }
             item { InfoRow("Build", BuildConfig.GIT_SHA, mono = true) }
+            // Surface the product flavour so the user (and anyone helping them
+            // troubleshoot) knows which build they're running. Distinct
+            // distribution paths produce subtly different behaviour: the github
+            // flavour has the in-app self-updater; the fdroid flavour gets
+            // update notifications from the F-Droid client instead.
+            item {
+                InfoRow(
+                    "Distribution",
+                    if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub",
+                    mono = true,
+                )
+            }
             item {
                 LinkRow(
                     label = "Source code",
@@ -96,10 +108,12 @@ fun AboutScreen(
             // crash reports + UX feedback; without it, users have to type the
             // URL into a desktop browser.
             item {
+                val flavour = if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub"
                 val bugUrl = "${BuildConfig.SOURCE_URL}/issues/new?body=" +
                     java.net.URLEncoder.encode(
                         "App: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n" +
                             "Build: ${BuildConfig.GIT_SHA}\n" +
+                            "Distribution: $flavour\n" +
                             "Android: API ${Build.VERSION.SDK_INT}\n" +
                             "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
                             "(describe what happened — if it's a crash, paste the LAST CRASH from the dev menu here)",

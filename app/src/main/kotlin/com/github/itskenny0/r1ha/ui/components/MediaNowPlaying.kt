@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.itskenny0.r1ha.core.theme.LocalHaBearerToken
 import com.github.itskenny0.r1ha.core.theme.LocalHaServerUrl
 import com.github.itskenny0.r1ha.core.theme.R1
 import java.time.Duration
@@ -52,13 +53,20 @@ fun MediaNowPlayingCompact(
     accent: Color,
 ) {
     val serverUrl = LocalHaServerUrl.current
+    // Authenticate the album-art fetch — HA's entity_picture URLs come in two flavours
+    // depending on the integration, and a previously-hardcoded `null` here left covers
+    // blank for the half that needs a Bearer header (plain `/api/...` paths, anything
+    // from an integration that doesn't bake a `?token=...` into the URL itself). The
+    // header is harmless when the URL already carries a token query parameter; HA
+    // ignores it in that case.
+    val bearerToken = LocalHaBearerToken.current
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (!picture.isNullOrBlank()) {
                 AsyncBitmap(
                     url = picture,
                     serverUrl = serverUrl,
-                    bearerToken = null,
+                    bearerToken = bearerToken,
                     modifier = Modifier
                         .size(56.dp)
                         .clip(R1.ShapeS),

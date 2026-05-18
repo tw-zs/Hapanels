@@ -43,6 +43,24 @@ val LocalHaRepository = staticCompositionLocalOf<com.github.itskenny0.r1ha.core.
 val LocalHaServerUrl = staticCompositionLocalOf<String?> { null }
 
 /**
+ * Current HA access token (Bearer). Used by deep image-fetch composables — primarily
+ * the album-art [com.github.itskenny0.r1ha.ui.components.AsyncBitmap] — to pass an
+ * `Authorization: Bearer <token>` header alongside their request.
+ *
+ * Why this is needed: HA's `entity_picture` URLs come in two flavours. Some
+ * integrations bake a short-lived `?token=…` query parameter into the URL itself
+ * (the official media-player proxy does this) and a Bearer header is redundant.
+ * Other integrations — and any plain `/api/...` path — require normal HA auth, and
+ * fetching them without a Bearer header gets a 401. Always passing the Bearer is
+ * harmless in the first case (HA ignores it when a token query param is present) and
+ * fixes the loaded-but-blank album cover in the second.
+ *
+ * Null when no token is available (cold start before tokens load, or the user is
+ * signed out).
+ */
+val LocalHaBearerToken = staticCompositionLocalOf<String?> { null }
+
+/**
  * Per-entity overrides surfaced to deep card composables so the rename / display /
  * long-press customizations can apply without each theme threading them through. The
  * EntityCard wrapper looks up the override for its entity_id and merges visibility

@@ -258,12 +258,16 @@ private fun SwitchTrack(
 @Composable
 private fun MediaNowPlayingInline(state: EntityState, accent: Color) {
     val serverUrl = com.github.itskenny0.r1ha.core.theme.LocalHaServerUrl.current
+    // Same auth fix as MediaNowPlayingCompact — the Bearer header is needed for the
+    // half of media_player integrations whose entity_picture is a plain /api/... path
+    // (no `?token=...` baked in). Harmless when the URL already carries a token.
+    val bearerToken = com.github.itskenny0.r1ha.core.theme.LocalHaBearerToken.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (!state.mediaPicture.isNullOrBlank()) {
             AsyncBitmap(
                 url = state.mediaPicture,
                 serverUrl = serverUrl,
-                bearerToken = null,
+                bearerToken = bearerToken,
                 modifier = Modifier
                     .size(48.dp)
                     .clip(R1.ShapeS),

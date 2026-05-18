@@ -137,8 +137,24 @@ class MainActivity : ComponentActivity() {
                         com.github.itskenny0.r1ha.core.util.R1Toast.Level.DEBUG
                 }
             }
+            // Track the current HA access token so deep image-fetch composables
+            // (album art on media_player cards, primarily) can authenticate against
+            // HA's media-proxy endpoints. Re-load on every Connected transition so
+            // we pick up the freshly-rotated token after TokenRefresher swaps it.
+            // produceState's coroutine collects on connection until cancelled —
+            // the lambda only re-reads when the new state is Connected so we
+            // don't thrash the keystore on the rapid Disconnected↔Connecting bounces
+            // that come from a flaky network.
+            val connectionForTokenRefresh by graph.haRepository.connection
+                .collectAsStateWithLifecycle(initialValue = graph.haRepository.connection.value)
+            val bearerToken by produceState<String?>(initialValue = null, connectionForTokenRefresh) {
+                value = runCatching { graph.tokens.load()?.accessToken }.getOrNull()
+            }
             R1ThemeHost(themeId = settings.theme) {
-                CompositionLocalProvider(LocalUiOptions provides settings.ui) {
+                CompositionLocalProvider(
+                    LocalUiOptions provides settings.ui,
+                    com.github.itskenny0.r1ha.core.theme.LocalHaBearerToken provides bearerToken,
+                ) {
                     // Wrap the nav graph in a Box so the in-app ToastHost can
                     // overlay every navigated screen. The toast bus is process-
                     // scoped (see R1Toast); the host just renders whatever event

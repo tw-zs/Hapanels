@@ -139,15 +139,17 @@ class MainActivity : ComponentActivity() {
             }
             // Track the current HA access token so deep image-fetch composables
             // (album art on media_player cards, primarily) can authenticate against
-            // HA's media-proxy endpoints. Re-load on every Connected transition so
-            // we pick up the freshly-rotated token after TokenRefresher swaps it.
-            // produceState's coroutine collects on connection until cancelled —
-            // the lambda only re-reads when the new state is Connected so we
-            // don't thrash the keystore on the rapid Disconnected↔Connecting bounces
-            // that come from a flaky network.
-            val connectionForTokenRefresh by graph.haRepository.connection
+            // HA's media-proxy endpoints. Key produceState on the Connected-state's
+            // haVersion so the token re-loads once per successful WS reconnect —
+            // which is also when TokenRefresher has just rotated the access token —
+            // without thrashing the Keystore on the rapid Connecting / Authenticating
+            // / Disconnected bounces that come from a flaky network. haVersion is null
+            // outside Connected, so transitions away from Connected and back fire
+            // exactly one re-read.
+            val connection by graph.haRepository.connection
                 .collectAsStateWithLifecycle(initialValue = graph.haRepository.connection.value)
-            val bearerToken by produceState<String?>(initialValue = null, connectionForTokenRefresh) {
+            val connectedHaVersion = (connection as? com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected)?.haVersion
+            val bearerToken by produceState<String?>(initialValue = null, connectedHaVersion) {
                 value = runCatching { graph.tokens.load()?.accessToken }.getOrNull()
             }
             R1ThemeHost(themeId = settings.theme) {

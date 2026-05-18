@@ -124,10 +124,21 @@ fun SwitchCard(
         Spacer(Modifier.height(14.dp))
 
         // ── The two-position switch ────────────────────────────────────────────────
+        // Track labels are domain-aware so a lock reads UNLOCKED / LOCKED on its
+        // tappable end-stops instead of the generic ON / OFF. The state word above
+        // tells the user the current state; the labels tell them what tapping
+        // each end will *do*, which for locks is much clearer phrased as the
+        // physical state rather than the abstract on/off.
+        val (onLabel, offLabel) = when (state.id.domain) {
+            com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> "UNLOCK" to "LOCK"
+            else -> "ON" to "OFF"
+        }
         SwitchTrack(
             isOn = state.isOn,
             accent = accent,
             onSetOn = onSetOn,
+            onLabel = onLabel,
+            offLabel = offLabel,
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -168,6 +179,11 @@ private fun SwitchTrack(
     accent: Color,
     onSetOn: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    /** Top end-stop label. Defaults to ON for switches / lights / etc.; locks
+     *  override with UNLOCK to read more naturally. */
+    onLabel: String = "ON",
+    /** Bottom end-stop label, paired with [onLabel]. */
+    offLabel: String = "OFF",
 ) {
     // Critically damped spring — a physical toggle snaps to its stop and stays put; no
     // bounce. (The percent slider on the other card variant does bounce because there are
@@ -187,13 +203,15 @@ private fun SwitchTrack(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Left labels — ON top, OFF bottom. Both are clickable explicit setters.
+        // Left labels — the top one sets the ON state, the bottom one sets OFF.
+        // Both are clickable explicit setters. Text content comes from the caller
+        // so locks read UNLOCK / LOCK instead of the generic ON / OFF.
         Column(
             modifier = Modifier.height(120.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "ON",
+                text = onLabel,
                 style = R1.numeralM,
                 color = if (isOn) accent else R1.InkMuted,
                 modifier = Modifier
@@ -202,7 +220,7 @@ private fun SwitchTrack(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             )
             Text(
-                text = "OFF",
+                text = offLabel,
                 style = R1.numeralM,
                 color = if (!isOn) R1.InkSoft else R1.InkMuted,
                 modifier = Modifier

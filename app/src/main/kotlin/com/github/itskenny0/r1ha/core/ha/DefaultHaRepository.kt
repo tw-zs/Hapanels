@@ -97,6 +97,17 @@ class DefaultHaRepository(
      */
     @Volatile private var authLostRefreshAttempt: Int = 0
 
+    /**
+     * Wall-clock millisecond timestamp of the last useful signal from HA — either a
+     * state_changed event applied through [applyEvent] or a successful REST seed/poll.
+     * The heartbeat poller (see [start]) uses this to decide whether the WebSocket has
+     * gone silent and a REST fallback is warranted. Initialised to 0 so the FIRST
+     * heartbeat tick after start fires a REST poll if the WS hasn't connected yet — that
+     * way a broken-WS-but-working-REST reverse-proxy setup paints cards within ~30 s of
+     * launch instead of sitting blank indefinitely.
+     */
+    @Volatile private var lastEventAtMs: Long = 0L
+
     // Key the per-call debouncer by (target, service) rather than just (target).
     // Without the service segment, rapid taps of distinct media-transport buttons
     // (PLAY → NEXT → VOL+) all collapsed onto the same EntityId-only key and
@@ -201,6 +212,11 @@ class DefaultHaRepository(
                     is ConnectionState.Connected -> {
                         reconnectAttempt = 0
                         authLostRefreshAttempt = 0
+                        // Stamp the heartbeat now so the REST fallback poller in [start]
+                        // doesn't fire a redundant /api/states right after a fresh
+                        // Connected (the seedCacheFromHa() call below already handles
+                        // the initial paint).
+                        lastEventAtMs = System.currentTimeMillis()
                         // Connected — there's nothing scheduled, so the UI countdown should
                         // stop. The pendingReconnect job, if any, has already fired and
                         // self-cleared this; this assignment is the belt-and-braces case
@@ -322,6 +338,42 @@ class DefaultHaRepository(
                     }
                 }
                 .launchIn(this)
+
+            // Heartbeat / REST fallback poller. The WS path is still the primary delivery
+            // channel for state_changed — instant updates, low overhead — but a class of
+            // reverse-proxy misconfigurations break it in subtle ways that leave the app
+            // looking healthy on the surface:
+            //   1. nginx without `proxy_set_header Upgrade $http_upgrade;` rejects the
+            //      Upgrade handshake — ws.state stays Disconnected; cards never refresh.
+            //   2. nginx with `proxy_buffering on` (the default) for the WS location can
+            //      coalesce or drop frames — ws.state shows Connected but state_changed
+            //      events arrive late, out of order, or not at all.
+            //   3. Cloudflare's free tier closes idle WebSockets after ~100s — silent
+            //      drops until the next reconnect cycle catches up.
+            // The user has no leverage to fix any of these from the app, but a periodic
+            // REST poll on /api/states works through every one of them (no Upgrade, no
+            // streaming, no idle timeout). Cadence is conservative — 30 s — so a healthy
+            // WS that produces any event resets the timer and the poller never fires.
+            // A truly silent WS gives the user cards lagging ~30 s instead of forever.
+            launch {
+                while (true) {
+                    delay(HEARTBEAT_INTERVAL_MS)
+                    val s = settings.settings.first()
+                    if (s.server == null) continue
+                    if (s.favorites.isEmpty()) continue
+                    val st = ws.state.value
+                    // AuthLost / Idle won't be helped by polling — REST uses the same
+                    // access token that just got rejected, and Idle means no URL yet.
+                    if (st is ConnectionState.AuthLost || st is ConnectionState.Idle) continue
+                    val silentFor = System.currentTimeMillis() - lastEventAtMs
+                    if (silentFor < HEARTBEAT_SILENCE_THRESHOLD_MS) continue
+                    R1Log.i(
+                        "HaRepo.heartbeat",
+                        "no WS event for ${silentFor / 1000}s (state=${st::class.simpleName}); polling REST",
+                    )
+                    silentRefreshFromHa()
+                }
+            }
         }
     }
 
@@ -515,6 +567,9 @@ class DefaultHaRepository(
             else 0,
         )
         cache.update { it + (id to newState) }
+        // Heartbeat: any successfully-applied event means the WS path is alive. The
+        // poller in [start] reads this to decide whether REST fallback is needed.
+        lastEventAtMs = System.currentTimeMillis()
     }
 
     /**
@@ -1064,6 +1119,52 @@ class DefaultHaRepository(
         val msg = lastError?.message ?: "unknown error"
         R1Log.e("HaRepo.seed", "all retries failed: $msg", lastError)
         com.github.itskenny0.r1ha.core.util.Toaster.error("Couldn't load entities: $msg")
+    }
+
+    /**
+     * REST fallback poll used by the heartbeat in [start]. Differs from [seedCacheFromHa]
+     * in being:
+     *   - **Single-attempt**: no retries-with-delay loop. If REST is broken we'd rather
+     *     fail silently and try again on the next heartbeat tick than stack three back-
+     *     to-back retries inside one tick (which would extend the heartbeat to ~3 s in
+     *     practice and bury the next legitimate tick).
+     *   - **Silent**: no Toaster.error on failure, no "Loaded N entities" toast on the
+     *     first successful poll. This runs in the background every 30 s while the WS is
+     *     silent; users would be drowning in toasts on a perma-broken reverse proxy.
+     *     Failures still log through R1Log so they're recoverable from the in-app log
+     *     viewer.
+     *
+     * Note we still update lastEventAtMs on success so a stretch of working REST polls
+     * keeps the heartbeat from re-firing every tick — the WS being broken doesn't mean
+     * the REST cache needs continual refresh; one good poll per 30 s is plenty.
+     */
+    private suspend fun silentRefreshFromHa() {
+        val favIds = settings.settings.first().favorites
+            .mapNotNull { runCatching { EntityId(it) }.getOrNull() }
+            .toSet()
+        if (favIds.isEmpty()) return
+        val result = listAllEntities()
+        result.fold(
+            onSuccess = { all ->
+                if (settings.settings.first().server == null) {
+                    R1Log.w("HaRepo.heartbeat", "server gone mid-poll; discarding ${all.size} entities")
+                    return
+                }
+                val byId = all.filter { it.id in favIds }.associateBy { it.id }
+                if (byId.isNotEmpty()) {
+                    cache.update { current -> current + byId }
+                    R1Log.i("HaRepo.heartbeat", "REST refresh updated ${byId.size}/${favIds.size} favourites")
+                    // The successful poll counts as a useful signal — back off until the
+                    // next genuine silence window.
+                    lastEventAtMs = System.currentTimeMillis()
+                } else {
+                    R1Log.w("HaRepo.heartbeat", "REST returned ${all.size} entities; none matched favourites")
+                }
+            },
+            onFailure = { t ->
+                R1Log.w("HaRepo.heartbeat", "REST poll failed: ${t.message}")
+            },
+        )
     }
 
     /** Single Json instance for /api/states deserialisation to avoid the per-call allocation lint. */
@@ -1684,6 +1785,25 @@ class DefaultHaRepository(
          * low enough that the user knows within a sensible window if their command was lost.
          */
         const val CALL_TIMEOUT_MS = 15_000L
+
+        /**
+         * Heartbeat tick interval — the REST fallback poller wakes this often to *check*
+         * whether the WS has been silent, but actual REST calls only fire when the
+         * silence threshold below is also exceeded. Same value for both means a worst-
+         * case 60 s lag (one tick to notice silence, one full poll cycle to refresh)
+         * but in practice the second tick fires almost immediately after the first.
+         */
+        const val HEARTBEAT_INTERVAL_MS = 30_000L
+
+        /**
+         * How long the WS must be silent (no state_changed event applied) before the
+         * REST fallback kicks in. A healthy WS produces events on any entity change,
+         * which keeps this from ever tripping; the threshold only fires on the broken-
+         * proxy / Cloudflare-idle-close / WS-coalesced-frames cases described in
+         * [start]'s heartbeat block. 30 s matches the tick interval — there's no value
+         * in a longer silence window because the tick is what gates the poll anyway.
+         */
+        const val HEARTBEAT_SILENCE_THRESHOLD_MS = 30_000L
     }
 
     /**

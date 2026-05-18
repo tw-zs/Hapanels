@@ -1061,18 +1061,25 @@ class CardStackViewModel(
         val activeState = _state.value.activeState ?: return
         if (!activeState.isAvailable) return  // can't toggle an unreachable entity
         viewModelScope.launch {
-            // Cover-mid-travel special case: if HA reports the cover as actively moving
-            // (state="opening"/"closing"), a tap should STOP it rather than flip its
-            // open/close intent. That's the natural mental model — tap a moving blind to
-            // halt it where it is, tap a stationary one to flip its direction. Falls back
-            // to the standard toggle for every other state and every other domain.
-            val isCoverMoving = activeState.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.COVER &&
+            // Mid-travel STOP special case: if HA reports a cover or valve as actively
+            // moving (state="opening"/"closing"), a tap should STOP it where it is
+            // rather than flip its open/close intent. Natural mental model — tap a
+            // moving blind / water valve to halt it, tap a stationary one to flip
+            // direction. Covers fire stop_cover, valves fire stop_valve; HA exposes
+            // the same shape on both domains. Every other domain falls through to the
+            // standard toggle.
+            val stopService = when (activeState.id.domain) {
+                com.github.itskenny0.r1ha.core.ha.Domain.COVER -> "stop_cover"
+                com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "stop_valve"
+                else -> null
+            }
+            val isMoving = stopService != null &&
                 (activeState.rawState == "opening" || activeState.rawState == "closing")
-            val call = if (isCoverMoving) {
+            val call = if (isMoving) {
                 R1Log.i("CardStack.tap", "stop ${activeState.id} (state=${activeState.rawState})")
                 ServiceCall(
                     target = activeState.id,
-                    service = "stop_cover",
+                    service = stopService!!,
                     data = kotlinx.serialization.json.JsonObject(emptyMap()),
                 )
             } else {

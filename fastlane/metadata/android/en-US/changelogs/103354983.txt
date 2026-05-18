@@ -1,0 +1,4 @@
+Infrastructure:
+* Release APK is now R8-minified: ~5 MB instead of ~70 MB.
+* Build splits into github and fdroid product flavours. The fdroid build omits the in-app self-updater and the REQUEST_INSTALL_PACKAGES permission, since F-Droid clients handle updates themselves.
+* The in-app self-updater now skips the '-fdroid-' release asset and only pulls the github flavour.

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -1116,12 +1117,22 @@ private fun PageDeck(
         val statusBarTop = androidx.compose.foundation.layout.WindowInsets.statusBars
             .asPaddingValues().calculateTopPadding()
         val pagerTopPadding = statusBarTop + 80.dp
+        // Same inset-aware treatment on the bottom: phones with gesture
+        // navigation (Pixel 7-class hardware) reserve 24–48 dp at the bottom
+        // for the navigation-hint pill. The previous hard-coded 24 dp
+        // contentPadding either left the card content brushing against the
+        // pill (gesture phones) or left a too-large empty band on the R1
+        // (which reports 0 dp nav inset). Adding 16 dp of baseline breathing
+        // room on top of the actual inset keeps both extremes consistent.
+        val navBarBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars
+            .asPaddingValues().calculateBottomPadding()
+        val pagerBottomPadding = navBarBottom + 16.dp
         VerticalPager(
             state = pagerState,
             // No peek — off-screen cards are hidden entirely until the user starts dragging.
             // During the drag, each page's graphicsLayer (below) gives the deck an overlap
             // with a big drop shadow.
-            contentPadding = PaddingValues(top = pagerTopPadding, bottom = 24.dp),
+            contentPadding = PaddingValues(top = pagerTopPadding, bottom = pagerBottomPadding),
             pageSize = PageSize.Fill,
             pageSpacing = 0.dp,
             modifier = Modifier.fillMaxSize(),

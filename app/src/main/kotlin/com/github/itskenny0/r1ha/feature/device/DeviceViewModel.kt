@@ -52,6 +52,13 @@ class DeviceViewModel(app: App) : AndroidViewModel(app) {
         /** Per-window screen brightness in 0..100. -1 means
          *  'follow system brightness' (no override applied). */
         val brightnessPct: Int = -1,
+        /** Current SYSTEM-wide screen brightness in 0..100, read from
+         *  Settings.System.SCREEN_BRIGHTNESS (a 0..255 value, scaled
+         *  here). Used to position the brightness slider when no
+         *  per-window override is active, so the slider reflects what
+         *  the user is actually looking at instead of snapping to 50%
+         *  the moment they touch it. */
+        val systemBrightnessPct: Int = 0,
         /** Media volume scaled to 0..100 across the AudioManager
          *  per-stream range. */
         val mediaVolumePct: Int = 0,
@@ -149,6 +156,7 @@ class DeviceViewModel(app: App) : AndroidViewModel(app) {
             val ssid = readWifiSsid()
             _ui.value = cur.copy(
                 brightnessPct = brightness,
+                systemBrightnessPct = readSystemBrightnessPct(),
                 mediaVolumePct = media,
                 notificationVolumePct = notif,
                 alarmVolumePct = alarm,
@@ -269,6 +277,20 @@ class DeviceViewModel(app: App) : AndroidViewModel(app) {
         // querying — the screen pushes new values into the VM and
         // bind() re-syncs on mount.
         return _ui.value.brightnessPct
+    }
+
+    /** Read the SYSTEM-wide brightness setting and scale 0..255 → 0..100.
+     *  No permission required (the value is publicly readable).
+     *  Falls back to 0 when the read fails (rare; some manufacturers
+     *  scope the setting under a different namespace). */
+    private fun readSystemBrightnessPct(): Int {
+        return runCatching {
+            val raw = Settings.System.getInt(
+                context.contentResolver,
+                Settings.System.SCREEN_BRIGHTNESS,
+            )
+            (raw * 100f / 255f).toInt().coerceIn(0, 100)
+        }.getOrDefault(0)
     }
 
     private fun readVolumePct(stream: Int): Int {

@@ -125,6 +125,7 @@ fun DeviceScreen(
             BatteryCard(ui)
             BrightnessCard(
                 pct = ui.brightnessPct,
+                systemPct = ui.systemBrightnessPct,
                 onChange = { vm.setBrightness(it) },
                 onReleaseToSystem = { vm.setBrightness(-1) },
                 onOpenSystem = { vm.openSystemDisplaySettings() },
@@ -203,15 +204,18 @@ private fun BatteryCard(ui: DeviceViewModel.UiState) {
 @Composable
 private fun BrightnessCard(
     pct: Int,
+    systemPct: Int,
     onChange: (Int) -> Unit,
     onReleaseToSystem: () -> Unit,
     onOpenSystem: () -> Unit,
 ) {
-    // pct < 0 means we're following the system brightness (no
-    // per-window override applied). The slider shows that as a faded
-    // mid-position with a hint, and a separate FOLLOW SYSTEM chip
-    // releases the override after the user has dragged it.
+    // pct < 0 means we're following the system brightness (no per-window override
+    // applied). In that case the slider position is the SYSTEM brightness — read
+    // from Settings.System.SCREEN_BRIGHTNESS — so the slider reflects what the
+    // user is actually looking at instead of snapping to 50% the moment they touch
+    // it. RESET releases the override after the user has dragged it.
     val isOverride = pct >= 0
+    val sliderPosition = if (isOverride) pct else systemPct
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -224,18 +228,25 @@ private fun BrightnessCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "SCREEN BRIGHTNESS", style = R1.labelMicro, color = R1.InkSoft, modifier = Modifier.weight(1f))
             Text(
-                text = if (isOverride) "${pct}%" else "FOLLOW SYSTEM",
+                // FOLLOW SYSTEM mode shows the SYSTEM value alongside the label so
+                // the user can read the current brightness without dragging the
+                // slider into override mode just to find out.
+                text = if (isOverride) "${pct}%" else "FOLLOW SYSTEM · ${systemPct}%",
                 style = R1.body.copy(fontWeight = FontWeight.SemiBold),
                 color = if (isOverride) R1.AccentWarm else R1.InkSoft,
             )
         }
         Slider(
-            value = (if (isOverride) pct else 50).toFloat(),
+            value = sliderPosition.toFloat(),
             onValueChange = { onChange(it.toInt()) },
             valueRange = 0f..100f,
             colors = SliderDefaults.colors(
-                thumbColor = R1.AccentWarm,
-                activeTrackColor = R1.AccentWarm,
+                // Muted thumb + track when the slider is reflecting system brightness
+                // (no override active) so it doesn't look like the user is in control.
+                // The moment they drag, it switches into override mode and the warm
+                // accent comes back through the recomposition.
+                thumbColor = if (isOverride) R1.AccentWarm else R1.InkSoft,
+                activeTrackColor = if (isOverride) R1.AccentWarm else R1.InkSoft,
                 inactiveTrackColor = R1.Hairline,
             ),
         )

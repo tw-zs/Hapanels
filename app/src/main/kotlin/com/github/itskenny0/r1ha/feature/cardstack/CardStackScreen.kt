@@ -2384,6 +2384,11 @@ private fun ChromeRow(
         // 'ask HA about something' a single-tap action rather than a
         // Settings → Assist navigation. 32 dp tap target so it fits
         // next to the pencil + gear without crowding the right cluster.
+        // Custom-drawn glyph (not the 🎤 emoji) so the visual weight
+        // matches HamburgerGlyph on the opposite side of the chrome —
+        // emoji rendering varies by Android version and bled into a
+        // colourised pictograph that read soft against the monochrome
+        // chrome.
         Box(
             modifier = Modifier
                 .size(32.dp)
@@ -2391,7 +2396,7 @@ private fun ChromeRow(
                 .r1Pressable(onOpenAssist),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "🎤", style = R1.labelMicro, color = R1.InkSoft)
+            com.github.itskenny0.r1ha.ui.components.AssistMicGlyph(size = 16.dp)
         }
         Spacer(Modifier.width(2.dp))
 

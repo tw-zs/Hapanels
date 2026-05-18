@@ -218,9 +218,10 @@ fun AssistScreen(
                 Text(text = "↺", style = R1.labelMicro, color = R1.InkSoft)
             }
             Spacer(Modifier.width(4.dp))
-            // 🎤 voice button — fires the system speech recognizer.
-            // Disabled while a send is in flight so a quick voice tap
-            // doesn't queue a second prompt over the first.
+            // Voice button — fires the system speech recognizer. Disabled
+            // while a send is in flight so a quick voice tap doesn't queue a
+            // second prompt over the first. Same hand-drawn AssistMicGlyph as
+            // the chrome-row mic so the two surfaces agree on the iconography.
             Box(
                 modifier = Modifier
                     .clip(R1.ShapeS)
@@ -249,7 +250,7 @@ fun AssistScreen(
                     })
                     .padding(horizontal = 8.dp, vertical = 8.dp),
             ) {
-                Text(text = "🎤", style = R1.labelMicro, color = R1.InkSoft)
+                com.github.itskenny0.r1ha.ui.components.AssistMicGlyph(size = 14.dp)
             }
             Spacer(Modifier.width(6.dp))
             Box(modifier = Modifier.weight(1f)) {

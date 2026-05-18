@@ -52,6 +52,10 @@ fun EnergyScreen(
     settings: SettingsRepository,
     wheelInput: WheelInput,
     onBack: () -> Unit,
+    /** Tap a TOP CONSUMERS row → open the full-screen History view for
+     *  that sensor's entity_id. Default no-op so previews / tests don't
+     *  need to thread it through. */
+    onOpenHistory: (entityId: String) -> Unit = {},
 ) {
     val vm: EnergyViewModel = viewModel(factory = EnergyViewModel.factory(haRepository))
     val ui by vm.ui.collectAsState()
@@ -123,7 +127,7 @@ fun EnergyScreen(
                 Spacer(Modifier.size(4.dp))
                 Text(text = "TOP CONSUMERS", style = R1.labelMicro, color = R1.InkSoft)
                 for (c in ui.topConsumers.take(5)) {
-                    ConsumerRow(c)
+                    ConsumerRow(c, onClick = { onOpenHistory(c.entityId) })
                 }
             } else if (!ui.loading && ui.error == null && ui.currentDrawW == null) {
                 // Empty state when no device_class=power sensors are
@@ -196,13 +200,17 @@ private fun BigStatTile(
 }
 
 @Composable
-private fun ConsumerRow(c: EnergyViewModel.Consumer) {
+private fun ConsumerRow(c: EnergyViewModel.Consumer, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
             .border(1.dp, R1.Hairline, R1.ShapeS)
+            // Tap a consumer → open its history. Lets the user investigate
+            // 'what's drawing 1.2 kW right now?' without leaving the app
+            // to dig through HA's web UI.
+            .r1Pressable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

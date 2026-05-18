@@ -1,0 +1,1 @@
+Native Home Assistant client for the Rabbit R1, scales to phones and tablets.

@@ -81,7 +81,16 @@ fun AboutScreen(
                     },
                 )
             }
-            item { UpdaterRow() }
+            // Self-updater is omitted on the F-Droid flavour — F-Droid users get
+            // update notifications from the F-Droid client and shouldn't see a
+            // duplicate in-app affordance. The github flavour keeps it so direct-
+            // install users (downloading the APK from GitHub Releases) have a
+            // discoverable update path. Gated at composition time so the gradle
+            // R8 pass drops the entire UpdaterRow + AppUpdater wiring from the
+            // F-Droid APK rather than just hiding it at runtime.
+            if (!BuildConfig.IS_FDROID_BUILD) {
+                item { UpdaterRow() }
+            }
             // File-a-bug link — drops the user straight into the GitHub issue
             // tracker pre-filled with the app version. Lowers the friction for
             // crash reports + UX feedback; without it, users have to type the

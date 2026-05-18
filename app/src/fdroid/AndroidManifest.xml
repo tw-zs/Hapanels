@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    F-Droid flavour manifest overlay.
+
+    The default (github) manifest declares REQUEST_INSTALL_PACKAGES so the in-app
+    AppUpdater can hand a downloaded APK to Android's PackageInstaller via
+    ACTION_VIEW. The F-Droid flavour disables the AppUpdater UI entirely (see
+    AboutScreen.kt — UpdaterRow is gated on !BuildConfig.IS_FDROID_BUILD), so the
+    permission is unused. F-Droid's anti-feature scanner flags
+    REQUEST_INSTALL_PACKAGES as a potential surface for sideload-driven self-update,
+    and removing it here keeps the F-Droid build's permission list minimal.
+
+    tools:node="remove" tells the manifest merger to drop the matching declaration
+    from the main manifest when building the fdroid flavour. The merger needs the
+    xmlns:tools declaration on the root <manifest> element to recognise the
+    attribute.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission
+        android:name="android.permission.REQUEST_INSTALL_PACKAGES"
+        tools:node="remove" />
+
+</manifest>

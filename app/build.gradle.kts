@@ -70,6 +70,33 @@ android {
         }
     }
 
+    // Two product flavours so the F-Droid build can omit the in-app self-updater
+    // (and the REQUEST_INSTALL_PACKAGES permission that backs it) without a separate
+    // branch. F-Droid users get updates from the F-Droid client; folding the same
+    // affordance into the github flavour would duplicate notifications and the
+    // permission would be flagged in F-Droid's anti-feature scanner.
+    //
+    //   github  → default; ships to GitHub Releases with self-updater enabled.
+    //   fdroid  → strips the updater UI and drops REQUEST_INSTALL_PACKAGES via a
+    //             flavour-specific manifest overlay at app/src/fdroid/AndroidManifest.xml.
+    //
+    // applicationId stays identical across flavours so the two builds register as the
+    // SAME app from Android's POV — switching distribution requires a sign-out then
+    // sign-in only if the signatures differ (they do for f-droid.org's main repo
+    // because F-Droid signs with their own key; they don't for IzzyOnDroid, which
+    // re-publishes the github-flavour APK signed with our key).
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "IS_FDROID_BUILD", "false")
+        }
+        create("fdroid") {
+            dimension = "distribution"
+            buildConfigField("boolean", "IS_FDROID_BUILD", "true")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

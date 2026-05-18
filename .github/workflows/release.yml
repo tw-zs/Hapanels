@@ -67,16 +67,28 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build APK
+      - name: Build APKs (both flavours)
         env:
           APP_VERSION_CODE: ${{ steps.version.outputs.version_code }}
           APP_VERSION_NAME: ${{ steps.version.outputs.version_name }}
-        run: ./gradlew :app:assembleDebug
+        # Two product flavours land in this workflow:
+        #   - github  → default; ships with the in-app self-updater (the APK this
+        #               same workflow attaches to GitHub Releases and the in-app
+        #               updater downloads on tap).
+        #   - fdroid  → strips the self-updater UI and the REQUEST_INSTALL_PACKAGES
+        #               permission. Mirror-ready for IzzyOnDroid and f-droid.org so
+        #               users on those catalogs get a single update path through the
+        #               catalog client.
+        # Both share the same applicationId / versionCode / versionName so they
+        # register as the same Android app.
+        run: ./gradlew :app:assembleGithubDebug :app:assembleFdroidDebug
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
-          mv app/build/outputs/apk/debug/app-debug.apk \
+          mv app/build/outputs/apk/github/debug/app-github-debug.apk \
              "r1ha-${{ steps.version.outputs.version_name }}.apk"
+          mv app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk \
+             "r1ha-fdroid-${{ steps.version.outputs.version_name }}.apk"
 
       - name: Generate release notes
         id: notes
@@ -99,4 +111,6 @@ jobs:
           body: ${{ steps.notes.outputs.notes }}
           draft: false
           prerelease: false
-          files: r1ha-${{ steps.version.outputs.version_name }}.apk
+          files: |
+            r1ha-${{ steps.version.outputs.version_name }}.apk
+            r1ha-fdroid-${{ steps.version.outputs.version_name }}.apk

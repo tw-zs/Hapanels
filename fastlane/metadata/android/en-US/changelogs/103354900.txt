@@ -1,0 +1,8 @@
+Bug fixes:
+* Album art now authenticates against HA's media-proxy (covers no longer blank).
+* REST heartbeat falls back when the WebSocket goes silent (handles reverse-proxy event drops / Cloudflare idle-close).
+* Card padding tracks actual status-bar / nav-bar insets across all Android devices.
+
+Polish:
+* Hand-drawn glyphs replace colour emojis in the chrome, Assist, and Device screens.
+* About > Connection now shows a 'Last event Ns ago' diagnostic.

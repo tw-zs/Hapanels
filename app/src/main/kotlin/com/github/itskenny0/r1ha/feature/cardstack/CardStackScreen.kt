@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PageSize
@@ -1100,17 +1103,25 @@ private fun PageDeck(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // ChromeRow consumes the status-bar inset via systemBarsPadding,
+        // so the actual chrome+tabstrip height on screen is
+        //     statusBarHeight + chromeContent (~44 dp) + tabStripHeight (~36 dp).
+        // The previous build hard-coded 100 dp which assumed the R1's
+        // ~20 dp status bar; on phones with taller bars (notches,
+        // pinhole cameras, Pixel-7-class hardware) the card overlapped
+        // the tab strip by 10+ dp and the right-edge VerticalTapeMeter
+        // got its top edge clipped by the same amount. Reading the
+        // actual status-bar inset and adding our chrome-content height
+        // on top keeps every device aligned correctly.
+        val statusBarTop = androidx.compose.foundation.layout.WindowInsets.statusBars
+            .asPaddingValues().calculateTopPadding()
+        val pagerTopPadding = statusBarTop + 80.dp
         VerticalPager(
             state = pagerState,
             // No peek — off-screen cards are hidden entirely until the user starts dragging.
             // During the drag, each page's graphicsLayer (below) gives the deck an overlap
             // with a big drop shadow.
-            //
-            // Top padding sized for ChromeRow (~60 dp incl. statusBars) + TabStrip (~36 dp).
-            // Pre-tabs this was 72 dp; the strip below ChromeRow eats into it, so the top
-            // edge of the card touched / overlapped the tab chips. Bumped to 100 dp so the
-            // card sits clearly under the tab strip with a few pixels of breathing room.
-            contentPadding = PaddingValues(top = 100.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(top = pagerTopPadding, bottom = 24.dp),
             pageSize = PageSize.Fill,
             pageSpacing = 0.dp,
             modifier = Modifier.fillMaxSize(),

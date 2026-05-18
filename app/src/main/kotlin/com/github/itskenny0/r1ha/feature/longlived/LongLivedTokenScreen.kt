@@ -128,17 +128,22 @@ fun LongLivedTokenScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 R1Button(
                     text = if (saving) "SAVING…" else "SAVE & CONNECT",
-                    enabled = !saving && url.isNotBlank() && token.isNotBlank() && url.startsWith("http"),
+                    // Mirror the Onboarding form's accept-any-shaped-URL policy:
+                    // the normaliser below turns a bare host into a full URL, so
+                    // the button is enabled as soon as both fields have content.
+                    enabled = !saving && url.isNotBlank() && token.isNotBlank(),
                     onClick = {
                         saving = true
                         error = null
                         scope.launch {
                             try {
-                                val normalisedUrl = url.trim().trimEnd('/')
-                                require(normalisedUrl.startsWith("http://") ||
-                                    normalisedUrl.startsWith("https://")) {
-                                    "URL must start with http:// or https://"
-                                }
+                                // Same normaliser the Onboarding flow uses: pick http://
+                                // vs https:// from the host shape, default port to 8123
+                                // for LAN targets, leave explicit-protocol URLs alone.
+                                val normalisedUrl =
+                                    com.github.itskenny0.r1ha.feature.onboarding
+                                        .normalizeServerUrl(url)
+                                require(normalisedUrl.isNotBlank()) { "Empty URL" }
                                 val newServer = ServerConfig(url = normalisedUrl, haVersion = null)
                                 settings.update { it.copy(server = newServer) }
                                 tokens.save(

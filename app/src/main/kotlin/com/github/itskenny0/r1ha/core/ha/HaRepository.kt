@@ -23,6 +23,16 @@ interface HaRepository {
      * backoff window.
      */
     val reconnectNextAttemptAtMillis: StateFlow<Long?>
+
+    /**
+     * Wall-clock millis when the last useful HA signal arrived — either a state_changed
+     * event applied from the WebSocket or a successful REST fallback poll. 0 means
+     * "nothing yet this session". UI consumers (currently AboutScreen → CONNECTION
+     * diagnostic) read this to surface "WS dropped 47 s ago" when a reverse-proxy
+     * misconfiguration silently breaks the WS event stream — the connection-state dot
+     * stays green so the user has no other signal that something is wrong.
+     */
+    val lastEventAtMillis: StateFlow<Long>
     /** Fire a service call. Coalesces back-to-back calls per entity via internal debounce. */
     suspend fun call(call: ServiceCall): Result<Unit>
     /** One-shot REST GET /api/states equivalent, used by FavoritesPicker. */

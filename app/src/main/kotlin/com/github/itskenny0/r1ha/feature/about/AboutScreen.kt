@@ -121,6 +121,15 @@ fun AboutScreen(
                     value = describeConnection(connection),
                 )
             }
+            item {
+                // 'Last event' diagnostic — surfaces the heartbeat the repository tracks
+                // for its REST-fallback poller. When the user's WS is half-broken (the
+                // connection upgrades cleanly but state_changed events get dropped by a
+                // misconfigured reverse proxy), 'WebSocket' above still reads Connected,
+                // but cards update slowly. The seconds-since-last-event number tells
+                // them which case they're in.
+                LastEventRow(haRepository)
+            }
             item { InfoRow("Favourites", appSettings.favorites.size.toString(), mono = true) }
             item { EntitiesDiagnosticRow(haRepository) }
 
@@ -170,6 +179,59 @@ fun AboutScreen(
             }
             item { Spacer(Modifier.height(48.dp)) }
         }
+    }
+}
+
+/**
+ * 'Last event' diagnostic — surfaces the [HaRepository.lastEventAtMillis] heartbeat the
+ * repository uses to decide whether the REST fallback poller should fire. Renders as a
+ * standard row with a 1 s ticker so the seconds-since count stays current as the user
+ * watches the screen, and the value is colour-coded by freshness:
+ *   - < 30 s ago: muted (everything healthy)
+ *   - 30 s – 2 min: amber (heartbeat poller is engaging)
+ *   - > 2 min:    red (REST fallback is failing too — server unreachable)
+ *
+ * 'Just now' / 'Never' / 'N s ago' / 'N min ago' read better than a raw epoch number
+ * for the user who's trying to figure out whether the WS is healthy.
+ */
+@Composable
+private fun LastEventRow(haRepository: HaRepository) {
+    val lastAt by haRepository.lastEventAtMillis.collectAsStateWithLifecycle()
+    // Tick every second so the elapsed seconds count keeps refreshing while the screen
+    // is open. Avoids subscribing to a wall-clock StateFlow we don't have; a 1 s delay
+    // loop is cheap and stops as soon as the composable leaves composition.
+    val now = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis())
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            now.longValue = System.currentTimeMillis()
+            kotlinx.coroutines.delay(1_000L)
+        }
+    }
+    val elapsedSec = if (lastAt <= 0L) -1L else ((now.longValue - lastAt) / 1000L).coerceAtLeast(0L)
+    val text = when {
+        lastAt <= 0L -> "Never"
+        elapsedSec < 2L -> "Just now"
+        elapsedSec < 60L -> "$elapsedSec s ago"
+        elapsedSec < 3600L -> "${elapsedSec / 60} min ago"
+        else -> "${elapsedSec / 3600} h ago"
+    }
+    val tint = when {
+        elapsedSec < 0L -> R1.InkMuted
+        elapsedSec < 30L -> R1.InkSoft
+        elapsedSec < 120L -> R1.StatusAmber
+        else -> R1.StatusRed
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Last event", style = R1.bodyEmph, color = R1.Ink)
+        Spacer(Modifier.weight(1f))
+        Text(text = text, style = R1.body, color = tint)
     }
 }
 

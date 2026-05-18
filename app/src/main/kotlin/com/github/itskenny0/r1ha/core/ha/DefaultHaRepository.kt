@@ -105,8 +105,14 @@ class DefaultHaRepository(
      * heartbeat tick after start fires a REST poll if the WS hasn't connected yet — that
      * way a broken-WS-but-working-REST reverse-proxy setup paints cards within ~30 s of
      * launch instead of sitting blank indefinitely.
+     *
+     * Exposed through the [HaRepository.lastEventAtMillis] StateFlow so the About screen
+     * can render a 'last WS event N seconds ago' diagnostic — useful for users who can
+     * see the connection dot green but cards updating slowly (the reverse-proxy
+     * partial-WS case the heartbeat is designed to mitigate).
      */
-    @Volatile private var lastEventAtMs: Long = 0L
+    private val _lastEventAt = MutableStateFlow(0L)
+    override val lastEventAtMillis: StateFlow<Long> = _lastEventAt.asStateFlow()
 
     // Key the per-call debouncer by (target, service) rather than just (target).
     // Without the service segment, rapid taps of distinct media-transport buttons
@@ -216,7 +222,7 @@ class DefaultHaRepository(
                         // doesn't fire a redundant /api/states right after a fresh
                         // Connected (the seedCacheFromHa() call below already handles
                         // the initial paint).
-                        lastEventAtMs = System.currentTimeMillis()
+                        _lastEventAt.value = System.currentTimeMillis()
                         // Connected — there's nothing scheduled, so the UI countdown should
                         // stop. The pendingReconnect job, if any, has already fired and
                         // self-cleared this; this assignment is the belt-and-braces case
@@ -365,7 +371,7 @@ class DefaultHaRepository(
                     // AuthLost / Idle won't be helped by polling — REST uses the same
                     // access token that just got rejected, and Idle means no URL yet.
                     if (st is ConnectionState.AuthLost || st is ConnectionState.Idle) continue
-                    val silentFor = System.currentTimeMillis() - lastEventAtMs
+                    val silentFor = System.currentTimeMillis() - _lastEventAt.value
                     if (silentFor < HEARTBEAT_SILENCE_THRESHOLD_MS) continue
                     R1Log.i(
                         "HaRepo.heartbeat",
@@ -568,8 +574,9 @@ class DefaultHaRepository(
         )
         cache.update { it + (id to newState) }
         // Heartbeat: any successfully-applied event means the WS path is alive. The
-        // poller in [start] reads this to decide whether REST fallback is needed.
-        lastEventAtMs = System.currentTimeMillis()
+        // poller in [start] reads this to decide whether REST fallback is needed; the
+        // About screen reads it to surface 'last event N seconds ago'.
+        _lastEventAt.value = System.currentTimeMillis()
     }
 
     /**
@@ -1134,7 +1141,7 @@ class DefaultHaRepository(
      *     Failures still log through R1Log so they're recoverable from the in-app log
      *     viewer.
      *
-     * Note we still update lastEventAtMs on success so a stretch of working REST polls
+     * Note we still update _lastEventAt on success so a stretch of working REST polls
      * keeps the heartbeat from re-firing every tick — the WS being broken doesn't mean
      * the REST cache needs continual refresh; one good poll per 30 s is plenty.
      */
@@ -1156,7 +1163,7 @@ class DefaultHaRepository(
                     R1Log.i("HaRepo.heartbeat", "REST refresh updated ${byId.size}/${favIds.size} favourites")
                     // The successful poll counts as a useful signal — back off until the
                     // next genuine silence window.
-                    lastEventAtMs = System.currentTimeMillis()
+                    _lastEventAt.value = System.currentTimeMillis()
                 } else {
                     R1Log.w("HaRepo.heartbeat", "REST returned ${all.size} entities; none matched favourites")
                 }

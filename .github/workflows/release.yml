@@ -67,7 +67,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build APKs (both flavours)
+      - name: Build APKs (both flavours, release type)
         env:
           APP_VERSION_CODE: ${{ steps.version.outputs.version_code }}
           APP_VERSION_NAME: ${{ steps.version.outputs.version_name }}
@@ -81,13 +81,21 @@ jobs:
         #               catalog client.
         # Both share the same applicationId / versionCode / versionName so they
         # register as the same Android app.
-        run: ./gradlew :app:assembleGithubDebug :app:assembleFdroidDebug
+        #
+        # We build the RELEASE variant rather than debug so R8 minification + resource
+        # shrinking apply. The resulting APK is ~5 MB instead of ~70 MB, which keeps
+        # us well under IzzyOnDroid's 30 MB cap. The release signingConfig falls back
+        # to the committed debug.keystore when no release keystore is wired through
+        # local.properties (the case for CI), so the signature stays consistent with
+        # the existing user base from prior tag builds — direct-install upgrades work
+        # without uninstall.
+        run: ./gradlew :app:assembleGithubRelease :app:assembleFdroidRelease
 
       - name: Rename APKs
         run: |
-          mv app/build/outputs/apk/github/debug/app-github-debug.apk \
+          mv app/build/outputs/apk/github/release/app-github-release.apk \
              "r1ha-${{ steps.version.outputs.version_name }}.apk"
-          mv app/build/outputs/apk/fdroid/debug/app-fdroid-debug.apk \
+          mv app/build/outputs/apk/fdroid/release/app-fdroid-release.apk \
              "r1ha-fdroid-${{ steps.version.outputs.version_name }}.apk"
 
       - name: Generate release notes

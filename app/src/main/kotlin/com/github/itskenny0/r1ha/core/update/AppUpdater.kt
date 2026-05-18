@@ -72,8 +72,18 @@ class AppUpdater(
                 R1Log.i("Updater.check", "already on latest (${BuildConfig.VERSION_CODE} ≥ $versionCode)")
                 return@withContext null
             }
-            val apkAsset = release.assets.firstOrNull { it.name.endsWith(".apk") }
-                ?: return@withContext null
+            // Each release now ships two APKs: the github-flavour one (with the
+            // self-updater enabled — that's what we want here) named
+            //   r1ha-YYYY.MM.DD.HHmm.apk
+            // and the fdroid-flavour one (no self-updater, fewer permissions) named
+            //   r1ha-fdroid-YYYY.MM.DD.HHmm.apk
+            // The in-app updater MUST pick the github asset, otherwise an updating
+            // user would land on the fdroid build and lose the self-updater on their
+            // next install. Filter `-fdroid-` out explicitly rather than relying on
+            // alphabetical order in the assets array.
+            val apkAsset = release.assets.firstOrNull {
+                it.name.endsWith(".apk") && !it.name.contains("-fdroid-")
+            } ?: return@withContext null
             UpdateInfo(
                 versionCode = versionCode,
                 versionName = release.name ?: release.tag_name,

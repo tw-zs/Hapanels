@@ -239,6 +239,24 @@ private fun UrlEntryForm(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Live preview of what the normaliser will turn the typed URL into.
+        // Surfaces the protocol-inference and default-port heuristic before the
+        // user taps CONNECT so 'why is it adding :8123?' has an immediate answer
+        // and a typo'd host doesn't probe for two seconds before failing. Only
+        // shown when the preview differs from the raw input (i.e. the normaliser
+        // actually did something).
+        val normalised = remember(urlText) {
+            com.github.itskenny0.r1ha.feature.onboarding.normalizeServerUrl(urlText)
+        }
+        if (normalised.isNotBlank() && normalised != urlText.trim().trimEnd('/')) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Will probe: $normalised",
+                style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
+                color = com.github.itskenny0.r1ha.core.theme.R1.InkSoft,
+            )
+        }
+
         if (error != null) {
             Spacer(Modifier.height(8.dp))
             Text(

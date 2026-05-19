@@ -11,9 +11,15 @@ import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.ha.ServiceCall
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 
@@ -77,37 +83,44 @@ class SearchViewModel(
         val error: String? = null,
     )
 
-    /** Filtered subset matching [query] AND the active [bucket]. Empty
-     *  query with ALL bucket returns empty list (avoid rendering the
-     *  entire entity registry on entry); query OR bucket non-empty
-     *  produces matches.*/
-    val results: List<EntityState>
-        get() {
-            val s = _ui.value
-            val q = s.query.trim().lowercase()
-            if (q.isBlank() && s.bucket == Bucket.ALL) return emptyList()
-            return s.all.filter { e ->
-                val matchesQuery = if (q.isBlank()) true else (
-                    e.friendlyName.lowercase().contains(q) ||
-                        e.id.value.lowercase().contains(q) ||
-                        (e.area?.lowercase()?.contains(q) ?: false)
-                    )
-                val matchesBucket = s.bucket == Bucket.ALL || bucketOf(e.id.domain) == s.bucket
-                matchesQuery && matchesBucket
-            }
-                .sortedWith(
-                    compareByDescending<EntityState> {
-                        q.isNotBlank() && (
-                            it.friendlyName.lowercase().startsWith(q) ||
-                                it.id.value.lowercase().substringAfter('.').startsWith(q)
-                            )
-                    }.thenBy { it.friendlyName.lowercase() },
-                )
-                .take(resultCap)
-        }
-
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
+
+    /**
+     * Filtered+sorted results derived from [ui]. Pushed to Dispatchers.Default via
+     * [flowOn] so a 2000-entity registry re-filters off the main thread; typing one
+     * character no longer blocks Compose recomposition while we iterate everything.
+     * stateIn keeps the latest value warm so the screen reads it synchronously.
+     */
+    val results: StateFlow<List<EntityState>> =
+        _ui.map { s -> filterAndSort(s) }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private fun filterAndSort(s: UiState): List<EntityState> {
+        val q = s.query.trim().lowercase()
+        if (q.isBlank() && s.bucket == Bucket.ALL) return emptyList()
+        return s.all.asSequence().filter { e ->
+            val matchesQuery = if (q.isBlank()) true else (
+                e.friendlyName.lowercase().contains(q) ||
+                    e.id.value.lowercase().contains(q) ||
+                    (e.area?.lowercase()?.contains(q) ?: false)
+                )
+            val matchesBucket = s.bucket == Bucket.ALL || bucketOf(e.id.domain) == s.bucket
+            matchesQuery && matchesBucket
+        }
+            .sortedWith(
+                compareByDescending<EntityState> {
+                    q.isNotBlank() && (
+                        it.friendlyName.lowercase().startsWith(q) ||
+                            it.id.value.lowercase().substringAfter('.').startsWith(q)
+                        )
+                }.thenBy { it.friendlyName.lowercase() },
+            )
+            .take(resultCap)
+            .toList()
+    }
 
     fun refresh() {
         viewModelScope.launch {

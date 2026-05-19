@@ -126,7 +126,11 @@ class DashboardViewModel(
     val ui: StateFlow<UiState> = _ui
 
     fun refresh() {
-        viewModelScope.launch {
+        // Network fan-out runs on Default but the post-await assembly (JSON walking,
+        // Instant parsing, sorting) is non-trivial; keep it off Main so a refresh
+        // doesn't jank the dashboard scroll. viewModelScope's default is Main, hence
+        // the explicit withContext.
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             _ui.value = _ui.value.copy(loading = true, error = null)
             try {
                 val weatherJob = async { haRepository.listRawEntitiesByDomain("weather") }

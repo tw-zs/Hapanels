@@ -617,10 +617,16 @@ fun CardStackScreen(
                     // optimistic map identity means we only re-map when
                     // either actually changes; the no-optimistic case
                     // returns the existing list reference verbatim.
+                    val isActive = page.id == state.activePageId
+                    // Only the active page shows the wheel-driven optimistic overrides; peek
+                    // neighbours never receive wheel events, so paying the per-detent re-map
+                    // cost on them just churns recompositions of cards the user isn't even
+                    // touching. Gating saves N-cards re-allocation × 2 peek neighbours per
+                    // wheel detent during sustained spins (R1's perf-critical path).
                     val pageCards = androidx.compose.runtime.remember(
-                        pageCardsRaw, state.optimisticPercents,
+                        pageCardsRaw, if (isActive) state.optimisticPercents else null,
                     ) {
-                        if (state.optimisticPercents.isEmpty()) {
+                        if (!isActive || state.optimisticPercents.isEmpty()) {
                             pageCardsRaw
                         } else {
                             pageCardsRaw.map { card ->
@@ -634,7 +640,6 @@ fun CardStackScreen(
                             }
                         }
                     }
-                    val isActive = page.id == state.activePageId
                     if (pageCards.isEmpty()) {
                         val reconnectAt by haRepository.reconnectNextAttemptAtMillis
                             .collectAsStateWithLifecycle()

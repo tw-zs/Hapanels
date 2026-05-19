@@ -390,10 +390,14 @@ private fun CameraDetailOverlay(
                     Text(text = "Loading…", style = R1.body, color = R1.InkMuted)
                 }
             } else {
+                // Use the available vertical space rather than locking to 16:9 — portrait
+                // cameras (Reolink doorbells, baby monitors) otherwise waste ~70% of the
+                // overlay below the image strip. CameraSnapshot still ContentScale.Fit's the
+                // bitmap inside this box so non-16:9 sources letterbox cleanly.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
+                        .weight(1f)
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                         .clip(R1.ShapeS)
                         .border(1.dp, R1.Hairline, R1.ShapeS),

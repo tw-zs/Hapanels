@@ -75,6 +75,7 @@ fun SearchScreen(
 ) {
     val vm: SearchViewModel = viewModel(factory = SearchViewModel.factory(haRepository, settings))
     val ui by vm.ui.collectAsState()
+    val results by results.collectAsState()
     val listState = rememberLazyListState()
     val focus = remember { FocusRequester() }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -205,7 +206,7 @@ fun SearchScreen(
                     )
                 }
             }
-            vm.results.isEmpty() && ui.query.isBlank() &&
+            results.isEmpty() && ui.query.isBlank() &&
                 ui.bucket == SearchViewModel.Bucket.ALL -> Box(
                 modifier = Modifier.fillMaxSize().padding(22.dp),
                 contentAlignment = Alignment.Center,
@@ -224,7 +225,7 @@ fun SearchScreen(
                     )
                 }
             }
-            vm.results.isEmpty() -> Box(
+            results.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(22.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -272,13 +273,13 @@ fun SearchScreen(
                 ) {
                     item("__count_header") {
                         Text(
-                            text = "${vm.results.size} result${if (vm.results.size == 1) "" else "s"}",
+                            text = "${results.size} result${if (results.size == 1) "" else "s"}",
                             style = R1.labelMicro,
                             color = R1.InkMuted,
                             modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                         )
                     }
-                    items(items = vm.results, key = { it.id.value }) { entity ->
+                    items(items = results, key = { it.id.value }) { entity ->
                         SearchResultRow(
                             entity,
                             isFavorite = entity.id.value in activeFavourites,

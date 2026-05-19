@@ -129,7 +129,12 @@ fun NotificationsScreen(
             }
         }
         when {
-            ui.loading -> Box(
+            // Only show the centred spinner on the first load, when there's literally
+            // nothing else to render. Subsequent refreshes keep the existing list +
+            // DISMISS ALL row visible and rely on the pull-to-refresh spinner instead,
+            // so the user doesn't lose scroll position or bulk-action access during a
+            // routine 30-second auto-refresh.
+            ui.loading && ui.notifications.isEmpty() && ui.error == null -> Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {

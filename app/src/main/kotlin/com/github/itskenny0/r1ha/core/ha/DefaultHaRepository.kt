@@ -820,7 +820,7 @@ class DefaultHaRepository(
     override suspend fun listAllEntities(): Result<List<EntityState>> = withContext(Dispatchers.IO) {
         runCatching {
             val s = settings.settings.first()
-            val server = s.server ?: error("Server URL not configured — sign out & reconnect from Settings.")
+            val server = s.server ?: error("Server URL not configured. Sign out & reconnect from Settings.")
             // Pre-emptive refresh — if the cached access token is within 60 s of
             // expiry, swap it before issuing the call. Skips the round-trip-then-401
             // dance in the common case where the app's been idle ~30 minutes and the
@@ -838,9 +838,9 @@ class DefaultHaRepository(
                 if (refresher?.forceRefresh() == true) {
                     R1Log.i("HaRepo.listAll", "401 → refreshed access token; retrying once")
                     fetchStatesBody(server.url)
-                        ?: error("Home Assistant returned HTTP 401 for /api/states even after refresh — sign out & reconnect.")
+                        ?: error("Home Assistant returned HTTP 401 for /api/states even after refresh. Sign out & reconnect.")
                 } else {
-                    error("Home Assistant returned HTTP 401 for /api/states — sign out & reconnect.")
+                    error("Home Assistant returned HTTP 401 for /api/states. Sign out & reconnect.")
                 }
             }
             // Parse the response as a List<JsonElement> first, then decode each row
@@ -1007,7 +1007,7 @@ class DefaultHaRepository(
                         fetchStatesBody(server.url)
                             ?: error("Home Assistant returned HTTP 401 for /api/states even after refresh.")
                     } else {
-                        error("Home Assistant returned HTTP 401 for /api/states — sign out & reconnect.")
+                        error("Home Assistant returned HTTP 401 for /api/states. Sign out & reconnect.")
                     }
                 }
                 // Pull just the entity_id from each row by inspecting the raw JSON
@@ -1037,7 +1037,7 @@ class DefaultHaRepository(
      * both.
      */
     private suspend fun fetchHistoryBody(url: String): String? = withContext(Dispatchers.IO) {
-        val t = tokens.load() ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+        val t = tokens.load() ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val req = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer ${t.accessToken}")
@@ -1057,7 +1057,7 @@ class DefaultHaRepository(
      * picks up the newly-rotated value.
      */
     private suspend fun fetchStatesBody(serverUrl: String): String? = withContext(Dispatchers.IO) {
-        val t = tokens.load() ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+        val t = tokens.load() ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val req = Request.Builder()
             .url("${serverUrl.trimEnd('/')}/api/states")
             .header("Authorization", "Bearer ${t.accessToken}")
@@ -1200,9 +1200,9 @@ class DefaultHaRepository(
                     if (refresher?.forceRefresh() == true) {
                         R1Log.i("HaRepo.fetchHistory", "401 → refreshed access token; retrying once")
                         fetchHistoryBody(url)
-                            ?: error("Home Assistant returned HTTP 401 for /api/history even after refresh — sign out & reconnect.")
+                            ?: error("Home Assistant returned HTTP 401 for /api/history even after refresh. Sign out & reconnect.")
                     } else {
-                        error("Home Assistant returned HTTP 401 for /api/history — sign out & reconnect.")
+                        error("Home Assistant returned HTTP 401 for /api/history. Sign out & reconnect.")
                     }
                 }
                 // HA returns a JSON array of arrays — outermost level is one entry per
@@ -1582,7 +1582,7 @@ class DefaultHaRepository(
      *  (config, error_log). */
     private suspend fun simpleAuthedGet(url: String): String? = withContext(Dispatchers.IO) {
         val t = tokens.load()
-            ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+            ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val req = Request.Builder()
             .url(url)
             .header("Authorization", "Bearer ${t.accessToken}")
@@ -1612,7 +1612,7 @@ class DefaultHaRepository(
                 fetchStatesBody(server.url)
                     ?: error("Home Assistant returned HTTP 401 for /api/states even after refresh.")
             } else {
-                error("Home Assistant returned HTTP 401 for /api/states — sign out & reconnect.")
+                error("Home Assistant returned HTTP 401 for /api/states. Sign out & reconnect.")
             }
         }
         val rowsJson = listStatesJson.decodeFromString<List<kotlinx.serialization.json.JsonElement>>(body)
@@ -1680,7 +1680,7 @@ class DefaultHaRepository(
         payload: kotlinx.serialization.json.JsonObject,
     ): String? = withContext(Dispatchers.IO) {
         val t = tokens.load()
-            ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+            ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val mediaType = "application/json".toMediaTypeOrNull()
         val req = Request.Builder()
             .url(url)
@@ -1741,7 +1741,7 @@ class DefaultHaRepository(
         payload: kotlinx.serialization.json.JsonObject,
     ): String? = withContext(Dispatchers.IO) {
         val t = tokens.load()
-            ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+            ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val mediaType = "application/json".toMediaTypeOrNull()
         val req = Request.Builder()
             .url(url)
@@ -1767,7 +1767,7 @@ class DefaultHaRepository(
         url: String,
         payload: kotlinx.serialization.json.JsonObject,
     ): String? = withContext(Dispatchers.IO) {
-        val t = tokens.load() ?: error("Authentication tokens missing — sign out & reconnect from Settings.")
+        val t = tokens.load() ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
         val mediaType = "application/json".toMediaTypeOrNull()
         val req = Request.Builder()
             .url(url)

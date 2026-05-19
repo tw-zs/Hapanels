@@ -73,7 +73,7 @@ class AreasViewModel(
                     runCatching {
                         val root = Json.parseToJsonElement(rendered)
                         val arr = root as? JsonArray
-                            ?: error("Unexpected template response shape — not an array")
+                            ?: error("Unexpected template response shape. Not an array")
                         val list = arr.mapNotNull { el ->
                             val obj = el as? JsonObject ?: return@mapNotNull null
                             val name = (obj["name"] as? JsonPrimitive)?.content

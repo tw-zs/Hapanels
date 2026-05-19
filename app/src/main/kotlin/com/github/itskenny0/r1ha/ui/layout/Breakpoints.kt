@@ -125,12 +125,16 @@ fun AdaptiveContent(
 
 /** Column count for grid surfaces (Cameras GRID, future favourites
  *  picker grid, etc.). R1 stays at 2 columns; phones widen to 2; tablets
- *  go to 3 so the extra horizontal space is actually used. Returning an
+ *  go to 3 so the extra horizontal space is actually used; very wide
+ *  screens (≥ 960 dp — 12" tablets in landscape) bump to 4. Returning an
  *  Int keeps call sites pleasingly terse: `columns = GridCells.Fixed(gridColumnsFor(tier))`. */
 @Composable
 @ReadOnlyComposable
-fun gridColumnsFor(tier: WidthTier = currentWidthTier()): Int = when (tier) {
-    WidthTier.R1 -> 2
-    WidthTier.PHONE -> 2
-    WidthTier.TABLET -> 3
+fun gridColumnsFor(tier: WidthTier = currentWidthTier()): Int {
+    if (tier == WidthTier.TABLET && LocalConfiguration.current.screenWidthDp >= 960) return 4
+    return when (tier) {
+        WidthTier.R1 -> 2
+        WidthTier.PHONE -> 2
+        WidthTier.TABLET -> 3
+    }
 }

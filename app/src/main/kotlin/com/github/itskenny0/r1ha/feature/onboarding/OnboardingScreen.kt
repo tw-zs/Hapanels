@@ -5,11 +5,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.verticalScroll
@@ -184,12 +186,18 @@ private fun UrlEntryForm(
         }
     }
 
-    Column(
+    androidx.compose.foundation.layout.Box(
         modifier = Modifier
             .fillMaxSize()
             .background(com.github.itskenny0.r1ha.core.theme.R1.Bg)
             .systemBarsPadding()
-            .imePadding()
+            .imePadding(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+    Column(
+        modifier = Modifier
+            .widthIn(max = 560.dp)
+            .fillMaxHeight()
             .verticalScroll(scrollState)
             .padding(horizontal = 22.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.Start,
@@ -310,4 +318,5 @@ private fun UrlEntryForm(
             }
         }
     }
+    } // centering Box
 }

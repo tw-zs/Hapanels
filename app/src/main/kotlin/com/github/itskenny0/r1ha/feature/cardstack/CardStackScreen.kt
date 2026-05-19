@@ -1401,7 +1401,7 @@ private fun EmptyState(
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
-                    text = "STILL LOADING. TAP TO RETRY",
+                    text = "STILL LOADING · TAP TO RETRY",
                     style = R1.labelMicro,
                     color = color,
                 )
@@ -2630,7 +2630,7 @@ private fun BoxScope.WheelHintOverlay(state: androidx.compose.runtime.MutableLon
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             Text(
-                text = "WHEEL DOES NOTHING HERE. SWIPE OR TAP THE PIP",
+                text = "WHEEL DOES NOTHING HERE · SWIPE OR TAP THE PIP",
                 style = R1.labelMicro,
                 color = R1.InkSoft,
             )

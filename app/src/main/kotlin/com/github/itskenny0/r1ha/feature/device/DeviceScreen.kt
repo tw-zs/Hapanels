@@ -118,7 +118,7 @@ fun DeviceScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = "LOCAL. NOT EXPOSED TO HA",
+                text = "LOCAL · NOT EXPOSED TO HA",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
             )

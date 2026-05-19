@@ -73,6 +73,9 @@ fun ScenesScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "SCENES & SCRIPTS", onBack = onBack)
+        // All content inside AdaptiveContent so action buttons, search, chips, and
+        // list all centre at 800 dp together on tablets.
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
         MasterActionsRow(
             inFlight = ui.masterActionInFlight,
             onLightsOff = { vm.allLightsOff() },
@@ -86,7 +89,6 @@ fun ScenesScreen(
             counts = ui.counts,
             onSelect = { vm.setFilter(it) },
         )
-        AdaptiveContent(modifier = Modifier.weight(1f)) {
             when {
                 ui.loading -> Box(
                     modifier = Modifier.fillMaxSize(),

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
@@ -114,9 +113,9 @@ fun HelpersScreen(
                 }
             },
         )
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         BucketChips(current = ui.bucket, counts = ui.counts, onSelect = { vm.setBucket(it) })
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
-        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading && ui.all.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -196,7 +195,6 @@ private fun BucketChips(
     val scroll = rememberScrollState()
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .horizontalScroll(scroll)
             .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -229,7 +227,6 @@ private fun BucketChips(
 private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

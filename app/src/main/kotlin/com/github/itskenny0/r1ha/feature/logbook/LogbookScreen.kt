@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -124,9 +123,9 @@ fun LogbookScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "RECENT ACTIVITY", onBack = onBack)
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
-        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -212,7 +211,6 @@ private fun WindowChips(
 ) {
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -291,7 +289,6 @@ private fun LogbookRow(
 private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

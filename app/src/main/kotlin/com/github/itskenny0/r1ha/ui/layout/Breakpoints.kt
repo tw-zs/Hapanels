@@ -1,8 +1,9 @@
 package com.github.itskenny0.r1ha.ui.layout
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -103,21 +104,25 @@ fun ResponsiveColumn(
 fun AdaptiveContent(
     modifier: Modifier = Modifier,
     maxWidth: Dp = 800.dp,
-    content: @Composable () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val tier = currentWidthTier()
     if (tier != WidthTier.TABLET) {
-        // On R1 / phones: the content fills naturally but the caller's modifier
-        // (e.g. Modifier.weight(1f)) still needs to be honoured so the composable
-        // occupies the right space in its parent Column.
-        Box(modifier = modifier.fillMaxSize()) { content() }
+        // On R1 / phones: wrap in a Column so call sites can put multiple
+        // sibling composables inside without them stacking in a Box. The
+        // caller's modifier (e.g. Modifier.weight(1f)) is honoured via the
+        // Column so the composable occupies the right space in its parent.
+        Column(modifier = modifier.fillMaxSize()) { content() }
         return
     }
+    // On tablets: centre a max-width Column. Using Column here means callers
+    // can put multiple sibling composables directly inside AdaptiveContent
+    // and have them flow vertically (same behaviour as wrapping in a Column).
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
-        Box(modifier = Modifier.widthIn(max = maxWidth).fillMaxSize()) {
+        Column(modifier = Modifier.widthIn(max = maxWidth).fillMaxHeight()) {
             content()
         }
     }

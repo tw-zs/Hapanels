@@ -80,6 +80,7 @@ fun NotificationsScreen(
             .systemBarsPadding(),
     ) {
         R1TopBar(title = "NOTIFICATIONS", onBack = onBack)
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         // Bulk DISMISS ALL — only rendered when there's at least one
         // notification to dismiss. Two-stage confirm via the armed/commit
         // pattern (single tap arms, second tap within 3 s fires) so a
@@ -182,6 +183,7 @@ fun NotificationsScreen(
                 }
             }
         }
+        } // AdaptiveContent
     }
 }
 

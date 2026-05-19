@@ -89,6 +89,7 @@ fun CalendarsScreen(
             .systemBarsPadding(),
     ) {
         R1TopBar(title = "CALENDARS", onBack = onBack)
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -141,6 +142,7 @@ fun CalendarsScreen(
                 }
             }
         }
+        } // AdaptiveContent
     }
 }
 

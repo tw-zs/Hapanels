@@ -74,6 +74,7 @@ fun PersonsScreen(
             .systemBarsPadding(),
     ) {
         R1TopBar(title = "WHO'S HOME", onBack = onBack)
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -150,6 +151,7 @@ fun PersonsScreen(
                 }
             }
         }
+        } // AdaptiveContent
     }
 }
 

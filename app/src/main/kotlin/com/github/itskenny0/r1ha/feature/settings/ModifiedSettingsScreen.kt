@@ -104,8 +104,28 @@ fun ModifiedSettingsScreen(
                     )
                 }
             }
-            itemsIndexed(modified, key = { _, it -> it.id }) { _, entry ->
-                ModifiedSettingRow(entry, current)
+            // Group entries by category, preserving the registry's overall order.
+            // The diff list now reads category-by-category, matching the layout of
+            // the parent Settings screen so the user can map each diff row to its
+            // visual neighbourhood there.
+            val grouped: List<Pair<SettingCategory, List<SettingEntry>>> =
+                modified.groupBy { it.category }
+                    .toList()
+                    .sortedBy { (category, _) ->
+                        SettingCategory.entries.indexOf(category)
+                    }
+            grouped.forEach { (category, entries) ->
+                item("__cat_${category.name}") {
+                    Text(
+                        text = category.label.uppercase(),
+                        style = R1.labelMicro,
+                        color = R1.AccentWarm,
+                        modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 2.dp),
+                    )
+                }
+                itemsIndexed(entries, key = { _, it -> it.id }) { _, entry ->
+                    ModifiedSettingRow(entry, current)
+                }
             }
         }
     }
@@ -123,14 +143,8 @@ private fun ModifiedSettingRow(entry: SettingEntry, current: AppSettings) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            // Category tag on top, label below — same visual idiom as the search
-            // result row, so users get a consistent shape across surfaces.
-            Text(
-                text = entry.category.label.uppercase(),
-                style = R1.labelMicro,
-                color = R1.AccentWarm,
-            )
-            Spacer(Modifier.width(2.dp))
+            // Category tag is on the group header now, so the row body only
+            // needs label + description.
             Text(
                 text = entry.label,
                 style = R1.body,

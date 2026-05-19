@@ -500,6 +500,9 @@ fun AppNavGraph(
                 onOpenAssist = {
                     navController.navigate(Routes.ASSIST) { launchSingleTop = true }
                 },
+                onOpenHistory = { entityId ->
+                    navController.navigate(Routes.historyRoute(entityId)) { launchSingleTop = true }
+                },
             )
         }
     }

@@ -93,6 +93,9 @@ fun ServiceCallerScreen(
                 placeholder = "homeassistant",
                 monospace = true,
                 modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+                ),
             )
             Spacer(Modifier.padding(top = 6.dp))
             FieldLabel("SERVICE")
@@ -102,6 +105,9 @@ fun ServiceCallerScreen(
                 placeholder = "check_config",
                 monospace = true,
                 modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next,
+                ),
             )
             Spacer(Modifier.padding(top = 6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -148,9 +154,11 @@ fun ServiceCallerScreen(
                 onValueChange = { vm.setData(it) },
                 placeholder = """{"entity_id":"light.kitchen"}""",
                 monospace = true,
+                singleLine = false,
+                minLines = 3,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 64.dp),
+                    .heightIn(min = 88.dp),
             )
             Spacer(Modifier.padding(top = 8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -77,6 +77,13 @@ fun DashboardScreen(
     /** Mic glyph — opens HA Assist directly. Same affordance as the
      *  card stack chrome so the action is consistent across surfaces. */
     onOpenAssist: () -> Unit = {},
+    /**
+     * Drill into a specific entity's recent state history (the same surface that
+     * Search and Recent Activity use). Today: wired from LowBatteryCard rows so
+     * tapping "sensor.kitchen_motion_battery 8%" jumps straight to that battery's
+     * history view rather than leaving the user to search for it.
+     */
+    onOpenHistory: (entityId: String) -> Unit = {},
     /** True when the back stack has at least one previous entry —
      *  the chevron-back tile renders only when this is true so the
      *  inert chevron isn't visible on the kiosk start path. */
@@ -296,7 +303,7 @@ fun DashboardScreen(
                     )
                 }
                 if (ds.showLowBattery && ui.lowBatteries.isNotEmpty()) {
-                    LowBatteryCard(ui.lowBatteries)
+                    LowBatteryCard(ui.lowBatteries, onOpenHistory = onOpenHistory)
                 }
                 // If there are notifications, surface the first N inline below
                 // the metrics row so the user sees what HA is shouting about
@@ -562,8 +569,13 @@ private fun DashboardTopBar(
 }
 
 @Composable
-private fun LowBatteryCard(entries: List<String>) {
-    // Each entry is "<entity_id>=<pct>" — split and render two-column.
+private fun LowBatteryCard(
+    entries: List<String>,
+    onOpenHistory: (entityId: String) -> Unit,
+) {
+    // Each entry is "<entity_id>=<pct>": split and render two-column. Each row is
+    // a tap target that opens the entity's history view so the user can drill into
+    // which battery is dying without scrolling Search for the entity_id.
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -582,7 +594,14 @@ private fun LowBatteryCard(entries: List<String>) {
             val idx = entry.indexOf('=')
             val id = if (idx > 0) entry.substring(0, idx) else entry
             val pct = if (idx > 0) entry.substring(idx + 1) else "?"
-            Row {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(R1.ShapeS)
+                    .r1Pressable(onClick = { onOpenHistory(id) })
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     text = id,
                     style = R1.body,

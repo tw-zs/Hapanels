@@ -59,6 +59,14 @@ fun R1TextField(
      *  attachment, preserving the original behaviour for every existing
      *  caller. */
     focusRequester: androidx.compose.ui.focus.FocusRequester? = null,
+    /**
+     * Set false for fields that should wrap rather than scroll horizontally. The Service
+     * Caller's JSON DATA field is the canonical case: a long object body would otherwise
+     * trail off the right of the screen with no way to see the trailing characters.
+     */
+    singleLine: Boolean = true,
+    /** Optional minimum height for multi-line fields; ignored when [singleLine] is true. */
+    minLines: Int = 1,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
@@ -90,7 +98,8 @@ fun R1TextField(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
-            singleLine = true,
+            singleLine = singleLine,
+            minLines = if (singleLine) 1 else minLines.coerceAtLeast(1),
             textStyle = baseStyle,
             cursorBrush = SolidColor(R1.AccentWarm),
             keyboardOptions = keyboardOptions,

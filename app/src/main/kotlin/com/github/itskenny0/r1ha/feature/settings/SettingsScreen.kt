@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +83,7 @@ fun SettingsScreen(
     )
     val s by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     WheelScrollFor(wheelInput = wheelInput, listState = listState, settings = settings)
 
     // Search query against the SETTINGS_REGISTRY. Live-filters the visible
@@ -250,6 +252,15 @@ fun SettingsScreen(
                                 }
                                 expandedSections = setOf(sectionName)
                                 settingsQuery = ""
+                                // Scroll to the top so the search header (now
+                                // empty) and the single expanded section land
+                                // immediately in view. Without this the user
+                                // stays at whatever scroll position they had
+                                // before opening search, which on a long list
+                                // is rarely where they want to land.
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(0)
+                                }
                             },
                         )
                     }

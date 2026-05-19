@@ -111,6 +111,26 @@ fun CardStackScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val appSettings by settings.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
     val connection by haRepository.connection.collectAsStateWithLifecycle()
+    // 'WS silent' = WebSocket reports Connected but no state_changed event has
+    // arrived for >60 s, which is the soft-broken-proxy case the REST heartbeat
+    // fallback was added to mitigate (the user's friend's reverse-proxied install
+    // surfaced this earlier in development). We surface it as an amber chrome dot
+    // so the user has a visible signal that the WS isn't carrying its weight,
+    // even though the connection-state machine reads Connected. Ticks every 10 s
+    // (cheap; only re-reads two StateFlow values) so the dot flips into amber
+    // promptly after the WS goes silent and back to none when an event lands.
+    val lastEventAt by haRepository.lastEventAtMillis.collectAsStateWithLifecycle()
+    val nowTick = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis())
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        while (true) {
+            nowTick.longValue = System.currentTimeMillis()
+            kotlinx.coroutines.delay(10_000L)
+        }
+    }
+    val wsSilent = connection is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
+        lastEventAt > 0L && (nowTick.longValue - lastEventAt) > 60_000L
 
     // Wheel events are processed ONLY while CardStackScreen is composed. Navigating away
     // (e.g. into FavoritesPicker or Settings) suspends the collection so spinning the wheel
@@ -653,6 +673,7 @@ fun CardStackScreen(
         ) {
             ChromeRow(
                 connection = connection,
+                wsSilent = wsSilent,
                 cardsCount = cards.size,
                 currentIndex = state.currentIndex,
                 showCounter = cards.size > 1,
@@ -2284,6 +2305,14 @@ private fun QuickActionsSheet(
 @Composable
 private fun ChromeRow(
     connection: ConnectionState,
+    /** True when the WS reports Connected but state_changed events have stopped
+     *  flowing — the soft-broken-proxy case the REST heartbeat fallback
+     *  mitigates. The connection-state dot picks up an amber tint when this
+     *  goes true so the user has a visible signal that the WS isn't carrying
+     *  its weight even though the state machine reads Connected. Defaults to
+     *  false so previews / non-card-stack callers stay on the existing
+     *  hide-when-Connected behaviour. */
+    wsSilent: Boolean = false,
     cardsCount: Int,
     currentIndex: Int,
     showCounter: Boolean,
@@ -2444,7 +2473,11 @@ private fun ChromeRow(
             // the dot itself so its appear/disappear doesn't snap when state crosses the
             // Connected boundary.
             val statusColor = when (connection) {
-                is ConnectionState.Connected -> null
+                // Connected: hide the dot UNLESS the WS has gone silent and the
+                // REST heartbeat fallback is doing the lifting. Amber in that
+                // case so the user sees the soft-broken state instead of a
+                // misleadingly-green chrome.
+                is ConnectionState.Connected -> if (wsSilent) R1.StatusAmber else null
                 ConnectionState.Idle,
                 ConnectionState.Connecting,
                 ConnectionState.Authenticating -> R1.StatusAmber

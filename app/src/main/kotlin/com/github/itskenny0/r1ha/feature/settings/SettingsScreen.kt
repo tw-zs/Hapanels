@@ -135,21 +135,19 @@ fun SettingsScreen(
         }
     }
 
-    // Collect focus requests from ModifiedSettingsScreen: when the user taps a
-    // diff row over there and pops back to here, the bus fires with the section
-    // name. Collapse every other section so the target dominates the viewport,
-    // clear any in-progress search query (otherwise the section grid is hidden),
-    // and scroll the LazyColumn back to the top so the section ladder reads
-    // top-down. Only the matching section is expanded so the user scrolls past
-    // a few collapsed headers to reach the relevant settings — without needing
-    // a precise scroll-to-key (which would require keying every section item).
+    // Drain a pending focus request from ModifiedSettingsScreen on this
+    // composition. Read-and-clear so a later unrelated re-entry into Settings
+    // doesn't silently re-expand the same section. Collapses every other
+    // section so the target dominates the viewport, clears any in-progress
+    // search query (otherwise the section grid would be hidden by the search
+    // results), and scrolls the LazyColumn back to the top so the section
+    // ladder reads top-down.
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        com.github.itskenny0.r1ha.core.util.SettingsFocusBus.requests.collect { name ->
-            if (name in allSectionNames) {
-                expandedSections = setOf(name)
-                settingsQuery = ""
-                runCatching { listState.animateScrollToItem(0) }
-            }
+        val pending = com.github.itskenny0.r1ha.core.util.SettingsFocusBus.consume()
+        if (pending != null && pending in allSectionNames) {
+            expandedSections = setOf(pending)
+            settingsQuery = ""
+            runCatching { listState.animateScrollToItem(0) }
         }
     }
 

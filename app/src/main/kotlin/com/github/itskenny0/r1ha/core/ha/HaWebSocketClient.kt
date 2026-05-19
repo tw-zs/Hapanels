@@ -1,7 +1,7 @@
 package com.github.itskenny0.r1ha.core.ha
 
+import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
@@ -66,6 +66,16 @@ class HaWebSocketClient internal constructor(
     )
 
     fun connect(url: String, accessToken: String) {
+        connect(url) { accessToken }
+    }
+
+    /**
+     * Connect variant where the access token is fetched at AuthRequired time via [tokenProvider].
+     * Prefer this in production wiring: the repository can rotate the token between the call to
+     * connect() and the WS handshake (token refresh fires during the connecting window), and a
+     * captured-by-closure constructor argument would otherwise hand HA an already-revoked token.
+     */
+    fun connect(url: String, tokenProvider: () -> String) {
         // Allow connect from Idle, Disconnected, AND AuthLost: when the repository succeeds at
         // refreshing the access token after an auth-rejected handshake, it has to be able to
         // reconnect even though the state is still pinned at AuthLost.
@@ -79,16 +89,19 @@ class HaWebSocketClient internal constructor(
             override fun onOpen(ws: WebSocket, resp: Response) {
                 // webSocket was already set from the http.newWebSocket() return value below so
                 // the onFailure/onClosed guards work even if the connection fails before onOpen
-                // is delivered. Guard against a stale onOpen too — if disconnect() ran or a new
+                // is delivered. Guard against a stale onOpen too: if disconnect() ran or a new
                 // connection has replaced this one, don't bump state to Authenticating.
                 if (this@HaWebSocketClient.webSocket !== ws) return
                 _state.value = ConnectionState.Authenticating
-                receiverJob = scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                // Drain outgoing on a regular dispatched coroutine so the for-loop doesn't
+                // park OkHttp's listener thread; UNDISPATCHED would force the first iteration
+                // to run on the WS callback thread, blocking it until the channel suspends.
+                receiverJob = scope.launch {
                     for (msg in outgoing) ws.send(HaJson.encodeToString(msg))
                 }
             }
             override fun onMessage(ws: WebSocket, text: String) {
-                // Ignore messages from a WebSocket that has been replaced or torn down — without
+                // Ignore messages from a WebSocket that has been replaced or torn down: without
                 // this guard, a late AuthOk from a previous connection could bump the state back
                 // to Connected after the user has signed out (or while a new connection is mid-
                 // authenticating).
@@ -96,7 +109,14 @@ class HaWebSocketClient internal constructor(
                 val msg = runCatching { HaJson.decodeFromString<HaInbound>(text) }
                     .getOrElse { HaInbound.Unknown }
                 when (msg) {
-                    is HaInbound.AuthRequired -> ws.send(HaJson.encodeToString<HaOutbound>(HaOutbound.Auth(accessToken)))
+                    is HaInbound.AuthRequired -> {
+                        // Read the access token at handshake time, not at connect() invocation
+                        // time. Between the two, the repository may have rotated the token (a
+                        // refresh fired during the connecting window); the captured-by-closure
+                        // value would otherwise hand HA an already-revoked token.
+                        val token = runCatching { tokenProvider() }.getOrNull().orEmpty()
+                        ws.send(HaJson.encodeToString<HaOutbound>(HaOutbound.Auth(token)))
+                    }
                     is HaInbound.AuthOk -> _state.value = ConnectionState.Connected(msg.haVersion)
                     is HaInbound.AuthInvalid -> {
                         _state.value = ConnectionState.AuthLost(msg.message)
@@ -136,7 +156,16 @@ class HaWebSocketClient internal constructor(
 
     /** Enqueue an outbound message. Safe to call before [connect] has completed; the queue drains once connected. */
     fun send(msg: HaOutbound) {
-        outgoing.trySend(msg)
+        val result = outgoing.trySend(msg)
+        if (result.isFailure) {
+            // DROP_OLDEST means a backed-up channel silently discards the oldest queued frame
+            // when a new one is offered. For wheel-driven debounced calls this is correct
+            // (the trailing-edge value supersedes), but for one-shot CallService frames a
+            // drop means the caller's deferred in pendingCalls will hang until the 15s
+            // timeout. Surface it so users can see "WS overloaded" in the dev log rather
+            // than wondering why a tap silently did nothing.
+            R1Log.w("HaWS.send", "outbound queue dropped a $msg (channel full or closed)")
+        }
     }
 
     fun disconnect(code: Int = 1000, reason: String = "client_disconnect") {

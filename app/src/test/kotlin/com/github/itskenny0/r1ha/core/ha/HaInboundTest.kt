@@ -39,10 +39,26 @@ class HaInboundTest {
         val m = HaJson.decodeFromString<HaInbound>(raw)
         val ev = m as HaInbound.Event
         assertThat(ev.id).isEqualTo(5)
-        val toState = ev.event.variables.trigger.toState
+        val toState = ev.event.variables.trigger.toState!!
         assertThat(toState.entityId).isEqualTo("light.k")
         assertThat(toState.state).isEqualTo("on")
         assertThat(toState.attributes["brightness"]?.toString()).isEqualTo("128")
+    }
+    @Test fun `event tolerates missing to_state state field`() {
+        val raw = """
+            {"id":6,"type":"event","event":{"variables":{"trigger":{"platform":"state","entity_id":"light.k",
+            "to_state":{"entity_id":"light.k","attributes":{}}}}}}
+        """.trimIndent()
+        val m = HaJson.decodeFromString<HaInbound>(raw)
+        val ev = m as HaInbound.Event
+        assertThat(ev.event.variables.trigger.toState?.state).isNull()
+    }
+    @Test fun `result error code tolerates integer code`() {
+        val m = HaJson.decodeFromString<HaInbound>(
+            """{"id":7,"type":"result","success":false,"error":{"code":15,"message":"nope"}}"""
+        )
+        val r = m as HaInbound.Result
+        assertThat(r.error?.codeString).isEqualTo("15")
     }
     @Test fun `pong`() {
         val m = HaJson.decodeFromString<HaInbound>("""{"id":1,"type":"pong"}""")

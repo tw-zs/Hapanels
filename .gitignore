@@ -31,3 +31,6 @@ Thumbs.db
 # Top-level dotfiles / hidden dirs not explicitly tracked
 .*/
 !.github/
+
+# Working files, never committed
+TASKLIST.txt

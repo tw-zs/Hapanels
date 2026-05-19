@@ -24,8 +24,20 @@ sealed interface HaInbound {
         val result: JsonElement? = null,
         val error: Error? = null,
     ) : HaInbound {
+        // HA's error.code is documented as a string (e.g. "not_found") but in older
+        // releases and a few integrations it arrives as an integer or a bare null. Accept
+        // any JSON shape and coerce to string on read so the strict deserializer doesn't
+        // drop the entire frame and leave pendingCalls hanging until the 15s timeout.
         @Serializable
-        data class Error(val code: String? = null, val message: String? = null)
+        data class Error(val code: JsonElement? = null, val message: String? = null) {
+            val codeString: String?
+                get() = when (val c = code) {
+                    null -> null
+                    is kotlinx.serialization.json.JsonNull -> null
+                    is kotlinx.serialization.json.JsonPrimitive -> c.content
+                    else -> c.toString()
+                }
+        }
     }
 
     @Serializable @SerialName("event")
@@ -39,12 +51,14 @@ sealed interface HaInbound {
             val platform: String,
             @SerialName("entity_id") val entityId: String,
             @SerialName("from_state") val fromState: StateBlock? = null,
-            @SerialName("to_state") val toState: StateBlock,
+            @SerialName("to_state") val toState: StateBlock? = null,
         )
+        // HA sometimes emits state-change events where to_state.state is missing (entity
+        // disappearing) or non-string. Tolerate both rather than failing the whole frame.
         @Serializable
         data class StateBlock(
             @SerialName("entity_id") val entityId: String? = null,
-            val state: String,
+            val state: String? = null,
             val attributes: JsonObject = JsonObject(emptyMap()),
             @SerialName("last_changed") val lastChanged: String? = null,
         )

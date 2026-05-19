@@ -172,6 +172,18 @@ class TokenStore(
         } catch (t: Throwable) {
             R1Log.e("TokenStore.load", "decrypt failed; key likely lost. Returning null to force re-auth.", t)
             Toaster.error("Token decrypt failed. Re-authenticate")
+            // Clear the unreadable ciphertext from both storage tiers so subsequent loads
+            // return null without going through decrypt + toast again. Keep the shadow
+            // initialized marker set so load() still treats the shadow as authoritative.
+            runCatching {
+                shadow.edit()
+                    .remove(S.accessCipher).remove(S.accessIv)
+                    .remove(S.refreshCipher).remove(S.refreshIv)
+                    .remove(S.expiresAt)
+                    .putBoolean(S.initialized, true)
+                    .commit()
+                store.edit { it.clear() }
+            }
             null
         }
     }

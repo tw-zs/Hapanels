@@ -7,6 +7,8 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -41,6 +43,14 @@ class TokenRefresher(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    // Serialise concurrent refresh callers. Without it, two simultaneous ensureFresh()
+    // calls (heartbeat poll + WS auth handshake racing on cold start) both POST the same
+    // refresh_token to /auth/token. If HA ever rotates refresh tokens the second call
+    // races and may invalidate the first. The lock also coalesces work: the second
+    // caller waits for the first to finish, re-reads the now-fresh expiry, and short-
+    // circuits without making a redundant network round-trip.
+    private val refreshMutex = Mutex()
+
     /**
      * If the stored access token is within [skewMillis] of expiry, exchange the refresh token
      * for a new access token and persist it. Returns true if the token is now valid (either
@@ -56,16 +66,23 @@ class TokenRefresher(
         // repository layer with the usual sign-out toast.
         if (current.refreshToken.isBlank()) return true
         if (current.expiresAtMillis > System.currentTimeMillis() + skewMillis) return true
-        return refresh(current)
+        return refreshMutex.withLock {
+            // Re-read inside the lock so a queued second caller sees the just-refreshed
+            // expiry written by the first and skips its own network call.
+            val latest = tokens.load() ?: return@withLock false
+            if (latest.refreshToken.isBlank()) return@withLock true
+            if (latest.expiresAtMillis > System.currentTimeMillis() + skewMillis) return@withLock true
+            refresh(latest)
+        }
     }
 
     /** Force a refresh regardless of remaining lifetime. Used after [ConnectionState.AuthLost]. */
-    suspend fun forceRefresh(): Boolean {
-        val current = tokens.load() ?: return false
-        // LLAT path — there's nothing to refresh. Return false so callers
+    suspend fun forceRefresh(): Boolean = refreshMutex.withLock {
+        val current = tokens.load() ?: return@withLock false
+        // LLAT path: there's nothing to refresh. Return false so callers
         // surface "sign out & reconnect" toasts rather than silently looping.
-        if (current.refreshToken.isBlank()) return false
-        return refresh(current)
+        if (current.refreshToken.isBlank()) return@withLock false
+        refresh(current)
     }
 
     private suspend fun refresh(current: Tokens): Boolean = withContext(Dispatchers.IO) {

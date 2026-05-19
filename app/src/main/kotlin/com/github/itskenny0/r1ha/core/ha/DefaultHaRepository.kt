@@ -44,6 +44,19 @@ private fun JsonElement?.asString(): String? = (this as? JsonPrimitive)?.content
 private fun JsonElement?.asInt(): Int? = (this as? JsonPrimitive)?.content?.toIntOrNull()
 /** Read a JSON attribute as Double. Works for both JsonPrimitive(0.42) and JsonPrimitive("0.42"). */
 private fun JsonElement?.asDouble(): Double? = (this as? JsonPrimitive)?.content?.toDoubleOrNull()
+/**
+ * Read a JSON attribute as Boolean. HA can encode the same logical field as a JSON boolean
+ * (`true` / `false`), the same word as a string (`"true"`), or as 0/1; accept all three so
+ * a single integration switching its emitter never silently flips the value.
+ */
+private fun JsonElement?.asBoolean(): Boolean? {
+    val raw = (this as? JsonPrimitive)?.content ?: return null
+    return when (raw.lowercase()) {
+        "true", "1", "yes", "on" -> true
+        "false", "0", "no", "off" -> false
+        else -> null
+    }
+}
 
 class DefaultHaRepository(
     private val ws: HaWebSocketClient,
@@ -78,7 +91,18 @@ class DefaultHaRepository(
     private val cache = MutableStateFlow<Map<EntityId, EntityState>>(emptyMap())
     private val pendingCalls = ConcurrentHashMap<Int, CompletableDeferred<Result<Unit>>>()
     private var supervisorJob: Job? = null
-    private var subscriptionId: Int? = null
+    // Volatile because the WS listener thread (OkHttp dispatch) reads it from the
+    // AuthRequired handler while the repo coroutine writes it from connectFromSettings
+    // and the post-refresh resubscribe path. @Volatile is enough since we only ever
+    // assign or read a single reference, never read-modify-write.
+    @Volatile private var subscriptionId: Int? = null
+    /**
+     * Most recently loaded HA access token. Read by the WS [HaWebSocketClient.connect]
+     * tokenProvider closure on the OkHttp listener thread, so it must be volatile and
+     * synchronously readable. Set in [connectFromSettings] and on every successful
+     * token refresh; tokens.load() is suspend and not safe to call from the listener.
+     */
+    @Volatile private var latestAccessToken: String? = null
     /** Tracks the currently-scheduled reconnect-backoff job so [reconnectNow] can cancel it. */
     @Volatile private var pendingReconnect: Job? = null
 
@@ -204,10 +228,24 @@ class DefaultHaRepository(
         supervisorJob = scope.launch {
             ws.inbound.onEach { msg ->
                 when (msg) {
-                    is HaInbound.Result -> pendingCalls.remove(msg.id)?.complete(
-                        if (msg.success) Result.success(Unit)
-                        else Result.failure(IllegalStateException(msg.error?.message ?: "ha_error"))
-                    )
+                    is HaInbound.Result -> {
+                        val deferred = pendingCalls.remove(msg.id)
+                        if (deferred != null) {
+                            deferred.complete(
+                                if (msg.success) Result.success(Unit)
+                                else Result.failure(
+                                    IllegalStateException(msg.error?.message ?: "ha_error")
+                                )
+                            )
+                        } else {
+                            // A Result arriving for an id we no longer track means either
+                            // the deferred already timed out (and we replaced its failure
+                            // text 15s ago) or sign-out drained the map while HA's reply
+                            // was in flight. Surface at debug only so noisy traces stay
+                            // out of the default log level, but visible during triage.
+                            R1Log.d("HaRepo.late", "result for unknown id=${msg.id}; success=${msg.success}")
+                        }
+                    }
                     is HaInbound.Event -> applyEvent(msg)
                     else -> Unit
                 }
@@ -384,6 +422,19 @@ class DefaultHaRepository(
     }
 
     override suspend fun stop() {
+        // Fail any in-flight service-call deferreds first: their Result will never arrive
+        // because the supervisor cancel below tears down the inbound observer, and the
+        // ws.disconnect drains the outgoing queue. Without an explicit fail any awaiter
+        // hangs until the 15s timeout, which means a caller's UI sits "FIRING…" while
+        // the user has already navigated away.
+        if (pendingCalls.isNotEmpty()) {
+            pendingCalls.values.forEach {
+                it.complete(Result.failure(IllegalStateException("Repository stopped")))
+            }
+            pendingCalls.clear()
+        }
+        latestAccessToken = null
+        subscriptionId = null
         supervisorJob?.cancel(); supervisorJob = null
         ws.disconnect()
     }
@@ -413,7 +464,15 @@ class DefaultHaRepository(
             base.startsWith("http://")  -> base.replaceFirst("http://", "ws://")
             else -> base
         } + "/api/websocket"
-        ws.connect(wsUrl, t.accessToken)
+        // Pass a tokenProvider rather than the captured-at-call-time token so the WS handshake
+        // reads the latest value at AuthRequired time. If a concurrent refresh rotates the
+        // token between this line and the handshake, the WS picks up the rotated value
+        // rather than handing HA an already-revoked one. The provider reads the @Volatile
+        // [latestAccessToken] cache rather than re-running suspend tokens.load() from the
+        // OkHttp listener thread; the cache is updated on every successful refresh and on
+        // every connectFromSettings entry.
+        latestAccessToken = t.accessToken
+        ws.connect(wsUrl) { latestAccessToken ?: t.accessToken }
     }
 
     private fun reconnectLater(attempt: Int) {
@@ -455,7 +514,10 @@ class DefaultHaRepository(
     }
 
     private fun applyEvent(ev: HaInbound.Event) {
-        val raw = ev.event.variables.trigger.toState
+        // HA occasionally emits state-change events with no to_state (entity removed) or a
+        // missing state field; treat both as no-ops rather than letting the unwrap NPE.
+        val raw = ev.event.variables.trigger.toState ?: return
+        val stateStr = raw.state ?: return
         val idStr = raw.entityId ?: ev.event.variables.trigger.entityId
         val prefix = idStr.substringBefore('.', missingDelimiterValue = "")
         if (!Domain.isSupportedPrefix(prefix)) return
@@ -470,35 +532,35 @@ class DefaultHaRepository(
         // running.
         val isOn = when (id.domain) {
             Domain.LIGHT, Domain.FAN, Domain.SWITCH, Domain.INPUT_BOOLEAN,
-            Domain.AUTOMATION, Domain.HUMIDIFIER -> raw.state.equals("on", ignoreCase = true)
-            Domain.COVER, Domain.VALVE -> raw.state.equals("open", ignoreCase = true)
-            Domain.MEDIA_PLAYER -> raw.state.equals("playing", ignoreCase = true)
-            Domain.LOCK -> raw.state.equals("unlocked", ignoreCase = true)
-            Domain.CLIMATE, Domain.WATER_HEATER -> !raw.state.equals("off", ignoreCase = true) &&
-                raw.state != "unavailable" && raw.state != "unknown"
+            Domain.AUTOMATION, Domain.HUMIDIFIER -> stateStr.equals("on", ignoreCase = true)
+            Domain.COVER, Domain.VALVE -> stateStr.equals("open", ignoreCase = true)
+            Domain.MEDIA_PLAYER -> stateStr.equals("playing", ignoreCase = true)
+            Domain.LOCK -> stateStr.equals("unlocked", ignoreCase = true)
+            Domain.CLIMATE, Domain.WATER_HEATER -> !stateStr.equals("off", ignoreCase = true) &&
+                stateStr != "unavailable" && stateStr != "unknown"
             // Scripts have an "on" state while they're executing. Scene/button never get
-            // a meaningful on state — their state attribute is a last-fired timestamp.
-            Domain.SCRIPT -> raw.state.equals("on", ignoreCase = true)
+            // a meaningful on state: their state attribute is a last-fired timestamp.
+            Domain.SCRIPT -> stateStr.equals("on", ignoreCase = true)
             Domain.SCENE, Domain.BUTTON, Domain.INPUT_BUTTON -> false
-            // binary_sensor uses "on"/"off" by HA convention — "on" means the triggered
+            // binary_sensor uses "on"/"off" by HA convention: "on" means the triggered
             // state (door open, motion detected, leak found). Plain sensor entities have
             // numeric/string readings and don't have a meaningful on/off mapping.
-            Domain.BINARY_SENSOR -> raw.state.equals("on", ignoreCase = true)
+            Domain.BINARY_SENSOR -> stateStr.equals("on", ignoreCase = true)
             Domain.SENSOR -> false
-            // number / input_number entities — state is the numeric value as a string.
+            // number / input_number entities: state is the numeric value as a string.
             // "Non-zero" is the closest thing to "on" but it isn't very meaningful here;
             // the wheel just drives the value. Treat as false so tap-toggle doesn't try
             // to flip a slider to its zero/non-zero positions.
             Domain.NUMBER, Domain.INPUT_NUMBER -> false
             // Vacuum: any active state (cleaning, returning) reads as "on".
-            Domain.VACUUM -> raw.state.equals("cleaning", ignoreCase = true) ||
-                raw.state.equals("returning", ignoreCase = true) ||
-                raw.state.equals("on", ignoreCase = true)
-            // Select / input_select have no on/off — they're settable enums. Pin
+            Domain.VACUUM -> stateStr.equals("cleaning", ignoreCase = true) ||
+                stateStr.equals("returning", ignoreCase = true) ||
+                stateStr.equals("on", ignoreCase = true)
+            // Select / input_select have no on/off: they're settable enums. Pin
             // isOn to false so tap-toggle doesn't try to flip them; the dedicated
             // picker overlay is the only way to change the option.
             Domain.SELECT, Domain.INPUT_SELECT -> false
-            // Counter / timer / input_text / input_datetime — Helpers-screen
+            // Counter / timer / input_text / input_datetime: Helpers-screen
             // rendered only. No meaningful on/off mapping; the bespoke
             // per-kind controls on the Helpers screen handle interaction.
             Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
@@ -506,12 +568,12 @@ class DefaultHaRepository(
             // 'idle' is stopped. Treat 'active' as on so a hypothetical
             // pin-to-favorites + tap could be wired later without further
             // changes to isOn semantics.
-            Domain.TIMER -> raw.state.equals("active", ignoreCase = true)
+            Domain.TIMER -> stateStr.equals("active", ignoreCase = true)
         }
-        val available = raw.state != "unavailable" && raw.state != "unknown"
-        val pct = computePercentWithState(id.domain, raw.attributes, raw.state)
+        val available = stateStr != "unavailable" && stateStr != "unknown"
+        val pct = computePercentWithState(id.domain, raw.attributes, stateStr)
         val rawNum = computeRaw(id.domain, raw.attributes)
-            ?: if (id.domain == Domain.NUMBER || id.domain == Domain.INPUT_NUMBER) raw.state.toDoubleOrNull() else null
+            ?: if (id.domain == Domain.NUMBER || id.domain == Domain.INPUT_NUMBER) stateStr.toDoubleOrNull() else null
         val newState = EntityState(
             id = id,
             friendlyName = raw.attributes["friendly_name"].asString() ?: id.objectId,
@@ -522,7 +584,7 @@ class DefaultHaRepository(
             lastChanged = runCatching { Instant.parse(raw.lastChanged ?: "") }.getOrDefault(Instant.now()),
             isAvailable = available,
             supportsScalar = supportsScalar(id.domain, raw.attributes),
-            rawState = raw.state,
+            rawState = stateStr,
             // For climate, HA puts the temperature unit on `temperature_unit` rather than
             // `unit_of_measurement` (which it doesn't expose at all). Surface it through
             // the same `unit` field so the card display layer doesn't need to know.
@@ -556,7 +618,7 @@ class DefaultHaRepository(
             attributesJson = raw.attributes,
             // Select-domain bits — options list + current option track via state.
             selectOptions = if (id.domain.isSelect) extractStringList(raw.attributes["options"]) else emptyList(),
-            currentOption = if (id.domain.isSelect) raw.state.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" } else null,
+            currentOption = if (id.domain.isSelect) stateStr.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" } else null,
             mediaTitle = if (id.domain == Domain.MEDIA_PLAYER) raw.attributes["media_title"].asString() else null,
             mediaArtist = if (id.domain == Domain.MEDIA_PLAYER) raw.attributes["media_artist"].asString() else null,
             mediaAlbumName = if (id.domain == Domain.MEDIA_PLAYER) raw.attributes["media_album_name"].asString() else null,
@@ -567,7 +629,7 @@ class DefaultHaRepository(
             } else null,
             mediaPicture = if (id.domain == Domain.MEDIA_PLAYER) raw.attributes["entity_picture"].asString() else null,
             isVolumeMuted = id.domain == Domain.MEDIA_PLAYER &&
-                (raw.attributes["is_volume_muted"] as? JsonPrimitive)?.content == "true",
+                (raw.attributes["is_volume_muted"].asBoolean() ?: false),
             mediaSupportedFeatures = if (id.domain == Domain.MEDIA_PLAYER)
                 raw.attributes["supported_features"].asInt() ?: 0
             else 0,
@@ -1545,7 +1607,15 @@ class DefaultHaRepository(
             return runCatching { Instant.parse(dt) }.getOrNull() to false
         }
         (obj["date"] as? JsonPrimitive)?.content?.let { date ->
-            return runCatching { Instant.parse(date + "T00:00:00Z") }.getOrNull() to true
+            // All-day events in HA are local-date strings (no timezone). Resolve them against
+            // the device's system zone so events show on the correct calendar day; forcing
+            // UTC midnight made e.g. a 2026-05-19 event show on 2026-05-18 in UTC-5 zones.
+            val parsed = runCatching {
+                java.time.LocalDate.parse(date)
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toInstant()
+            }.getOrNull()
+            return parsed to true
         }
         return null to false
     }

@@ -186,6 +186,14 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         currentDisplay = { if (it.ui.infiniteScroll) "ON" else "OFF" },
     ),
     SettingEntry(
+        id = "ui.textHistoryLength",
+        category = SettingCategory.CARD_UI,
+        label = "Sensor history length",
+        description = "Recent state-change rows kept on text/categorical sensor cards",
+        isDefault = { it.ui.textHistoryLength == defaults.ui.textHistoryLength },
+        currentDisplay = { "${it.ui.textHistoryLength}" },
+    ),
+    SettingEntry(
         id = "ui.maxDecimalPlaces",
         category = SettingCategory.CARD_UI,
         label = "Sensor decimals",

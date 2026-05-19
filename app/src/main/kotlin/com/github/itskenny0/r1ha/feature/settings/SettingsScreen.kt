@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -202,7 +203,14 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(R1.Bg)
-            .systemBarsPadding(),
+            .systemBarsPadding()
+            // imePadding keeps the LazyColumn above the keyboard when the user
+            // focuses one of the text fields here (Settings search at the top,
+            // Quick Settings tile entity binding, Long-Lived Token URL, etc.).
+            // Without it the bottom of the section grid extends behind the IME
+            // and Compose's BringIntoView only scrolls the focused field into
+            // view — surrounding controls stay obscured.
+            .imePadding(),
     ) {
         R1TopBar(title = "SETTINGS", onBack = onBack)
 

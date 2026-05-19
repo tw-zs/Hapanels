@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "com.github.itskenny0.r1ha"
-        minSdk = 33
+        minSdk = 30
         targetSdk = 34
         // Versions are date-based to match the `r1ha-YYYYMMDD` release tag scheme.
         // CI passes APP_VERSION_CODE / APP_VERSION_NAME on tag builds; local builds fall back to today's date.

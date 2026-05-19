@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.ha.HaRepository
@@ -194,8 +195,24 @@ fun DashboardScreen(
                         }
                     }
                 }
-                if (ds.showWeather) ui.weather?.let { WeatherCard(it, onClick = onOpenWeather) }
-                if (ds.showSun) ui.sun?.let { SunCard(it) }
+                // On tablets (≥ 600 dp) show paired tiles side-by-side. If only one of a
+                // pair is visible it falls back to full width automatically.
+                val isTablet = LocalConfiguration.current.screenWidthDp >= 600
+
+                DashboardPair(
+                    isTablet = isTablet,
+                    leftVisible = ds.showWeather && ui.weather != null,
+                    rightVisible = ds.showPersons && ui.persons != null,
+                    left = { ui.weather?.let { WeatherCard(it, onClick = onOpenWeather) } },
+                    right = { ui.persons?.let { PersonsCard(it, onClick = onOpenPersons) } },
+                )
+                DashboardPair(
+                    isTablet = isTablet,
+                    leftVisible = ds.showSun && ui.sun != null,
+                    rightVisible = ds.showNextEvent && ui.nextEvent != null,
+                    left = { ui.sun?.let { SunCard(it) } },
+                    right = { ui.nextEvent?.let { CalendarCard(it, onClick = onOpenCalendars) } },
+                )
                 if (ds.showTimers && ui.timers.isNotEmpty()) {
                     Text(text = "TIMERS", style = R1.labelMicro, color = R1.InkSoft)
                     for (t in ui.timers) {
@@ -233,8 +250,6 @@ fun DashboardScreen(
                         )
                     }
                 }
-                if (ds.showPersons) ui.persons?.let { PersonsCard(it, onClick = onOpenPersons) }
-                if (ds.showNextEvent) ui.nextEvent?.let { CalendarCard(it, onClick = onOpenCalendars) }
                 if (ds.showMetrics) {
                     MetricsRow(
                         cameraCount = ui.cameraCount,
@@ -1070,3 +1085,35 @@ private fun conditionAccent(condition: String): androidx.compose.ui.graphics.Col
         "windy", "windy-variant" -> R1.AccentNeutral
         else -> R1.InkSoft
     }
+
+/**
+ * Responsive tile pair for the dashboard.
+ *
+ * On tablets (isTablet == true) and when BOTH tiles are visible, renders them
+ * side-by-side at equal width. On phones / R1, or when only one tile is visible,
+ * renders them in a plain vertical stack — the visible one fills full width.
+ * Tiles themselves use fillMaxWidth internally so they naturally stretch to
+ * their container's width without any modification.
+ */
+@Composable
+private fun DashboardPair(
+    isTablet: Boolean,
+    leftVisible: Boolean,
+    rightVisible: Boolean,
+    left: @Composable () -> Unit,
+    right: @Composable () -> Unit,
+) {
+    if (isTablet && leftVisible && rightVisible) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(modifier = Modifier.weight(1f)) { left() }
+            Box(modifier = Modifier.weight(1f)) { right() }
+        }
+    } else {
+        if (leftVisible) left()
+        if (rightVisible) right()
+    }
+}

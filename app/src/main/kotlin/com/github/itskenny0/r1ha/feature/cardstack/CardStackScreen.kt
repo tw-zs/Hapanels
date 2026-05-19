@@ -44,6 +44,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -463,11 +465,21 @@ fun CardStackScreen(
         com.github.itskenny0.r1ha.core.theme.LocalOnSetEntityPercent provides onSetEntityPercent,
     ) {
     Box(modifier = Modifier.fillMaxSize().background(R1.Bg)) {
-        // displayedCards = cards with optimistic overrides applied per entity. Binding the
-        // UI to this list (rather than to the raw HA-confirmed cards) is what makes the
-        // brightness/value track the wheel *instantly* instead of waiting for the HA
-        // round-trip to echo a state_changed event back.
+        // On wide displays (tablets in landscape) cap the card column at 600 dp and
+        // centre it. This prevents a single card stretching to 1280 dp while keeping
+        // the dark background filling the full screen. The overlays (dialogs, sheets)
+        // sit at the outer Box level so they cover the full screen independently.
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp
+        // displayedCards is hoisted here (outside the island Box) so the full-screen
+        // overlays (customize dialog, jump picker, etc.) can reference it too.
         val cards = state.displayedCards
+        Box(
+            modifier = if (screenWidthDp > 600) {
+                Modifier.widthIn(max = 600.dp).fillMaxHeight().align(Alignment.Center)
+            } else {
+                Modifier.fillMaxSize()
+            },
+        ) {
         when {
             // Cold-start splash. DataStore is async on first read so for a brief
             // window the VM has its default state. Without this branch the user
@@ -730,6 +742,11 @@ fun CardStackScreen(
         // recomposed the whole card-stack. Pushing the read into the
         // overlay's scope isolates the subscription.
         WheelHintOverlay(state = wheelHintAt)
+
+        } // end card-content island (max 600 dp on wide screens)
+
+        // ── Overlays — rendered at the outer full-screen Box level so they cover the
+        // full display regardless of the card island width. ─────────────────────────
 
         // ── Customize dialog ────────────────────────────────────────────────────────
         // Reuses the favourites-picker's RenameDialog so the customize flow is identical

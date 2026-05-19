@@ -264,33 +264,35 @@ fun SearchScreen(
                     }
                 }
             }
-            else -> LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 12.dp, vertical = 8.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                item("__count_header") {
-                    Text(
-                        text = "${vm.results.size} result${if (vm.results.size == 1) "" else "s"}",
-                        style = R1.labelMicro,
-                        color = R1.InkMuted,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    )
+            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 12.dp, vertical = 8.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    item("__count_header") {
+                        Text(
+                            text = "${vm.results.size} result${if (vm.results.size == 1) "" else "s"}",
+                            style = R1.labelMicro,
+                            color = R1.InkMuted,
+                            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(items = vm.results, key = { it.id.value }) { entity ->
+                        SearchResultRow(
+                            entity,
+                            isFavorite = entity.id.value in activeFavourites,
+                            onTap = { vm.activate(entity) },
+                            onLongPress = { openInHa(entity) },
+                            onFavorite = { vm.addToFavorites(entity.id) },
+                            onHistory = { onOpenHistory(entity.id.value) },
+                        )
+                    }
                 }
-                items(items = vm.results, key = { it.id.value }) { entity ->
-                    SearchResultRow(
-                        entity,
-                        isFavorite = entity.id.value in activeFavourites,
-                        onTap = { vm.activate(entity) },
-                        onLongPress = { openInHa(entity) },
-                        onFavorite = { vm.addToFavorites(entity.id) },
-                        onHistory = { onOpenHistory(entity.id.value) },
-                    )
-                }
-            }
+            } // AdaptiveContent
         }
     }
 }

@@ -161,31 +161,33 @@ fun AutomationsScreen(
                     color = R1.InkMuted,
                 )
             }
-            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                isRefreshing = ui.loading,
-                onRefresh = { vm.refresh() },
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                LazyColumn(
-                    state = listState,
+            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
+                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = ui.loading,
+                    onRefresh = { vm.refresh() },
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp, vertical = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(items = ui.entries, key = { it.id.value }) { entry ->
-                        AutomationRow(
-                            entry = entry,
-                            isFavorite = entry.id.value in activeFavourites,
-                            onRun = { vm.trigger(entry) },
-                            onToggleEnabled = { vm.setEnabled(entry, !entry.enabled) },
-                            onLongPress = { onOpenHistory(entry.id.value) },
-                            onFavorite = { vm.addToFavorites(entry) },
-                        )
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = 12.dp, vertical = 8.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(items = ui.entries, key = { it.id.value }) { entry ->
+                            AutomationRow(
+                                entry = entry,
+                                isFavorite = entry.id.value in activeFavourites,
+                                onRun = { vm.trigger(entry) },
+                                onToggleEnabled = { vm.setEnabled(entry, !entry.enabled) },
+                                onLongPress = { onOpenHistory(entry.id.value) },
+                                onFavorite = { vm.addToFavorites(entry) },
+                            )
+                        }
                     }
                 }
-            }
+            } // AdaptiveContent
         }
     }
 }

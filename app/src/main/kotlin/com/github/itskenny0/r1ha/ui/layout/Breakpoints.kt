@@ -1,10 +1,16 @@
 package com.github.itskenny0.r1ha.ui.layout
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 /**
  * Width-based responsive tier the current composition is rendering in.
@@ -76,6 +82,42 @@ fun ResponsiveColumn(
     content: @Composable () -> Unit,
 ) {
     content()
+}
+
+/**
+ * Centers list/form screens to a comfortable reading width on large displays.
+ *
+ * On R1 and phones the content fills its parent naturally — no change.
+ * On tablets (≥ 600 dp) the content is horizontally centred and capped at
+ * [maxWidth] so list rows, settings items, and form fields don't stretch
+ * uncomfortably across a 1280 dp panel. The parent's background already
+ * covers the full screen, so the side gutters match the app background.
+ *
+ * Use this on list/form screens (Settings, Search, Logbook, Helpers, etc.).
+ * Do NOT use it on the card stack or dashboard where content should expand.
+ *
+ * Default [maxWidth] of 800 dp is wide enough for comfortable reading without
+ * feeling cramped on a 10" tablet.
+ */
+@Composable
+fun AdaptiveContent(
+    modifier: Modifier = Modifier,
+    maxWidth: Dp = 800.dp,
+    content: @Composable () -> Unit,
+) {
+    val tier = currentWidthTier()
+    if (tier != WidthTier.TABLET) {
+        content()
+        return
+    }
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Box(modifier = Modifier.widthIn(max = maxWidth).fillMaxSize()) {
+            content()
+        }
+    }
 }
 
 /** Column count for grid surfaces (Cameras GRID, future favourites

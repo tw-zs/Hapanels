@@ -230,6 +230,7 @@ fun SettingsScreen(
     ) {
         R1TopBar(title = "SETTINGS", onBack = onBack)
 
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
             // ── Search bar + modified-settings entry ──────────────────────────
@@ -1281,6 +1282,7 @@ fun SettingsScreen(
 
             item { Spacer(Modifier.height(48.dp)) }
         }
+        } // AdaptiveContent
     }
     // Entity-picker overlay for the Quick Settings tile binding —
     // sits above the LazyColumn so the picker isn't squeezed inside

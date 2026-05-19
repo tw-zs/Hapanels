@@ -234,6 +234,19 @@ private fun MasterActionsRow(
             onClick = onSwitchesOff,
         )
     }
+    // Discoverability hint for the asymmetric long-press affordance. LIGHTS is
+    // the only pill with a hidden second action (long-press → turn ON, because
+    // turning all lights on is a common kiosk-wakeup intent), and without a
+    // hint nobody would find it. Single muted line under the row keeps the
+    // visual weight low while still surfacing the gesture.
+    Text(
+        text = "Tap = OFF · long-press LIGHTS for ON",
+        style = R1.labelMicro,
+        color = R1.InkMuted,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 2.dp),
+    )
 }
 
 @Composable

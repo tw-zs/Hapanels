@@ -100,7 +100,7 @@ fun OnboardingScreen(
                 // on HA's error page with no clear next step.
                 onMissingCode = { errorMessage ->
                     vm.failOnboarding(errorMessage?.let { "Login was cancelled or rejected ($it)" }
-                        ?: "Login didn't complete — please try again.")
+                        ?: "Login didn't complete. Please try again.")
                 },
                 modifier = Modifier
                     .fillMaxSize()

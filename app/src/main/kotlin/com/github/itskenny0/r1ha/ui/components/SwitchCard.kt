@@ -137,6 +137,10 @@ fun SwitchCard(
             // mechanism. Matches the state word above (OPEN / CLOSED).
             com.github.itskenny0.r1ha.core.ha.Domain.COVER,
             com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "OPEN" to "CLOSE"
+            // Vacuums map ON / OFF to CLEAN / DOCK — tapping CLEAN starts the
+            // robot, tapping DOCK sends it back to base. Matches the actual
+            // services dispatched (vacuum.start and vacuum.return_to_base).
+            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> "CLEAN" to "DOCK"
             else -> "ON" to "OFF"
         }
         SwitchTrack(

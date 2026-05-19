@@ -593,7 +593,8 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 10.dp),
                 )
                 Text(
-                    text = "Drag-reorder + toggle the right cluster of the card-stack chrome.",
+                    text = "Reorder with ↑ / ↓ chips and toggle visibility per button. " +
+                        "Right cluster of the card-stack chrome.",
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                     modifier = Modifier.padding(horizontal = 22.dp),

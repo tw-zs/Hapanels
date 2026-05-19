@@ -221,10 +221,22 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         label = "Chrome buttons",
         description = "Right-cluster button order + visibility",
         isDefault = { it.ui.chromeButtons == defaults.ui.chromeButtons },
-        currentDisplay = {
-            val visible = it.ui.chromeButtons.count { c -> c.enabled }
-            val total = it.ui.chromeButtons.size
-            "$visible / $total visible"
+        currentDisplay = { s ->
+            // Show the actual order of visible buttons as a compact arrow chain
+            // (e.g. "BAT > MIC > GEAR"). The previous '4 / 4 visible' rendering
+            // hid order changes — a pure reorder showed identical text against
+            // the default state, even though isDefault correctly reported the
+            // entry as modified. Strikethrough Unicode isn't an option in our
+            // monospace font; instead, hidden buttons are simply omitted.
+            val abbreviations = mapOf(
+                ChromeButtonRef.BATTERY to "BAT",
+                ChromeButtonRef.ASSIST_MIC to "MIC",
+                ChromeButtonRef.EDIT to "EDIT",
+                ChromeButtonRef.GEAR to "GEAR",
+            )
+            s.ui.chromeButtons
+                .filter { it.enabled }
+                .joinToString(" › ") { abbreviations[it.ref] ?: it.ref.name }
         },
     ),
 

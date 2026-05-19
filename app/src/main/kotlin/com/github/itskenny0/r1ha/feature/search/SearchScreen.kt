@@ -309,7 +309,6 @@ private fun BucketChips(
     )
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),

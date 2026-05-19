@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +73,7 @@ fun SettingsScreen(
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
     onOpenDevice: () -> Unit,
+    onOpenModifiedSettings: () -> Unit,
     onSignedOut: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -81,6 +83,21 @@ fun SettingsScreen(
     val s by vm.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     WheelScrollFor(wheelInput = wheelInput, listState = listState, settings = settings)
+
+    // Search query against the SETTINGS_REGISTRY. Live-filters the visible
+    // sections when non-blank: the regular sections collapse and a flat
+    // matched-entries list takes their place. Empty query restores the
+    // section view. Lives at screen scope so the query survives scroll
+    // recomposition without resetting.
+    var settingsQuery by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf("")
+    }
+    val matchedEntries = androidx.compose.runtime.remember(settingsQuery) {
+        com.github.itskenny0.r1ha.core.prefs.searchSettings(settingsQuery)
+    }
+    val modifiedCount = androidx.compose.runtime.remember(s) {
+        com.github.itskenny0.r1ha.core.prefs.modifiedSettings(s).size
+    }
 
     // Overlay flag for the Quick Settings tile entity-picker. Lives at
     // screen scope so the picker can render above the LazyColumn body.
@@ -155,6 +172,41 @@ fun SettingsScreen(
         R1TopBar(title = "SETTINGS", onBack = onBack)
 
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+
+            // ── Search bar + modified-settings entry ──────────────────────────
+            // Sticky-feeling header at the top of the LazyColumn. The search
+            // field live-filters against the SETTINGS_REGISTRY; the
+            // 'N modified' chip jumps to the dedicated subscreen.
+            item {
+                SettingsHeader(
+                    query = settingsQuery,
+                    onQueryChange = { settingsQuery = it },
+                    modifiedCount = modifiedCount,
+                    onOpenModified = onOpenModifiedSettings,
+                )
+            }
+
+            if (settingsQuery.isNotBlank()) {
+                // Search view — replaces the section grid with a flat matched
+                // list. Each row shows the category tag, label, description and
+                // current value so the user can find the setting and know what
+                // section to scroll to.
+                if (matchedEntries.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No settings match \"$settingsQuery\".",
+                            style = R1.body,
+                            color = R1.InkMuted,
+                            modifier = Modifier.padding(22.dp),
+                        )
+                    }
+                } else {
+                    itemsIndexed(matchedEntries, key = { _, it -> it.id }) { _, entry ->
+                        SearchResultRow(entry = entry, current = s)
+                    }
+                }
+                return@LazyColumn // Skip the normal sections while searching.
+            }
 
             // ── Server ─────────────────────────────────────────────────────────────
             item { Section("SERVER") }
@@ -1199,6 +1251,120 @@ private fun ToastLogLevelRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * Top-of-Settings header that combines:
+ *   - A live search field that filters the registry (consumed by the parent
+ *     LazyColumn — when [query] is non-blank, the sections collapse and a flat
+ *     matched-entries list takes their place).
+ *   - A "N modified" chip that opens the Modified Settings subscreen. The
+ *     number reads as muted when zero (nothing modified, nothing to audit) and
+ *     as accent when >0 so users notice the trail of changes.
+ */
+@Composable
+private fun SettingsHeader(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifiedCount: Int,
+    onOpenModified: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.weight(1f)) {
+                com.github.itskenny0.r1ha.ui.components.R1TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    placeholder = "Search settings…",
+                    monospace = false,
+                )
+            }
+            if (query.isNotEmpty()) {
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .r1Pressable(
+                            onClick = { onQueryChange("") },
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "✕", style = R1.labelMicro, color = R1.InkSoft)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        // Modified-settings entry chip. Always rendered so the affordance is
+        // discoverable on a fresh install (where the count reads '0 modified'
+        // and the tap navigates to a friendly empty-state).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = onOpenModified)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "$modifiedCount modified",
+                    style = R1.body,
+                    color = if (modifiedCount > 0) R1.AccentWarm else R1.InkSoft,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = "VIEW →",
+                    style = R1.labelMicro,
+                    color = R1.InkSoft,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Single matched-entry row in the search-results view. Read-only: tells the
+ * user which category the setting lives in, the label / description, and its
+ * current value. The user scrolls the section open to actually edit (no deep-
+ * link until the tiered-menus refactor lands).
+ */
+@Composable
+private fun SearchResultRow(
+    entry: com.github.itskenny0.r1ha.core.prefs.SettingEntry,
+    current: com.github.itskenny0.r1ha.core.prefs.AppSettings,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 4.dp)
+            .clip(R1.ShapeS)
+            .background(R1.SurfaceMuted)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = entry.category.label.uppercase(),
+                style = R1.labelMicro,
+                color = R1.AccentWarm,
+            )
+            Text(text = entry.label, style = R1.body, color = R1.Ink, maxLines = 2)
+            Text(
+                text = entry.description,
+                style = R1.labelMicro,
+                color = R1.InkSoft,
+                maxLines = 2,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = entry.currentDisplay(current),
+            style = R1.bodyEmph,
+            color = R1.InkSoft,
+        )
     }
 }
 

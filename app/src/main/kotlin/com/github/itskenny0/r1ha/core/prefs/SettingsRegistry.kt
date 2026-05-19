@@ -1,0 +1,330 @@
+package com.github.itskenny0.r1ha.core.prefs
+
+/**
+ * Catalogue of user-facing settings entries, used by:
+ *   - the "Modified settings" diff subscreen, which iterates this list and shows
+ *     entries where the current value differs from the constructor-default;
+ *   - the Settings search overlay, which fuzzy-matches user queries against each
+ *     entry's [label] and [description].
+ *
+ * Keeping this metadata separate from the [AppSettings] tree (rather than as
+ * annotations on the data-class fields) means:
+ *   1. The data classes stay pure plain-old-Kotlin without runtime metadata
+ *      reflection, which keeps R8 minification happy in release builds.
+ *   2. Adding a brand-new setting to [AppSettings] without registering it here
+ *      is a no-op for the diff / search surfaces — it just doesn't appear there
+ *      until someone deliberately wires the registry entry, which is the right
+ *      trade for catching incompletely-surfaced new settings during code review.
+ *   3. The label / description copy that the user actually sees lives next to
+ *      the search-index entry, not buried in the data-class KDoc that the user
+ *      never reads.
+ *
+ * If a setting is missing from this registry, the diff / search surfaces won't
+ * show it; they're best-effort, not exhaustive. Add an entry whenever a new
+ * user-facing setting lands.
+ */
+
+/**
+ * Coarse buckets used to group entries in the diff panel and to scope the
+ * Settings search results. These mirror the section headers on the existing
+ * flat Settings screen so the same mental model carries across.
+ */
+enum class SettingCategory(val label: String) {
+    SERVER("Server"),
+    INPUT("Scroll wheel"),
+    CARD_UI("Card UI"),
+    BEHAVIOUR("Behaviour"),
+    APPEARANCE("Appearance"),
+    DASHBOARD("Dashboard"),
+    INTEGRATIONS("Integrations"),
+    DATA("Backup & restore"),
+}
+
+/**
+ * One user-facing setting, described once and consumed by every diff / search
+ * surface that needs to enumerate settings.
+ *
+ * [isDefault] runs against the live [AppSettings] tree and returns true when
+ * the current value matches the value [AppSettings] gives without any
+ * customisation. The diff panel filters by `!isDefault(current)` to show only
+ * modified entries.
+ *
+ * [currentDisplay] renders the setting's current value as a single short
+ * string suitable for a row's right-edge value chip. Returning empty is fine
+ * for switches whose status is already implied by 'present in the diff list =
+ * not default'; the diff panel may still render the empty string verbatim, so
+ * keep the value short.
+ */
+data class SettingEntry(
+    val id: String,
+    val category: SettingCategory,
+    val label: String,
+    val description: String,
+    val isDefault: (AppSettings) -> Boolean,
+    val currentDisplay: (AppSettings) -> String,
+)
+
+private val defaults = AppSettings()
+
+/**
+ * Curated list of user-facing settings. Order roughly follows the current
+ * Settings screen's section order so the diff panel reads top-to-bottom in a
+ * familiar shape.
+ */
+val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
+    // ── Server ──────────────────────────────────────────────────────────
+    SettingEntry(
+        id = "server.url",
+        category = SettingCategory.SERVER,
+        label = "Server URL",
+        description = "Home Assistant base URL",
+        isDefault = { it.server?.url == defaults.server?.url },
+        currentDisplay = { it.server?.url ?: "(none)" },
+    ),
+
+    // ── Theme ───────────────────────────────────────────────────────────
+    SettingEntry(
+        id = "theme",
+        category = SettingCategory.APPEARANCE,
+        label = "Theme",
+        description = "Card-stack visual theme",
+        isDefault = { it.theme == defaults.theme },
+        currentDisplay = { it.theme.name.lowercase().replace('_', ' ') },
+    ),
+
+    // ── Scroll wheel ────────────────────────────────────────────────────
+    SettingEntry(
+        id = "wheel.stepPercent",
+        category = SettingCategory.INPUT,
+        label = "Wheel step",
+        description = "Percent change per detent (1, 2, 5, or 10)",
+        isDefault = { it.wheel.stepPercent == defaults.wheel.stepPercent },
+        currentDisplay = { "${it.wheel.stepPercent} %" },
+    ),
+    SettingEntry(
+        id = "wheel.acceleration",
+        category = SettingCategory.INPUT,
+        label = "Wheel acceleration",
+        description = "Boost the step on fast spins",
+        isDefault = { it.wheel.acceleration == defaults.wheel.acceleration },
+        currentDisplay = { if (it.wheel.acceleration) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "wheel.accelerationCurve",
+        category = SettingCategory.INPUT,
+        label = "Acceleration curve",
+        description = "Subtle / medium / aggressive boost shape",
+        isDefault = { it.wheel.accelerationCurve == defaults.wheel.accelerationCurve },
+        currentDisplay = { it.wheel.accelerationCurve.name },
+    ),
+    SettingEntry(
+        id = "wheel.invertDirection",
+        category = SettingCategory.INPUT,
+        label = "Invert wheel direction",
+        description = "Up = decrease, down = increase",
+        isDefault = { it.wheel.invertDirection == defaults.wheel.invertDirection },
+        currentDisplay = { if (it.wheel.invertDirection) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "wheel.keySource",
+        category = SettingCategory.INPUT,
+        label = "Wheel key source",
+        description = "Which Android keycode the wheel sends (auto / DPAD / volume)",
+        isDefault = { it.wheel.keySource == defaults.wheel.keySource },
+        currentDisplay = { it.wheel.keySource.name },
+    ),
+
+    // ── Card UI ─────────────────────────────────────────────────────────
+    SettingEntry(
+        id = "ui.displayMode",
+        category = SettingCategory.CARD_UI,
+        label = "Display mode",
+        description = "Show scalar values as percent or raw value",
+        isDefault = { it.ui.displayMode == defaults.ui.displayMode },
+        currentDisplay = { it.ui.displayMode.name },
+    ),
+    SettingEntry(
+        id = "ui.showOnOffPill",
+        category = SettingCategory.CARD_UI,
+        label = "Show on/off pill",
+        description = "Tiny ON / OFF chip on every card's lower-left",
+        isDefault = { it.ui.showOnOffPill == defaults.ui.showOnOffPill },
+        currentDisplay = { if (it.ui.showOnOffPill) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "ui.showAreaLabel",
+        category = SettingCategory.CARD_UI,
+        label = "Show area label",
+        description = "Show the entity's HA area on the card header",
+        isDefault = { it.ui.showAreaLabel == defaults.ui.showAreaLabel },
+        currentDisplay = { if (it.ui.showAreaLabel) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "ui.showPositionDots",
+        category = SettingCategory.CARD_UI,
+        label = "Show position pip",
+        description = "Bar in the chrome that shows current card position",
+        isDefault = { it.ui.showPositionDots == defaults.ui.showPositionDots },
+        currentDisplay = { if (it.ui.showPositionDots) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "ui.hideCardTailAbove",
+        category = SettingCategory.CARD_UI,
+        label = "Hide card tail above current",
+        description = "Solid chrome backdrop covers the previous card's tail",
+        isDefault = { it.ui.hideCardTailAbove == defaults.ui.hideCardTailAbove },
+        currentDisplay = { if (it.ui.hideCardTailAbove) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "ui.infiniteScroll",
+        category = SettingCategory.CARD_UI,
+        label = "Infinite scroll",
+        description = "Wheel past the last card wraps to the first",
+        isDefault = { it.ui.infiniteScroll == defaults.ui.infiniteScroll },
+        currentDisplay = { if (it.ui.infiniteScroll) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "ui.maxDecimalPlaces",
+        category = SettingCategory.CARD_UI,
+        label = "Sensor decimals",
+        description = "Max decimal places shown for numeric sensors",
+        isDefault = { it.ui.maxDecimalPlaces == defaults.ui.maxDecimalPlaces },
+        currentDisplay = { if (it.ui.maxDecimalPlaces == 0) "INT" else "${it.ui.maxDecimalPlaces}" },
+    ),
+    SettingEntry(
+        id = "ui.tempUnit",
+        category = SettingCategory.CARD_UI,
+        label = "Temperature unit",
+        description = "Auto follows HA's reported unit; force Celsius or Fahrenheit",
+        isDefault = { it.ui.tempUnit == defaults.ui.tempUnit },
+        currentDisplay = {
+            when (it.ui.tempUnit) {
+                TemperatureUnit.AUTO -> "AUTO"
+                TemperatureUnit.CELSIUS -> "°C"
+                TemperatureUnit.FAHRENHEIT -> "°F"
+            }
+        },
+    ),
+    SettingEntry(
+        id = "ui.chromeButtons",
+        category = SettingCategory.CARD_UI,
+        label = "Chrome buttons",
+        description = "Right-cluster button order + visibility",
+        isDefault = { it.ui.chromeButtons == defaults.ui.chromeButtons },
+        currentDisplay = {
+            val visible = it.ui.chromeButtons.count { c -> c.enabled }
+            val total = it.ui.chromeButtons.size
+            "$visible / $total visible"
+        },
+    ),
+
+    // ── Behaviour ───────────────────────────────────────────────────────
+    SettingEntry(
+        id = "behavior.haptics",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Haptics",
+        description = "Vibration on wheel detents and taps",
+        isDefault = { it.behavior.haptics == defaults.behavior.haptics },
+        currentDisplay = { if (it.behavior.haptics) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.keepScreenOn",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Keep screen on",
+        description = "Prevent the display from sleeping while the app is foreground",
+        isDefault = { it.behavior.keepScreenOn == defaults.behavior.keepScreenOn },
+        currentDisplay = { if (it.behavior.keepScreenOn) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.tapToToggle",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Tap card to toggle",
+        description = "Whole-card tap toggles the entity",
+        isDefault = { it.behavior.tapToToggle == defaults.behavior.tapToToggle },
+        currentDisplay = { if (it.behavior.tapToToggle) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.hideStatusBar",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Hide system status bar",
+        description = "Hide Android's top bar for the pure-card aesthetic",
+        isDefault = { it.behavior.hideStatusBar == defaults.behavior.hideStatusBar },
+        currentDisplay = { if (it.behavior.hideStatusBar) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.showBatteryWhenStatusBarHidden",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Battery indicator on chrome",
+        description = "Render a battery pill in the chrome when the status bar is hidden",
+        isDefault = {
+            it.behavior.showBatteryWhenStatusBarHidden ==
+                defaults.behavior.showBatteryWhenStatusBarHidden
+        },
+        currentDisplay = { if (it.behavior.showBatteryWhenStatusBarHidden) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.startOnDashboard",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Start on dashboard",
+        description = "Open on the TODAY dashboard rather than the card stack",
+        isDefault = { it.behavior.startOnDashboard == defaults.behavior.startOnDashboard },
+        currentDisplay = { if (it.behavior.startOnDashboard) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.wheelTogglesSwitches",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Wheel toggles switches",
+        description = "Wheel up/down flips non-scalar cards (locks, plain switches)",
+        isDefault = {
+            it.behavior.wheelTogglesSwitches == defaults.behavior.wheelTogglesSwitches
+        },
+        currentDisplay = { if (it.behavior.wheelTogglesSwitches) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.toastLogLevel",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Toast log level",
+        description = "Diagnostic-toast threshold (off / error / warn / info / debug)",
+        isDefault = { it.behavior.toastLogLevel == defaults.behavior.toastLogLevel },
+        currentDisplay = { it.behavior.toastLogLevel.name },
+    ),
+    SettingEntry(
+        id = "behavior.quickTileEntityId",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Quick Settings tile",
+        description = "Entity bound to the Android notification-shade tile",
+        isDefault = { it.behavior.quickTileEntityId == defaults.behavior.quickTileEntityId },
+        currentDisplay = { it.behavior.quickTileEntityId?.takeIf { v -> v.isNotBlank() } ?: "(unbound)" },
+    ),
+    SettingEntry(
+        id = "behavior.assistAutoOpenKeyboard",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Assist auto-open keyboard",
+        description = "Pop the keyboard when the Assist screen opens",
+        isDefault = {
+            it.behavior.assistAutoOpenKeyboard == defaults.behavior.assistAutoOpenKeyboard
+        },
+        currentDisplay = { if (it.behavior.assistAutoOpenKeyboard) "ON" else "OFF" },
+    ),
+)
+
+/**
+ * Return the subset of [SETTINGS_REGISTRY] whose [SettingEntry.isDefault] returns
+ * false for [current], in registry order. Used by the diff subscreen.
+ */
+fun modifiedSettings(current: AppSettings): List<SettingEntry> =
+    SETTINGS_REGISTRY.filterNot { it.isDefault(current) }
+
+/**
+ * Case-insensitive substring match against [SettingEntry.label] and
+ * [SettingEntry.description]. Used by the Settings search overlay. The query is
+ * already lowercased / trimmed by the call site so this stays a hot O(N) loop
+ * without per-call string allocations.
+ */
+fun searchSettings(query: String): List<SettingEntry> {
+    if (query.isBlank()) return emptyList()
+    val q = query.trim().lowercase()
+    return SETTINGS_REGISTRY.filter {
+        it.label.lowercase().contains(q) || it.description.lowercase().contains(q)
+    }
+}

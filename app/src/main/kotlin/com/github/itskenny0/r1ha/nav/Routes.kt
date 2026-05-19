@@ -33,6 +33,11 @@ object Routes {
     const val LOVELACE = "lovelace"
     const val DEVICE = "device"
 
+    /** "Modified settings" subscreen — lists every registry entry whose
+     *  current value differs from its default. Reached from a chip near
+     *  the top of the main Settings screen. */
+    const val MODIFIED_SETTINGS = "modified_settings"
+
     /** History drill-in route — carries the entity_id as a path
      *  segment. Use [historyRoute] from call sites so the encoding
      *  rule lives in one place. */

@@ -198,6 +198,9 @@ fun AppNavGraph(
                 onOpenDevice = {
                     navController.navigate(Routes.DEVICE) { launchSingleTop = true }
                 },
+                onOpenModifiedSettings = {
+                    navController.navigate(Routes.MODIFIED_SETTINGS) { launchSingleTop = true }
+                },
                 onSignedOut = {
                     // Clear the whole back stack so a stale CardStack/Onboarding can't be
                     // popped back to; then land fresh on Onboarding.
@@ -211,6 +214,13 @@ fun AppNavGraph(
         composable(Routes.THEME_PICKER) {
             ThemePickerScreen(
                 settings = settings,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.MODIFIED_SETTINGS) {
+            com.github.itskenny0.r1ha.feature.settings.ModifiedSettingsScreen(
+                settings = settings,
+                wheelInput = wheelInput,
                 onBack = { navController.popBackStack() },
             )
         }

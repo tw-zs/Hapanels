@@ -325,6 +325,7 @@ data class IntegrationsSettings(
  * screen. Treat unfamiliar fields as 'reserved for future use' rather than fully
  * exercised — the dev menu is for power users diagnosing live behaviour.
  */
+@Stable
 @kotlinx.serialization.Serializable
 data class AdvancedSettings(
     /** Trailing-edge debounce window for service calls. Lower = faster wire updates
@@ -413,6 +414,7 @@ data class ServerConfig(
  * the user's desired display order, identical in shape to the legacy single-
  * page [AppSettings.favorites] list it migrates from.
  */
+@Stable
 @kotlinx.serialization.Serializable
 data class FavoritePage(
     val id: String,

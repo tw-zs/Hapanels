@@ -385,6 +385,15 @@ private fun NumberControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
 @Composable
 private fun CounterControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
     val value = entry.numericValue
+    val armed = androidx.compose.runtime.remember(entry.entityId) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    androidx.compose.runtime.LaunchedEffect(armed.value) {
+        if (armed.value) {
+            kotlinx.coroutines.delay(3_000L)
+            armed.value = false
+        }
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         StepPill(label = "−", onClick = { vm.counterDecrement(entry) })
         Spacer(Modifier.width(8.dp))
@@ -396,26 +405,39 @@ private fun CounterControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) 
         )
         StepPill(label = "+", onClick = { vm.counterIncrement(entry) })
         Spacer(Modifier.width(6.dp))
-        // RESET is destructive-ish (loses the count) so we render it
-        // in StatusAmber to flag the secondary nature.
+        // RESET wipes the running count and some users hang days-since-X counters
+        // off these. Two-stage confirm (tap arms, second tap commits within 3s)
+        // so a stray tap doesn't blow away a multi-month accumulation.
         Box(
             modifier = Modifier
                 .clip(R1.ShapeS)
-                .background(R1.Bg)
+                .background(if (armed.value) R1.StatusAmber.copy(alpha = 0.28f) else R1.Bg)
                 .border(1.dp, R1.Hairline, R1.ShapeS)
-                .r1Pressable(onClick = { vm.counterReset(entry) })
+                .r1Pressable(onClick = {
+                    if (armed.value) {
+                        armed.value = false
+                        vm.counterReset(entry)
+                    } else {
+                        armed.value = true
+                    }
+                })
                 .padding(horizontal = 8.dp, vertical = 6.dp),
         ) {
-            Text(text = "RESET", style = R1.labelMicro, color = R1.StatusAmber)
+            Text(
+                text = if (armed.value) "CONFIRM" else "RESET",
+                style = R1.labelMicro,
+                color = R1.StatusAmber,
+            )
         }
     }
 }
 
 @Composable
 private fun SelectControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
-    // Tap cycles to the next option — keeps the row compact. The
-    // current option is highlighted; HA's select dropdown UX doesn't
-    // translate well to the R1's portrait display.
+    // Tap cycles forward; long-press cycles backward. The current option is
+    // highlighted; HA's dropdown UX doesn't translate well to the R1's portrait
+    // display, but a long-press affordance lets users back out of an overshoot
+    // without going all the way around the list.
     val options = entry.options
     val currentIdx = options.indexOf(entry.state).coerceAtLeast(0)
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -424,12 +446,20 @@ private fun SelectControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
                 .clip(R1.ShapeS)
                 .background(R1.AccentWarm.copy(alpha = 0.18f))
                 .border(1.dp, R1.AccentWarm.copy(alpha = 0.5f), R1.ShapeS)
-                .r1Pressable(onClick = {
-                    if (options.isNotEmpty()) {
-                        val next = options[(currentIdx + 1) % options.size]
-                        vm.selectOption(entry, next)
-                    }
-                })
+                .r1RowPressable(
+                    onTap = {
+                        if (options.isNotEmpty()) {
+                            val next = options[(currentIdx + 1) % options.size]
+                            vm.selectOption(entry, next)
+                        }
+                    },
+                    onLongPress = {
+                        if (options.isNotEmpty()) {
+                            val prevIdx = if (currentIdx == 0) options.size - 1 else currentIdx - 1
+                            vm.selectOption(entry, options[prevIdx])
+                        }
+                    },
+                )
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             Text(text = entry.state, style = R1.body, color = R1.AccentWarm, maxLines = 1)

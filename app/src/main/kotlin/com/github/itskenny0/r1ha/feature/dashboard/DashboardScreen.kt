@@ -225,7 +225,7 @@ fun DashboardScreen(
                     isTablet = isTablet,
                     leftVisible = ds.showSun && ui.sun != null,
                     rightVisible = ds.showNextEvent && ui.nextEvent != null,
-                    left = { ui.sun?.let { SunCard(it) } },
+                    left = { ui.sun?.let { SunCard(it, onClick = { onOpenHistory("sun.sun") }) } },
                     right = { ui.nextEvent?.let { CalendarCard(it, onClick = onOpenCalendars) } },
                 )
                 if (ds.showTimers && ui.timers.isNotEmpty()) {
@@ -390,16 +390,16 @@ private fun WeatherCard(
 }
 
 @Composable
-private fun SunCard(s: DashboardViewModel.SunSummary) {
-    // Read-only: there's no useful tap action on the sun. (Could route
-    // to a /history?entity_id=sun.sun web view but the dashboard is
-    // already exposing the salient fields.)
+private fun SunCard(s: DashboardViewModel.SunSummary, onClick: () -> Unit = {}) {
+    // Tap opens sun.sun's history so the user can drill into elevation curves and the
+    // next-rising/setting transitions without leaving the app.
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
             .border(1.dp, R1.Hairline, R1.ShapeS)
+            .r1Pressable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

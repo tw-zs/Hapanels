@@ -284,10 +284,24 @@ private fun AutomationRow(
                 )
                 if (entry.mode != AutomationsViewModel.Mode.UNKNOWN) {
                     Spacer(Modifier.width(6.dp))
+                    // Long-press a mode badge surfaces a one-line explainer; HA's
+                    // automation-mode jargon (queued/restart/parallel) isn't obvious
+                    // even to fairly experienced users.
+                    val modeExplain = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+                    androidx.compose.runtime.LaunchedEffect(modeExplain.value) {
+                        if (modeExplain.value) {
+                            kotlinx.coroutines.delay(2_500L)
+                            modeExplain.value = false
+                        }
+                    }
                     Text(
-                        text = entry.mode.label,
+                        text = if (modeExplain.value) modeExplainer(entry.mode) else entry.mode.label,
                         style = R1.labelMicro,
                         color = R1.AccentNeutral,
+                        modifier = Modifier.r1RowPressable(
+                            onTap = { /* no-op; tap is reserved for the row */ },
+                            onLongPress = { modeExplain.value = true },
+                        ),
                     )
                 }
                 if (entry.currentRunning > 0) {
@@ -334,4 +348,12 @@ private fun AutomationRow(
             Text(text = "RUN", style = R1.labelMicro, color = R1.AccentGreen)
         }
     }
+}
+
+private fun modeExplainer(mode: AutomationsViewModel.Mode): String = when (mode) {
+    AutomationsViewModel.Mode.SINGLE -> "one at a time"
+    AutomationsViewModel.Mode.PARALLEL -> "many at once"
+    AutomationsViewModel.Mode.QUEUED -> "queue extras"
+    AutomationsViewModel.Mode.RESTART -> "restart on retrigger"
+    AutomationsViewModel.Mode.UNKNOWN -> ""
 }

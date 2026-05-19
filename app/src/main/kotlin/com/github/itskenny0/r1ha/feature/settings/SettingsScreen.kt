@@ -1620,7 +1620,7 @@ private fun ChromeButtonRow(
         com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT ->
             "Opens the customize dialog for the active card"
         com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR ->
-            "Settings (always shown; required to reach Settings itself)"
+            "Tap: Settings. Long-press: Quick Search. Always shown."
     }
     Row(
         modifier = Modifier

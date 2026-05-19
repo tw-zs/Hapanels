@@ -603,9 +603,15 @@ fun SettingsScreen(
                     color = R1.InkMuted,
                     modifier = Modifier.padding(horizontal = 22.dp),
                 )
+                // Live preview of the rendered cluster — mirrors what the chrome row
+                // will actually look like in card-stack order. Hidden buttons render
+                // dimmed with a slash overlay so the user can see at a glance which
+                // slots will fire and which are off.
+                ChromeButtonsPreview(buttons = s.ui.chromeButtons)
             }
             itemsIndexed(s.ui.chromeButtons, key = { _, c -> c.ref.name }) { idx, cfg ->
                 ChromeButtonRow(
+                    position = idx + 1,
                     config = cfg,
                     isFirst = idx == 0,
                     isLast = idx == s.ui.chromeButtons.lastIndex,
@@ -1573,6 +1579,7 @@ private fun SearchResultRow(
  */
 @Composable
 private fun ChromeButtonRow(
+    position: Int,
     config: com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig,
     isFirst: Boolean,
     isLast: Boolean,
@@ -1603,6 +1610,15 @@ private fun ChromeButtonRow(
             .padding(horizontal = 22.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Position number — disambiguates "slot 1" (leftmost in the cluster) from
+        // "slot N" (closest to GEAR) when the user is scanning the rows. Fixed-
+        // width so the labels below line up.
+        Text(
+            text = "$position.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+            modifier = Modifier.width(18.dp),
+        )
         // Up / Down chips. Both are r1Pressable-only when the move is legal; we
         // still render the disabled state so the row's left edge stays aligned
         // even at the list extremes.
@@ -1619,6 +1635,71 @@ private fun ChromeButtonRow(
             onCheckedChange = { if (!gear) onToggle(it) },
             enabled = !gear,
         )
+    }
+}
+
+/**
+ * Live preview of the chrome-row's right cluster as the user reorders / toggles
+ * buttons. Renders compact pills in the same left-to-right order they'll appear
+ * on the card stack. Hidden buttons are dimmed and struck through so the user
+ * sees the position survives a visibility toggle (the disabled slot just won't
+ * render at runtime). Keeps the preview decoupled from the heavy actual glyphs
+ * (BatteryIndicator polls BatteryManager, AssistMicGlyph draws a path) — those
+ * would be wasteful inside a settings row that just needs to communicate order.
+ */
+@Composable
+private fun ChromeButtonsPreview(
+    buttons: List<com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig>,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 22.dp, end = 22.dp, top = 6.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "PREVIEW",
+            style = R1.labelMicro,
+            color = R1.InkSoft,
+        )
+        Spacer(Modifier.width(10.dp))
+        buttons.forEachIndexed { idx, cfg ->
+            val gear = cfg.ref == com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR
+            val visible = cfg.enabled || gear
+            val shortLabel = when (cfg.ref) {
+                com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY -> "BAT"
+                com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.ASSIST_MIC -> "MIC"
+                com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT -> "EDIT"
+                com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR -> "GEAR"
+            }
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(if (visible) R1.SurfaceMuted else R1.SurfaceMuted.copy(alpha = 0.35f))
+                    .border(
+                        width = 1.dp,
+                        color = if (visible) R1.AccentWarm.copy(alpha = 0.6f) else R1.Hairline,
+                        shape = R1.ShapeS,
+                    )
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = if (visible) shortLabel else "$shortLabel · off",
+                    style = R1.labelMicro,
+                    color = if (visible) R1.Ink else R1.InkMuted,
+                )
+            }
+            if (idx != buttons.lastIndex) {
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "›",
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                )
+                Spacer(Modifier.width(6.dp))
+            }
+        }
     }
 }
 

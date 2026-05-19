@@ -37,7 +37,6 @@ import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
-import androidx.compose.foundation.layout.widthIn
 import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
@@ -199,7 +198,6 @@ private fun MasterActionsRow(
     // "panel of mass actions" rather than a primary + secondaries.
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -324,7 +322,6 @@ private fun FilterChips(
     )
     Row(
         modifier = Modifier
-            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),

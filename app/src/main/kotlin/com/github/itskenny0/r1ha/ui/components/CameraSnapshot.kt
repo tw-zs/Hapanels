@@ -1,9 +1,11 @@
 package com.github.itskenny0.r1ha.ui.components
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.repeatOnLifecycle
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.core.util.R1Log
@@ -62,35 +66,43 @@ fun CameraSnapshot(
     var bitmap by remember(entityId) { mutableStateOf<ImageBitmap?>(null) }
     var failed by remember(entityId) { mutableStateOf(false) }
     // Suspend the polling loop when the host lifecycle drops below
-    // STARTED — saves cellular data + battery on a handheld R1 left in
+    // STARTED: saves cellular data + battery on a handheld R1 left in
     // a pocket with the Cameras screen open. Polling resumes
     // automatically on ON_RESUME via repeatOnLifecycle's wiring.
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    LaunchedEffect(entityId, serverUrl, bearerToken, intervalMillis, lifecycleOwner) {
-        // repeatOnLifecycle is a LifecycleOwner extension; the block
-        // runs (and reruns on ON_START) only while the lifecycle is at
-        // least STARTED. Same wiring as the AutoRefresh composable.
-        lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
-            while (true) {
-                val cb = System.currentTimeMillis()
-                val url = "${serverUrl.trimEnd('/')}/api/camera_proxy/$entityId?cb=$cb"
-                val image = runCatching { fetchSnapshot(url, bearerToken) }
-                    .onFailure { R1Log.d("Camera", "fetch $entityId failed: ${it.message}") }
-                    .getOrNull()
-                if (image != null) {
-                    bitmap = image
-                    failed = false
-                } else if (bitmap == null) {
-                    // Only flip into the failed-with-no-last-frame state if we never
-                    // got anything. A transient failure mid-stream just keeps the
-                    // previous frame visible until the next poll lands.
-                    failed = true
+    // Wrap in BoxWithConstraints so we know the target tile size in pixels at decode
+    // time. A 1920x1080 ARGB_8888 bitmap is ~8.3 MB; an 8-tile grid would otherwise
+    // hold ~66 MB of camera frames on a 3 GB R1. Sampling down to the rendered size
+    // (typically 360 dp wide on the R1) drops that to ~2-3 MB per tile and keeps
+    // memory pressure off Doze-induced trim-memory kills.
+    BoxWithConstraints(
+        modifier = modifier.background(R1.SurfaceMuted),
+        contentAlignment = Alignment.Center,
+    ) {
+        val density = LocalDensity.current
+        val targetWidthPx = with(density) { maxWidth.toPx().toInt().coerceAtLeast(1) }
+        val targetHeightPx = with(density) { maxHeight.toPx().toInt().coerceAtLeast(1) }
+        LaunchedEffect(entityId, serverUrl, bearerToken, intervalMillis, lifecycleOwner, targetWidthPx) {
+            lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                while (true) {
+                    val cb = System.currentTimeMillis()
+                    val url = "${serverUrl.trimEnd('/')}/api/camera_proxy/$entityId?cb=$cb"
+                    val image = runCatching { fetchSnapshot(url, bearerToken, targetWidthPx, targetHeightPx) }
+                        .onFailure { R1Log.d("Camera", "fetch $entityId failed: ${it.message}") }
+                        .getOrNull()
+                    if (image != null) {
+                        bitmap = image
+                        failed = false
+                    } else if (bitmap == null) {
+                        // Only flip into the failed-with-no-last-frame state if we never
+                        // got anything. A transient failure mid-stream just keeps the
+                        // previous frame visible until the next poll lands.
+                        failed = true
+                    }
+                    delay(intervalMillis)
                 }
-                delay(intervalMillis)
             }
         }
-    }
-    Box(modifier = modifier.background(R1.SurfaceMuted), contentAlignment = Alignment.Center) {
         val img = bitmap
         if (img != null) {
             Image(
@@ -102,11 +114,23 @@ fun CameraSnapshot(
         } else if (failed) {
             Text(text = "NO SIGNAL", style = R1.labelMicro, color = R1.InkMuted)
         } else {
-            // Initial-load state — empty SurfaceMuted box matches AsyncBitmap's
+            // Initial-load state: empty SurfaceMuted box matches AsyncBitmap's
             // first-frame behaviour rather than a spinner that flickers and
             // disappears within a second.
         }
     }
+}
+
+/**
+ * Compute inSampleSize as the largest power of two that keeps the decoded image at
+ * least as large as the target. BitmapFactory rounds down on non-power-of-two values
+ * silently, so doing the math here makes the intent explicit and predictable.
+ */
+private fun computeSampleSize(srcW: Int, srcH: Int, targetW: Int, targetH: Int): Int {
+    if (srcW <= 0 || srcH <= 0 || targetW <= 0 || targetH <= 0) return 1
+    var sample = 1
+    while (srcW / (sample * 2) >= targetW && srcH / (sample * 2) >= targetH) sample *= 2
+    return sample
 }
 
 /** Module-scoped OkHttp client for camera fetches. Separate from
@@ -122,7 +146,12 @@ private val cameraHttp: OkHttpClient by lazy {
         .build()
 }
 
-private suspend fun fetchSnapshot(url: String, bearerToken: String?): ImageBitmap? =
+private suspend fun fetchSnapshot(
+    url: String,
+    bearerToken: String?,
+    targetWidthPx: Int,
+    targetHeightPx: Int,
+): ImageBitmap? =
     withContext(Dispatchers.IO) {
         val builder = Request.Builder().url(url)
         if (!bearerToken.isNullOrBlank()) {
@@ -131,6 +160,16 @@ private suspend fun fetchSnapshot(url: String, bearerToken: String?): ImageBitma
         cameraHttp.newCall(builder.build()).execute().use { resp ->
             if (!resp.isSuccessful) return@withContext null
             val bytes = resp.body?.bytes() ?: return@withContext null
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            // Two-pass decode: first measure the source dimensions with inJustDecodeBounds,
+            // then compute a sample size that brings the decoded bitmap close to the tile
+            // size, and finally decode at that sample. RGB_565 halves memory vs ARGB_8888;
+            // camera JPEGs don't carry alpha so the colour loss is invisible.
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            val opts = BitmapFactory.Options().apply {
+                inSampleSize = computeSampleSize(bounds.outWidth, bounds.outHeight, targetWidthPx, targetHeightPx)
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)?.asImageBitmap()
         }
     }

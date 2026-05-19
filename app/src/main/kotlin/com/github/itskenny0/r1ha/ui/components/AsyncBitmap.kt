@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import androidx.compose.foundation.Image
@@ -129,7 +130,7 @@ private fun resolveUrl(raw: String, serverUrl: String?): String? = when {
 private suspend fun fetchAndDecode(url: String, bearerToken: String?): ImageBitmap? =
     withContext(Dispatchers.IO) {
         if (url.startsWith("data:")) {
-            // data:image/jpeg;base64,<...> — split off the base64 segment and
+            // data:image/jpeg;base64,<...> split off the base64 segment and
             // decode it. Inline data URIs are rare for media_player but some
             // integrations (Plex, Music Assistant) emit them.
             val commaIdx = url.indexOf(',')
@@ -137,7 +138,7 @@ private suspend fun fetchAndDecode(url: String, bearerToken: String?): ImageBitm
             val payload = url.substring(commaIdx + 1)
             val bytes = runCatching { android.util.Base64.decode(payload, android.util.Base64.DEFAULT) }
                 .getOrNull() ?: return@withContext null
-            return@withContext BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            return@withContext decodeSubsampled(bytes)
         }
         val client = AsyncBitmapCache.httpClient()
         val builder = Request.Builder().url(url)
@@ -147,9 +148,35 @@ private suspend fun fetchAndDecode(url: String, bearerToken: String?): ImageBitm
         client.newCall(builder.build()).execute().use { resp ->
             if (!resp.isSuccessful) return@withContext null
             val bytes = resp.body?.bytes() ?: return@withContext null
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            decodeSubsampled(bytes)
         }
     }
+
+/**
+ * Subsample decode targeted at the typical album-art slot size on R1 (~240 dp).
+ * A 1024x1024 ARGB_8888 cover from Music Assistant decodes to ~4 MB; sampled
+ * down to 256x256 RGB_565 it's ~128 KB. The LRU's 16-entry cap then bounds
+ * memory at ~2 MB instead of ~64 MB for max-sized inputs.
+ */
+private fun decodeSubsampled(bytes: ByteArray): ImageBitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    val target = TARGET_PX
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= target && bounds.outHeight / (sample * 2) >= target) {
+        sample *= 2
+    }
+    val opts = BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = Bitmap.Config.RGB_565
+    }
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)?.asImageBitmap()
+}
+
+// Slightly larger than the on-screen 240 dp to allow ContentScale.Crop to pick
+// from the borders without visible upscaling. RGB_565 + 256-target keeps each
+// cached cover well under 200 KB.
+private const val TARGET_PX = 256
 
 /**
  * Process-scoped cache for decoded album-art bitmaps + the OkHttp client that

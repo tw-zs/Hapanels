@@ -20,3 +20,12 @@
     public static *** v(...);
     public static *** d(...);
 }
+
+# Strip our own debug/verbose logs from release too. R1Log.d is called on every
+# wheel detent (CardStackViewModel hot path) and assembling the StringBuilder
+# argument allocates per-call; -assumenosideeffects lets R8 drop the call and
+# its arguments entirely in optimised release builds.
+-assumenosideeffects class com.github.itskenny0.r1ha.core.util.R1Log {
+    public *** d(...);
+    public *** v(...);
+}

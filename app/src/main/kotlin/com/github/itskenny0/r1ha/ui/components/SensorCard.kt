@@ -287,7 +287,7 @@ private fun sensorReadoutStyle(
 /**
  * Map a binary sensor's [state.rawState] to a presentation word. The HA convention is
  * "on" / "off", but the natural word depends on `device_class` — a door is OPEN/CLOSED,
- * a motion sensor is MOTION/CLEAR, a leak sensor is LEAK/DRY, etc. Falls back to a
+ * a motion sensor is MOTION/CLEAR, a moisture sensor is WET/DRY, etc. Falls back to a
  * straight TRUE/FALSE for anything we don't recognise, which still reads better than the
  * raw "on" / "off" everywhere.
  */
@@ -296,7 +296,10 @@ private fun friendlyBinaryWord(state: EntityState): String {
     return when (state.deviceClass) {
         "door", "garage_door", "window", "opening" -> if (on) "OPEN" else "CLOSED"
         "motion", "occupancy", "presence" -> if (on) "MOTION" else "CLEAR"
-        "moisture" -> if (on) "LEAK" else "DRY"
+        // Moisture sensors trip on any wetness, not just leaks — a damp basement
+        // floor or condensation on a window can also trigger them. WET reads as
+        // descriptive rather than alarming, which matches the actual signal.
+        "moisture" -> if (on) "WET" else "DRY"
         "smoke" -> if (on) "SMOKE" else "CLEAR"
         "gas", "carbon_monoxide" -> if (on) "DETECTED" else "CLEAR"
         "lock" -> if (on) "UNLOCKED" else "LOCKED"

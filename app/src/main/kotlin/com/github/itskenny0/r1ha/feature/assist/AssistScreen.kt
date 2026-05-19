@@ -1,5 +1,10 @@
 package com.github.itskenny0.r1ha.feature.assist
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
@@ -240,15 +245,13 @@ fun AssistScreen(
                                     // Animate the trailing dots so a slow local-LLM Assist call
                                     // reads as "working" rather than "frozen". One dot at 0-500 ms,
                                     // two at 500-1000, three at 1000-1500, cycling.
-                                    val transition = androidx.compose.animation.core.rememberInfiniteTransition(
-                                        label = "assist-inflight",
-                                    )
+                                    val transition = rememberInfiniteTransition(label = "assist-inflight")
                                     val phase by transition.animateFloat(
                                         initialValue = 0f,
                                         targetValue = 3f,
-                                        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-                                            animation = androidx.compose.animation.core.tween(durationMillis = 1500),
-                                            repeatMode = androidx.compose.animation.core.RepeatMode.Restart,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(durationMillis = 1500),
+                                            repeatMode = RepeatMode.Restart,
                                         ),
                                         label = "assist-inflight-phase",
                                     )

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -472,6 +473,7 @@ private fun DashboardTopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
+                .widthIn(max = 1000.dp)
                 .fillMaxWidth()
                 .padding(start = 4.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         ) {

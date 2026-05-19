@@ -116,7 +116,7 @@ fun AboutScreen(
                             "Distribution: $flavour\n" +
                             "Android: API ${Build.VERSION.SDK_INT}\n" +
                             "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
-                            "(describe what happened — if it's a crash, paste the LAST CRASH from the dev menu here)",
+                            "(describe what happened. If it's a crash, paste the LAST CRASH from the dev menu here.)",
                         "UTF-8",
                     )
                 LinkRow(
@@ -171,7 +171,7 @@ fun AboutScreen(
             item {
                 Text(
                     text = "Released into the public domain via The Unlicense. " +
-                        "Copy, modify, redistribute — commercial or not, by any means.",
+                        "Copy, modify, redistribute. Commercial or not, by any means.",
                     style = R1.body,
                     color = R1.InkSoft,
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),

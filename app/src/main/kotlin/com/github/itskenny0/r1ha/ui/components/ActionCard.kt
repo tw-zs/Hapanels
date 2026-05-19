@@ -141,7 +141,7 @@ fun ActionCard(
         // Secondary hint — clarifies that this is a one-shot trigger, not a toggle, so
         // users who hit it accidentally know there's no "undo" by tapping again.
         Text(
-            text = if (state.isOn) "RUNNING…" else "TAP TO FIRE — NO TOGGLE",
+            text = if (state.isOn) "RUNNING…" else "TAP TO FIRE · NO TOGGLE",
             style = R1.labelMicro,
             color = R1.InkMuted,
         )

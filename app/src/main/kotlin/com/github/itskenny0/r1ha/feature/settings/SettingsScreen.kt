@@ -135,6 +135,24 @@ fun SettingsScreen(
         }
     }
 
+    // Collect focus requests from ModifiedSettingsScreen: when the user taps a
+    // diff row over there and pops back to here, the bus fires with the section
+    // name. Collapse every other section so the target dominates the viewport,
+    // clear any in-progress search query (otherwise the section grid is hidden),
+    // and scroll the LazyColumn back to the top so the section ladder reads
+    // top-down. Only the matching section is expanded so the user scrolls past
+    // a few collapsed headers to reach the relevant settings — without needing
+    // a precise scroll-to-key (which would require keying every section item).
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.github.itskenny0.r1ha.core.util.SettingsFocusBus.requests.collect { name ->
+            if (name in allSectionNames) {
+                expandedSections = setOf(name)
+                settingsQuery = ""
+                runCatching { listState.animateScrollToItem(0) }
+            }
+        }
+    }
+
     // Overlay flag for the Quick Settings tile entity-picker. Lives at
     // screen scope so the picker can render above the LazyColumn body.
     // Driven by the PICK chip on the Quick Settings tile row.
@@ -1277,7 +1295,7 @@ fun SettingsScreen(
  * are the SettingsScreen's contract — not part of the registry's public API —
  * so the mapping is kept in this file rather than next to the enum.
  */
-private fun sectionNameForCategory(
+internal fun sectionNameForCategory(
     category: com.github.itskenny0.r1ha.core.prefs.SettingCategory,
 ): String = when (category) {
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"

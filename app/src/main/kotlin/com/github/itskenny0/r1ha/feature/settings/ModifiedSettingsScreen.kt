@@ -32,6 +32,7 @@ import com.github.itskenny0.r1ha.core.prefs.modifiedSettings
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
+import com.github.itskenny0.r1ha.ui.components.r1Pressable
 
 /**
  * Read-only audit of every setting that differs from its constructor default.
@@ -124,7 +125,18 @@ fun ModifiedSettingsScreen(
                     )
                 }
                 itemsIndexed(entries, key = { _, it -> it.id }) { _, entry ->
-                    ModifiedSettingRow(entry, current)
+                    ModifiedSettingRow(
+                        entry = entry,
+                        current = current,
+                        onJumpToSection = {
+                            // Push the section name onto the focus bus and pop back.
+                            // SettingsScreen's collector handles the expand + scroll.
+                            com.github.itskenny0.r1ha.core.util.SettingsFocusBus.request(
+                                sectionNameForCategory(entry.category),
+                            )
+                            onBack()
+                        },
+                    )
                 }
             }
         }
@@ -132,13 +144,22 @@ fun ModifiedSettingsScreen(
 }
 
 @Composable
-private fun ModifiedSettingRow(entry: SettingEntry, current: AppSettings) {
+private fun ModifiedSettingRow(
+    entry: SettingEntry,
+    current: AppSettings,
+    onJumpToSection: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
             .border(1.dp, R1.Hairline, R1.ShapeS)
+            // Tap surfs back to Settings with the entry's section expanded and
+            // focused, so the audit-then-edit flow is one tap instead of a
+            // back+scroll+find sequence. The arrow on the right hints that the
+            // row is actionable.
+            .r1Pressable(onClick = onJumpToSection)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -163,6 +184,14 @@ private fun ModifiedSettingRow(entry: SettingEntry, current: AppSettings) {
             text = entry.currentDisplay(current),
             style = R1.bodyEmph,
             color = R1.AccentWarm,
+        )
+        Spacer(Modifier.width(8.dp))
+        // Right-edge arrow hints the row jumps to Settings rather than opening
+        // an inline editor. Muted so it doesn't compete with the value chip.
+        Text(
+            text = "›",
+            style = R1.body,
+            color = R1.InkMuted,
         )
     }
 }

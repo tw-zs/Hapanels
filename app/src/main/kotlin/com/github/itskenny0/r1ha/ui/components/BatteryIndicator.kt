@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -97,14 +98,26 @@ fun BatteryIndicator(
             )
             .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
-        Text(
-            text = when {
-                p == null -> "—"
-                charging -> "⚡${p}%"
-                else -> "${p}%"
-            },
-            style = R1.labelMicro,
-            color = tint,
-        )
+        // Use a Row when charging so the lightning glyph renders as a Canvas-drawn
+        // path in the same monochrome tint as the percent text. The earlier
+        // "⚡${p}%" string concatenation rendered the bolt with the system colour-
+        // emoji font (yellow on most Android versions), which broke the indicator's
+        // monochrome look on hairline-stroke chrome.
+        when {
+            p == null -> Text(text = "—", style = R1.labelMicro, color = tint)
+            charging -> androidx.compose.foundation.layout.Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                ChargingBoltGlyph(
+                    size = 10.dp,
+                    tint = tint,
+                )
+                androidx.compose.foundation.layout.Spacer(
+                    androidx.compose.ui.Modifier.width(2.dp),
+                )
+                Text(text = "${p}%", style = R1.labelMicro, color = tint)
+            }
+            else -> Text(text = "${p}%", style = R1.labelMicro, color = tint)
+        }
     }
 }

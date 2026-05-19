@@ -312,7 +312,7 @@ fun SettingsScreen(
                     is com.github.itskenny0.r1ha.core.ha.ConnectionState.Disconnected ->
                         "Disconnected (attempt ${c.attempt})"
                     is com.github.itskenny0.r1ha.core.ha.ConnectionState.AuthLost ->
-                        "Auth lost — sign in again"
+                        "Auth lost · sign in again"
                 }
                 InfoRow(label = "Status", value = label)
             }
@@ -658,7 +658,7 @@ fun SettingsScreen(
                     SwitchRow(
                         label = "↳ Show battery indicator",
                         subtitle = "Tiny percent pill on the right of the chrome row " +
-                            "(polled every 30 s) — useful so a low R1 battery doesn't catch you off-guard.",
+                            "(polled every 30 s). Useful so a low R1 battery doesn't catch you off-guard.",
                         checked = s.behavior.showBatteryWhenStatusBarHidden,
                         onCheckedChange = { vm.setShowBatteryWhenStatusBarHidden(it) },
                     )
@@ -678,7 +678,7 @@ fun SettingsScreen(
                     label = "Wheel toggles switches",
                     subtitle = "On (default): wheel-up turns locks, covers, vacuums, plain " +
                         "switches on; wheel-down turns them off. Off: wheel does nothing on " +
-                        "those cards — useful if a casual brush is accidentally relocking your door.",
+                        "those cards; useful if a casual brush is accidentally relocking your door.",
                     checked = s.behavior.wheelTogglesSwitches,
                     onCheckedChange = { vm.setWheelTogglesSwitches(it) },
                 )
@@ -687,7 +687,7 @@ fun SettingsScreen(
                 SwitchRow(
                     label = "Assist · open keyboard on entry",
                     subtitle = "Off (default): tapping into Assist shows the screen but " +
-                        "leaves the keyboard closed — useful on phones where the IME " +
+                        "leaves the keyboard closed; useful on phones where the IME " +
                         "popping up otherwise re-centers the empty state jarringly. " +
                         "On: opening Assist focuses the input field immediately. " +
                         "Voice input (🎤) works regardless of this setting.",
@@ -1204,7 +1204,7 @@ fun SettingsScreen(
             item {
                 NavRow(
                     label = "Device",
-                    value = "Local — brightness, volume, flashlight",
+                    value = "Local: brightness, volume, flashlight",
                     onClick = onOpenDevice,
                 )
             }
@@ -1359,7 +1359,7 @@ private fun ToastLogLevelRow(
         Text("Toast log level", style = R1.bodyEmph, color = R1.Ink)
         Text(
             text = "Off (default): no diagnostic toasts. Warn: surface failures and " +
-                "decoder drops as tappable expanding toasts — useful for 'where's my " +
+                "decoder drops as tappable expanding toasts. Useful for 'where's my " +
                 "entity?' on devices without adb. Debug: everything R1Log emits.",
             style = R1.body,
             color = R1.InkMuted,
@@ -1575,7 +1575,7 @@ private fun ChromeButtonRow(
         com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT ->
             "Opens the customize dialog for the active card"
         com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR ->
-            "Settings (always shown — required to reach Settings itself)"
+            "Settings (always shown; required to reach Settings itself)"
     }
     Row(
         modifier = Modifier

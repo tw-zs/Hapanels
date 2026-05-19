@@ -99,6 +99,28 @@ fun SettingsScreen(
         com.github.itskenny0.r1ha.core.prefs.modifiedSettings(s).size
     }
 
+    // Expand/collapse state for each section header. Defaults to all expanded
+    // (no behaviour change for existing installs); the user can tap a header
+    // to collapse the section, or use COLLAPSE ALL / EXPAND ALL chips in the
+    // settings header. Persisted only for the current screen lifetime — sections
+    // re-expand on screen re-entry, which keeps the discoverability of the full
+    // settings tree as the entry point.
+    val allSectionNames = listOf(
+        "SERVER", "SCROLL WHEEL", "CARD UI", "BEHAVIOUR",
+        "BACKUP & RESTORE", "DASHBOARD", "INTEGRATIONS", "APPEARANCE",
+        "TODAY", "TALK & FIRE", "STATUS VIEWS", "POWER TOOLS",
+    )
+    var expandedSections by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(allSectionNames.toSet())
+    }
+    val toggleSection: (String) -> Unit = { name ->
+        expandedSections = if (name in expandedSections) {
+            expandedSections - name
+        } else {
+            expandedSections + name
+        }
+    }
+
     // Overlay flag for the Quick Settings tile entity-picker. Lives at
     // screen scope so the picker can render above the LazyColumn body.
     // Driven by the PICK chip on the Quick Settings tile row.
@@ -183,6 +205,9 @@ fun SettingsScreen(
                     onQueryChange = { settingsQuery = it },
                     modifiedCount = modifiedCount,
                     onOpenModified = onOpenModifiedSettings,
+                    anyExpanded = expandedSections.isNotEmpty(),
+                    onCollapseAll = { expandedSections = emptySet() },
+                    onExpandAll = { expandedSections = allSectionNames.toSet() },
                 )
             }
 
@@ -209,7 +234,8 @@ fun SettingsScreen(
             }
 
             // ── Server ─────────────────────────────────────────────────────────────
-            item { Section("SERVER") }
+            item { Section("SERVER", expanded = "SERVER" in expandedSections, onToggle = { toggleSection("SERVER") }) }
+            if ("SERVER" in expandedSections) {
             item {
                 InfoRow(
                     label = "URL",
@@ -349,10 +375,12 @@ fun SettingsScreen(
                 }
             }
 
+            }
             item { SectionDivider() }
 
             // ── Scroll wheel ───────────────────────────────────────────────────────
-            item { Section("SCROLL WHEEL") }
+            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }) }
+            if ("SCROLL WHEEL" in expandedSections) {
             item {
                 LabeledControl(label = "Step size") {
                     SegmentedIntPicker(
@@ -413,10 +441,12 @@ fun SettingsScreen(
                 }
             }
 
+            }
             item { SectionDivider() }
 
             // ── Card UI ────────────────────────────────────────────────────────────
-            item { Section("CARD UI") }
+            item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }) }
+            if ("CARD UI" in expandedSections) {
             item {
                 LabeledControl(label = "Display mode") {
                     SegmentedEnumPicker(
@@ -529,10 +559,12 @@ fun SettingsScreen(
                 )
             }
 
+            }
             item { SectionDivider() }
 
             // ── Behaviour ──────────────────────────────────────────────────────────
-            item { Section("BEHAVIOUR") }
+            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }) }
+            if ("BEHAVIOUR" in expandedSections) {
             item {
                 SwitchRow(
                     label = "Haptic feedback",
@@ -665,10 +697,12 @@ fun SettingsScreen(
                 }
             }
 
+            }
             item { SectionDivider() }
 
             // ── Backup & restore ───────────────────────────────────────────────────
-            item { Section("BACKUP & RESTORE") }
+            item { Section("BACKUP & RESTORE", expanded = "BACKUP & RESTORE" in expandedSections, onToggle = { toggleSection("BACKUP & RESTORE") }) }
+            if ("BACKUP & RESTORE" in expandedSections) {
             item {
                 InfoRow(
                     label = "What's included",
@@ -750,10 +784,12 @@ fun SettingsScreen(
                 }
             }
 
+            }
             item { SectionDivider() }
 
             // ── Dashboard layout — per-section visibility + thresholds ─────────
-            item { Section("DASHBOARD") }
+            item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }) }
+            if ("DASHBOARD" in expandedSections) {
             item { SubGroupLabel("VISIBLE CARDS") }
             item {
                 SwitchRow(
@@ -899,10 +935,12 @@ fun SettingsScreen(
                 )
             }
 
+            }
             item { SectionDivider() }
 
             // ── Integrations — per-surface refresh intervals + tuning ──────────
-            item { Section("INTEGRATIONS") }
+            item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }) }
+            if ("INTEGRATIONS" in expandedSections) {
             item { SubGroupLabel("AUTO-REFRESH INTERVALS") }
             item {
                 NumberStepperRow(
@@ -1014,10 +1052,12 @@ fun SettingsScreen(
                 )
             }
 
+            }
             item { SectionDivider() }
 
             // ── Appearance ─────────────────────────────────────────────────────────
-            item { Section("APPEARANCE") }
+            item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }) }
+            if ("APPEARANCE" in expandedSections) {
             item {
                 NavRow(
                     label = "Theme",
@@ -1029,10 +1069,12 @@ fun SettingsScreen(
                 )
             }
 
+            }
             item { SectionDivider() }
 
             // ── Today — at-a-glance dashboard + quick search ──────────────
-            item { Section("TODAY") }
+            item { Section("TODAY", expanded = "TODAY" in expandedSections, onToggle = { toggleSection("TODAY") }) }
+            if ("TODAY" in expandedSections) {
             item {
                 NavRow(label = "Dashboard", value = "Weather · People · Next event", onClick = onOpenDashboard)
             }
@@ -1040,10 +1082,12 @@ fun SettingsScreen(
                 NavRow(label = "Quick Search", value = "Find any entity", onClick = onOpenSearch)
             }
 
+            }
             item { SectionDivider() }
 
             // ── Talk + Fire — high-frequency action surfaces ─────────────
-            item { Section("TALK & FIRE") }
+            item { Section("TALK & FIRE", expanded = "TALK & FIRE" in expandedSections, onToggle = { toggleSection("TALK & FIRE") }) }
+            if ("TALK & FIRE" in expandedSections) {
             item {
                 NavRow(label = "Assist", value = "Talk to HA", onClick = onOpenAssist)
             }
@@ -1066,8 +1110,10 @@ fun SettingsScreen(
             }
 
             // ── Status views — read-only at-a-glance HA state ────────────
+            }
             item { SectionDivider() }
-            item { Section("STATUS VIEWS") }
+            item { Section("STATUS VIEWS", expanded = "STATUS VIEWS" in expandedSections, onToggle = { toggleSection("STATUS VIEWS") }) }
+            if ("STATUS VIEWS" in expandedSections) {
             item {
                 NavRow(label = "Cameras", value = "Live snapshots", onClick = onOpenCameras)
             }
@@ -1112,8 +1158,10 @@ fun SettingsScreen(
             }
 
             // ── Power tools — diagnostic / advanced surfaces ─────────────
+            }
             item { SectionDivider() }
-            item { Section("POWER TOOLS") }
+            item { Section("POWER TOOLS", expanded = "POWER TOOLS" in expandedSections, onToggle = { toggleSection("POWER TOOLS") }) }
+            if ("POWER TOOLS" in expandedSections) {
             item {
                 NavRow(label = "Templates", value = "Jinja2 evaluator", onClick = onOpenTemplate)
             }
@@ -1134,6 +1182,7 @@ fun SettingsScreen(
                 )
             }
 
+            }
             item { SectionDivider() }
 
             item {
@@ -1162,11 +1211,17 @@ fun SettingsScreen(
 // ── Building blocks ──────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun Section(title: String) {
+private fun Section(
+    title: String,
+    expanded: Boolean = true,
+    onToggle: (() -> Unit)? = null,
+) {
+    val modifier = Modifier
+        .fillMaxWidth()
+        .then(if (onToggle != null) Modifier.r1Pressable(onClick = onToggle) else Modifier)
+        .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 8.dp)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 8.dp),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = R1.sectionHeader, color = R1.AccentWarm)
@@ -1177,6 +1232,17 @@ private fun Section(title: String) {
                 .weight(1f)
                 .background(R1.Hairline),
         )
+        if (onToggle != null) {
+            Spacer(Modifier.width(10.dp))
+            // Chevron-style indicator: '−' (minus) when expanded, '+' when collapsed.
+            // Single-char readouts keep the visual weight low — the header line is
+            // already prominent and a full word would compete with the title.
+            Text(
+                text = if (expanded) "−" else "+",
+                style = R1.bodyEmph,
+                color = R1.InkSoft,
+            )
+        }
     }
 }
 
@@ -1269,6 +1335,9 @@ private fun SettingsHeader(
     onQueryChange: (String) -> Unit,
     modifiedCount: Int,
     onOpenModified: () -> Unit,
+    anyExpanded: Boolean,
+    onCollapseAll: () -> Unit,
+    onExpandAll: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1320,6 +1389,25 @@ private fun SettingsHeader(
                     color = R1.InkSoft,
                 )
             }
+        }
+        Spacer(Modifier.height(6.dp))
+        // Bulk-toggle every section in one tap. Toggles between fully-expanded
+        // (the default first-launch state) and fully-collapsed (true 'tiered
+        // menu' shape — only section titles visible, tap one to drill in).
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = if (anyExpanded) onCollapseAll else onExpandAll)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = if (anyExpanded) "COLLAPSE ALL SECTIONS" else "EXPAND ALL SECTIONS",
+                style = R1.labelMicro,
+                color = R1.InkSoft,
+            )
         }
     }
 }

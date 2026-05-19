@@ -271,7 +271,12 @@ fun SearchScreen(
                     }
                 }
             }
-            else -> LazyColumn(
+            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = ui.loading,
+                onRefresh = { vm.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -298,6 +303,7 @@ fun SearchScreen(
                         )
                     }
                 }
+            }
         }
         } // AdaptiveContent
     }

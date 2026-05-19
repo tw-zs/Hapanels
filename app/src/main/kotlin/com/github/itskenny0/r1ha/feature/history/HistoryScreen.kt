@@ -125,38 +125,48 @@ fun HistoryScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = ui.loading,
+            onRefresh = { vm.refresh() },
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Text(
-                text = entityId,
-                style = R1.labelMicro,
-                color = R1.InkMuted,
-            )
-            WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
-            HistoryChartPanel(ui)
-            SummaryPanel(ui)
-            if (ui.error != null && ui.points.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(R1.ShapeS)
-                        .background(R1.StatusRed.copy(alpha = 0.12f))
-                        .border(1.dp, R1.StatusRed.copy(alpha = 0.4f), R1.ShapeS)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    Text(
-                        text = ui.error ?: "",
-                        style = R1.labelMicro,
-                        color = R1.StatusRed,
-                    )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = entityId,
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                )
+                WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
+                HistoryChartPanel(ui)
+                SummaryPanel(ui)
+                // Surface refresh errors even when the chart still has stale points; the
+                // prior gate of `ui.points.isEmpty()` silently swallowed errors during
+                // routine re-fetches, so a user staring at an old line had no way to
+                // know the refresh failed.
+                if (ui.error != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(R1.ShapeS)
+                            .background(R1.StatusRed.copy(alpha = 0.12f))
+                            .border(1.dp, R1.StatusRed.copy(alpha = 0.4f), R1.ShapeS)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            text = ui.error ?: "",
+                            style = R1.labelMicro,
+                            color = R1.StatusRed,
+                        )
+                    }
                 }
+                Spacer(Modifier.size(24.dp))
             }
-            Spacer(Modifier.size(24.dp))
         }
     }
 }

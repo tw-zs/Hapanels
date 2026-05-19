@@ -1425,24 +1425,28 @@ private fun SettingsHeader(
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
         // Bulk-toggle every section in one tap. Toggles between fully-expanded
         // (the default first-launch state) and fully-collapsed (true 'tiered
         // menu' shape — only section titles visible, tap one to drill in).
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(R1.ShapeS)
-                .background(R1.SurfaceMuted)
-                .border(1.dp, R1.Hairline, R1.ShapeS)
-                .r1Pressable(onClick = if (anyExpanded) onCollapseAll else onExpandAll)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = if (anyExpanded) "COLLAPSE ALL SECTIONS" else "EXPAND ALL SECTIONS",
-                style = R1.labelMicro,
-                color = R1.InkSoft,
-            )
+        // Hidden while searching: the section grid is replaced by the matched-
+        // entries list, so the toggle would have no visible effect.
+        if (query.isBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(onClick = if (anyExpanded) onCollapseAll else onExpandAll)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = if (anyExpanded) "COLLAPSE ALL SECTIONS" else "EXPAND ALL SECTIONS",
+                    style = R1.labelMicro,
+                    color = R1.InkSoft,
+                )
+            }
         }
     }
 }

@@ -71,6 +71,7 @@ fun ServiceCallerScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "SERVICE CALLER", onBack = onBack)
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
         val scrollState = rememberScrollState()
         com.github.itskenny0.r1ha.ui.components.WheelScrollForScrollState(
             wheelInput = wheelInput,
@@ -210,6 +211,7 @@ fun ServiceCallerScreen(
             }
             Spacer(Modifier.padding(top = 24.dp))
         }
+        } // AdaptiveContent
     }
 }
 

@@ -107,7 +107,10 @@ fun AdaptiveContent(
 ) {
     val tier = currentWidthTier()
     if (tier != WidthTier.TABLET) {
-        content()
+        // On R1 / phones: the content fills naturally but the caller's modifier
+        // (e.g. Modifier.weight(1f)) still needs to be honoured so the composable
+        // occupies the right space in its parent Column.
+        Box(modifier = modifier.fillMaxSize()) { content() }
         return
     }
     Box(

@@ -1417,8 +1417,14 @@ private fun EmptyState(
                 else -> R1.StatusAmber
             }
             Spacer(Modifier.height(20.dp))
+            // Give the retry chip a visible border + surface so it reads as a button
+            // rather than just inline copy. Previously a bare Text inside a Box made the
+            // tap target invisible against the empty-state backdrop.
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(color.copy(alpha = 0.12f))
+                    .border(1.dp, color.copy(alpha = 0.4f), R1.ShapeS)
                     .r1Pressable(onRetry)
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {

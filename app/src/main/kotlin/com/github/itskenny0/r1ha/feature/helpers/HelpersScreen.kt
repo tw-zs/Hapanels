@@ -39,6 +39,7 @@ import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.RelativeTimeLabel
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.components.r1RowPressable
 
 /**
  * Helpers browser — mirrors HA's frontend Helpers configuration panel
@@ -385,7 +386,7 @@ private fun NumberControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
 @Composable
 private fun CounterControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
     val value = entry.numericValue
-    val armed = androidx.compose.runtime.remember(entry.entityId) {
+    val armed = androidx.compose.runtime.remember(entry.id.value) {
         androidx.compose.runtime.mutableStateOf(false)
     }
     androidx.compose.runtime.LaunchedEffect(armed.value) {

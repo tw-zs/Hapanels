@@ -27,7 +27,7 @@ class HaInboundTest {
         val m = HaJson.decodeFromString<HaInbound>("""{"id":7,"type":"result","success":false,"error":{"code":"not_found","message":"nope"}}""")
         val r = m as HaInbound.Result
         assertThat(r.success).isFalse()
-        assertThat(r.error?.code).isEqualTo("not_found")
+        assertThat(r.error?.codeString).isEqualTo("not_found")
         assertThat(r.error?.message).isEqualTo("nope")
     }
     @Test fun `event trigger with state_changed`() {

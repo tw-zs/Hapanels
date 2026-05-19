@@ -75,7 +75,7 @@ fun SearchScreen(
 ) {
     val vm: SearchViewModel = viewModel(factory = SearchViewModel.factory(haRepository, settings))
     val ui by vm.ui.collectAsState()
-    val results by results.collectAsState()
+    val results by vm.results.collectAsState()
     val listState = rememberLazyListState()
     val focus = remember { FocusRequester() }
     val context = androidx.compose.ui.platform.LocalContext.current

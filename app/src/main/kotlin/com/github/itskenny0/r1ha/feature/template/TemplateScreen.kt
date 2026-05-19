@@ -34,6 +34,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1Button
 import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 
 /**
@@ -65,6 +66,7 @@ fun TemplateScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "TEMPLATES", onBack = onBack)
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
         // Wheel scroll for the form area — long Jinja templates +
         // RECENT history can exceed one screen.
         val scrollState = rememberScrollState()
@@ -156,6 +158,7 @@ fun TemplateScreen(
             }
             Spacer(Modifier.padding(top = 24.dp))
         }
+        } // AdaptiveContent
     }
 }
 

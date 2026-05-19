@@ -333,13 +333,19 @@ private fun AssistBubble(msg: AssistMessage) {
     // doesn't conflict with tap-to-do-nothing (the rest of the bubble currently
     // has no tap affordance).
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    // Bubble max-width scales with the available container: narrower on R1/phones
+    // so bubbles don't fill the whole width; wider on tablets (the chat is inside
+    // an 800 dp AdaptiveContent island) so longer responses don't word-wrap
+    // into single-word lines.
+    val bubbleMaxWidth = if (com.github.itskenny0.r1ha.ui.layout.currentWidthTier() ==
+        com.github.itskenny0.r1ha.ui.layout.WidthTier.TABLET) 540.dp else 240.dp
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         Box(
             modifier = Modifier
-                .widthIn(max = 240.dp)
+                .widthIn(max = bubbleMaxWidth)
                 .clip(R1.ShapeS)
                 .background(bg)
                 .border(1.dp, if (isUser) R1.AccentWarm else R1.Hairline, R1.ShapeS)

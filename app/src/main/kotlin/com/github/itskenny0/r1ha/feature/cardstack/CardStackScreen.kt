@@ -1749,6 +1749,7 @@ private fun TabManageDialog(
     ) {
         Column(
             modifier = Modifier
+                .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp)
                 .clip(R1.ShapeS)
@@ -2020,6 +2021,7 @@ private fun CardContextMenu(
     ) {
         Column(
             modifier = Modifier
+                .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp)
                 .clip(R1.ShapeS)
@@ -2203,6 +2205,7 @@ private fun QuickActionsSheet(
     ) {
         Column(
             modifier = Modifier
+                .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp)
                 .clip(R1.ShapeS)

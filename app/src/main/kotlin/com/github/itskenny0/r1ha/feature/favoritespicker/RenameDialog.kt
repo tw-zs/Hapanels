@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,6 +85,7 @@ fun RenameDialog(
         // padding would dismiss the dialog mid-edit.
         Column(
             modifier = Modifier
+                .widthIn(max = 560.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 14.dp, vertical = 14.dp)
                 .clip(R1.ShapeS)

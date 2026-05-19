@@ -1271,6 +1271,7 @@ private fun sectionNameForCategory(
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS -> "INTEGRATIONS"
 }
 
 // ── Building blocks ──────────────────────────────────────────────────────────────────────

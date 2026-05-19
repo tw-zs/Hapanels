@@ -35,11 +35,11 @@ enum class SettingCategory(val label: String) {
     CARD_UI("Card UI"),
     BEHAVIOUR("Behaviour"),
     APPEARANCE("Appearance"),
-    // Future categories (DASHBOARD / INTEGRATIONS / DATA) intentionally absent:
-    // the registry doesn't populate them today and an unpopulated category can't
-    // surface in search or diff anyway. Re-add when entries land. A test asserts
-    // every category is populated, so a drive-by enum addition without a matching
-    // entry won't merge.
+    INTEGRATIONS("Integrations"),
+    // DASHBOARD / DATA intentionally absent: the registry doesn't populate
+    // them today (DashboardSettings is many-fielded; backup/restore is
+    // actions not settings). A test asserts every category is populated, so
+    // a drive-by enum addition without a matching entry won't merge.
 }
 
 /**
@@ -327,6 +327,68 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
             it.behavior.assistAutoOpenKeyboard == defaults.behavior.assistAutoOpenKeyboard
         },
         currentDisplay = { if (it.behavior.assistAutoOpenKeyboard) "ON" else "OFF" },
+    ),
+
+    // ── Integrations ────────────────────────────────────────────────────
+    SettingEntry(
+        id = "integrations.notificationsRefreshSec",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Notifications refresh",
+        description = "Auto-refresh cadence for persistent notifications (seconds)",
+        isDefault = {
+            it.integrations.notificationsRefreshSec == defaults.integrations.notificationsRefreshSec
+        },
+        currentDisplay = { "${it.integrations.notificationsRefreshSec} s" },
+    ),
+    SettingEntry(
+        id = "integrations.logbookRefreshSec",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Logbook refresh",
+        description = "Auto-refresh cadence for Recent Activity (seconds)",
+        isDefault = {
+            it.integrations.logbookRefreshSec == defaults.integrations.logbookRefreshSec
+        },
+        currentDisplay = { "${it.integrations.logbookRefreshSec} s" },
+    ),
+    SettingEntry(
+        id = "integrations.cameraOverlayPollSec",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Camera detail polling",
+        description = "Snapshot poll interval when a camera is open fullscreen (seconds)",
+        isDefault = {
+            it.integrations.cameraOverlayPollSec == defaults.integrations.cameraOverlayPollSec
+        },
+        currentDisplay = { "${it.integrations.cameraOverlayPollSec} s" },
+    ),
+    SettingEntry(
+        id = "integrations.cameraGridPollSec",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Camera grid polling",
+        description = "Snapshot poll interval for camera grid tiles (seconds)",
+        isDefault = {
+            it.integrations.cameraGridPollSec == defaults.integrations.cameraGridPollSec
+        },
+        currentDisplay = { "${it.integrations.cameraGridPollSec} s" },
+    ),
+    SettingEntry(
+        id = "integrations.camerasDefaultGrid",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Cameras default to grid",
+        description = "Open Cameras in GRID view rather than LIST",
+        isDefault = {
+            it.integrations.camerasDefaultGrid == defaults.integrations.camerasDefaultGrid
+        },
+        currentDisplay = { if (it.integrations.camerasDefaultGrid) "GRID" else "LIST" },
+    ),
+    SettingEntry(
+        id = "integrations.searchResultCap",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Quick Search result cap",
+        description = "Max entity rows returned by Quick Search",
+        isDefault = {
+            it.integrations.searchResultCap == defaults.integrations.searchResultCap
+        },
+        currentDisplay = { "${it.integrations.searchResultCap}" },
     ),
 )
 

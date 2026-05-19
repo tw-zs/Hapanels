@@ -131,8 +131,18 @@ fun SearchScreen(
         R1TopBar(title = "QUICK SEARCH", onBack = onBack)
         // Domain-bucket filter chips — ALL / CONTROLS / SENSORS / ACTIONS.
         // Tap to narrow without typing. ALL needs a query; the others
-        // surface entities even with an empty search field.
-        BucketChips(current = ui.bucket, onSelect = { vm.setBucket(it) })
+        // surface entities even with an empty search field. Counts come
+        // from the in-memory snapshot so the chips advertise how many
+        // entities will surface before the user taps.
+        val bucketCounts = remember(ui.all) {
+            ui.all.groupingBy { vm.bucketOf(it.id.domain) }.eachCount()
+        }
+        BucketChips(
+            current = ui.bucket,
+            counts = bucketCounts,
+            totalCount = ui.all.size,
+            onSelect = { vm.setBucket(it) },
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -288,6 +298,8 @@ fun SearchScreen(
 @Composable
 private fun BucketChips(
     current: SearchViewModel.Bucket,
+    counts: Map<SearchViewModel.Bucket, Int>,
+    totalCount: Int,
     onSelect: (SearchViewModel.Bucket) -> Unit,
 ) {
     val items = listOf(
@@ -304,6 +316,12 @@ private fun BucketChips(
     ) {
         for ((bucket, label) in items) {
             val active = bucket == current
+            // ALL chip shows the grand total; the rest show their own bucket
+            // count. Suppressed while the registry is still loading (totalCount
+            // == 0) so the chips don't briefly read 'CONTROLS 0' before the
+            // first refresh lands.
+            val count = if (bucket == SearchViewModel.Bucket.ALL) totalCount else counts[bucket] ?: 0
+            val display = if (totalCount == 0) label else "$label  $count"
             Box(
                 modifier = Modifier
                     .clip(R1.ShapeS)
@@ -312,7 +330,7 @@ private fun BucketChips(
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
                 Text(
-                    text = label,
+                    text = display,
                     style = R1.labelMicro,
                     color = if (active) R1.Bg else R1.InkSoft,
                 )

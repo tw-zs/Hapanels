@@ -47,7 +47,9 @@ class SearchViewModel(
      *  expose; "ALL" disables the kind filter entirely. */
     enum class Bucket { ALL, CONTROLS, SENSORS, ACTIONS, OTHER }
 
-    private fun bucketOf(d: Domain): Bucket = when (d) {
+    /** Visible so the chip row can compute per-bucket counts without
+     *  re-implementing the domain→bucket mapping. Single source of truth. */
+    fun bucketOf(d: Domain): Bucket = when (d) {
         Domain.LIGHT, Domain.SWITCH, Domain.FAN, Domain.COVER, Domain.MEDIA_PLAYER,
         Domain.LOCK, Domain.INPUT_BOOLEAN, Domain.HUMIDIFIER, Domain.CLIMATE,
         Domain.WATER_HEATER, Domain.VACUUM, Domain.VALVE, Domain.NUMBER,

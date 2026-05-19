@@ -141,6 +141,12 @@ fun SwitchCard(
             // robot, tapping DOCK sends it back to base. Matches the actual
             // services dispatched (vacuum.start and vacuum.return_to_base).
             com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> "CLEAN" to "DOCK"
+            // Media players reach the SwitchCard path when they don't advertise
+            // VOLUME_SET (radio streams, simple players). Tapping the top
+            // end-stop dispatches media_play, bottom dispatches media_pause —
+            // PLAY / PAUSE matches both the services and the universal media-
+            // control glyph language.
+            com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> "PLAY" to "PAUSE"
             else -> "ON" to "OFF"
         }
         SwitchTrack(

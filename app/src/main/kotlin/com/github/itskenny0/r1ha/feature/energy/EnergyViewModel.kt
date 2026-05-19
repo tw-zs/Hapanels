@@ -121,7 +121,7 @@ class EnergyViewModel(
                 topConsumers = top,
                 error = if (anyFailed && drawRaw == null && prodRaw == null &&
                     kwhRaw == null && top.isEmpty()) {
-                    "All energy templates returned errors — does HA have any " +
+                    "All energy templates returned errors. Does HA have any " +
                         "device_class=power or device_class=energy sensors?"
                 } else null,
             )

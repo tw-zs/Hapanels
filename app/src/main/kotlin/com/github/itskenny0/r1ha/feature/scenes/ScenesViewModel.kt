@@ -162,7 +162,7 @@ class ScenesViewModel(
     fun allLightsOff() = fireMasterOff(
         domain = Domain.LIGHT,
         service = "turn_off",
-        emptyMessage = "No light entities — nothing to turn off",
+        emptyMessage = "No light entities. Nothing to turn off",
         successMessage = "All lights off",
         failurePrefix = "All-lights-off",
     )
@@ -173,7 +173,7 @@ class ScenesViewModel(
     fun allLightsOn() = fireMasterOff(
         domain = Domain.LIGHT,
         service = "turn_on",
-        emptyMessage = "No light entities — nothing to turn on",
+        emptyMessage = "No light entities. Nothing to turn on",
         successMessage = "All lights on",
         failurePrefix = "All-lights-on",
     )
@@ -184,7 +184,7 @@ class ScenesViewModel(
     fun allMediaPause() = fireMasterOff(
         domain = Domain.MEDIA_PLAYER,
         service = "media_pause",
-        emptyMessage = "No media players — nothing to pause",
+        emptyMessage = "No media players. Nothing to pause",
         successMessage = "All media paused",
         failurePrefix = "All-media-pause",
     )
@@ -194,7 +194,7 @@ class ScenesViewModel(
     fun allSwitchesOff() = fireMasterOff(
         domain = Domain.SWITCH,
         service = "turn_off",
-        emptyMessage = "No switches — nothing to turn off",
+        emptyMessage = "No switches. Nothing to turn off",
         successMessage = "All switches off",
         failurePrefix = "All-switches-off",
     )

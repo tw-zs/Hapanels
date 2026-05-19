@@ -124,7 +124,7 @@ class HaQuickTileService : TileService() {
                 val rawId = settings.behavior.quickTileEntityId?.takeIf { it.isNotBlank() }
                 if (rawId.isNullOrBlank()) {
                     tile.state = Tile.STATE_INACTIVE
-                    tile.label = "HA — set entity"
+                    tile.label = "HA. Set entity"
                     tile.subtitle = "Tap to open app"
                     tile.icon = Icon.createWithResource(applicationContext, R.mipmap.ic_launcher)
                     tile.updateTile()
@@ -133,7 +133,7 @@ class HaQuickTileService : TileService() {
                 val entityId = runCatching { EntityId(rawId) }.getOrNull()
                 if (entityId == null) {
                     tile.state = Tile.STATE_UNAVAILABLE
-                    tile.label = "HA — bad entity_id"
+                    tile.label = "HA. Bad entity_id"
                     tile.icon = Icon.createWithResource(applicationContext, R.mipmap.ic_launcher)
                     tile.updateTile()
                     return@launch

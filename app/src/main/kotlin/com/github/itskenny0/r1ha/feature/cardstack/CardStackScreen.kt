@@ -372,11 +372,11 @@ fun CardStackScreen(
                         val buf = CharArray(maxBytes.toInt())
                         val n = reader.read(buf, 0, buf.size)
                         String(buf, 0, n.coerceAtLeast(0)) +
-                            "\n\n[truncated — full report in dev menu LAST CRASH]"
+                            "\n\n[truncated. Full report in dev menu LAST CRASH]"
                     }
                 }
                 com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
-                    shortText = "Crash detected — tap for trace",
+                    shortText = "Crash detected. Tap for trace",
                     fullText = raw,
                 )
                 // Don't delete — keep it accessible via the dev menu's

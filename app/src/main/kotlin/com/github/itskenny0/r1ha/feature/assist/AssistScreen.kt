@@ -43,6 +43,7 @@ import com.github.itskenny0.r1ha.ui.components.R1Button
 import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.components.r1RowPressable
 
 /**
  * Text-mode HA Assist surface — pipes a typed prompt into
@@ -332,6 +333,13 @@ private fun AssistBubble(msg: AssistMessage) {
         isError -> R1.StatusRed
         else -> R1.Ink
     }
+    // Long-press copies the bubble text. Useful for: replaying a working prompt
+    // ("turn off the kitchen light" → reuse with a tweak), grabbing HA's response
+    // (a sensor reading, a state list) to paste into a notes app, and quoting an
+    // error message into a bug report. Long-press is the cheapest gesture that
+    // doesn't conflict with tap-to-do-nothing (the rest of the bubble currently
+    // has no tap affordance).
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
@@ -342,6 +350,13 @@ private fun AssistBubble(msg: AssistMessage) {
                 .clip(R1.ShapeS)
                 .background(bg)
                 .border(1.dp, if (isUser) R1.AccentWarm else R1.Hairline, R1.ShapeS)
+                .r1RowPressable(
+                    onTap = {},
+                    onLongPress = {
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(msg.text))
+                        com.github.itskenny0.r1ha.core.util.Toaster.show("Copied")
+                    },
+                )
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Text(text = msg.text, style = R1.body, color = textColor)

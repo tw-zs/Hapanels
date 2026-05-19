@@ -43,6 +43,7 @@ import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 
@@ -81,6 +82,7 @@ fun FavoritesPickerScreen(
                 .imePadding(),
         ) {
             R1TopBar(title = "FAVOURITES", onBack = onBack)
+            AdaptiveContent(modifier = Modifier.weight(1f)) {
 
             // Search + filter chips — both pinned above the list so the user can refine
             // results from any scroll position. Hidden during initial load; no point
@@ -126,6 +128,7 @@ fun FavoritesPickerScreen(
                     )
                 }
             }
+            } // AdaptiveContent
         }
 
         // ── Customize dialog ────────────────────────────────────────────────────────

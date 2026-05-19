@@ -34,6 +34,7 @@ import com.github.itskenny0.r1ha.core.util.Toaster
 import com.github.itskenny0.r1ha.ui.components.R1Button
 import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 
 /**

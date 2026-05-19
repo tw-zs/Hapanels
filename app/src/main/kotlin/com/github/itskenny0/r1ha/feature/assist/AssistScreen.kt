@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -111,6 +112,10 @@ fun AssistScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "ASSIST", onBack = onBack)
+        // On tablets the chat + input stay within 800 dp centred so a long
+        // conversation doesn't stretch bubbles across a 1280 dp panel.
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.fillMaxSize()) {
         // Transcript — fills the remainder. Empty state shows a "How can I
         // help?" prompt mirroring HA's own Assist greeting so the screen
         // doesn't look broken before the first send.
@@ -303,6 +308,8 @@ fun AssistScreen(
                 modifier = Modifier.widthIn(min = 64.dp),
             )
         }
+        } // inner Column (transcript + input)
+        } // AdaptiveContent
     }
 }
 

@@ -38,6 +38,7 @@ import com.github.itskenny0.r1ha.core.util.Toaster
 import com.github.itskenny0.r1ha.ui.components.R1Button
 import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -83,6 +84,7 @@ fun LongLivedTokenScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "LONG-LIVED TOKEN", onBack = onBack)
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
         val scrollState = rememberScrollState()
         com.github.itskenny0.r1ha.ui.components.WheelScrollForScrollState(
             wheelInput = wheelInput,
@@ -213,5 +215,6 @@ fun LongLivedTokenScreen(
                 }
             }
         }
+        } // AdaptiveContent
     }
 }

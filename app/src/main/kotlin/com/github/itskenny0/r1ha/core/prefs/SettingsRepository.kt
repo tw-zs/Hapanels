@@ -151,6 +151,12 @@ class SettingsRepository private constructor(
         val uiMaxDecimals = intPreferencesKey("ui.max_decimals")
         val uiTempUnit = stringPreferencesKey("ui.temp_unit")
         val uiInfiniteScroll = booleanPreferencesKey("ui.infinite_scroll")
+        // Chrome-row button order + visibility — stored as a JSON-encoded list of
+        // {ref, enabled} entries. JSON-shape rather than parallel per-button keys
+        // because the list both reorders AND toggles, and storing the order as a
+        // canonical string is simpler than juggling N integer-keyed slots whose
+        // semantics change on every reorder.
+        val uiChromeButtons = stringPreferencesKey("ui.chrome_buttons.json")
 
         val theme = stringPreferencesKey("theme")
         /**
@@ -222,6 +228,7 @@ class SettingsRepository private constructor(
                     maxDecimalPlaces = (p[K.uiMaxDecimals] ?: 2).coerceIn(0, 6),
                     tempUnit = p[K.uiTempUnit]?.let { runCatching { TemperatureUnit.valueOf(it) }.getOrNull() } ?: TemperatureUnit.CELSIUS,
                     infiniteScroll = p[K.uiInfiniteScroll] ?: false,
+                    chromeButtons = decodeChromeButtons(p[K.uiChromeButtons]),
                 ),
                 behavior = Behavior(
                     haptics = p[K.behaviorHaptics] ?: true,
@@ -346,6 +353,7 @@ class SettingsRepository private constructor(
                 p[K.uiMaxDecimals] = next.ui.maxDecimalPlaces
                 p[K.uiTempUnit] = next.ui.tempUnit.name
                 p[K.uiInfiniteScroll] = next.ui.infiniteScroll
+                p[K.uiChromeButtons] = encodeChromeButtons(next.ui.chromeButtons)
                 p[K.theme] = next.theme.name
                 p[K.nameOverrides] = encodeNameOverrides(next.nameOverrides)
                 p[K.entityOverrides] = encodeEntityOverrides(next.entityOverrides)
@@ -500,6 +508,48 @@ class SettingsRepository private constructor(
     suspend fun applyBackup(backup: AppBackup) {
         update { current -> backup.applyOnto(current) }
     }
+
+    /**
+     * Decode the persisted chrome-button list, falling back to the canonical
+     * default order on any failure (legacy installs, JSON that doesn't parse,
+     * empty value). After decode we also REPAIR the list:
+     *   - any [ChromeButtonRef] not present in the stored list gets appended at
+     *     the end so a future migration that adds a new button shows up for
+     *     existing users without losing their custom order;
+     *   - GEAR is force-enabled regardless of what's stored, matching the
+     *     UI's required-on rule so the user can never lose the path back to
+     *     Settings even if a corrupt write disabled it.
+     *   - Duplicate refs (which the UI shouldn't produce but defensive code
+     *     can't assume) collapse to the first occurrence.
+     */
+    private fun decodeChromeButtons(raw: String?): List<ChromeButtonConfig> {
+        val parsed = if (raw.isNullOrBlank()) emptyList() else runCatching {
+            advancedJson.decodeFromString(
+                kotlinx.serialization.builtins.ListSerializer(ChromeButtonConfig.serializer()),
+                raw,
+            )
+        }.getOrElse { emptyList() }
+        // De-dupe by ref, preserving first occurrence.
+        val seen = HashSet<ChromeButtonRef>()
+        val deduped = parsed.filter { seen.add(it.ref) }.toMutableList()
+        // Append any missing refs at the end with their default enabled state.
+        for (ref in ChromeButtonRef.entries) {
+            if (ref !in seen) deduped += ChromeButtonConfig(ref, enabled = true)
+        }
+        // GEAR is always-on at the persistence layer; the Settings UI also
+        // refuses to flip it, but a hostile manual edit shouldn't be able to
+        // strand the user.
+        return deduped.map {
+            if (it.ref == ChromeButtonRef.GEAR) it.copy(enabled = true) else it
+        }
+    }
+
+    /** Inverse of [decodeChromeButtons]. */
+    private fun encodeChromeButtons(list: List<ChromeButtonConfig>): String =
+        advancedJson.encodeToString(
+            kotlinx.serialization.builtins.ListSerializer(ChromeButtonConfig.serializer()),
+            list,
+        )
 
     private fun writeShadow(server: ServerConfig?, favorites: List<String>) {
         val editor = shadow.edit()

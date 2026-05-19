@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -442,6 +443,38 @@ fun SettingsScreen(
                         onSelect = { vm.setTempUnit(it) },
                     )
                 }
+            }
+
+            // ── Chrome row layout ───────────────────────────────────────────────
+            // Right-cluster button order + visibility. Renders as a small stack
+            // because the list is fixed-size (currently 4 items: BATTERY,
+            // ASSIST_MIC, EDIT, GEAR) and a DragReorderColumn inside a LazyColumn
+            // doesn't compose cleanly. ↑ / ↓ chips swap with neighbour; a small
+            // SWITCH toggles visibility per row (forced-on for GEAR — without it
+            // the user can't reach Settings).
+            item {
+                Text(
+                    text = "Chrome buttons",
+                    style = R1.bodyEmph,
+                    color = R1.Ink,
+                    modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 10.dp),
+                )
+                Text(
+                    text = "Drag-reorder + toggle the right cluster of the card-stack chrome.",
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                    modifier = Modifier.padding(horizontal = 22.dp),
+                )
+            }
+            itemsIndexed(s.ui.chromeButtons, key = { _, c -> c.ref.name }) { idx, cfg ->
+                ChromeButtonRow(
+                    config = cfg,
+                    isFirst = idx == 0,
+                    isLast = idx == s.ui.chromeButtons.lastIndex,
+                    onMoveUp = { vm.moveChromeButton(idx, idx - 1) },
+                    onMoveDown = { vm.moveChromeButton(idx, idx + 1) },
+                    onToggle = { vm.setChromeButtonEnabled(cfg.ref, it) },
+                )
             }
 
             item { SectionDivider() }
@@ -1166,6 +1199,85 @@ private fun ToastLogLevelRow(
                 }
             }
         }
+    }
+}
+
+/**
+ * Per-button row in the Chrome buttons reorder list. Renders:
+ *   - Up / Down chips on the left to move the row one slot in either direction
+ *     (chips are disabled at the list extremes so a press becomes a no-op rather
+ *     than a layout-mutating wrap-around);
+ *   - The button name in the middle;
+ *   - A small switch on the right that toggles visibility. GEAR's switch is
+ *     forced-on and the tap is swallowed so the user can't disable it.
+ *
+ * Lives inside the parent LazyColumn so it doesn't introduce a nested scroll;
+ * the small fixed-size list (4 items today) is enumerated via [itemsIndexed].
+ */
+@Composable
+private fun ChromeButtonRow(
+    config: com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+) {
+    val gear = config.ref == com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR
+    val label = when (config.ref) {
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY -> "Battery indicator"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.ASSIST_MIC -> "Assist mic"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT -> "Edit pencil"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR -> "Settings gear"
+    }
+    val subtitle = when (config.ref) {
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY ->
+            "Also requires the system status bar hidden + battery-on-chrome opt-in"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.ASSIST_MIC ->
+            "Opens HA Assist from anywhere on the card stack"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT ->
+            "Opens the customize dialog for the active card"
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR ->
+            "Settings (always shown — required to reach Settings itself)"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Up / Down chips. Both are r1Pressable-only when the move is legal; we
+        // still render the disabled state so the row's left edge stays aligned
+        // even at the list extremes.
+        ReorderChip(label = "↑", enabled = !isFirst, onClick = onMoveUp)
+        Spacer(Modifier.width(4.dp))
+        ReorderChip(label = "↓", enabled = !isLast, onClick = onMoveDown)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = R1.bodyEmph, color = R1.Ink)
+            Text(text = subtitle, style = R1.labelMicro, color = R1.InkMuted)
+        }
+        com.github.itskenny0.r1ha.ui.components.R1Switch(
+            checked = config.enabled || gear,
+            onCheckedChange = { if (!gear) onToggle(it) },
+            enabled = !gear,
+        )
+    }
+}
+
+@Composable
+private fun ReorderChip(label: String, enabled: Boolean, onClick: () -> Unit) {
+    val bg = if (enabled) R1.SurfaceMuted else R1.SurfaceMuted.copy(alpha = 0.4f)
+    val fg = if (enabled) R1.Ink else R1.InkMuted
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(R1.ShapeS)
+            .background(bg)
+            .then(if (enabled) Modifier.r1Pressable(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = label, style = R1.body, color = fg)
     }
 }
 

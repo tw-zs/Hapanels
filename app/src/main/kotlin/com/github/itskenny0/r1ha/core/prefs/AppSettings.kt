@@ -34,6 +34,29 @@ enum class AccelerationCurve { SUBTLE, MEDIUM, AGGRESSIVE }
  */
 enum class ToastLogLevel { OFF, ERROR, WARN, INFO, DEBUG }
 
+/**
+ * Toggleable chrome-row buttons sitting in the right cluster. The left-side
+ * hamburger and centre VerticalPagePip are fixed (they're navigation primitives
+ * and the page indicator) and so don't appear here. The settings gear stays
+ * required-on too — without it the user can't reach Settings to change anything
+ * — but it IS part of this list so it can be reordered; the toggle just stays
+ * forced-true.
+ */
+enum class ChromeButtonRef { BATTERY, ASSIST_MIC, EDIT, GEAR }
+
+/**
+ * Per-button configuration for the chrome row's right cluster. The list order
+ * in [UiOptions.chromeButtons] is the render order (left → right); each entry's
+ * [enabled] decides whether the button renders at all. GEAR is forced-on by the
+ * settings UI so the user can never lose their way back to Settings.
+ */
+@Stable
+@kotlinx.serialization.Serializable
+data class ChromeButtonConfig(
+    val ref: ChromeButtonRef,
+    val enabled: Boolean = true,
+)
+
 @Stable
 data class WheelSettings(
     val stepPercent: Int = 2,           // 1, 2, 5, or 10
@@ -71,6 +94,21 @@ data class UiOptions(
      * top boundary regardless of this setting.
      */
     val infiniteScroll: Boolean = false,
+    /**
+     * Per-button configuration for the chrome row's right cluster — the order entries
+     * appear in this list is the left→right render order, and each entry's [enabled]
+     * gates whether the button shows. GEAR is always present in the list with
+     * `enabled = true`; the Settings UI keeps it forced-on so the user can never lose
+     * the path back to Settings.
+     *
+     * Default order matches the pre-config layout: BATTERY → MIC → EDIT → GEAR.
+     */
+    val chromeButtons: List<ChromeButtonConfig> = listOf(
+        ChromeButtonConfig(ChromeButtonRef.BATTERY, enabled = true),
+        ChromeButtonConfig(ChromeButtonRef.ASSIST_MIC, enabled = true),
+        ChromeButtonConfig(ChromeButtonRef.EDIT, enabled = true),
+        ChromeButtonConfig(ChromeButtonRef.GEAR, enabled = true),
+    ),
 )
 
 @Stable

@@ -695,6 +695,7 @@ fun CardStackScreen(
                 showBatteryIndicator = appSettings.behavior.hideStatusBar &&
                     appSettings.behavior.showBatteryWhenStatusBarHidden,
                 onOpenDevice = onOpenDevice,
+                chromeButtons = appSettings.ui.chromeButtons,
             )
             // Tab strip — chip per page. Tap to switch active. Long-press opens a
             // management overlay (add / rename / delete). The '+' chip on the
@@ -2346,6 +2347,28 @@ private fun ChromeRow(
      *  previews so the indicator stays non-interactive when the
      *  caller doesn't wire it. */
     onOpenDevice: () -> Unit = {},
+    /** Right-cluster button order + visibility. The list is rendered left→right;
+     *  each entry's [com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig.enabled]
+     *  gates whether the matching widget shows up at all. Defaults to the canonical
+     *  pre-config order ([BATTERY, ASSIST_MIC, EDIT, GEAR], all enabled) so previews
+     *  that don't pass a value render the existing layout. The battery slot ALSO
+     *  honours [showBatteryIndicator] — the user must have hidden the status bar
+     *  and opted into the on-chrome pill before the BATTERY config flag takes
+     *  effect, otherwise we'd be redundant with the system status bar. */
+    chromeButtons: List<com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig> = listOf(
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig(
+            com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY,
+        ),
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig(
+            com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.ASSIST_MIC,
+        ),
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig(
+            com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT,
+        ),
+        com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig(
+            com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR,
+        ),
+    ),
 ) {
     Row(
         modifier = Modifier
@@ -2406,67 +2429,80 @@ private fun ChromeRow(
             Spacer(Modifier.size(44.dp))
         }
 
-        // Top-right cluster: edit pencil + settings gear + connection-state dot. Grouped
-        // in a Row so the parent SpaceBetween keeps the pip centred between hamburger
-        // and this cluster (rather than treating each element independently).
+        // Top-right cluster: order + visibility comes from [chromeButtons]. The cluster
+        // is a Row whose children are emitted in list order so the user's Settings →
+        // Chrome buttons reorder shows up exactly here. The previous version
+        // hard-coded the BATTERY → MIC → EDIT → GEAR order with a fixed conditional
+        // for each.
+        //
+        // The connection-state dot (and its IDLE / CONNECTING amber-pulse / silent-WS
+        // amber / disconnected red logic) stays anchored to the GEAR button — both as
+        // the natural 'system status' surface and because it's the only button GEAR
+        // can't be turned off, guaranteeing the dot always has a host. If the user
+        // moves GEAR mid-cluster, the dot follows.
         Row(verticalAlignment = Alignment.CenterVertically) {
-
-        // Battery indicator pill — only present when the user has hidden the system
-        // status bar AND opted into the pill. Sits before the edit pencil so the
-        // habitual pencil-tap target doesn't shift when the indicator toggles.
-        if (showBatteryIndicator) {
-            com.github.itskenny0.r1ha.ui.components.BatteryIndicator(onClick = onOpenDevice)
-            Spacer(Modifier.width(6.dp))
-        }
-
-        // Assist mic — opens the HA Assist surface from anywhere on the
-        // card stack. Surfacing this in the chrome row makes
-        // 'ask HA about something' a single-tap action rather than a
-        // Settings → Assist navigation. 32 dp tap target so it fits
-        // next to the pencil + gear without crowding the right cluster.
-        // Custom-drawn glyph (not the 🎤 emoji) so the visual weight
-        // matches HamburgerGlyph on the opposite side of the chrome —
-        // emoji rendering varies by Android version and bled into a
-        // colourised pictograph that read soft against the monochrome
-        // chrome.
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .r1Pressable(onOpenAssist),
-            contentAlignment = Alignment.Center,
-        ) {
-            com.github.itskenny0.r1ha.ui.components.AssistMicGlyph(size = 16.dp)
-        }
-        Spacer(Modifier.width(2.dp))
-
-        // Edit pencil — opens the customize dialog for the active card. This was the
-        // entry point users were missing from the card stack (previously only in the
-        // favourites picker). 36 dp tap target rather than 44 so the gear next to it
-        // doesn't get crowded out on the R1's narrow chrome.
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .r1Pressable(onEditActive),
-            contentAlignment = Alignment.Center,
-        ) {
-            com.github.itskenny0.r1ha.ui.components.EditGlyph(size = 14.dp, tint = R1.Ink.copy(alpha = 0.85f))
-        }
-
-        // Settings gear + connection-state dot. The gear is a Canvas-drawn wireframe
-        // (see `SettingsCogGlyph`) so it matches the rest of the chrome's hairline-stroke
-        // language instead of Material's filled gear. Long-press opens
-        // the Quick Search dialog — accessible from anywhere on the
-        // card stack without a Settings detour.
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .r1RowPressable(onTap = onOpenSettings, onLongPress = onLongPressGear),
-            contentAlignment = Alignment.Center,
-        ) {
-            SettingsCogGlyph(size = 18.dp)
+            val visibleButtons = chromeButtons.filter { cfg ->
+                when (cfg.ref) {
+                    // BATTERY needs all three gates: the user's flag in this list, the
+                    // system-bar-hidden setting, and the show-battery-when-hidden
+                    // opt-in. Otherwise we'd be redundant with Android's own status
+                    // bar (or hide a battery readout the user can't get anywhere else).
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY ->
+                        cfg.enabled && showBatteryIndicator
+                    // GEAR's enabled bit is forced-true at the repo level — the user
+                    // can't lock themselves out of Settings.
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR -> true
+                    else -> cfg.enabled
+                }
+            }
+            visibleButtons.forEachIndexed { idx, cfg ->
+                when (cfg.ref) {
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.BATTERY -> {
+                        com.github.itskenny0.r1ha.ui.components.BatteryIndicator(
+                            onClick = onOpenDevice,
+                        )
+                    }
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.ASSIST_MIC -> {
+                        // Custom-drawn glyph (not the 🎤 emoji) so the visual weight
+                        // matches HamburgerGlyph on the opposite side of the chrome.
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .r1Pressable(onOpenAssist),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            com.github.itskenny0.r1ha.ui.components.AssistMicGlyph(size = 16.dp)
+                        }
+                    }
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.EDIT -> {
+                        // Edit pencil — opens the customize dialog for the active card.
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .r1Pressable(onEditActive),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            com.github.itskenny0.r1ha.ui.components.EditGlyph(
+                                size = 14.dp,
+                                tint = R1.Ink.copy(alpha = 0.85f),
+                            )
+                        }
+                    }
+                    com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef.GEAR -> {
+                        // Settings gear + connection-state dot overlay.
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .r1RowPressable(
+                                    onTap = onOpenSettings,
+                                    onLongPress = onLongPressGear,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            SettingsCogGlyph(size = 18.dp)
             // Connection dot: only visible when NOT connected (subtle when healthy, loud
             // when not). Animated colour transition so the amber→red flip on a failed
             // reconnect reads as deliberate rather than a UI bounce; AnimatedVisibility on
@@ -2538,7 +2574,17 @@ private fun ChromeRow(
                     )
                 }
             }
-        }
+                        }  // end GEAR Box
+                    }  // end GEAR -> when branch
+                }  // end when (cfg.ref)
+                // Inter-button spacer — small (2 dp) so adjacent monochrome glyphs
+                // don't crowd, but no wider than the original layout had between
+                // mic / pencil / gear. Skip after the last button so the cluster
+                // doesn't get an unbalanced right-edge padding.
+                if (idx < visibleButtons.lastIndex) {
+                    Spacer(Modifier.width(2.dp))
+                }
+            }  // end visibleButtons.forEachIndexed
         }  // end right-cluster Row
     }
 }

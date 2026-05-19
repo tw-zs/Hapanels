@@ -50,6 +50,34 @@ class SettingsViewModel(
         update { it.copy(ui = it.ui.copy(tempUnit = u)) }
     fun setInfiniteScroll(enabled: Boolean) = update { it.copy(ui = it.ui.copy(infiniteScroll = enabled)) }
 
+    /** Toggle a chrome-row button's visibility. The persistence layer force-
+     *  enables GEAR regardless of what's passed here (so a hostile manual edit
+     *  can't strand the user), but the UI also refuses to invoke this for GEAR,
+     *  so the request never reaches here in practice. */
+    fun setChromeButtonEnabled(
+        ref: com.github.itskenny0.r1ha.core.prefs.ChromeButtonRef,
+        enabled: Boolean,
+    ) = update { current ->
+        val updated = current.ui.chromeButtons.map { cfg ->
+            if (cfg.ref == ref) cfg.copy(enabled = enabled) else cfg
+        }
+        current.copy(ui = current.ui.copy(chromeButtons = updated))
+    }
+
+    /** Move the chrome-row button at [fromIndex] to [toIndex]. Used by the
+     *  Settings → Chrome buttons reorder UI to commit each ↑ / ↓ tap. Bounds-
+     *  checked here so a stale click against an out-of-date list shape can't
+     *  throw IndexOutOfBounds. */
+    fun moveChromeButton(fromIndex: Int, toIndex: Int) = update { current ->
+        val list = current.ui.chromeButtons.toMutableList()
+        if (fromIndex !in list.indices) return@update current
+        val target = toIndex.coerceIn(0, list.size - 1)
+        if (target == fromIndex) return@update current
+        val moved = list.removeAt(fromIndex)
+        list.add(target, moved)
+        current.copy(ui = current.ui.copy(chromeButtons = list))
+    }
+
     // ── Behavior ────────────────────────────────────────────────────────────
 
     fun setHaptics(enabled: Boolean) = update { it.copy(behavior = it.behavior.copy(haptics = enabled)) }

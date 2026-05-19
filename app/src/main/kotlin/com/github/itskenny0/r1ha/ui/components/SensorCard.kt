@@ -304,8 +304,26 @@ private fun friendlyBinaryWord(state: EntityState): String {
         "gas", "carbon_monoxide" -> if (on) "DETECTED" else "CLEAR"
         "lock" -> if (on) "UNLOCKED" else "LOCKED"
         "battery" -> if (on) "LOW" else "OK"
+        "battery_charging" -> if (on) "CHARGING" else "IDLE"
         "power", "plug" -> if (on) "POWER" else "OFF"
         "connectivity" -> if (on) "ONLINE" else "OFFLINE"
+        // Temperature-class binary sensors trip when their threshold is crossed.
+        // HA's contract: `cold` = too cold, `heat` = too hot. CRITICAL is the
+        // shorter all-caps word that scans on the R1's narrow card.
+        "cold" -> if (on) "COLD" else "OK"
+        "heat" -> if (on) "HOT" else "OK"
+        // Photoresistor / light-detected sensors.
+        "light" -> if (on) "LIGHT" else "DARK"
+        // Generic safety / problem / tamper alarms. PROBLEM is shorter than
+        // 'DETECTED' and scans more clearly on alarm-class cards.
+        "safety", "problem", "tamper" -> if (on) "PROBLEM" else "OK"
+        // Vibration / sound trip-detectors.
+        "vibration" -> if (on) "VIBRATION" else "STILL"
+        "sound" -> if (on) "SOUND" else "QUIET"
+        // Motor / appliance running indicators (washing machine state, etc.).
+        "running" -> if (on) "RUNNING" else "IDLE"
+        // 'Update available' binary sensors (HA's `update` integration).
+        "update" -> if (on) "AVAILABLE" else "UP TO DATE"
         else -> if (on) "ON" else "OFF"
     }
 }

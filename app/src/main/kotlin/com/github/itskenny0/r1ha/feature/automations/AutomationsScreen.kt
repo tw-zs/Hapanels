@@ -120,6 +120,7 @@ fun AutomationsScreen(
             },
         )
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading && ui.all.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -161,8 +162,7 @@ fun AutomationsScreen(
                     color = R1.InkMuted,
                 )
             }
-            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
-                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
                     isRefreshing = ui.loading,
                     onRefresh = { vm.refresh() },
                     modifier = Modifier.fillMaxSize(),
@@ -187,8 +187,8 @@ fun AutomationsScreen(
                         }
                     }
                 }
-            } // AdaptiveContent
         }
+        } // AdaptiveContent
     }
 }
 

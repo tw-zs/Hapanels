@@ -125,6 +125,7 @@ fun LogbookScreen(
         R1TopBar(title = "RECENT ACTIVITY", onBack = onBack)
         WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -160,47 +161,46 @@ fun LogbookScreen(
             // Pull-to-refresh wrap — the logbook is naturally append-only
             // so a refresh just re-issues the same window query and picks
             // up anything that landed in the seconds since the last fetch.
-            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
-                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                    isRefreshing = ui.loading,
-                    onRefresh = { vm.refresh() },
+            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = ui.loading,
+                onRefresh = { vm.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 12.dp, vertical = 8.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                            horizontal = 12.dp, vertical = 8.dp,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        items(
-                            items = ui.entries,
-                        // Stable key: timestamp nanos + entity-id + name keeps
-                        // duplicate-message rows distinct (two automations firing
-                        // at the same wall-clock second on different entities).
-                        key = { it.timestamp.toEpochMilli().toString() + "|" + (it.entityId?.value ?: it.name) },
-                        ) { entry ->
-                            LogbookRow(
-                                entry,
-                                // Tap drills into the entity's history — feels
-                                // like a natural follow-on from 'I just saw
-                                // this state-change'. Falls back to the
-                                // detail toast for entries without an
-                                // entity_id (typical for system events,
-                                // automation triggers without a target).
-                                onTap = {
-                                    val eid = entry.entityId?.value
-                                    if (!eid.isNullOrBlank()) onOpenHistory(eid)
-                                    else vm.showDetail(entry)
-                                },
-                                onLongPress = { openInHa(entry) },
-                            )
-                        }
+                    items(
+                        items = ui.entries,
+                    // Stable key: timestamp nanos + entity-id + name keeps
+                    // duplicate-message rows distinct (two automations firing
+                    // at the same wall-clock second on different entities).
+                    key = { it.timestamp.toEpochMilli().toString() + "|" + (it.entityId?.value ?: it.name) },
+                    ) { entry ->
+                        LogbookRow(
+                            entry,
+                            // Tap drills into the entity's history — feels
+                            // like a natural follow-on from 'I just saw
+                            // this state-change'. Falls back to the
+                            // detail toast for entries without an
+                            // entity_id (typical for system events,
+                            // automation triggers without a target).
+                            onTap = {
+                                val eid = entry.entityId?.value
+                                if (!eid.isNullOrBlank()) onOpenHistory(eid)
+                                else vm.showDetail(entry)
+                            },
+                            onLongPress = { openInHa(entry) },
+                        )
                     }
                 }
-            } // AdaptiveContent
+            }
         }
+        } // AdaptiveContent
     }
 }
 

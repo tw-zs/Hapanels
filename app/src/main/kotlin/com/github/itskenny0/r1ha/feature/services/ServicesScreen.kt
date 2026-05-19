@@ -76,6 +76,7 @@ fun ServicesScreen(
     ) {
         R1TopBar(title = "SERVICES", onBack = onBack)
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -111,51 +112,50 @@ fun ServicesScreen(
                     color = R1.InkMuted,
                 )
             }
-            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
-                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                    isRefreshing = ui.loading,
-                    onRefresh = { vm.refresh() },
+            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = ui.loading,
+                onRefresh = { vm.refresh() },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        horizontal = 12.dp, vertical = 8.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                            horizontal = 12.dp, vertical = 8.dp,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        for (domain in ui.domains) {
-                            item(key = domain.domain) {
-                                DomainRow(
-                                    domain = domain.domain,
-                                    count = domain.services.size,
-                                    expanded = (expandedDomain == domain.domain) || ui.query.isNotBlank(),
-                                    onToggle = {
-                                        expandedDomain = if (expandedDomain == domain.domain) null else domain.domain
-                                    },
-                                )
-                            }
-                            if ((expandedDomain == domain.domain) || ui.query.isNotBlank()) {
-                                for (svc in domain.services) {
-                                    item(key = "${domain.domain}.${svc.name}") {
-                                        ServiceRow(
-                                            domain = domain.domain,
-                                            service = svc,
-                                            onCopy = {
-                                                val fqn = "${domain.domain}.${svc.name}"
-                                                clipboard.setText(AnnotatedString(fqn))
-                                                Toaster.show("Copied $fqn")
-                                            },
-                                        )
-                                    }
+                    for (domain in ui.domains) {
+                        item(key = domain.domain) {
+                            DomainRow(
+                                domain = domain.domain,
+                                count = domain.services.size,
+                                expanded = (expandedDomain == domain.domain) || ui.query.isNotBlank(),
+                                onToggle = {
+                                    expandedDomain = if (expandedDomain == domain.domain) null else domain.domain
+                                },
+                            )
+                        }
+                        if ((expandedDomain == domain.domain) || ui.query.isNotBlank()) {
+                            for (svc in domain.services) {
+                                item(key = "${domain.domain}.${svc.name}") {
+                                    ServiceRow(
+                                        domain = domain.domain,
+                                        service = svc,
+                                        onCopy = {
+                                            val fqn = "${domain.domain}.${svc.name}"
+                                            clipboard.setText(AnnotatedString(fqn))
+                                            Toaster.show("Copied $fqn")
+                                        },
+                                    )
                                 }
                             }
                         }
                     }
                 }
-            } // AdaptiveContent
+            }
         }
+        } // AdaptiveContent
     }
 }
 

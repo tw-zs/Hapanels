@@ -96,6 +96,7 @@ fun ZonesScreen(
                 }
             },
         )
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading && ui.zones.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -127,34 +128,33 @@ fun ZonesScreen(
                     color = R1.InkMuted,
                 )
             }
-            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp, vertical = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Map preview — only when at least two zones carry
-                    // lat/lon so there's something meaningful to draw.
-                    val mappable = ui.zones.filter { it.latitude != null && it.longitude != null }
-                    if (mappable.size >= 2) {
-                        item("__map__") {
-                            ZoneMap(zones = mappable)
-                        }
-                    }
-                    items(items = ui.zones, key = { it.entityId }) { zone ->
-                        ZoneRow(zone)
-                    }
-                    if (ui.outside.isNotEmpty()) {
-                        item("__outside__") {
-                            OutsideRow(names = ui.outside)
-                        }
+            else -> LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 12.dp, vertical = 8.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Map preview — only when at least two zones carry
+                // lat/lon so there's something meaningful to draw.
+                val mappable = ui.zones.filter { it.latitude != null && it.longitude != null }
+                if (mappable.size >= 2) {
+                    item("__map__") {
+                        ZoneMap(zones = mappable)
                     }
                 }
-            } // AdaptiveContent
+                items(items = ui.zones, key = { it.entityId }) { zone ->
+                    ZoneRow(zone)
+                }
+                if (ui.outside.isNotEmpty()) {
+                    item("__outside__") {
+                        OutsideRow(names = ui.outside)
+                    }
+                }
+            }
         }
+        } // AdaptiveContent
     }
 }
 

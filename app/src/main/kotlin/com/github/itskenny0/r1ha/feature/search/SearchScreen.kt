@@ -220,7 +220,7 @@ fun SearchScreen(
                     )
                     Spacer(Modifier.size(6.dp))
                     Text(
-                        text = "Type a name, entity_id, or area to find. or tap a chip above to narrow by kind. Tap a result to fire (scenes / scripts / buttons) or toggle (lights / switches / fans).",
+                        text = "Type a name, entity_id, or area to find. Or tap a chip above to narrow by kind. Tap a result to fire (scenes / scripts / buttons) or toggle (lights / switches / fans).",
                         style = R1.labelMicro,
                         color = R1.InkSoft,
                     )

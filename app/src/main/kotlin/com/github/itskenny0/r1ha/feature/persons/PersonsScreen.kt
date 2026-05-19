@@ -102,7 +102,7 @@ fun PersonsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No people or device trackers in HA. add a person integration to see them here.",
+                    text = "No people or device trackers in HA. Add a person integration to see them here.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

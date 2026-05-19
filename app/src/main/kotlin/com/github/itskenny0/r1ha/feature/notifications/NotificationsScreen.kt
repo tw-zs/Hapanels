@@ -154,7 +154,7 @@ fun NotificationsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No persistent notifications in HA. all clear.",
+                    text = "No persistent notifications in HA. All clear.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

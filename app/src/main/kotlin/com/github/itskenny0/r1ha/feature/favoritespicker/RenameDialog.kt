@@ -147,7 +147,7 @@ fun RenameDialog(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Local-only. clear to revert to HA's friendly_name.",
+                text = "Local-only. Clear to revert to HA's friendly_name.",
                 style = R1.body,
                 color = R1.InkMuted,
             )
@@ -294,7 +294,7 @@ fun RenameDialog(
             // ── GESTURE ──────────────────────────────────────────────────────────────
             SectionHeader("GESTURE")
             Text(
-                text = "Long-press this card to fire another entity. e.g. `scene.movie_night`, `script.bedtime`, `switch.kettle`.",
+                text = "Long-press this card to fire another entity. E.g. `scene.movie_night`, `script.bedtime`, `switch.kettle`.",
                 style = R1.body,
                 color = R1.InkMuted,
             )

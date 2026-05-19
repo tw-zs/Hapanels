@@ -252,7 +252,7 @@ private fun BrightnessCard(
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Per-app only. leaves system brightness untouched.",
+                text = "Per-app only. Leaves system brightness untouched.",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
                 modifier = Modifier.weight(1f),

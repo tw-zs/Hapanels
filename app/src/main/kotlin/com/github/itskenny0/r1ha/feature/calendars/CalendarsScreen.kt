@@ -117,7 +117,7 @@ fun CalendarsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No calendar entities in HA. add a calendar integration to see them here.",
+                    text = "No calendar entities in HA. Add a calendar integration to see them here.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

@@ -211,7 +211,7 @@ class DeviceViewModel(app: App) : AndroidViewModel(app) {
             audioManager.setStreamVolume(stream, target, 0)
         }.onFailure {
             R1Log.w("Device", "setStreamVolume($stream, $pct) failed: ${it.message}")
-            Toaster.error("Volume change rejected. check Do-Not-Disturb / system permissions")
+            Toaster.error("Volume change rejected. Check Do-Not-Disturb / system permissions")
         }
         // Re-read so the slider snaps to the actual rounded value.
         viewModelScope.launch {

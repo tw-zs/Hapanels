@@ -2047,7 +2047,7 @@ private fun CardContextMenu(
             Spacer(Modifier.height(6.dp))
             if (targetPages.isEmpty()) {
                 Text(
-                    text = "No other pages yet. add one with the '+' chip on the tab strip.",
+                    text = "No other pages yet. Add one with the '+' chip on the tab strip.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

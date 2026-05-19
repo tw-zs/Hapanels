@@ -382,7 +382,7 @@ class SettingsRepository private constructor(
         } catch (t: Throwable) {
             R1Log.e("SettingsRepo.update", "DataStore edit threw; shadow has the value as a fallback", t)
             // Only toast on failure (and the shadow store will keep things working).
-            Toaster.error("Settings save failed. using fallback storage")
+            Toaster.error("Settings save failed. Using fallback storage")
             // Don't rethrow — the shadow store has the critical bits, and the caller (typically
             // OnboardingViewModel) should not be forced to error out the user's flow if only the
             // DataStore commit failed.
@@ -573,7 +573,7 @@ class SettingsRepository private constructor(
         R1Log.i("SettingsRepo.writeShadow", "server=${server?.url ?: "null"} favorites=${favorites.size} commit=$ok")
         if (!ok) {
             // Only toast on FAILURE; success would otherwise spam the user on every settings edit.
-            Toaster.error("Storage failed. please reboot the device")
+            Toaster.error("Storage failed. Please reboot the device")
         }
         // Tick the settings Flow so observers re-read — even if the DataStore commit below
         // fails, observers see the updated shadow values.

@@ -1526,10 +1526,15 @@ private fun SearchResultRow(
             )
         }
         Spacer(Modifier.width(8.dp))
+        // Tint the value accent-warm when the entry is non-default — gives the
+        // user a visual cue 'this is something I've changed' alongside the
+        // matched-text result. Default values stay muted so they don't compete
+        // with actually-modified ones.
+        val isModified = !entry.isDefault(current)
         Text(
             text = entry.currentDisplay(current),
             style = R1.bodyEmph,
-            color = R1.InkSoft,
+            color = if (isModified) R1.AccentWarm else R1.InkSoft,
         )
     }
 }

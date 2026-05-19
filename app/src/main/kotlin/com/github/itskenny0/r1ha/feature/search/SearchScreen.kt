@@ -169,6 +169,7 @@ fun SearchScreen(
                 }
             }
         }
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading && ui.all.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),
@@ -264,8 +265,7 @@ fun SearchScreen(
                     }
                 }
             }
-            else -> com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
-                LazyColumn(
+            else -> LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -292,8 +292,8 @@ fun SearchScreen(
                         )
                     }
                 }
-            } // AdaptiveContent
         }
+        } // AdaptiveContent
     }
 }
 

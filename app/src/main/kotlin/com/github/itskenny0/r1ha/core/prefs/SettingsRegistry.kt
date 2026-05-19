@@ -35,9 +35,11 @@ enum class SettingCategory(val label: String) {
     CARD_UI("Card UI"),
     BEHAVIOUR("Behaviour"),
     APPEARANCE("Appearance"),
-    DASHBOARD("Dashboard"),
-    INTEGRATIONS("Integrations"),
-    DATA("Backup & restore"),
+    // Future categories (DASHBOARD / INTEGRATIONS / DATA) intentionally absent:
+    // the registry doesn't populate them today and an unpopulated category can't
+    // surface in search or diff anyway. Re-add when entries land. A test asserts
+    // every category is populated, so a drive-by enum addition without a matching
+    // entry won't merge.
 }
 
 /**

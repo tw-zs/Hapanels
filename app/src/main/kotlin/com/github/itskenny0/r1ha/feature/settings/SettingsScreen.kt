@@ -115,9 +115,6 @@ fun SettingsScreen(
                         com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
                         com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
                         com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.DASHBOARD -> "DASHBOARD"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS -> "INTEGRATIONS"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.DATA -> "BACKUP & RESTORE"
                     }
                 }
                 .eachCount()
@@ -268,9 +265,6 @@ fun SettingsScreen(
                                     com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
                                     com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
                                     com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.DASHBOARD -> "DASHBOARD"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS -> "INTEGRATIONS"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.DATA -> "BACKUP & RESTORE"
                                 }
                                 expandedSections = setOf(sectionName)
                                 settingsQuery = ""

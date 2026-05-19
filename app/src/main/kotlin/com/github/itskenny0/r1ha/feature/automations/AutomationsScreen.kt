@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
@@ -197,6 +198,7 @@ fun AutomationsScreen(
 private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     Row(
         modifier = Modifier
+            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

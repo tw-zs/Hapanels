@@ -403,7 +403,7 @@ class DefaultHaRepository(
             // the user explicitly to re-auth from Settings.
             R1Log.w("HaRepo.connect", "tokens.load() returned null even though server is set; user needs to re-auth")
             com.github.itskenny0.r1ha.core.util.Toaster.error(
-                "Authentication tokens missing — open Settings → Sign out & reconnect",
+                "Authentication tokens missing. Open Settings → Sign out & reconnect.",
             )
             return
         }

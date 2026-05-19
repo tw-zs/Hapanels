@@ -64,6 +64,20 @@ fun LongLivedTokenScreen(
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    // FLAG_SECURE keeps the token paste field out of Android's recents thumbnails and
+    // out of screen-recording captures. Applied via DisposableEffect so it's only on
+    // while this screen is composed; other surfaces remain unaffected.
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(view) {
+        val window = (view.context as? android.app.Activity)?.window
+        window?.setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_SECURE,
+            android.view.WindowManager.LayoutParams.FLAG_SECURE,
+        )
+        onDispose {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
     val current by settings.settings.collectAsState(initial = null)
     var url by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }

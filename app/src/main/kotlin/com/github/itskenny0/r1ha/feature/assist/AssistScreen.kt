@@ -237,7 +237,23 @@ fun AssistScreen(
                                         .background(R1.SurfaceMuted)
                                         .padding(horizontal = 10.dp, vertical = 6.dp),
                                 ) {
-                                    Text(text = "…", style = R1.labelMicro, color = R1.InkMuted)
+                                    // Animate the trailing dots so a slow local-LLM Assist call
+                                    // reads as "working" rather than "frozen". One dot at 0-500 ms,
+                                    // two at 500-1000, three at 1000-1500, cycling.
+                                    val transition = androidx.compose.animation.core.rememberInfiniteTransition(
+                                        label = "assist-inflight",
+                                    )
+                                    val phase by transition.animateFloat(
+                                        initialValue = 0f,
+                                        targetValue = 3f,
+                                        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                            animation = androidx.compose.animation.core.tween(durationMillis = 1500),
+                                            repeatMode = androidx.compose.animation.core.RepeatMode.Restart,
+                                        ),
+                                        label = "assist-inflight-phase",
+                                    )
+                                    val dots = (phase.toInt().coerceIn(0, 2) + 1)
+                                    Text(text = ".".repeat(dots), style = R1.labelMicro, color = R1.InkMuted)
                                 }
                             }
                         }

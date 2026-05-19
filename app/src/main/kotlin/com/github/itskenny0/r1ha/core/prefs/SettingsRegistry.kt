@@ -316,15 +316,19 @@ fun modifiedSettings(current: AppSettings): List<SettingEntry> =
     SETTINGS_REGISTRY.filterNot { it.isDefault(current) }
 
 /**
- * Case-insensitive substring match against [SettingEntry.label] and
- * [SettingEntry.description]. Used by the Settings search overlay. The query is
- * already lowercased / trimmed by the call site so this stays a hot O(N) loop
- * without per-call string allocations.
+ * Case-insensitive substring match against [SettingEntry.label],
+ * [SettingEntry.description] and [SettingCategory.label]. Used by the Settings
+ * search overlay. Including the category label lets the user type a section
+ * name (e.g. 'behaviour', 'card ui') and have every entry under that section
+ * surface in one shot, which is closer to the 'tiered menu' navigation
+ * shape than a strict per-entry text match.
  */
 fun searchSettings(query: String): List<SettingEntry> {
     if (query.isBlank()) return emptyList()
     val q = query.trim().lowercase()
     return SETTINGS_REGISTRY.filter {
-        it.label.lowercase().contains(q) || it.description.lowercase().contains(q)
+        it.label.lowercase().contains(q) ||
+            it.description.lowercase().contains(q) ||
+            it.category.label.lowercase().contains(q)
     }
 }

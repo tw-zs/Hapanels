@@ -82,7 +82,7 @@ fun CameraSnapshot(
         val density = LocalDensity.current
         val targetWidthPx = with(density) { maxWidth.toPx().toInt().coerceAtLeast(1) }
         val targetHeightPx = with(density) { maxHeight.toPx().toInt().coerceAtLeast(1) }
-        LaunchedEffect(entityId, serverUrl, bearerToken, intervalMillis, lifecycleOwner, targetWidthPx) {
+        LaunchedEffect(entityId, serverUrl, bearerToken, intervalMillis, lifecycleOwner, targetWidthPx, targetHeightPx) {
             lifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
                 while (true) {
                     val cb = System.currentTimeMillis()

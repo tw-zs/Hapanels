@@ -49,6 +49,8 @@ class SettingsViewModel(
     fun setTempUnit(u: com.github.itskenny0.r1ha.core.prefs.TemperatureUnit) =
         update { it.copy(ui = it.ui.copy(tempUnit = u)) }
     fun setInfiniteScroll(enabled: Boolean) = update { it.copy(ui = it.ui.copy(infiniteScroll = enabled)) }
+    fun setShowZeroPercentWhenOff(enabled: Boolean) =
+        update { it.copy(ui = it.ui.copy(showZeroPercentWhenOff = enabled)) }
 
     /** Toggle a chrome-row button's visibility. The persistence layer force-
      *  enables GEAR regardless of what's passed here (so a hostile manual edit

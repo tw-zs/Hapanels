@@ -158,6 +158,7 @@ class SettingsRepository private constructor(
         // canonical string is simpler than juggling N integer-keyed slots whose
         // semantics change on every reorder.
         val uiChromeButtons = stringPreferencesKey("ui.chrome_buttons.json")
+        val uiShowZeroPercentWhenOff = booleanPreferencesKey("ui.show_zero_percent_when_off")
 
         val theme = stringPreferencesKey("theme")
         /**
@@ -230,6 +231,7 @@ class SettingsRepository private constructor(
                     tempUnit = p[K.uiTempUnit]?.let { runCatching { TemperatureUnit.valueOf(it) }.getOrNull() } ?: TemperatureUnit.CELSIUS,
                     infiniteScroll = p[K.uiInfiniteScroll] ?: false,
                     chromeButtons = decodeChromeButtons(p[K.uiChromeButtons]),
+                    showZeroPercentWhenOff = p[K.uiShowZeroPercentWhenOff] ?: false,
                 ),
                 behavior = Behavior(
                     haptics = p[K.behaviorHaptics] ?: true,
@@ -359,6 +361,7 @@ class SettingsRepository private constructor(
                 p[K.uiTempUnit] = next.ui.tempUnit.name
                 p[K.uiInfiniteScroll] = next.ui.infiniteScroll
                 p[K.uiChromeButtons] = encodeChromeButtons(next.ui.chromeButtons)
+                p[K.uiShowZeroPercentWhenOff] = next.ui.showZeroPercentWhenOff
                 p[K.theme] = next.theme.name
                 p[K.nameOverrides] = encodeNameOverrides(next.nameOverrides)
                 p[K.entityOverrides] = encodeEntityOverrides(next.entityOverrides)

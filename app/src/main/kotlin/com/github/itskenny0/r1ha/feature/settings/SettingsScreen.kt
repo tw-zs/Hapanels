@@ -572,6 +572,17 @@ fun SettingsScreen(
                 )
             }
             item {
+                SwitchRow(
+                    label = "Show 0% arc when entity is off",
+                    subtitle = "Off (default): arc shows whatever brightness HA reported, " +
+                        "even if the entity is currently off. On: arc is always blank (0%) " +
+                        "for off entities. Useful for bulbs that store pre-off brightness " +
+                        "in HA so a dark bulb doesn't show 75% on its card.",
+                    checked = s.ui.showZeroPercentWhenOff,
+                    onCheckedChange = { vm.setShowZeroPercentWhenOff(it) },
+                )
+            }
+            item {
                 LabeledControl(label = "Sensor decimals") {
                     SegmentedIntPicker(
                         options = listOf(0, 1, 2, 3, 4),

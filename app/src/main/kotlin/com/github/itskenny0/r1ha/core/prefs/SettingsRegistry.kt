@@ -186,6 +186,14 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         currentDisplay = { if (it.ui.infiniteScroll) "ON" else "OFF" },
     ),
     SettingEntry(
+        id = "ui.showZeroPercentWhenOff",
+        category = SettingCategory.CARD_UI,
+        label = "Show 0% arc when entity is off",
+        description = "Clamp the brightness arc to zero for any off entity, overriding HA's stored brightness",
+        isDefault = { it.ui.showZeroPercentWhenOff == defaults.ui.showZeroPercentWhenOff },
+        currentDisplay = { if (it.ui.showZeroPercentWhenOff) "ON" else "OFF" },
+    ),
+    SettingEntry(
         id = "ui.textHistoryLength",
         category = SettingCategory.CARD_UI,
         label = "Sensor history length",

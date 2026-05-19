@@ -120,6 +120,17 @@ data class UiOptions(
         ChromeButtonConfig(ChromeButtonRef.EDIT, enabled = true),
         ChromeButtonConfig(ChromeButtonRef.GEAR, enabled = true),
     ),
+    /**
+     * When on, cards whose entity is currently off always render their percentage arc at 0 %,
+     * regardless of what HA last reported for that entity's brightness. Useful for lights that
+     * retain their pre-off brightness in HA (e.g. Zigbee bulbs that store the last value):
+     * off by default the card might show "75 %" even though the light is dark, which is
+     * confusing. With this on the arc goes blank when the entity is off and snaps back to the
+     * real brightness once HA confirms the entity turned on.
+     *
+     * Default OFF to match the original behaviour: the arc shows whatever HA reported.
+     */
+    val showZeroPercentWhenOff: Boolean = false,
 )
 
 @Stable

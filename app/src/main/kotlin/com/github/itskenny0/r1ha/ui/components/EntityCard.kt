@@ -264,7 +264,12 @@ fun EntityCard(
                     entityIdText = state.id.value,
                     friendlyName = state.friendlyName,
                     area = state.area,
-                    percent = state.percent ?: 0,
+                    // When showZeroPercentWhenOff is on, clamp the displayed percent to 0
+                    // for any entity that is currently off, regardless of what HA reported.
+                    // Useful for Zigbee / Z-Wave bulbs that preserve their pre-off brightness
+                    // in HA's state: without this the arc shows e.g. "75 %" for a dark bulb.
+                    percent = if (mergedUi.showZeroPercentWhenOff && !state.isOn) 0
+                              else state.percent ?: 0,
                     isOn = state.isOn,
                     domainGlyph = glyph,
                     accent = accentRole,

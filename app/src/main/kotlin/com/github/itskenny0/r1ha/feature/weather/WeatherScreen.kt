@@ -175,7 +175,10 @@ private fun WeatherRow(w: WeatherViewModel.Weather) {
         val parts = buildList {
             if (w.humidity != null) add("${w.humidity}% RH")
             if (w.windSpeed != null) {
-                add("${formatNumber(w.windSpeed)} ${w.windUnit ?: ""}".trim())
+                val bearing = w.windBearingText
+                    ?: w.windBearingDeg?.let { degreesToCompass(it) }
+                val windStr = "${formatNumber(w.windSpeed)} ${w.windUnit ?: ""}".trim()
+                add(if (bearing != null) "$windStr $bearing" else windStr)
             }
             if (w.pressure != null) {
                 add("${formatNumber(w.pressure)} ${w.pressureUnit ?: ""}".trim())
@@ -292,3 +295,14 @@ private fun conditionAccent(condition: String): androidx.compose.ui.graphics.Col
         "unavailable", "unknown" -> R1.InkMuted
         else -> R1.InkSoft
     }
+
+/**
+ * Convert HA's `wind_bearing` (degrees, 0 = north) into the 8-point compass
+ * label most weather UIs use ("N", "NE", "E", …). Doubles-out to 16-point
+ * granularity would be marginally more precise but reads as cluttered.
+ */
+private fun degreesToCompass(deg: Double): String {
+    val normalised = ((deg % 360) + 360) % 360
+    val sector = ((normalised + 22.5) / 45.0).toInt() % 8
+    return arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[sector]
+}

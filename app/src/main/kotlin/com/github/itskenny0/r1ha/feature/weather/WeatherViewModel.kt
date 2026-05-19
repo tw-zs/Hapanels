@@ -47,6 +47,11 @@ class WeatherViewModel(
         val humidity: Int?,
         val windSpeed: Double?,
         val windUnit: String?,
+        /** Wind bearing in degrees (0 = N, 90 = E, …). HA exposes this as
+         *  `wind_bearing` on most integrations; some pass a string compass
+         *  abbreviation directly (e.g. "NE"). Null when neither is set. */
+        val windBearingDeg: Double?,
+        val windBearingText: String?,
         val pressure: Double?,
         val pressureUnit: String?,
         /** Legacy `forecast` attribute — daily forecast entries. Empty
@@ -97,6 +102,9 @@ class WeatherViewModel(
                                 ?.toDoubleOrNull()?.toInt(),
                             windSpeed = (attrs["wind_speed"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
                             windUnit = (attrs["wind_speed_unit"] as? JsonPrimitive)?.content,
+                            windBearingDeg = (attrs["wind_bearing"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
+                            windBearingText = (attrs["wind_bearing"] as? JsonPrimitive)?.content
+                                ?.takeIf { it.toDoubleOrNull() == null },
                             pressure = (attrs["pressure"] as? JsonPrimitive)?.content?.toDoubleOrNull(),
                             pressureUnit = (attrs["pressure_unit"] as? JsonPrimitive)?.content,
                             forecast = forecast,

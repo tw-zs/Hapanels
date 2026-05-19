@@ -112,6 +112,23 @@ fun LongLivedTokenScreen(
                 monospace = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Live preview of the normalised URL, same affordance as the
+            // Onboarding flow's URL field. Only shown when the normaliser
+            // actually changes something (e.g. a bare host gets http://
+            // and :8123 added) so the line stays absent for fully-typed
+            // URLs.
+            val normalisedUrlPreview = remember(url) {
+                com.github.itskenny0.r1ha.feature.onboarding.normalizeServerUrl(url)
+            }
+            if (normalisedUrlPreview.isNotBlank() &&
+                normalisedUrlPreview != url.trim().trimEnd('/')) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Will save: $normalisedUrlPreview",
+                    style = R1.labelMicro,
+                    color = R1.InkSoft,
+                )
+            }
             Spacer(Modifier.height(12.dp))
             Text(text = "ACCESS TOKEN", style = R1.labelMicro, color = R1.InkSoft)
             Spacer(Modifier.height(4.dp))

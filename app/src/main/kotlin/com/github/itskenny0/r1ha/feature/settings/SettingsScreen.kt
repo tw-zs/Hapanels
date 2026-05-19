@@ -227,7 +227,31 @@ fun SettingsScreen(
                     }
                 } else {
                     itemsIndexed(matchedEntries, key = { _, it -> it.id }) { _, entry ->
-                        SearchResultRow(entry = entry, current = s)
+                        SearchResultRow(
+                            entry = entry,
+                            current = s,
+                            onClick = {
+                                // Clear the query so the section grid returns,
+                                // and expand ONLY this result's section so the
+                                // user lands directly on the relevant block.
+                                // The other sections collapse; tapping their
+                                // headers reopens them. Section header strings
+                                // are the same constants the wrapping if-blocks
+                                // test against.
+                                val sectionName = when (entry.category) {
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.DASHBOARD -> "DASHBOARD"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS -> "INTEGRATIONS"
+                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.DATA -> "BACKUP & RESTORE"
+                                }
+                                expandedSections = setOf(sectionName)
+                                settingsQuery = ""
+                            },
+                        )
                     }
                 }
                 return@LazyColumn // Skip the normal sections while searching.
@@ -1422,6 +1446,7 @@ private fun SettingsHeader(
 private fun SearchResultRow(
     entry: com.github.itskenny0.r1ha.core.prefs.SettingEntry,
     current: com.github.itskenny0.r1ha.core.prefs.AppSettings,
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -1430,6 +1455,7 @@ private fun SearchResultRow(
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
             .border(1.dp, R1.Hairline, R1.ShapeS)
+            .r1Pressable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

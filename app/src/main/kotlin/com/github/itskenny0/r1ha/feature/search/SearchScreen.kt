@@ -236,6 +236,14 @@ fun SearchScreen(
                         style = R1.body,
                         color = R1.InkMuted,
                     )
+                    if (ui.bucket != SearchViewModel.Bucket.ALL) {
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            text = "Filter set to ${ui.bucket.name}. Tap ALL above to widen the search.",
+                            style = R1.labelMicro,
+                            color = R1.InkMuted,
+                        )
+                    }
                     // Fallback to Assist when the user's query didn't match any
                     // entity. Conversational intent ('turn off all the kitchen
                     // lights', 'is it raining tomorrow') routes naturally to

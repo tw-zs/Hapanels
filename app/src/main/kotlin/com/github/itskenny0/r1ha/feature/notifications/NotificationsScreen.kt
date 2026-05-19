@@ -224,12 +224,33 @@ private fun NotificationRow(
             )
         }
         Spacer(Modifier.size(4.dp))
+        // HACS update lists and other "here are 14 components needing review" payloads
+        // routinely exceed 6 lines. Collapse by default; tap to expand the full body.
+        val expanded = androidx.compose.runtime.remember(notification.notificationId) {
+            androidx.compose.runtime.mutableStateOf(false)
+        }
+        val collapsedLines = 6
+        val needsExpand = notification.message.lineSequence().count() > collapsedLines ||
+            notification.message.length > 280
         Text(
             text = notification.message,
             style = R1.body,
             color = R1.InkSoft,
-            maxLines = 6,
+            maxLines = if (expanded.value) Int.MAX_VALUE else collapsedLines,
+            modifier = if (needsExpand) {
+                Modifier.r1Pressable(onClick = { expanded.value = !expanded.value })
+            } else Modifier,
         )
+        if (needsExpand) {
+            Text(
+                text = if (expanded.value) "↑ COLLAPSE" else "↓ EXPAND",
+                style = R1.labelMicro,
+                color = R1.InkMuted,
+                modifier = Modifier
+                    .padding(top = 2.dp)
+                    .r1Pressable(onClick = { expanded.value = !expanded.value }),
+            )
+        }
         Spacer(Modifier.size(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(

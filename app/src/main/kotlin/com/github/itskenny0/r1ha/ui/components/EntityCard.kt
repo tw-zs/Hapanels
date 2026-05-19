@@ -172,7 +172,11 @@ fun EntityCard(
         com.github.itskenny0.r1ha.core.theme.LocalUiOptions provides mergedUi,
     ) {
     Box(modifier = modifier.then(tapModifier)) {
-        val themeAlpha = if (state.isAvailable) 1f else 0.35f
+        // Dim slightly when unavailable, but keep the friendly name legible — the previous
+        // 0.35 alpha made labels almost unreadable, which mattered when the user was
+        // trying to identify *which* entity had gone offline. 0.55 still reads as "this
+        // is broken" without burying the text completely.
+        val themeAlpha = if (state.isAvailable) 1f else 0.55f
         // Per-card accent override resolves once here so every card variant gets the
         // same colour. Null = fall back to the domain-derived role colour.
         val overrideAccent = perCardOverride.accentColor?.let { androidx.compose.ui.graphics.Color(it) }

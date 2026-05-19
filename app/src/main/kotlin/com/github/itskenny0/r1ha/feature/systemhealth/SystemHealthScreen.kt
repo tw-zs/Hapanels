@@ -33,6 +33,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.core.util.Toaster
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * System Health diagnostic screen. Renders `/api/config` (HA version,
@@ -98,52 +99,54 @@ fun SystemHealthScreen(
             scrollState = scrollState,
             settings = settings,
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(scrollState),
-        ) {
-            Text(text = "SERVER", style = R1.labelMicro, color = R1.InkSoft)
-            Spacer(Modifier.size(4.dp))
-            val cfg = ui.config
-            if (cfg != null) {
-                ConfigPanel(cfg)
-            } else if (ui.configError != null) {
-                ErrorPanel(ui.configError!!)
-            }
-            Spacer(Modifier.size(16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "ERROR LOG (tail)", style = R1.labelMicro, color = R1.InkSoft)
-                Spacer(Modifier.weight(1f))
-                if (ui.errorLog.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .clip(R1.ShapeS)
-                            .background(R1.SurfaceMuted)
-                            .border(1.dp, R1.Hairline, R1.ShapeS)
-                            .r1Pressable(onClick = {
-                                clipboard.setText(AnnotatedString(ui.errorLog))
-                                Toaster.show("Copied")
-                            })
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(text = "COPY", style = R1.labelMicro, color = R1.InkSoft)
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .verticalScroll(scrollState),
+            ) {
+                Text(text = "SERVER", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.size(4.dp))
+                val cfg = ui.config
+                if (cfg != null) {
+                    ConfigPanel(cfg)
+                } else if (ui.configError != null) {
+                    ErrorPanel(ui.configError!!)
+                }
+                Spacer(Modifier.size(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "ERROR LOG (tail)", style = R1.labelMicro, color = R1.InkSoft)
+                    Spacer(Modifier.weight(1f))
+                    if (ui.errorLog.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(R1.ShapeS)
+                                .background(R1.SurfaceMuted)
+                                .border(1.dp, R1.Hairline, R1.ShapeS)
+                                .r1Pressable(onClick = {
+                                    clipboard.setText(AnnotatedString(ui.errorLog))
+                                    Toaster.show("Copied")
+                                })
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Text(text = "COPY", style = R1.labelMicro, color = R1.InkSoft)
+                        }
                     }
                 }
+                Spacer(Modifier.size(4.dp))
+                when {
+                    ui.errorLog.isNotBlank() -> ErrorLogPanel(ui.errorLog)
+                    ui.errorLogError != null -> ErrorPanel(ui.errorLogError!!)
+                    else -> Text(
+                        text = "No log output (HA returned an empty body).",
+                        style = R1.body,
+                        color = R1.InkMuted,
+                    )
+                }
+                Spacer(Modifier.size(24.dp))
             }
-            Spacer(Modifier.size(4.dp))
-            when {
-                ui.errorLog.isNotBlank() -> ErrorLogPanel(ui.errorLog)
-                ui.errorLogError != null -> ErrorPanel(ui.errorLogError!!)
-                else -> Text(
-                    text = "No log output (HA returned an empty body).",
-                    style = R1.body,
-                    color = R1.InkMuted,
-                )
-            }
-            Spacer(Modifier.size(24.dp))
-        }
+        } // AdaptiveContent
     }
 }
 

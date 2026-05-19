@@ -39,6 +39,7 @@ import com.github.itskenny0.r1ha.ui.components.AutoRefresh
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollForScrollState
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * Device controls — local-only cards for adjusting the host device
@@ -110,47 +111,49 @@ fun DeviceScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "LOCAL · NOT EXPOSED TO HA",
-                style = R1.labelMicro,
-                color = R1.InkMuted,
-            )
-            BatteryCard(ui)
-            BrightnessCard(
-                pct = ui.brightnessPct,
-                systemPct = ui.systemBrightnessPct,
-                onChange = { vm.setBrightness(it) },
-                onReleaseToSystem = { vm.setBrightness(-1) },
-                onOpenSystem = { vm.openSystemDisplaySettings() },
-            )
-            VolumeCard(
-                label = "MEDIA",
-                pct = ui.mediaVolumePct,
-                onChange = { vm.setMediaVolume(it) },
-            )
-            VolumeCard(
-                label = "NOTIFICATION",
-                pct = ui.notificationVolumePct,
-                onChange = { vm.setNotificationVolume(it) },
-            )
-            VolumeCard(
-                label = "ALARM",
-                pct = ui.alarmVolumePct,
-                onChange = { vm.setAlarmVolume(it) },
-            )
-            if (ui.flashlightAvailable) {
-                FlashlightCard(on = ui.flashlightOn, onToggle = { vm.toggleFlashlight() })
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "LOCAL · NOT EXPOSED TO HA",
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                )
+                BatteryCard(ui)
+                BrightnessCard(
+                    pct = ui.brightnessPct,
+                    systemPct = ui.systemBrightnessPct,
+                    onChange = { vm.setBrightness(it) },
+                    onReleaseToSystem = { vm.setBrightness(-1) },
+                    onOpenSystem = { vm.openSystemDisplaySettings() },
+                )
+                VolumeCard(
+                    label = "MEDIA",
+                    pct = ui.mediaVolumePct,
+                    onChange = { vm.setMediaVolume(it) },
+                )
+                VolumeCard(
+                    label = "NOTIFICATION",
+                    pct = ui.notificationVolumePct,
+                    onChange = { vm.setNotificationVolume(it) },
+                )
+                VolumeCard(
+                    label = "ALARM",
+                    pct = ui.alarmVolumePct,
+                    onChange = { vm.setAlarmVolume(it) },
+                )
+                if (ui.flashlightAvailable) {
+                    FlashlightCard(on = ui.flashlightOn, onToggle = { vm.toggleFlashlight() })
+                }
+                NetworkCard(ssid = ui.wifiSsid, onOpenWifi = { vm.openWifiSettings() })
+                Spacer(Modifier.size(24.dp))
             }
-            NetworkCard(ssid = ui.wifiSsid, onOpenWifi = { vm.openWifiSettings() })
-            Spacer(Modifier.size(24.dp))
-        }
+        } // AdaptiveContent
     }
 }
 

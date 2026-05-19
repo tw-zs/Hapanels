@@ -37,6 +37,7 @@ import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * Fast-fire launcher for HA scenes + scripts. Pulls the full entity list
@@ -100,58 +101,60 @@ fun ScenesScreen(
             counts = ui.counts,
             onSelect = { vm.setFilter(it) },
         )
-        when {
-            ui.loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = R1.AccentWarm,
-                )
-            }
-            ui.entries.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                // Distinguish "the install has no scenes" from "the search /
-                // filter chip excluded everything" so the user knows which
-                // dial to twist to see anything.
-                val hasAny = ui.all.isNotEmpty()
-                val msg = when {
-                    !hasAny -> "No scenes or scripts in HA. Define them in HA's UI to see them here."
-                    ui.query.isNotBlank() -> "No matches for '${ui.query}'. Clear the search or try different terms."
-                    else -> "Nothing under this filter. Switch to ALL to see everything."
-                }
-                Text(text = msg, style = R1.body, color = R1.InkMuted)
-            }
-            // Pull-to-refresh wrap — re-issue /api/states to pick up any
-            // new scenes / scripts the user added in HA without backing
-            // out and re-entering the screen.
-            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                isRefreshing = ui.loading,
-                onRefresh = { vm.refresh() },
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                LazyColumn(
-                    state = listState,
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            when {
+                ui.loading -> Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp, vertical = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    items(items = ui.entries, key = { it.id.value }) { entry ->
-                        SceneRow(
-                            entry,
-                            onFire = { vm.fire(entry) },
-                            onLongPress = { vm.showDetail(entry) },
-                        )
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = R1.AccentWarm,
+                    )
+                }
+                ui.entries.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize().padding(22.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Distinguish "the install has no scenes" from "the search /
+                    // filter chip excluded everything" so the user knows which
+                    // dial to twist to see anything.
+                    val hasAny = ui.all.isNotEmpty()
+                    val msg = when {
+                        !hasAny -> "No scenes or scripts in HA. Define them in HA's UI to see them here."
+                        ui.query.isNotBlank() -> "No matches for '${ui.query}'. Clear the search or try different terms."
+                        else -> "Nothing under this filter. Switch to ALL to see everything."
+                    }
+                    Text(text = msg, style = R1.body, color = R1.InkMuted)
+                }
+                // Pull-to-refresh wrap — re-issue /api/states to pick up any
+                // new scenes / scripts the user added in HA without backing
+                // out and re-entering the screen.
+                else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = ui.loading,
+                    onRefresh = { vm.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = 12.dp, vertical = 8.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        items(items = ui.entries, key = { it.id.value }) { entry ->
+                            SceneRow(
+                                entry,
+                                onFire = { vm.fire(entry) },
+                                onLongPress = { vm.showDetail(entry) },
+                            )
+                        }
                     }
                 }
             }
-        }
+        } // AdaptiveContent
     }
 }
 

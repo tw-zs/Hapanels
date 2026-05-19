@@ -34,6 +34,7 @@ import com.github.itskenny0.r1ha.ui.components.AutoRefresh
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollForScrollState
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * Energy summary surface — a four-tile readout of the most useful
@@ -90,84 +91,86 @@ fun EnergyScreen(
                 }
             },
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // ── DRAW + PRODUCTION row ──────────────────────────────
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                BigStatTile(
-                    modifier = Modifier.weight(1f),
-                    label = "DRAW",
-                    value = ui.currentDrawW?.let { formatWatts(it) } ?: "—",
-                    accent = drawAccent(ui.currentDrawW),
-                )
-                BigStatTile(
-                    modifier = Modifier.weight(1f),
-                    label = "PRODUCTION",
-                    value = ui.productionW?.let { formatWatts(it) } ?: "—",
-                    accent = if ((ui.productionW ?: 0.0) > 0) R1.AccentGreen else R1.InkMuted,
-                )
-            }
-            // ── TODAY (kWh) row ────────────────────────────────────
-            BigStatTile(
-                modifier = Modifier.fillMaxWidth(),
-                label = "TODAY",
-                value = ui.todayKwh?.let { "${"%.2f".format(it)} kWh" } ?: "—",
-                accent = if ((ui.todayKwh ?: 0.0) > 0) R1.AccentWarm else R1.InkMuted,
-            )
-            // ── TOP CONSUMERS ──────────────────────────────────────
-            if (ui.topConsumers.isNotEmpty()) {
-                Spacer(Modifier.size(4.dp))
-                Text(text = "TOP CONSUMERS", style = R1.labelMicro, color = R1.InkSoft)
-                for (c in ui.topConsumers.take(5)) {
-                    ConsumerRow(c, onClick = { onOpenHistory(c.entityId) })
-                }
-            } else if (!ui.loading && ui.error == null && ui.currentDrawW == null) {
-                // Empty state when no device_class=power sensors are
-                // configured. Same look as the other 'no data' panels
-                // in the app so it doesn't read as 'load failed'.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(R1.ShapeS)
-                        .background(R1.SurfaceMuted)
-                        .border(1.dp, R1.Hairline, R1.ShapeS)
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                // ── DRAW + PRODUCTION row ──────────────────────────────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        text = "No `device_class=power` sensors found. Add a power " +
-                            "integration (smart meter, smart plug, energy monitor) and " +
-                            "the dashboard will populate.",
-                        style = R1.labelMicro,
-                        color = R1.InkSoft,
+                    BigStatTile(
+                        modifier = Modifier.weight(1f),
+                        label = "DRAW",
+                        value = ui.currentDrawW?.let { formatWatts(it) } ?: "—",
+                        accent = drawAccent(ui.currentDrawW),
+                    )
+                    BigStatTile(
+                        modifier = Modifier.weight(1f),
+                        label = "PRODUCTION",
+                        value = ui.productionW?.let { formatWatts(it) } ?: "—",
+                        accent = if ((ui.productionW ?: 0.0) > 0) R1.AccentGreen else R1.InkMuted,
                     )
                 }
-            }
-            if (ui.error != null && ui.currentDrawW == null && ui.todayKwh == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(R1.ShapeS)
-                        .background(R1.StatusRed.copy(alpha = 0.12f))
-                        .border(1.dp, R1.StatusRed.copy(alpha = 0.4f), R1.ShapeS)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    Text(
-                        text = ui.error ?: "",
-                        style = R1.labelMicro,
-                        color = R1.StatusRed,
-                    )
+                // ── TODAY (kWh) row ────────────────────────────────────
+                BigStatTile(
+                    modifier = Modifier.fillMaxWidth(),
+                    label = "TODAY",
+                    value = ui.todayKwh?.let { "${"%.2f".format(it)} kWh" } ?: "—",
+                    accent = if ((ui.todayKwh ?: 0.0) > 0) R1.AccentWarm else R1.InkMuted,
+                )
+                // ── TOP CONSUMERS ──────────────────────────────────────
+                if (ui.topConsumers.isNotEmpty()) {
+                    Spacer(Modifier.size(4.dp))
+                    Text(text = "TOP CONSUMERS", style = R1.labelMicro, color = R1.InkSoft)
+                    for (c in ui.topConsumers.take(5)) {
+                        ConsumerRow(c, onClick = { onOpenHistory(c.entityId) })
+                    }
+                } else if (!ui.loading && ui.error == null && ui.currentDrawW == null) {
+                    // Empty state when no device_class=power sensors are
+                    // configured. Same look as the other 'no data' panels
+                    // in the app so it doesn't read as 'load failed'.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                    ) {
+                        Text(
+                            text = "No `device_class=power` sensors found. Add a power " +
+                                "integration (smart meter, smart plug, energy monitor) and " +
+                                "the dashboard will populate.",
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                        )
+                    }
                 }
+                if (ui.error != null && ui.currentDrawW == null && ui.todayKwh == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(R1.ShapeS)
+                            .background(R1.StatusRed.copy(alpha = 0.12f))
+                            .border(1.dp, R1.StatusRed.copy(alpha = 0.4f), R1.ShapeS)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            text = ui.error ?: "",
+                            style = R1.labelMicro,
+                            color = R1.StatusRed,
+                        )
+                    }
+                }
+                Spacer(Modifier.size(24.dp))
             }
-            Spacer(Modifier.size(24.dp))
-        }
+        } // AdaptiveContent
     }
 }
 

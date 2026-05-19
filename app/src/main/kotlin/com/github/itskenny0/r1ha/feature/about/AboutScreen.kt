@@ -38,6 +38,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 @Composable
 fun AboutScreen(
@@ -61,147 +62,149 @@ fun AboutScreen(
     ) {
         R1TopBar(title = "ABOUT", onBack = onBack)
 
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
 
-            // ── App ────────────────────────────────────────────────────────────────
-            item { Section("APP") }
-            item { InfoRow("Version", BuildConfig.VERSION_NAME, mono = true) }
-            item { InfoRow("Build", BuildConfig.GIT_SHA, mono = true) }
-            // Surface the product flavour so the user (and anyone helping them
-            // troubleshoot) knows which build they're running. Distinct
-            // distribution paths produce subtly different behaviour: the github
-            // flavour has the in-app self-updater; the fdroid flavour gets
-            // update notifications from the F-Droid client instead.
-            item {
-                InfoRow(
-                    "Distribution",
-                    if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub",
-                    mono = true,
-                )
-            }
-            item {
-                LinkRow(
-                    label = "Source code",
-                    url = BuildConfig.SOURCE_URL,
-                    onOpen = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.SOURCE_URL))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                        }
-                    },
-                )
-            }
-            // Self-updater is omitted on the F-Droid flavour — F-Droid users get
-            // update notifications from the F-Droid client and shouldn't see a
-            // duplicate in-app affordance. The github flavour keeps it so direct-
-            // install users (downloading the APK from GitHub Releases) have a
-            // discoverable update path. Gated at composition time so the gradle
-            // R8 pass drops the entire UpdaterRow + AppUpdater wiring from the
-            // F-Droid APK rather than just hiding it at runtime.
-            if (!BuildConfig.IS_FDROID_BUILD) {
-                item { UpdaterRow() }
-            }
-            // File-a-bug link — drops the user straight into the GitHub issue
-            // tracker pre-filled with the app version. Lowers the friction for
-            // crash reports + UX feedback; without it, users have to type the
-            // URL into a desktop browser.
-            item {
-                val flavour = if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub"
-                val bugUrl = "${BuildConfig.SOURCE_URL}/issues/new?body=" +
-                    java.net.URLEncoder.encode(
-                        "App: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n" +
-                            "Build: ${BuildConfig.GIT_SHA}\n" +
-                            "Distribution: $flavour\n" +
-                            "Android: API ${Build.VERSION.SDK_INT}\n" +
-                            "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
-                            "(describe what happened. If it's a crash, paste the LAST CRASH from the dev menu here.)",
-                        "UTF-8",
+                // ── App ────────────────────────────────────────────────────────────────
+                item { Section("APP") }
+                item { InfoRow("Version", BuildConfig.VERSION_NAME, mono = true) }
+                item { InfoRow("Build", BuildConfig.GIT_SHA, mono = true) }
+                // Surface the product flavour so the user (and anyone helping them
+                // troubleshoot) knows which build they're running. Distinct
+                // distribution paths produce subtly different behaviour: the github
+                // flavour has the in-app self-updater; the fdroid flavour gets
+                // update notifications from the F-Droid client instead.
+                item {
+                    InfoRow(
+                        "Distribution",
+                        if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub",
+                        mono = true,
                     )
-                LinkRow(
-                    label = "File a bug",
-                    url = bugUrl,
-                    onOpen = {
-                        runCatching {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse(bugUrl))
-                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                item {
+                    LinkRow(
+                        label = "Source code",
+                        url = BuildConfig.SOURCE_URL,
+                        onOpen = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.SOURCE_URL))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                    )
+                }
+                // Self-updater is omitted on the F-Droid flavour — F-Droid users get
+                // update notifications from the F-Droid client and shouldn't see a
+                // duplicate in-app affordance. The github flavour keeps it so direct-
+                // install users (downloading the APK from GitHub Releases) have a
+                // discoverable update path. Gated at composition time so the gradle
+                // R8 pass drops the entire UpdaterRow + AppUpdater wiring from the
+                // F-Droid APK rather than just hiding it at runtime.
+                if (!BuildConfig.IS_FDROID_BUILD) {
+                    item { UpdaterRow() }
+                }
+                // File-a-bug link — drops the user straight into the GitHub issue
+                // tracker pre-filled with the app version. Lowers the friction for
+                // crash reports + UX feedback; without it, users have to type the
+                // URL into a desktop browser.
+                item {
+                    val flavour = if (BuildConfig.IS_FDROID_BUILD) "F-Droid" else "GitHub"
+                    val bugUrl = "${BuildConfig.SOURCE_URL}/issues/new?body=" +
+                        java.net.URLEncoder.encode(
+                            "App: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n" +
+                                "Build: ${BuildConfig.GIT_SHA}\n" +
+                                "Distribution: $flavour\n" +
+                                "Android: API ${Build.VERSION.SDK_INT}\n" +
+                                "Device: ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
+                                "(describe what happened. If it's a crash, paste the LAST CRASH from the dev menu here.)",
+                            "UTF-8",
+                        )
+                    LinkRow(
+                        label = "File a bug",
+                        url = bugUrl,
+                        onOpen = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(bugUrl))
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                    )
+                }
+
+                item { SectionDivider() }
+
+                // ── Connection ─────────────────────────────────────────────────────────
+                item { Section("CONNECTION") }
+                item { InfoRow("Server", appSettings.server?.url ?: "(not connected)", mono = true) }
+                item {
+                    InfoRow(
+                        label = "WebSocket",
+                        value = describeConnection(connection),
+                    )
+                }
+                item {
+                    // 'Last event' diagnostic — surfaces the heartbeat the repository tracks
+                    // for its REST-fallback poller. When the user's WS is half-broken (the
+                    // connection upgrades cleanly but state_changed events get dropped by a
+                    // misconfigured reverse proxy), 'WebSocket' above still reads Connected,
+                    // but cards update slowly. The seconds-since-last-event number tells
+                    // them which case they're in.
+                    LastEventRow(haRepository)
+                }
+                item { InfoRow("Favourites", appSettings.favorites.size.toString(), mono = true) }
+                item { EntitiesDiagnosticRow(haRepository) }
+
+                item { SectionDivider() }
+
+                // ── Device ─────────────────────────────────────────────────────────────
+                item { Section("DEVICE") }
+                item { InfoRow("Manufacturer", Build.MANUFACTURER) }
+                item { InfoRow("Model", Build.MODEL) }
+                item { InfoRow("Android", "API ${Build.VERSION.SDK_INT} (${Build.VERSION.RELEASE})") }
+
+                item { SectionDivider() }
+
+                // ── License ────────────────────────────────────────────────────────────
+                item { Section("LICENSE") }
+                item {
+                    Text(
+                        text = "Released into the public domain via The Unlicense. " +
+                            "Copy, modify, redistribute. Commercial or not, by any means.",
+                        style = R1.body,
+                        color = R1.InkSoft,
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),
+                    )
+                }
+                item { SectionDivider() }
+                // ── Dev menu ───────────────────────────────────────────────────────────
+                item { Section("DEVELOPER") }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .r1Pressable(onClick = onOpenDevMenu)
+                            .padding(horizontal = 22.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Dev menu", style = R1.bodyEmph, color = R1.Ink)
+                            Text(
+                                text = "Advanced tunables, behaviour flags, in-app log viewer.",
+                                style = R1.body,
+                                color = R1.InkMuted,
                             )
                         }
-                    },
-                )
-            }
-
-            item { SectionDivider() }
-
-            // ── Connection ─────────────────────────────────────────────────────────
-            item { Section("CONNECTION") }
-            item { InfoRow("Server", appSettings.server?.url ?: "(not connected)", mono = true) }
-            item {
-                InfoRow(
-                    label = "WebSocket",
-                    value = describeConnection(connection),
-                )
-            }
-            item {
-                // 'Last event' diagnostic — surfaces the heartbeat the repository tracks
-                // for its REST-fallback poller. When the user's WS is half-broken (the
-                // connection upgrades cleanly but state_changed events get dropped by a
-                // misconfigured reverse proxy), 'WebSocket' above still reads Connected,
-                // but cards update slowly. The seconds-since-last-event number tells
-                // them which case they're in.
-                LastEventRow(haRepository)
-            }
-            item { InfoRow("Favourites", appSettings.favorites.size.toString(), mono = true) }
-            item { EntitiesDiagnosticRow(haRepository) }
-
-            item { SectionDivider() }
-
-            // ── Device ─────────────────────────────────────────────────────────────
-            item { Section("DEVICE") }
-            item { InfoRow("Manufacturer", Build.MANUFACTURER) }
-            item { InfoRow("Model", Build.MODEL) }
-            item { InfoRow("Android", "API ${Build.VERSION.SDK_INT} (${Build.VERSION.RELEASE})") }
-
-            item { SectionDivider() }
-
-            // ── License ────────────────────────────────────────────────────────────
-            item { Section("LICENSE") }
-            item {
-                Text(
-                    text = "Released into the public domain via The Unlicense. " +
-                        "Copy, modify, redistribute. Commercial or not, by any means.",
-                    style = R1.body,
-                    color = R1.InkSoft,
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),
-                )
-            }
-            item { SectionDivider() }
-            // ── Dev menu ───────────────────────────────────────────────────────────
-            item { Section("DEVELOPER") }
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .r1Pressable(onClick = onOpenDevMenu)
-                        .padding(horizontal = 22.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Dev menu", style = R1.bodyEmph, color = R1.Ink)
-                        Text(
-                            text = "Advanced tunables, behaviour flags, in-app log viewer.",
-                            style = R1.body,
-                            color = R1.InkMuted,
-                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(text = "→", style = R1.bodyEmph, color = R1.InkSoft)
                     }
-                    Spacer(Modifier.width(12.dp))
-                    Text(text = "→", style = R1.bodyEmph, color = R1.InkSoft)
                 }
+                item { Spacer(Modifier.height(48.dp)) }
             }
-            item { Spacer(Modifier.height(48.dp)) }
-        }
+        } // AdaptiveContent
     }
 }
 

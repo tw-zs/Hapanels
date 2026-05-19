@@ -43,6 +43,7 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.RelativeTimeLabel
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -126,54 +127,56 @@ fun CalendarEventsScreen(
             .systemBarsPadding(),
     ) {
         R1TopBar(title = calendarName.uppercase().take(20), onBack = onBack)
-        when {
-            ui.loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = R1.AccentWarm,
-                )
-            }
-            ui.error != null && ui.events.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = ui.error ?: "Error", style = R1.body, color = R1.StatusRed)
-            }
-            ui.events.isEmpty() -> Box(
-                modifier = Modifier.fillMaxSize().padding(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "No events in the next 14 days.",
-                    style = R1.body,
-                    color = R1.InkMuted,
-                )
-            }
-            else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                isRefreshing = ui.loading,
-                onRefresh = { vm.refresh() },
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                LazyColumn(
-                    state = listState,
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            when {
+                ui.loading -> Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        horizontal = 12.dp, vertical = 8.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    val now = Instant.now()
-                    items(items = ui.events, key = { "${it.summary}|${it.start?.toEpochMilli()}" }) { e ->
-                        EventRow(e, isHappeningNow = e.start != null && e.end != null &&
-                            now.isAfter(e.start) && now.isBefore(e.end))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
+                        color = R1.AccentWarm,
+                    )
+                }
+                ui.error != null && ui.events.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize().padding(22.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = ui.error ?: "Error", style = R1.body, color = R1.StatusRed)
+                }
+                ui.events.isEmpty() -> Box(
+                    modifier = Modifier.fillMaxSize().padding(22.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "No events in the next 14 days.",
+                        style = R1.body,
+                        color = R1.InkMuted,
+                    )
+                }
+                else -> androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = ui.loading,
+                    onRefresh = { vm.refresh() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = 12.dp, vertical = 8.dp,
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        val now = Instant.now()
+                        items(items = ui.events, key = { "${it.summary}|${it.start?.toEpochMilli()}" }) { e ->
+                            EventRow(e, isHappeningNow = e.start != null && e.end != null &&
+                                now.isAfter(e.start) && now.isBefore(e.end))
+                        }
                     }
                 }
             }
-        }
+        } // AdaptiveContent
     }
 }
 

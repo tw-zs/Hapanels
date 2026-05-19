@@ -33,6 +33,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * Read-only audit of every setting that differs from its constructor default.
@@ -65,81 +66,83 @@ fun ModifiedSettingsScreen(
             .systemBarsPadding(),
     ) {
         R1TopBar(title = "MODIFIED SETTINGS", onBack = onBack)
-        if (modified.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(22.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "Every registered setting is at its default value. " +
-                        "Adjust anything in Settings and it'll appear here.",
-                    style = R1.body,
-                    color = R1.InkMuted,
-                )
-            }
-            return@Column
-        }
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                horizontal = 12.dp,
-                vertical = 8.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // Lightweight summary header: count + a clarifying line so the user
-            // knows the list isn't an exhaustive enumeration of every setting.
-            item("__header") {
-                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            if (modified.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(22.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        text = "${modified.size} modified",
-                        style = R1.bodyEmph,
-                        color = R1.Ink,
-                    )
-                    Text(
-                        text = "Entries that differ from their constructor-default value. " +
-                            "Tap the parent section in Settings to change.",
-                        style = R1.labelMicro,
+                        text = "Every registered setting is at its default value. " +
+                            "Adjust anything in Settings and it'll appear here.",
+                        style = R1.body,
                         color = R1.InkMuted,
                     )
                 }
+                return@AdaptiveContent
             }
-            // Group entries by category, preserving the registry's overall order.
-            // The diff list now reads category-by-category, matching the layout of
-            // the parent Settings screen so the user can map each diff row to its
-            // visual neighbourhood there.
-            val grouped: List<Pair<SettingCategory, List<SettingEntry>>> =
-                modified.groupBy { it.category }
-                    .toList()
-                    .sortedBy { (category, _) ->
-                        SettingCategory.entries.indexOf(category)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    horizontal = 12.dp,
+                    vertical = 8.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                // Lightweight summary header: count + a clarifying line so the user
+                // knows the list isn't an exhaustive enumeration of every setting.
+                item("__header") {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        Text(
+                            text = "${modified.size} modified",
+                            style = R1.bodyEmph,
+                            color = R1.Ink,
+                        )
+                        Text(
+                            text = "Entries that differ from their constructor-default value. " +
+                                "Tap the parent section in Settings to change.",
+                            style = R1.labelMicro,
+                            color = R1.InkMuted,
+                        )
                     }
-            grouped.forEach { (category, entries) ->
-                item("__cat_${category.name}") {
-                    Text(
-                        text = category.label.uppercase(),
-                        style = R1.labelMicro,
-                        color = R1.AccentWarm,
-                        modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 2.dp),
-                    )
                 }
-                itemsIndexed(entries, key = { _, it -> it.id }) { _, entry ->
-                    ModifiedSettingRow(
-                        entry = entry,
-                        current = current,
-                        onJumpToSection = {
-                            // Push the section name onto the focus bus and pop back.
-                            // SettingsScreen's collector handles the expand + scroll.
-                            com.github.itskenny0.r1ha.core.util.SettingsFocusBus.request(
-                                sectionNameForCategory(entry.category),
-                            )
-                            onBack()
-                        },
-                    )
+                // Group entries by category, preserving the registry's overall order.
+                // The diff list now reads category-by-category, matching the layout of
+                // the parent Settings screen so the user can map each diff row to its
+                // visual neighbourhood there.
+                val grouped: List<Pair<SettingCategory, List<SettingEntry>>> =
+                    modified.groupBy { it.category }
+                        .toList()
+                        .sortedBy { (category, _) ->
+                            SettingCategory.entries.indexOf(category)
+                        }
+                grouped.forEach { (category, entries) ->
+                    item("__cat_${category.name}") {
+                        Text(
+                            text = category.label.uppercase(),
+                            style = R1.labelMicro,
+                            color = R1.AccentWarm,
+                            modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 2.dp),
+                        )
+                    }
+                    itemsIndexed(entries, key = { _, it -> it.id }) { _, entry ->
+                        ModifiedSettingRow(
+                            entry = entry,
+                            current = current,
+                            onJumpToSection = {
+                                // Push the section name onto the focus bus and pop back.
+                                // SettingsScreen's collector handles the expand + scroll.
+                                com.github.itskenny0.r1ha.core.util.SettingsFocusBus.request(
+                                    sectionNameForCategory(entry.category),
+                                )
+                                onBack()
+                            },
+                        )
+                    }
                 }
             }
-        }
+        } // AdaptiveContent
     }
 }
 

@@ -33,6 +33,7 @@ import com.github.itskenny0.r1ha.core.theme.R1Theme
 import com.github.itskenny0.r1ha.core.theme.R1ThemeHost
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import kotlinx.coroutines.launch
 
 private val SAMPLE_CARD = CardRenderModel(
@@ -69,19 +70,21 @@ fun ThemePickerScreen(
     ) {
         R1TopBar(title = "THEME", onBack = onBack)
 
-        Column(modifier = Modifier.fillMaxSize().padding(top = 6.dp)) {
-            ALL_THEMES.forEach { theme ->
-                ThemeRow(
-                    theme = theme,
-                    isSelected = theme.id == currentThemeId,
-                    onClick = {
-                        scope.launch {
-                            settings.update { it.copy(theme = theme.id) }
-                        }
-                    },
-                )
+        AdaptiveContent(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = 6.dp)) {
+                ALL_THEMES.forEach { theme ->
+                    ThemeRow(
+                        theme = theme,
+                        isSelected = theme.id == currentThemeId,
+                        onClick = {
+                            scope.launch {
+                                settings.update { it.copy(theme = theme.id) }
+                            }
+                        },
+                    )
+                }
             }
-        }
+        } // AdaptiveContent
     }
 }
 

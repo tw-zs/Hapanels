@@ -100,6 +100,28 @@ fun SettingsScreen(
     val modifiedCount = androidx.compose.runtime.remember(s) {
         com.github.itskenny0.r1ha.core.prefs.modifiedSettings(s).size
     }
+    // Per-section modified count — used as a small badge on each Section
+    // header so the user can spot 'where did I change things?' even in
+    // collapsed/tiered view. Categories without a 1:1 section mapping
+    // (TODAY / TALK & FIRE / STATUS VIEWS / POWER TOOLS) won't appear in
+    // this map; their headers stay badge-less.
+    val sectionModifiedCount: Map<String, Int> =
+        androidx.compose.runtime.remember(s) {
+            com.github.itskenny0.r1ha.core.prefs.modifiedSettings(s)
+                .groupingBy { entry ->
+                    when (entry.category) {
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.DASHBOARD -> "DASHBOARD"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS -> "INTEGRATIONS"
+                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.DATA -> "BACKUP & RESTORE"
+                    }
+                }
+                .eachCount()
+        }
 
     // Expand/collapse state for each section header. Defaults to all expanded
     // (no behaviour change for existing installs); the user can tap a header
@@ -269,7 +291,7 @@ fun SettingsScreen(
             }
 
             // ── Server ─────────────────────────────────────────────────────────────
-            item { Section("SERVER", expanded = "SERVER" in expandedSections, onToggle = { toggleSection("SERVER") }) }
+            item { Section("SERVER", expanded = "SERVER" in expandedSections, onToggle = { toggleSection("SERVER") }, modifiedCount = sectionModifiedCount["SERVER"] ?: 0) }
             if ("SERVER" in expandedSections) {
             item {
                 InfoRow(
@@ -414,7 +436,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Scroll wheel ───────────────────────────────────────────────────────
-            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }) }
+            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }, modifiedCount = sectionModifiedCount["SCROLL WHEEL"] ?: 0) }
             if ("SCROLL WHEEL" in expandedSections) {
             item {
                 LabeledControl(label = "Step size") {
@@ -480,7 +502,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Card UI ────────────────────────────────────────────────────────────
-            item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }) }
+            item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }, modifiedCount = sectionModifiedCount["CARD UI"] ?: 0) }
             if ("CARD UI" in expandedSections) {
             item {
                 LabeledControl(label = "Display mode") {
@@ -598,7 +620,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Behaviour ──────────────────────────────────────────────────────────
-            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }) }
+            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0) }
             if ("BEHAVIOUR" in expandedSections) {
             item {
                 SwitchRow(
@@ -736,7 +758,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Backup & restore ───────────────────────────────────────────────────
-            item { Section("BACKUP & RESTORE", expanded = "BACKUP & RESTORE" in expandedSections, onToggle = { toggleSection("BACKUP & RESTORE") }) }
+            item { Section("BACKUP & RESTORE", expanded = "BACKUP & RESTORE" in expandedSections, onToggle = { toggleSection("BACKUP & RESTORE") }, modifiedCount = sectionModifiedCount["BACKUP & RESTORE"] ?: 0) }
             if ("BACKUP & RESTORE" in expandedSections) {
             item {
                 InfoRow(
@@ -823,7 +845,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Dashboard layout — per-section visibility + thresholds ─────────
-            item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }) }
+            item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }, modifiedCount = sectionModifiedCount["DASHBOARD"] ?: 0) }
             if ("DASHBOARD" in expandedSections) {
             item { SubGroupLabel("VISIBLE CARDS") }
             item {
@@ -974,7 +996,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Integrations — per-surface refresh intervals + tuning ──────────
-            item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }) }
+            item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }, modifiedCount = sectionModifiedCount["INTEGRATIONS"] ?: 0) }
             if ("INTEGRATIONS" in expandedSections) {
             item { SubGroupLabel("AUTO-REFRESH INTERVALS") }
             item {
@@ -1091,7 +1113,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Appearance ─────────────────────────────────────────────────────────
-            item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }) }
+            item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }, modifiedCount = sectionModifiedCount["APPEARANCE"] ?: 0) }
             if ("APPEARANCE" in expandedSections) {
             item {
                 NavRow(
@@ -1108,7 +1130,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Today — at-a-glance dashboard + quick search ──────────────
-            item { Section("TODAY", expanded = "TODAY" in expandedSections, onToggle = { toggleSection("TODAY") }) }
+            item { Section("TODAY", expanded = "TODAY" in expandedSections, onToggle = { toggleSection("TODAY") }, modifiedCount = sectionModifiedCount["TODAY"] ?: 0) }
             if ("TODAY" in expandedSections) {
             item {
                 NavRow(label = "Dashboard", value = "Weather · People · Next event", onClick = onOpenDashboard)
@@ -1121,7 +1143,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Talk + Fire — high-frequency action surfaces ─────────────
-            item { Section("TALK & FIRE", expanded = "TALK & FIRE" in expandedSections, onToggle = { toggleSection("TALK & FIRE") }) }
+            item { Section("TALK & FIRE", expanded = "TALK & FIRE" in expandedSections, onToggle = { toggleSection("TALK & FIRE") }, modifiedCount = sectionModifiedCount["TALK & FIRE"] ?: 0) }
             if ("TALK & FIRE" in expandedSections) {
             item {
                 NavRow(label = "Assist", value = "Talk to HA", onClick = onOpenAssist)
@@ -1147,7 +1169,7 @@ fun SettingsScreen(
             // ── Status views — read-only at-a-glance HA state ────────────
             }
             item { SectionDivider() }
-            item { Section("STATUS VIEWS", expanded = "STATUS VIEWS" in expandedSections, onToggle = { toggleSection("STATUS VIEWS") }) }
+            item { Section("STATUS VIEWS", expanded = "STATUS VIEWS" in expandedSections, onToggle = { toggleSection("STATUS VIEWS") }, modifiedCount = sectionModifiedCount["STATUS VIEWS"] ?: 0) }
             if ("STATUS VIEWS" in expandedSections) {
             item {
                 NavRow(label = "Cameras", value = "Live snapshots", onClick = onOpenCameras)
@@ -1195,7 +1217,7 @@ fun SettingsScreen(
             // ── Power tools — diagnostic / advanced surfaces ─────────────
             }
             item { SectionDivider() }
-            item { Section("POWER TOOLS", expanded = "POWER TOOLS" in expandedSections, onToggle = { toggleSection("POWER TOOLS") }) }
+            item { Section("POWER TOOLS", expanded = "POWER TOOLS" in expandedSections, onToggle = { toggleSection("POWER TOOLS") }, modifiedCount = sectionModifiedCount["POWER TOOLS"] ?: 0) }
             if ("POWER TOOLS" in expandedSections) {
             item {
                 NavRow(label = "Templates", value = "Jinja2 evaluator", onClick = onOpenTemplate)
@@ -1250,6 +1272,11 @@ private fun Section(
     title: String,
     expanded: Boolean = true,
     onToggle: (() -> Unit)? = null,
+    /** How many registered settings in this section currently deviate from
+     *  their default value. Renders as a small accent-tinted pill between the
+     *  title and the hairline rule so the user sees 'where did I change
+     *  things?' at a glance, especially in collapsed view. 0 hides the pill. */
+    modifiedCount: Int = 0,
 ) {
     val modifier = Modifier
         .fillMaxWidth()
@@ -1260,6 +1287,21 @@ private fun Section(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(title, style = R1.sectionHeader, color = R1.AccentWarm)
+        if (modifiedCount > 0) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.AccentWarm.copy(alpha = 0.18f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = "$modifiedCount",
+                    style = R1.labelMicro,
+                    color = R1.AccentWarm,
+                )
+            }
+        }
         Spacer(Modifier.width(10.dp))
         Box(
             modifier = Modifier

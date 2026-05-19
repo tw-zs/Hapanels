@@ -1,12 +1,12 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import android.content.Context
-import android.os.VibrationAttributes
+import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.HapticFeedbackConstants
 import android.view.View
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
@@ -25,92 +25,70 @@ import com.github.itskenny0.r1ha.core.util.R1Log
  *    is the only reliable route.
  *  - **Other LineageOS / vendor ROMs** — sometimes the inverse:
  *    Vibrator one-shots get filtered out unless they carry a
- *    [VibrationAttributes] with `USAGE_TOUCH`, while
+ *    VibrationAttributes with `USAGE_TOUCH`, while
  *    `performHapticFeedback` is unaffected.
  *
  * So we fire *both* paths and accept that a few well-tuned devices
  * will perceive each tap as a very slightly punchier click — that's
  * a much better failure mode than "nothing happens" on a $300 phone
- * because the ROM blessed the wrong API. The Vibrator call carries
- * an explicit `USAGE_TOUCH` attribute so it honours the system-level
+ * because the ROM blessed the wrong API. On API 33+ the Vibrator call
+ * carries an explicit USAGE_TOUCH attribute so it honours the system
  * Touch-feedback toggle exactly the way the LineageOS launcher does.
+ * On API 30-32 the attribute isn't available so we call vibrate()
+ * directly; on API 30 VibratorManager doesn't exist yet so we fall
+ * back to Context.VIBRATOR_SERVICE (deprecated from 31 but reliable).
  *
- * `VIBRATE` permission is already declared in the manifest; minSdk 33
- * guarantees both [VibratorManager] and [VibrationAttributes].
+ * The VibratorManager and VibrationAttributes references live in
+ * @RequiresApi-annotated private functions outside this class body
+ * so ART's verifier only resolves those classes when it's actually
+ * reachable (i.e. on the API version that provides them).
  */
 class R1Haptic internal constructor(
     private val vibrator: Vibrator?,
 ) {
 
-    /** Short "click" feedback — wheel detents, button taps, scroll
-     *  pips. Calibrated to feel like a single satisfying click rather
-     *  than a buzz. */
+    /** Short "click" feedback — wheel detents, button taps, scroll pips. */
     fun tick(view: View) = fire(view, tick = true)
 
-    /** Heavier "you held that down" feedback — long-press menus,
-     *  destructive-action confirmations, drag handles. Distinctly
-     *  meatier than [tick] so the user can feel the difference between
-     *  a tap registering and a hold registering. */
+    /** Heavier "you held that down" feedback — long-press menus and
+     *  destructive-action confirmations. */
     fun longPress(view: View) = fire(view, tick = false)
 
-    /** Shared core. Fires both the Vibrator (with USAGE_TOUCH so the
-     *  system honours the touch-feedback setting consistently with the
-     *  launcher) AND the View's performHapticFeedback so whichever the
-     *  host ROM actually wires up produces tactile output. */
     private fun fire(view: View, tick: Boolean) {
-        // 1) Vibrator path. We try the predefined effect first because
-        //    on capable devices it gives a much nicer feel than a raw
-        //    one-shot, then fall back to a one-shot at a duration
-        //    that's long enough to reliably activate ERM motors (some
-        //    older LineageOS phones drop sub-15 ms pulses entirely)
-        //    while still being short enough to read as a click on LRAs.
+        // 1) Vibrator path.
         runCatching {
             val v = vibrator ?: return@runCatching
             if (!v.hasVibrator()) return@runCatching
-            // Always try the predefined effect — its support-detection
-            // is unreliable on enough ROMs that the check itself was
-            // skipping output on capable hardware. When the effect
-            // isn't actually supported, the system falls back to its
-            // own default vibration; only when that fails do we hit
-            // the catch and use our explicit one-shot below.
-            val attrs = VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH)
             val predefined = if (tick) VibrationEffect.EFFECT_TICK else VibrationEffect.EFFECT_CLICK
             val supported = v.areEffectsSupported(predefined).firstOrNull() ==
                 Vibrator.VIBRATION_EFFECT_SUPPORT_YES
             val effect = if (supported) {
                 VibrationEffect.createPredefined(predefined)
             } else if (tick) {
-                // 20 ms full-amplitude — reliably perceived as a single
-                // click on every common motor type. The earlier 12 ms /
-                // half-amplitude pulse was below the activation
-                // threshold on some LineageOS-on-mid-range-phone setups
-                // and the user got nothing.
                 VibrationEffect.createOneShot(20L, VibrationEffect.DEFAULT_AMPLITUDE)
             } else {
-                // 35 ms full-amplitude for the heavier long-press. Long
-                // enough to clearly read as "different from a tap".
                 VibrationEffect.createOneShot(35L, VibrationEffect.DEFAULT_AMPLITUDE)
             }
-            v.vibrate(effect, attrs)
+            // VibrationAttributes is API 33; VibrationAttributes-less vibrate is
+            // deprecated from 26 but works on 30-32. Both branches reference classes
+            // in @RequiresApi helpers so ART only loads what's actually reachable.
+            if (Build.VERSION.SDK_INT >= 33) {
+                vibrateWithAttrs(v, effect)
+            } else {
+                @Suppress("DEPRECATION")
+                v.vibrate(effect)
+            }
         }.onFailure {
             R1Log.w("R1Haptic", "vibrator path failed: ${it.message}")
         }
 
-        // 2) View.performHapticFeedback path. Cheap; on a ROM that
-        //    routes it to the same motor the Vibrator just hit, the
-        //    system typically deduplicates within its scheduling
-        //    window. On a ROM that silently drops the Vibrator path
-        //    (some vendor builds), this is what actually fires. The
-        //    @Suppress is required because CLOCK_TICK was deprecated in
-        //    API 34 in favour of CONTEXT_CLICK; we accept both since
-        //    different ROMs honour different constants.
+        // 2) View.performHapticFeedback path. Cheap; on a ROM that routes it
+        //    to the same motor the Vibrator just hit the system deduplicates.
+        //    On a ROM that silently drops Vibrator calls this is the backup.
         runCatching {
             @Suppress("DEPRECATION")
-            val constant = if (tick) {
-                HapticFeedbackConstants.CLOCK_TICK
-            } else {
-                HapticFeedbackConstants.LONG_PRESS
-            }
+            val constant = if (tick) HapticFeedbackConstants.CLOCK_TICK
+            else HapticFeedbackConstants.LONG_PRESS
             view.performHapticFeedback(constant)
         }.onFailure {
             R1Log.d("R1Haptic", "performHapticFeedback failed: ${it.message}")
@@ -118,14 +96,37 @@ class R1Haptic internal constructor(
     }
 
     companion object {
-        /** Build an [R1Haptic] from a [Context]. Resolves the
-         *  [VibratorManager] once; minSdk 33 guarantees it's
-         *  available. */
         fun from(context: Context): R1Haptic {
-            val mgr = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            return R1Haptic(mgr?.defaultVibrator)
+            val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= 31) {
+                vibratorFromManager(context)
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            }
+            return R1Haptic(vibrator)
         }
     }
+}
+
+// Separated into @RequiresApi top-level functions so ART's class verifier
+// only loads android.os.VibratorManager / android.os.VibrationAttributes
+// on devices that actually have them. Placing them inside the class body
+// would include them in the class verification pass regardless of the
+// SDK_INT guard above.
+
+@RequiresApi(31)
+private fun vibratorFromManager(context: Context): Vibrator? {
+    val mgr = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+        as? android.os.VibratorManager
+    return mgr?.defaultVibrator
+}
+
+@RequiresApi(33)
+private fun vibrateWithAttrs(v: Vibrator, effect: VibrationEffect) {
+    val attrs = android.os.VibrationAttributes.createForUsage(
+        android.os.VibrationAttributes.USAGE_TOUCH,
+    )
+    v.vibrate(effect, attrs)
 }
 
 /** Composable accessor — caches an [R1Haptic] for the lifetime of the

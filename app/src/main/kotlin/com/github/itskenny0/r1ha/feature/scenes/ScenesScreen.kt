@@ -195,7 +195,17 @@ private fun MasterActionsRow(
     onSwitchesOff: () -> Unit,
 ) {
     // Three side-by-side master actions. Equal weight so the row reads as
-    // "panel of mass actions" rather than a primary + secondaries.
+    // "panel of mass actions" rather than a primary + secondaries. Each pill
+    // arms on first tap and fires on second-within-3s so a fat-fingered tap
+    // doesn't cascade through every light in the house. Long-press LIGHTS
+    // (turn-all-on) is non-destructive and stays one-tap.
+    val armedKey = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(armedKey.value) {
+        if (armedKey.value != null) {
+            kotlinx.coroutines.delay(3_000L)
+            armedKey.value = null
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -205,24 +215,51 @@ private fun MasterActionsRow(
         MasterActionPill(
             modifier = Modifier.weight(1f),
             label = "LIGHTS",
+            armedLabel = "CONFIRM",
+            armed = armedKey.value == "LIGHTS",
             accent = R1.StatusRed,
             inFlight = inFlight,
-            onClick = onLightsOff,
+            onClick = {
+                if (armedKey.value == "LIGHTS") {
+                    armedKey.value = null
+                    onLightsOff()
+                } else {
+                    armedKey.value = "LIGHTS"
+                }
+            },
             onLongClick = onLightsOn,
         )
         MasterActionPill(
             modifier = Modifier.weight(1f),
             label = "MEDIA",
+            armedLabel = "CONFIRM",
+            armed = armedKey.value == "MEDIA",
             accent = R1.AccentCool,
             inFlight = inFlight,
-            onClick = onMediaPause,
+            onClick = {
+                if (armedKey.value == "MEDIA") {
+                    armedKey.value = null
+                    onMediaPause()
+                } else {
+                    armedKey.value = "MEDIA"
+                }
+            },
         )
         MasterActionPill(
             modifier = Modifier.weight(1f),
             label = "SWITCHES",
+            armedLabel = "CONFIRM",
+            armed = armedKey.value == "SWITCHES",
             accent = R1.AccentWarm,
             inFlight = inFlight,
-            onClick = onSwitchesOff,
+            onClick = {
+                if (armedKey.value == "SWITCHES") {
+                    armedKey.value = null
+                    onSwitchesOff()
+                } else {
+                    armedKey.value = "SWITCHES"
+                }
+            },
         )
     }
     // Discoverability hint for the asymmetric long-press affordance. LIGHTS is
@@ -244,6 +281,8 @@ private fun MasterActionsRow(
 private fun MasterActionPill(
     modifier: Modifier,
     label: String,
+    armedLabel: String = label,
+    armed: Boolean = false,
     accent: androidx.compose.ui.graphics.Color,
     inFlight: Boolean,
     onClick: () -> Unit,
@@ -257,16 +296,25 @@ private fun MasterActionPill(
     } else {
         Modifier.r1Pressable(onClick = { if (!inFlight) onClick() })
     }
+    val fill = when {
+        inFlight -> R1.SurfaceMuted
+        armed -> accent.copy(alpha = 0.38f)
+        else -> accent.copy(alpha = 0.18f)
+    }
     Box(
         modifier = modifier
             .height(36.dp)
             .clip(R1.ShapeS)
-            .background(if (inFlight) R1.SurfaceMuted else accent.copy(alpha = 0.18f))
+            .background(fill)
             .then(pressable),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = if (inFlight) "…" else label,
+            text = when {
+                inFlight -> "…"
+                armed -> armedLabel
+                else -> label
+            },
             style = R1.labelMicro,
             color = if (inFlight) R1.InkMuted else accent,
         )

@@ -722,6 +722,7 @@ fun SettingsScreen(
                 )
             }
             item { ToastLogLevelRow(current = s.behavior.toastLogLevel, onSelect = { vm.setToastLogLevel(it) }) }
+            item { OrientationModeRow(current = s.behavior.orientationMode, onSelect = { vm.setOrientationMode(it) }) }
 
             // ── Quick Settings tile ─────────────────────────────────
             // Bind one HA entity_id to the system Quick Settings panel
@@ -1428,6 +1429,53 @@ private fun ToastLogLevelRow(
                 ) {
                     Text(
                         text = level.name,
+                        style = R1.labelMicro,
+                        color = if (active) R1.Bg else R1.InkSoft,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OrientationModeRow(
+    current: com.github.itskenny0.r1ha.core.prefs.OrientationMode,
+    onSelect: (com.github.itskenny0.r1ha.core.prefs.OrientationMode) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 10.dp),
+    ) {
+        Text("Screen orientation", style = R1.bodyEmph, color = R1.Ink)
+        Text(
+            text = "Follow device (default): rotates with the sensor. " +
+                "Portrait only: locks to portrait regardless of rotation. " +
+                "Right choice for R1 and one-handed phone use.",
+            style = R1.body,
+            color = R1.InkMuted,
+            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            com.github.itskenny0.r1ha.core.prefs.OrientationMode.entries.forEach { mode ->
+                val active = mode == current
+                val label = when (mode) {
+                    com.github.itskenny0.r1ha.core.prefs.OrientationMode.FOLLOW_DEVICE -> "Follow device"
+                    com.github.itskenny0.r1ha.core.prefs.OrientationMode.PORTRAIT_ONLY -> "Portrait only"
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .clip(R1.ShapeS)
+                        .background(if (active) R1.AccentWarm else R1.SurfaceMuted)
+                        .r1Pressable({ onSelect(mode) })
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        text = label,
                         style = R1.labelMicro,
                         color = if (active) R1.Bg else R1.InkSoft,
                     )

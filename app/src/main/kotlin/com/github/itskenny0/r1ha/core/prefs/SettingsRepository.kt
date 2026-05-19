@@ -141,6 +141,7 @@ class SettingsRepository private constructor(
          *  time). */
         val behaviorQuickTileEntityId = stringPreferencesKey("behavior.quick_tile_entity_id")
         val behaviorAssistAutoOpenKeyboard = booleanPreferencesKey("behavior.assist_auto_open_keyboard")
+        val behaviorOrientationMode = stringPreferencesKey("behavior.orientation_mode")
         val advancedJson = stringPreferencesKey("advanced.json")
         val dashboardJson = stringPreferencesKey("dashboard.json")
         val integrationsJson = stringPreferencesKey("integrations.json")
@@ -243,6 +244,9 @@ class SettingsRepository private constructor(
                         ?: ToastLogLevel.OFF,
                     quickTileEntityId = p[K.behaviorQuickTileEntityId]?.takeIf { it.isNotBlank() },
                     assistAutoOpenKeyboard = p[K.behaviorAssistAutoOpenKeyboard] ?: false,
+                    orientationMode = p[K.behaviorOrientationMode]
+                        ?.let { runCatching { OrientationMode.valueOf(it) }.getOrNull() }
+                        ?: OrientationMode.FOLLOW_DEVICE,
                 ),
                 theme = p[K.theme]?.let { runCatching { ThemeId.valueOf(it) }.getOrNull() } ?: ThemeId.PRAGMATIC_HYBRID,
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
@@ -348,6 +352,7 @@ class SettingsRepository private constructor(
                 p[K.behaviorToastLogLevel] = next.behavior.toastLogLevel.name
                 p[K.behaviorQuickTileEntityId] = next.behavior.quickTileEntityId.orEmpty()
                 p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard
+                p[K.behaviorOrientationMode] = next.behavior.orientationMode.name
                 p[K.uiTextHistoryLen] = next.ui.textHistoryLength
                 p[K.uiHideCardTail] = next.ui.hideCardTailAbove
                 p[K.uiMaxDecimals] = next.ui.maxDecimalPlaces

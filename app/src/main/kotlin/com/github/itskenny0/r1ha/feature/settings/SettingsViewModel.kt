@@ -111,6 +111,9 @@ class SettingsViewModel(
     fun setAssistAutoOpenKeyboard(enabled: Boolean) =
         update { it.copy(behavior = it.behavior.copy(assistAutoOpenKeyboard = enabled)) }
 
+    fun setOrientationMode(mode: com.github.itskenny0.r1ha.core.prefs.OrientationMode) =
+        update { it.copy(behavior = it.behavior.copy(orientationMode = mode)) }
+
     /**
      * Generic mutator for the [AdvancedSettings] sub-struct. The dev-menu screen
      * uses this to update fields one at a time without each field needing its own

@@ -98,9 +98,22 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             R1Log.d("MainActivity.setContent", "startDestination=$startDestination server=${initial.server?.url ?: "null"}")
 
+            // Honour the orientation-mode setting live. PORTRAIT_ONLY locks the activity
+            // to portrait regardless of the sensor (good for R1 and one-handed phone use);
+            // FOLLOW_DEVICE restores sensor-driven rotation. The change is immediate and
+            // doesn't require an Activity restart because it goes through requestedOrientation.
+            androidx.compose.runtime.LaunchedEffect(settings.behavior.orientationMode) {
+                requestedOrientation = when (settings.behavior.orientationMode) {
+                    com.github.itskenny0.r1ha.core.prefs.OrientationMode.PORTRAIT_ONLY ->
+                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    com.github.itskenny0.r1ha.core.prefs.OrientationMode.FOLLOW_DEVICE ->
+                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+
             // Honour the user's "Hide status bar" toggle live — flipping it in Settings
             // applies immediately without an activity restart. WindowInsetsController is
-            // the recommended API since SDK 30; we already require min 33 so no fallback
+            // the recommended API since SDK 30; we already require min 30 so no fallback
             // path is needed.
             androidx.compose.runtime.LaunchedEffect(settings.behavior.hideStatusBar) {
                 val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)

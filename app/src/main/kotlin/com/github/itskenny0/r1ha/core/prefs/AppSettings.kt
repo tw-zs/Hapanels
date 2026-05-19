@@ -4,6 +4,17 @@ import androidx.compose.runtime.Stable
 
 enum class ThemeId { MINIMAL_DARK, PRAGMATIC_HYBRID, COLORFUL_CARDS }
 
+/**
+ * Controls how the app responds to device rotation.
+ *
+ * FOLLOW_DEVICE  — the activity rotates with the sensor; right choice for
+ *                  tablets and phones used in landscape.
+ * PORTRAIT_ONLY  — locks to portrait regardless of sensor; right choice for
+ *                  the R1 (which users never rotate) and for phone users who
+ *                  prefer one-handed portrait use.
+ */
+enum class OrientationMode { FOLLOW_DEVICE, PORTRAIT_ONLY }
+
 enum class DisplayMode { PERCENT, RAW }
 
 /**
@@ -197,6 +208,13 @@ data class Behavior(
      * the keyboard.
      */
     val assistAutoOpenKeyboard: Boolean = false,
+    /**
+     * Whether the app follows the device rotation sensor or locks to portrait.
+     * Defaults to FOLLOW_DEVICE so tablets and phones in landscape work out of
+     * the box after the orientation-lock was removed. Users who prefer portrait
+     * (R1, one-handed phone use) can switch to PORTRAIT_ONLY here.
+     */
+    val orientationMode: OrientationMode = OrientationMode.FOLLOW_DEVICE,
 )
 
 /**

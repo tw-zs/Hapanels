@@ -20,6 +20,17 @@
         </intent>
     </queries>
 
+    <!-- Declare support for all screen sizes so OEM tablet shells (Samsung DeX,
+         Xiaomi Pad, etc.) don't apply their own portrait-phone letterbox compat
+         mode. Without this, some builds ignore android:resizeableActivity and
+         show the app as a small phone-sized island on large screens. -->
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:resizeable="true" />
+
     <application
         android:name=".App"
         android:label="@string/app_name"
@@ -35,6 +46,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:resizeableActivity="true"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

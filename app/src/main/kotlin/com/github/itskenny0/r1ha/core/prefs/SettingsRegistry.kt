@@ -328,6 +328,19 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         },
         currentDisplay = { if (it.behavior.assistAutoOpenKeyboard) "ON" else "OFF" },
     ),
+    SettingEntry(
+        id = "behavior.orientationMode",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Screen orientation",
+        description = "Follow device sensor or lock to portrait",
+        isDefault = { it.behavior.orientationMode == defaults.behavior.orientationMode },
+        currentDisplay = {
+            when (it.behavior.orientationMode) {
+                OrientationMode.FOLLOW_DEVICE -> "Follow device"
+                OrientationMode.PORTRAIT_ONLY -> "Portrait only"
+            }
+        },
+    ),
 
     // ── Integrations ────────────────────────────────────────────────────
     SettingEntry(

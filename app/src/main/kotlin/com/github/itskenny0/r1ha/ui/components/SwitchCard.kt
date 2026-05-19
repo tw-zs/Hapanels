@@ -131,6 +131,12 @@ fun SwitchCard(
         // physical state rather than the abstract on/off.
         val (onLabel, offLabel) = when (state.id.domain) {
             com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> "UNLOCK" to "LOCK"
+            // Covers / valves: tapping the top end-stop opens, tapping the bottom
+            // end-stop closes. Same shape as ON / OFF semantically (the entity
+            // has two stable states) but reads more naturally for the physical
+            // mechanism. Matches the state word above (OPEN / CLOSED).
+            com.github.itskenny0.r1ha.core.ha.Domain.COVER,
+            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "OPEN" to "CLOSE"
             else -> "ON" to "OFF"
         }
         SwitchTrack(

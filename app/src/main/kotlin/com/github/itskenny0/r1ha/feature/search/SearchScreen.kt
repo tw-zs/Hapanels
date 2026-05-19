@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -130,11 +129,9 @@ fun SearchScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "QUICK SEARCH", onBack = onBack)
-        // Domain-bucket filter chips — ALL / CONTROLS / SENSORS / ACTIONS.
-        // Tap to narrow without typing. ALL needs a query; the others
-        // surface entities even with an empty search field. Counts come
-        // from the in-memory snapshot so the chips advertise how many
-        // entities will surface before the user taps.
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
+        // Domain-bucket filter chips and search field are inside AdaptiveContent
+        // so they align with the results list at 800 dp on tablets.
         val bucketCounts = remember(ui.all) {
             ui.all.groupingBy { vm.bucketOf(it.id.domain) }.eachCount()
         }
@@ -146,7 +143,6 @@ fun SearchScreen(
         )
         Row(
             modifier = Modifier
-                .widthIn(max = 800.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -171,7 +167,6 @@ fun SearchScreen(
                 }
             }
         }
-        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading && ui.all.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize(),

@@ -36,10 +36,10 @@ enum class SettingCategory(val label: String) {
     BEHAVIOUR("Behaviour"),
     APPEARANCE("Appearance"),
     INTEGRATIONS("Integrations"),
-    // DASHBOARD / DATA intentionally absent: the registry doesn't populate
-    // them today (DashboardSettings is many-fielded; backup/restore is
-    // actions not settings). A test asserts every category is populated, so
-    // a drive-by enum addition without a matching entry won't merge.
+    DASHBOARD("Dashboard"),
+    // DATA intentionally absent: backup/restore is actions not settings. A
+    // test asserts every category is populated, so a drive-by enum addition
+    // without a matching entry won't merge.
 }
 
 /**
@@ -389,6 +389,32 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
             it.integrations.searchResultCap == defaults.integrations.searchResultCap
         },
         currentDisplay = { "${it.integrations.searchResultCap}" },
+    ),
+
+    // ── Dashboard ───────────────────────────────────────────────────────
+    // Two most-touched dashboard knobs: how often it polls, and where the
+    // BATTERIES LOW threshold sits. Section-visibility toggles intentionally
+    // omitted from the registry — 11 booleans is a lot of registry weight for
+    // controls the user can already see in the Dashboard section's flat list.
+    SettingEntry(
+        id = "dashboard.refreshIntervalSec",
+        category = SettingCategory.DASHBOARD,
+        label = "Dashboard refresh",
+        description = "Auto-refresh cadence for the TODAY dashboard (seconds, 0 disables)",
+        isDefault = {
+            it.dashboard.refreshIntervalSec == defaults.dashboard.refreshIntervalSec
+        },
+        currentDisplay = { if (it.dashboard.refreshIntervalSec == 0) "OFF" else "${it.dashboard.refreshIntervalSec} s" },
+    ),
+    SettingEntry(
+        id = "dashboard.lowBatteryThresholdPct",
+        category = SettingCategory.DASHBOARD,
+        label = "Low-battery threshold",
+        description = "Battery sensors below this percent surface on the BATTERIES LOW dashboard card",
+        isDefault = {
+            it.dashboard.lowBatteryThresholdPct == defaults.dashboard.lowBatteryThresholdPct
+        },
+        currentDisplay = { "${it.dashboard.lowBatteryThresholdPct} %" },
     ),
 )
 

@@ -229,6 +229,7 @@ private fun BucketChips(
 private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     Row(
         modifier = Modifier
+            .widthIn(max = 800.dp)
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

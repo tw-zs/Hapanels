@@ -155,21 +155,51 @@ fun AssistScreen(
                         "Run the dinner scene",
                         "Is anyone home?",
                     )
-                    for (example in examples) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 3.dp)
-                                .clip(R1.ShapeS)
-                                .background(R1.SurfaceMuted)
-                                .border(1.dp, R1.Hairline, R1.ShapeS)
-                                .r1Pressable(onClick = {
-                                    vm.setDraft(example)
-                                    vm.send()
-                                })
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                        ) {
-                            Text(text = example, style = R1.body, color = R1.Ink, maxLines = 2)
+                    val isTablet = com.github.itskenny0.r1ha.ui.layout.currentWidthTier() ==
+                        com.github.itskenny0.r1ha.ui.layout.WidthTier.TABLET
+                    // 2-column grid on tablets (more horizontal room), single
+                    // column on phones and R1.
+                    if (isTablet) {
+                        val rows = examples.chunked(2)
+                        for (row in rows) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                for (example in row) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(R1.ShapeS)
+                                            .background(R1.SurfaceMuted)
+                                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                                            .r1Pressable(onClick = { vm.setDraft(example); vm.send() })
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    ) {
+                                        Text(text = example, style = R1.body, color = R1.Ink, maxLines = 2)
+                                    }
+                                }
+                                // If row has only 1 item, fill the second slot with empty weight
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    } else {
+                        for (example in examples) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp)
+                                    .clip(R1.ShapeS)
+                                    .background(R1.SurfaceMuted)
+                                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                                    .r1Pressable(onClick = {
+                                        vm.setDraft(example)
+                                        vm.send()
+                                    })
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                            ) {
+                                Text(text = example, style = R1.body, color = R1.Ink, maxLines = 2)
+                            }
                         }
                     }
                 }

@@ -1,17 +1,10 @@
 package com.github.itskenny0.r1ha.ui.layout
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 /**
  * Width-based responsive tier the current composition is rendering in.
@@ -66,31 +59,15 @@ fun currentWidthTier(): WidthTier {
 @ReadOnlyComposable
 fun isWiderThanR1(): Boolean = currentWidthTier() != WidthTier.R1
 
-/** Per-tier max content width for the single-column responsive
- *  container. R1 returns `Dp.Unspecified` so existing screens render
- *  bit-for-bit identical to today; PHONE and TABLET get bounded so a
- *  wide screen doesn't stretch the layout horizontally. */
-@Composable
-@ReadOnlyComposable
-fun maxContentWidthFor(tier: WidthTier): Dp = when (tier) {
-    WidthTier.R1 -> Dp.Unspecified
-    WidthTier.PHONE -> 480.dp
-    WidthTier.TABLET -> 560.dp
-}
-
 /**
- * Centred narrow-column wrapper for screens whose internal layout was
- * designed around the R1's ~320 dp width.
+ * Passthrough wrapper — all tiers fill the available width without a
+ * max-width cap. The card-based UI adapts naturally to any screen width;
+ * applying a fixed narrow cap caused the content to occupy only ~1/3 of
+ * a large tablet screen in landscape.
  *
- * On R1 (`tier == R1`) this is a passthrough — the wrapped composable
- * fills the full width with zero padding, exactly matching pre-change
- * behaviour. On larger screens the content is constrained to
- * [maxContentWidthFor]`(tier)` and horizontally centred, with a small
- * outer padding so the centred column doesn't sit flush against the
- * device bezel.
- *
- * Call sites pass their normal `Modifier.fillMaxSize()` etc. into the
- * lambda; the wrapper takes care of the centring.
+ * The function still exists so call sites don't need changing, and the
+ * [WidthTier] / [currentWidthTier] helpers remain for the cameras grid
+ * which uses them to decide column count.
  */
 @Composable
 fun ResponsiveColumn(
@@ -98,27 +75,7 @@ fun ResponsiveColumn(
     contentAlignment: Alignment = Alignment.TopCenter,
     content: @Composable () -> Unit,
 ) {
-    val tier = currentWidthTier()
-    if (tier == WidthTier.R1) {
-        // Passthrough — same Box-less layout the screen would have had
-        // before this wrapper existed. Critical for not breaking the R1.
-        content()
-        return
-    }
-    val maxWidth = maxContentWidthFor(tier)
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            // Side padding so the centred column has breathing room
-            // from the bezel on wide displays. 16 dp is the same
-            // gutter most material patterns use.
-            .padding(horizontal = 16.dp),
-        contentAlignment = contentAlignment,
-    ) {
-        Box(modifier = Modifier.widthIn(max = maxWidth).fillMaxSize()) {
-            content()
-        }
-    }
+    content()
 }
 
 /** Column count for grid surfaces (Cameras GRID, future favourites

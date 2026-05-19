@@ -41,6 +41,15 @@ class MainActivity : ComponentActivity() {
 
         graph = (application as App).graph
 
+        // Tell the window manager we support all orientations BEFORE setContent / setContentView
+        // so the system sizes the window correctly from frame 0. If we wait until a LaunchedEffect
+        // fires (after the first frame), AOSP 12+ and derivative ROMs (LineageOS, crDroid) have
+        // already applied their large-screen phone-compat letterbox policy and the window is stuck
+        // at phone dimensions. FULL_USER means "all 4 orientations, respect the user's rotation
+        // lock" — the most permissive option that still honours the system rotation setting.
+        // The PORTRAIT_ONLY user preference overrides this in the LaunchedEffect below.
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
@@ -98,16 +107,14 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             R1Log.d("MainActivity.setContent", "startDestination=$startDestination server=${initial.server?.url ?: "null"}")
 
-            // Honour the orientation-mode setting live. PORTRAIT_ONLY locks the activity
-            // to portrait regardless of the sensor (good for R1 and one-handed phone use);
-            // FOLLOW_DEVICE restores sensor-driven rotation. The change is immediate and
-            // doesn't require an Activity restart because it goes through requestedOrientation.
+            // Live setting changes. PORTRAIT_ONLY overrides the FULL_USER set in onCreate;
+            // FOLLOW_DEVICE reinstates FULL_USER. Both are immediate — no restart needed.
             androidx.compose.runtime.LaunchedEffect(settings.behavior.orientationMode) {
                 requestedOrientation = when (settings.behavior.orientationMode) {
                     com.github.itskenny0.r1ha.core.prefs.OrientationMode.PORTRAIT_ONLY ->
                         android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     com.github.itskenny0.r1ha.core.prefs.OrientationMode.FOLLOW_DEVICE ->
-                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                        android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_USER
                 }
             }
 

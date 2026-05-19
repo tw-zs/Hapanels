@@ -1060,21 +1060,28 @@ class CardStackViewModel(
     fun tapToggle() {
         val activeState = _state.value.activeState ?: return
         if (!activeState.isAvailable) return  // can't toggle an unreachable entity
+        // Mid-travel STOP special case: if HA reports a cover or valve as actively
+        // moving (state="opening"/"closing"), a tap should STOP it where it is
+        // rather than flip its open/close intent.
+        val stopService = when (activeState.id.domain) {
+            com.github.itskenny0.r1ha.core.ha.Domain.COVER -> "stop_cover"
+            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "stop_valve"
+            else -> null
+        }
+        val isMoving = stopService != null &&
+            (activeState.rawState == "opening" || activeState.rawState == "closing")
+        if (!isMoving) {
+            // Apply optimistic update synchronously before the async call so the
+            // percentage arc flips immediately on tap. Turning OFF → 0 so the arc
+            // clears to empty; turning ON → 1 so isOn flips true (the confirmed
+            // percent from HA's state_changed clears the optimistic and restores
+            // the real value).
+            val optimisticPct = if (activeState.isOn) 0 else 1
+            _state.value = _state.value.copy(
+                optimisticPercents = _state.value.optimisticPercents + (activeState.id to optimisticPct),
+            )
+        }
         viewModelScope.launch {
-            // Mid-travel STOP special case: if HA reports a cover or valve as actively
-            // moving (state="opening"/"closing"), a tap should STOP it where it is
-            // rather than flip its open/close intent. Natural mental model — tap a
-            // moving blind / water valve to halt it, tap a stationary one to flip
-            // direction. Covers fire stop_cover, valves fire stop_valve; HA exposes
-            // the same shape on both domains. Every other domain falls through to the
-            // standard toggle.
-            val stopService = when (activeState.id.domain) {
-                com.github.itskenny0.r1ha.core.ha.Domain.COVER -> "stop_cover"
-                com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "stop_valve"
-                else -> null
-            }
-            val isMoving = stopService != null &&
-                (activeState.rawState == "opening" || activeState.rawState == "closing")
             val call = if (isMoving) {
                 R1Log.i("CardStack.tap", "stop ${activeState.id} (state=${activeState.rawState})")
                 ServiceCall(

@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -75,12 +73,12 @@ fun AssistScreen(
         listState = listState,
         settings = settings,
     )
-    // Auto-scroll to the newest message whenever the transcript grows.
-    LaunchedEffect(ui.messages.size) {
-        if (ui.messages.isNotEmpty()) {
-            listState.animateScrollToItem(ui.messages.size - 1)
-        }
-    }
+    // No auto-scroll-to-latest needed: the LazyColumn uses reverseLayout = true so
+    // index 0 (the newest message, when we feed it messages.reversed()) is anchored
+    // to the bottom of the viewport. New messages and IME-driven viewport shrinks
+    // both keep the newest bubble in view automatically, which avoids the visible
+    // 'second keyboard-length shift' that an animateScrollToItem on top of
+    // imePadding produced.
     val focus = remember { FocusRequester() }
     // Honour the user's auto-open preference. Default OFF: opening
     // Assist no longer pops the keyboard automatically — the user
@@ -103,31 +101,6 @@ fun AssistScreen(
     LaunchedEffect(Unit) {
         com.github.itskenny0.r1ha.core.util.AssistDraftBus.drafts.collect { staged ->
             vm.setDraft(staged)
-        }
-    }
-    // Keyboard-aware scroll-to-latest. The outer Column uses imePadding(), which
-    // shrinks the transcript Box as the IME animates open. The
-    // LaunchedEffect(messages.size) above only fires when a *new* message lands,
-    // so a user opening the keyboard mid-conversation could see the most recent
-    // bubble vanish above the now-smaller LazyColumn's top edge. Bind a second
-    // effect to the binary IME-open state and re-scroll to the last item once
-    // the IME finishes settling.
-    //
-    // Binary key (imeBottomPx > 0) is deliberate: WindowInsets.ime.getBottom
-    // returns the live animating pixel value, which would re-fire the effect on
-    // every frame and fight the IME's own animation. The Boolean flips once on
-    // open and once on close, so the effect fires twice total — and we only
-    // act on the open transition.
-    val imeBottomPx = WindowInsets.ime
-        .getBottom(androidx.compose.ui.platform.LocalDensity.current)
-    val isImeOpen = imeBottomPx > 0
-    LaunchedEffect(isImeOpen) {
-        if (isImeOpen && ui.messages.isNotEmpty()) {
-            // Give the IME animation (~250 ms on stock Android) a beat to settle
-            // before we scroll; otherwise the LazyColumn's shrinking size and
-            // our scroll target race and the resulting position is off.
-            kotlinx.coroutines.delay(280)
-            runCatching { listState.animateScrollToItem(ui.messages.size - 1) }
         }
     }
     Column(
@@ -196,19 +169,29 @@ fun AssistScreen(
                     }
                 }
             } else {
+                // reverseLayout = true anchors the LazyColumn to the BOTTOM of its
+                // viewport: declared item 0 sits just above the input row, item 1
+                // above it, and so on upward. We feed it messages.reversed() so the
+                // newest message is index 0 (bottom-most). When the IME opens and
+                // imePadding shrinks the parent, the bottom edge stays fixed against
+                // the IME — the newest bubble remains visible without any
+                // animateScrollToItem on top, which was the source of the second
+                // visible 'keyboard-length' shift. Older messages spill upward and
+                // can be reached by scrolling.
                 LazyColumn(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 12.dp),
+                    reverseLayout = true,
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
                 ) {
-                    items(items = ui.messages, key = { it.id }) { msg ->
-                        AssistBubble(msg)
-                    }
+                    // In-flight pip belongs at the very bottom (visually just above
+                    // the input row). With reverseLayout the FIRST declared item is
+                    // bottom-most, so this slot comes before the messages.
                     if (ui.inFlight) {
-                        item {
+                        item("__inflight") {
                             Box(
                                 modifier = Modifier.fillMaxWidth(),
                                 contentAlignment = Alignment.CenterStart,
@@ -223,6 +206,9 @@ fun AssistScreen(
                                 }
                             }
                         }
+                    }
+                    items(items = ui.messages.asReversed(), key = { it.id }) { msg ->
+                        AssistBubble(msg)
                     }
                 }
             }

@@ -72,30 +72,14 @@ fun ScenesScreen(
             .imePadding(),
     ) {
         R1TopBar(title = "SCENES & SCRIPTS", onBack = onBack)
-        // Master off actions — sticky at the top, single tap each. Lives
-        // here because mass-actions sit at the same conceptual layer as
-        // scene activations (fire-and-forget, no scalar). The buttons
-        // disable themselves while a previous tap is still in flight so
-        // a double-tap doesn't queue two dispatches.
         MasterActionsRow(
             inFlight = ui.masterActionInFlight,
             onLightsOff = { vm.allLightsOff() },
-            // Long-press LIGHTS → ON (instead of off). Asymmetric vs
-            // MEDIA / SWITCHES because lights are the entity class users
-            // most want to turn ON en-masse (kiosk wake-up sequences,
-            // 'oh dark in here'); the others have no such common use.
             onLightsOn = { vm.allLightsOn() },
             onMediaPause = { vm.allMediaPause() },
             onSwitchesOff = { vm.allSwitchesOff() },
         )
-        // Search bar — substring match against entry name + entity_id. Big
-        // HA installs have 30+ scenes and 50+ scripts; without search the
-        // user has to wheel-scroll forever.
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })
-        // Filter chips — ALL / SCENES / SCRIPTS. Tap to switch the visible
-        // subset. Counts come from the loaded entity list so users with no
-        // scripts (or no scenes) see an empty subset chip rather than a
-        // misleading 'ALL' result.
         FilterChips(
             current = ui.filter,
             counts = ui.counts,

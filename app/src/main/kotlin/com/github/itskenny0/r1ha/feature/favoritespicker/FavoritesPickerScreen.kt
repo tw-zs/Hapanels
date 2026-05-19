@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
@@ -76,7 +77,8 @@ fun FavoritesPickerScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .systemBarsPadding(),
+                .systemBarsPadding()
+                .imePadding(),
         ) {
             R1TopBar(title = "FAVOURITES", onBack = onBack)
 

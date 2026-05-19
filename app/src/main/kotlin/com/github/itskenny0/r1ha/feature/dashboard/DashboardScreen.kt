@@ -135,6 +135,14 @@ fun DashboardScreen(
             }
             return@Column
         }
+        // On tablets cap the dashboard content at 1000 dp and centre it — wide enough
+        // to show the 2-column tile pairs without each tile stretching to 640 dp+ on
+        // a landscape 1280 dp screen. Uses AdaptiveContent's box rather than the 800 dp
+        // list-screen default because the dashboard has 2 columns and needs more room.
+        com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(
+            modifier = Modifier.weight(1f),
+            maxWidth = 1000.dp,
+        ) {
         // Wire the physical wheel to the dashboard's verticalScroll so
         // kiosk-mode users can scroll through a tall dashboard without
         // touching the screen. Same acceleration profile as elsewhere.
@@ -309,6 +317,7 @@ fun DashboardScreen(
                 Spacer(Modifier.size(24.dp))
             }
         }
+        } // AdaptiveContent
     }
 }
 

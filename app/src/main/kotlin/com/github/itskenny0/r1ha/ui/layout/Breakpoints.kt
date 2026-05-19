@@ -114,7 +114,7 @@ fun AdaptiveContent(
         return
     }
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
         Box(modifier = Modifier.widthIn(max = maxWidth).fillMaxSize()) {

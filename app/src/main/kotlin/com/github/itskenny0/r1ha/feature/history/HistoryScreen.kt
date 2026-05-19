@@ -365,7 +365,7 @@ private fun SummaryPanel(ui: HistoryViewModel.UiState) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            text = "SUMMARY — ${ui.window.label}",
+            text = "SUMMARY. ${ui.window.label}",
             style = R1.labelMicro,
             color = R1.InkSoft,
         )

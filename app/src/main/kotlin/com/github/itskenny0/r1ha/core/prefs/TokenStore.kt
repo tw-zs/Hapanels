@@ -171,7 +171,7 @@ class TokenStore(
             )
         } catch (t: Throwable) {
             R1Log.e("TokenStore.load", "decrypt failed; key likely lost. Returning null to force re-auth.", t)
-            Toaster.error("Token decrypt failed — re-authenticate")
+            Toaster.error("Token decrypt failed. re-authenticate")
             null
         }
     }

@@ -141,7 +141,7 @@ fun HelpersScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No helpers defined — add them under Settings → " +
+                    text = "No helpers defined. add them under Settings → " +
                         "Devices & Services → Helpers in HA's web UI.",
                     style = R1.body,
                     color = R1.InkMuted,

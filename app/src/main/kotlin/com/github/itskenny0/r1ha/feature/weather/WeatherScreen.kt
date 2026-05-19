@@ -102,7 +102,7 @@ fun WeatherScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No weather entities in HA — add a weather integration to see them here.",
+                    text = "No weather entities in HA. add a weather integration to see them here.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

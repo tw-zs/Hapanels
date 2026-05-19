@@ -122,7 +122,7 @@ fun ZonesScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No zones defined — Settings → Areas & Zones in HA's web UI.",
+                    text = "No zones defined. Settings → Areas & Zones in HA's web UI.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

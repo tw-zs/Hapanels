@@ -159,7 +159,7 @@ fun CamerasScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No cameras in HA — add a camera integration to see them here.",
+                    text = "No cameras in HA. add a camera integration to see them here.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

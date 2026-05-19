@@ -89,7 +89,7 @@ class AreasViewModel(
                         _ui.value = _ui.value.copy(loading = false, areas = list, error = null)
                     }.onFailure { t ->
                         R1Log.w("Areas", "parse failed: ${t.message}")
-                        Toaster.error("Areas parse failed — try Templates to debug")
+                        Toaster.error("Areas parse failed. try Templates to debug")
                         _ui.value = _ui.value.copy(loading = false, error = t.message)
                     }
                 },

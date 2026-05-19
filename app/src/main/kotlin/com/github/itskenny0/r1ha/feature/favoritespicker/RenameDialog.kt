@@ -147,7 +147,7 @@ fun RenameDialog(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Local-only — clear to revert to HA's friendly_name.",
+                text = "Local-only. clear to revert to HA's friendly_name.",
                 style = R1.body,
                 color = R1.InkMuted,
             )

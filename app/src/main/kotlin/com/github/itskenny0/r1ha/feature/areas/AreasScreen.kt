@@ -116,7 +116,7 @@ fun AreasScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No areas defined in HA — Settings → Areas in HA's web UI.",
+                    text = "No areas defined in HA. Settings → Areas in HA's web UI.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

@@ -146,7 +146,7 @@ fun EntityPickerSheet(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No toggleable entities loaded yet — sign in or wait for the registry to catch up.",
+                        text = "No toggleable entities loaded yet. sign in or wait for the registry to catch up.",
                         style = R1.labelMicro,
                         color = R1.InkMuted,
                     )

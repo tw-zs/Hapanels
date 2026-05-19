@@ -181,7 +181,7 @@ fun DashboardScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Dashboard refresh failed — tap to retry.",
+                                text = "Dashboard refresh failed. tap to retry.",
                                 style = R1.body,
                                 color = R1.StatusRed,
                             )
@@ -814,7 +814,7 @@ private fun PersonsCard(
         }
         if (p.total > p.rows.size) {
             Text(
-                text = "and ${p.total - p.rows.size} more — tap to see all",
+                text = "and ${p.total - p.rows.size} more. tap to see all",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
             )

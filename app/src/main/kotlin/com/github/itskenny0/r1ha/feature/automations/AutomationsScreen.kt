@@ -146,7 +146,7 @@ fun AutomationsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No automations defined — Settings → Automations in HA's web UI.",
+                    text = "No automations defined. Settings → Automations in HA's web UI.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

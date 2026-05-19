@@ -105,7 +105,7 @@ fun LovelaceScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No HA server configured — sign in via Settings → SERVER first.",
+                    text = "No HA server configured. sign in via Settings → SERVER first.",
                     style = R1.body,
                     color = R1.InkMuted,
                 )

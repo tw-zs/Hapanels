@@ -108,15 +108,7 @@ fun SettingsScreen(
     val sectionModifiedCount: Map<String, Int> =
         androidx.compose.runtime.remember(s) {
             com.github.itskenny0.r1ha.core.prefs.modifiedSettings(s)
-                .groupingBy { entry ->
-                    when (entry.category) {
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
-                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
-                    }
-                }
+                .groupingBy { sectionNameForCategory(it.category) }
                 .eachCount()
         }
 
@@ -275,16 +267,7 @@ fun SettingsScreen(
                                     // Clear the query so the section grid returns,
                                     // and expand ONLY this result's section so the
                                     // user lands directly on the relevant block.
-                                    // Section header strings are the same constants
-                                    // the wrapping if-blocks test against.
-                                    val sectionName = when (entry.category) {
-                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
-                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
-                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
-                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
-                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
-                                    }
-                                    expandedSections = setOf(sectionName)
+                                    expandedSections = setOf(sectionNameForCategory(entry.category))
                                     settingsQuery = ""
                                     coroutineScope.launch {
                                         listState.animateScrollToItem(0)
@@ -1271,6 +1254,23 @@ fun SettingsScreen(
             onDismiss = { tilePickerOpen.value = false },
         )
     }
+}
+
+/**
+ * Map a registry [SettingCategory] to the parent SettingsScreen's section-header
+ * string. Both surfaces (the section grid above and the search-result drilldown)
+ * route through this so the strings live in exactly one place. Section labels
+ * are the SettingsScreen's contract — not part of the registry's public API —
+ * so the mapping is kept in this file rather than next to the enum.
+ */
+private fun sectionNameForCategory(
+    category: com.github.itskenny0.r1ha.core.prefs.SettingCategory,
+): String = when (category) {
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
 }
 
 // ── Building blocks ──────────────────────────────────────────────────────────────────────

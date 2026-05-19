@@ -120,7 +120,7 @@ fun ScenesScreen(
                 // dial to twist to see anything.
                 val hasAny = ui.all.isNotEmpty()
                 val msg = when {
-                    !hasAny -> "No scenes or scripts in HA — define them in HA's UI to see them here."
+                    !hasAny -> "No scenes or scripts in HA. Define them in HA's UI to see them here."
                     ui.query.isNotBlank() -> "No matches for '${ui.query}'. Clear the search or try different terms."
                     else -> "Nothing under this filter. Switch to ALL to see everything."
                 }

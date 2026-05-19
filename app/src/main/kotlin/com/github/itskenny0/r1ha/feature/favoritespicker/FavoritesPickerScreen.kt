@@ -216,9 +216,9 @@ private fun FilteredEmptyState(filter: PickerFilter, query: String) {
     // yet. Each gets a short hint that points the user at the next step.
     val (heading, body) = when {
         query.isNotBlank() -> "NO MATCHES FOR \"${query.uppercase()}\"" to
-            "Try a different word — search looks at both the entity name and the\nentity_id (e.g. \"sensor.\")."
+            "Try a different word. Search looks at both the entity name and the\nentity_id (e.g. \"sensor.\")."
         filter == PickerFilter.ALL -> "NO CONTROLLABLE ENTITIES" to
-            "Home Assistant didn't return anything we know how to drive — no lights,\nswitches, scenes, or sensors."
+            "Home Assistant didn't return anything we know how to drive. No lights,\nswitches, scenes, or sensors."
         filter == PickerFilter.FAVS -> "NO FAVOURITES YET" to
             "Pick a chip above to start browsing, then tap an entity to favourite it."
         else -> "NONE IN THIS FILTER" to "Tap ALL above to see every entity."

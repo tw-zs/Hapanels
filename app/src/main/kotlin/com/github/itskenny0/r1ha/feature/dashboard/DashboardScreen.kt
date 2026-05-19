@@ -473,7 +473,6 @@ private fun DashboardTopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .widthIn(max = 1000.dp)
                 .fillMaxWidth()
                 .padding(start = 4.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         ) {

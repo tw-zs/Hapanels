@@ -1667,10 +1667,15 @@ private fun ChromeButtonRow(
 private fun ChromeButtonsPreview(
     buttons: List<com.github.itskenny0.r1ha.core.prefs.ChromeButtonConfig>,
 ) {
+    // horizontalScroll so 'BAT · off' (the disabled-state badge) doesn't push
+    // the cluster past the right edge on a 240-wide R1 portrait. With all
+    // buttons enabled and short labels the row already fits; the scroll is a
+    // graceful-overflow safety net for the disabled badge widths.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 22.dp, end = 22.dp, top = 6.dp, bottom = 4.dp),
+            .padding(start = 22.dp, end = 22.dp, top = 6.dp, bottom = 4.dp)
+            .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

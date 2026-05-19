@@ -223,13 +223,35 @@ fun DashboardScreen(
                 )
                 if (ds.showTimers && ui.timers.isNotEmpty()) {
                     Text(text = "TIMERS", style = R1.labelMicro, color = R1.InkSoft)
-                    for (t in ui.timers) {
-                        TimerCard(
-                            t,
-                            onPause = { vm.timerService(t.entityId, "pause") },
-                            onResume = { vm.timerService(t.entityId, "start") },
-                            onCancel = { vm.timerService(t.entityId, "cancel") },
-                        )
+                    // On tablets show 2 timers per row; phones stay 1 per row.
+                    if (isTablet) {
+                        ui.timers.chunked(2).forEach { pair ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                pair.forEach { t ->
+                                    Box(Modifier.weight(1f)) {
+                                        TimerCard(
+                                            t,
+                                            onPause = { vm.timerService(t.entityId, "pause") },
+                                            onResume = { vm.timerService(t.entityId, "start") },
+                                            onCancel = { vm.timerService(t.entityId, "cancel") },
+                                        )
+                                    }
+                                }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    } else {
+                        for (t in ui.timers) {
+                            TimerCard(
+                                t,
+                                onPause = { vm.timerService(t.entityId, "pause") },
+                                onResume = { vm.timerService(t.entityId, "start") },
+                                onCancel = { vm.timerService(t.entityId, "cancel") },
+                            )
+                        }
                     }
                 }
                 if (ds.showMedia && ui.media.isNotEmpty()) {

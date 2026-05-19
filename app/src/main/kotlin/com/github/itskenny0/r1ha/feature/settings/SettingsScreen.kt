@@ -247,38 +247,51 @@ fun SettingsScreen(
                         )
                     }
                 } else {
-                    itemsIndexed(matchedEntries, key = { _, it -> it.id }) { _, entry ->
-                        SearchResultRow(
-                            entry = entry,
-                            current = s,
-                            onClick = {
-                                // Clear the query so the section grid returns,
-                                // and expand ONLY this result's section so the
-                                // user lands directly on the relevant block.
-                                // The other sections collapse; tapping their
-                                // headers reopens them. Section header strings
-                                // are the same constants the wrapping if-blocks
-                                // test against.
-                                val sectionName = when (entry.category) {
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
-                                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
-                                }
-                                expandedSections = setOf(sectionName)
-                                settingsQuery = ""
-                                // Scroll to the top so the search header (now
-                                // empty) and the single expanded section land
-                                // immediately in view. Without this the user
-                                // stays at whatever scroll position they had
-                                // before opening search, which on a long list
-                                // is rarely where they want to land.
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(0)
-                                }
-                            },
-                        )
+                    // Group matched entries by category, in registry order, so
+                    // search results read with the same shape as the diff panel
+                    // and the section grid: SERVER → INPUT → CARD_UI →
+                    // BEHAVIOUR → APPEARANCE, with each group prefixed by a
+                    // small accent header.
+                    val grouped = matchedEntries
+                        .groupBy { it.category }
+                        .toList()
+                        .sortedBy { (cat, _) ->
+                            com.github.itskenny0.r1ha.core.prefs.SettingCategory.entries.indexOf(cat)
+                        }
+                    grouped.forEach { (category, entries) ->
+                        item("__search_cat_${category.name}") {
+                            Text(
+                                text = category.label.uppercase(),
+                                style = R1.labelMicro,
+                                color = R1.AccentWarm,
+                                modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 2.dp),
+                            )
+                        }
+                        itemsIndexed(entries, key = { _, it -> it.id }) { _, entry ->
+                            SearchResultRow(
+                                entry = entry,
+                                current = s,
+                                onClick = {
+                                    // Clear the query so the section grid returns,
+                                    // and expand ONLY this result's section so the
+                                    // user lands directly on the relevant block.
+                                    // Section header strings are the same constants
+                                    // the wrapping if-blocks test against.
+                                    val sectionName = when (entry.category) {
+                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
+                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
+                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
+                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
+                                        com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
+                                    }
+                                    expandedSections = setOf(sectionName)
+                                    settingsQuery = ""
+                                    coroutineScope.launch {
+                                        listState.animateScrollToItem(0)
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
                 return@LazyColumn // Skip the normal sections while searching.
@@ -1512,11 +1525,8 @@ private fun SearchResultRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = entry.category.label.uppercase(),
-                style = R1.labelMicro,
-                color = R1.AccentWarm,
-            )
+            // Category tag lives on the group header now (parent LazyColumn), so
+            // the row body only needs label + description.
             Text(text = entry.label, style = R1.body, color = R1.Ink, maxLines = 2)
             Text(
                 text = entry.description,

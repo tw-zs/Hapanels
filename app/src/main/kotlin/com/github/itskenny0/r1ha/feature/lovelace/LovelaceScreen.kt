@@ -175,6 +175,17 @@ private fun LovelaceWebView(
             // initialise — they need DOM storage + cookies + mixed
             // content (the WS upgrade) to function.
             settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            // Honour the system / in-app dark theme. HA's frontend reads
+            // prefers-color-scheme to flip its own theme tokens; without this
+            // the embedded view always rendered light regardless of the
+            // surrounding app theme. API 33+ feature; guarded with the support
+            // check so older Androids get the existing behaviour.
+            if (androidx.webkit.WebViewFeature.isFeatureSupported(
+                    androidx.webkit.WebViewFeature.ALGORITHMIC_DARKENING,
+                )
+            ) {
+                androidx.webkit.WebSettingsCompat.setAlgorithmicDarkeningAllowed(settings, true)
+            }
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
                     onLoadingChange(true)

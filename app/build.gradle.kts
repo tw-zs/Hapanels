@@ -180,6 +180,10 @@ dependencies {
     // impact (debugImplementation = scoped to the debug variant only).
     debugImplementation(libs.leakcanary)
 
+    // androidx.webkit: pulls in WebSettingsCompat so we can honour algorithmic
+    // darkening on the Lovelace fallback (API 33+) without a manual SDK check.
+    implementation(libs.androidx.webkit)
+
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

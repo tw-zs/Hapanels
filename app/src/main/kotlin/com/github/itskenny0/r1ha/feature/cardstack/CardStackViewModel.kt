@@ -44,6 +44,14 @@ data class CardStackUiState(
      *  trip; this raw view is kept so the activeState getter and the optimistic-filter in
      *  `observeFavorites` can still see "what HA actually thinks" separately. */
     val cards: List<EntityState> = emptyList(),
+    /**
+     * Parallel index from EntityId to its slot in [cards] for O(1) lookups on the
+     * hot service-dispatch path (the wheel can fire 30 times/sec, and the debouncer
+     * callback previously did a `cards.firstOrNull { it.id == entityId }` scan of
+     * up to ~30 favourites on every detent). Computed in step with [cards] so the
+     * two never drift; readers must never mutate the map directly.
+     */
+    val cardsById: Map<EntityId, EntityState> = emptyMap(),
     val currentIndex: Int = 0,
     /** Optimistic percent overrides per entity, applied while waiting for HA state_changed. */
     val optimisticPercents: Map<EntityId, Int> = emptyMap(),
@@ -195,7 +203,7 @@ class CardStackViewModel(
         // close_cover, media_play/media_pause). Reading the state at fire-time means the
         // wheel-up→ON and wheel-down→OFF intent stays accurate even if HA's state has shifted
         // during the 250 ms debounce.
-        val entityState = _state.value.cards.firstOrNull { it.id == entityId }
+        val entityState = _state.value.cardsById[entityId]
         val call = when {
             entityState?.supportsScalar == false -> {
                 R1Log.i("CardStack.debounced", "sending setSwitch($entityId, on=${pct > 0})")
@@ -451,6 +459,7 @@ class CardStackViewModel(
                 }
                 _state.value = cur.copy(
                     cards = ordered,
+                    cardsById = ordered.associateBy { it.id },
                     currentIndex = clampedIndex,
                     optimisticPercents = newOptimistic,
                     favouritesCount = favouriteIds.size,
@@ -549,7 +558,7 @@ class CardStackViewModel(
      * that mapping.
      */
     fun setEntityPercent(entityId: EntityId, pct: Int) {
-        val card = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val card = _state.value.cardsById[entityId] ?: return
         if (!card.isAvailable) return
         if (card.id.domain.isAction || card.id.domain.isSensor) return
         if (!card.supportsScalar) return
@@ -842,7 +851,7 @@ class CardStackViewModel(
      * `light.turn_on` with the new effect; HA accepts "None" as the no-effect sentinel.
      */
     fun cycleLightEffect(entityId: EntityId) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.LIGHT || entity.effectList.isEmpty()) return
         // Sequence with null at both ends so cycling wraps cleanly: null → first → ... → last → null.
         val sequence: List<String?> = listOf(null) + entity.effectList
@@ -863,7 +872,7 @@ class CardStackViewModel(
      * the readout doesn't bounce when the user changes modes.
      */
     fun setLightWheelMode(entityId: EntityId, mode: com.github.itskenny0.r1ha.core.ha.LightWheelMode) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.LIGHT) return
         val available = com.github.itskenny0.r1ha.core.ha.LightWheelMode.availableFor(entity.supportedColorModes)
         if (mode !in available) return
@@ -903,7 +912,7 @@ class CardStackViewModel(
      * lose a HUE/WHITE selection they may want to return to.
      */
     fun setLightEffect(entityId: EntityId, effect: String?) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.LIGHT) return
         R1Log.i("CardStack.setEffect", "$entityId: ${entity.effect ?: "none"} → ${effect ?: "none"}")
         if (!effect.isNullOrBlank()) {
@@ -926,7 +935,7 @@ class CardStackViewModel(
      * when the entity has no options or only one (nothing to choose).
      */
     fun cycleSelectOption(entityId: EntityId, delta: Int) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (!entity.id.domain.isSelect) return
         val options = entity.selectOptions
         if (options.size < 2) return
@@ -944,7 +953,7 @@ class CardStackViewModel(
 
     /** Apply a specific option to a select-entity. Used by the picker overlay. */
     fun setSelectOption(entityId: EntityId, option: String) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (!entity.id.domain.isSelect) return
         if (option !in entity.selectOptions) return
         R1Log.i("CardStack.setSelect", "$entityId: ${entity.currentOption ?: "?"} → $option")
@@ -960,7 +969,7 @@ class CardStackViewModel(
      * to set absolute volume, but discrete +/- taps are easier for small adjustments.
      */
     fun mediaTransport(entityId: EntityId, action: com.github.itskenny0.r1ha.core.ha.MediaTransport) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.MEDIA_PLAYER) return
         R1Log.i("CardStack.media", "$entityId $action (muted=${entity.isVolumeMuted})")
         viewModelScope.launch {
@@ -975,7 +984,7 @@ class CardStackViewModel(
     }
 
     fun cycleLightWheelMode(entityId: EntityId) {
-        val entity = _state.value.cards.firstOrNull { it.id == entityId } ?: return
+        val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.LIGHT) return
         val available = com.github.itskenny0.r1ha.core.ha.LightWheelMode.availableFor(entity.supportedColorModes)
         if (available.size <= 1) return

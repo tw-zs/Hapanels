@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -114,6 +115,12 @@ fun SystemHealthScreen(
                 } else if (ui.configError != null) {
                     ErrorPanel(ui.configError!!)
                 }
+                Spacer(Modifier.size(12.dp))
+                // Inline ping chip: measures round-trip time to /api/config so users
+                // can diagnose slow links without leaving the screen. The result
+                // sticks until the next press; multiple consecutive presses show how
+                // variable the link is.
+                PingRow(haRepository)
                 Spacer(Modifier.size(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "ERROR LOG (tail)", style = R1.labelMicro, color = R1.InkSoft)
@@ -228,5 +235,51 @@ private fun ErrorPanel(msg: String) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(text = msg, style = R1.body, color = R1.StatusRed)
+    }
+}
+
+@Composable
+private fun PingRow(haRepository: HaRepository) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val result = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    val inFlight = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = "PING", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.weight(1f))
+        if (result.value != null) {
+            Text(
+                text = result.value!!,
+                style = R1.body,
+                color = R1.AccentWarm,
+            )
+            Spacer(Modifier.size(8.dp))
+        }
+        Box(
+            modifier = Modifier
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = {
+                    if (inFlight.value) return@r1Pressable
+                    inFlight.value = true
+                    scope.launch {
+                        val start = System.currentTimeMillis()
+                        val outcome = haRepository.fetchHaConfig()
+                        val elapsed = System.currentTimeMillis() - start
+                        result.value = outcome.fold(
+                            onSuccess = { "${elapsed} ms" },
+                            onFailure = { "failed (${elapsed} ms)" },
+                        )
+                        inFlight.value = false
+                    }
+                })
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            Text(
+                text = if (inFlight.value) "…" else "TEST",
+                style = R1.labelMicro,
+                color = R1.InkSoft,
+            )
+        }
     }
 }

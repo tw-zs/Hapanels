@@ -279,18 +279,35 @@ private fun copy(clipboard: androidx.compose.ui.platform.ClipboardManager, text:
     Toaster.show("Copied")
 }
 
+/**
+ * One row of the example chips strip. The previous Triple+separate-data shape
+ * coupled fields by position, which silently broke when a future entry added a
+ * "data" field but kept the label in the Triple's first slot. A single data
+ * class with named fields stops that drift.
+ */
+private data class ServiceExample(
+    val label: String,
+    val domain: String,
+    val service: String,
+    val data: String = "",
+)
+
 @Composable
 private fun ExampleChips(onPick: (String, String, String) -> Unit) {
     // Common diagnostic dispatches — each one a real "I wish I could
     // do this without a laptop" intent.
     val examples = listOf(
-        Triple("Check config", "homeassistant", "check_config") to "",
-        Triple("Reload automations", "automation", "reload") to "",
-        Triple("Reload scripts", "script", "reload") to "",
-        Triple("Reload scenes", "scene", "reload") to "",
-        Triple("Reload templates", "template", "reload") to "",
-        Triple("HA notify", "persistent_notification", "create")
-            to """{"title":"From R1","message":"hello"}""",
+        ServiceExample("Check config", "homeassistant", "check_config"),
+        ServiceExample("Reload automations", "automation", "reload"),
+        ServiceExample("Reload scripts", "script", "reload"),
+        ServiceExample("Reload scenes", "scene", "reload"),
+        ServiceExample("Reload templates", "template", "reload"),
+        ServiceExample(
+            "HA notify",
+            "persistent_notification",
+            "create",
+            data = """{"title":"From R1","message":"hello"}""",
+        ),
     )
     Row(
         modifier = Modifier
@@ -301,17 +318,16 @@ private fun ExampleChips(onPick: (String, String, String) -> Unit) {
     ) {
         Text(text = "TRY", style = R1.labelMicro, color = R1.InkMuted)
         Spacer(Modifier.width(4.dp))
-        for ((trip, data) in examples) {
-            val (label, domain, service) = trip
+        for (ex in examples) {
             Box(
                 modifier = Modifier
                     .clip(R1.ShapeS)
                     .background(R1.SurfaceMuted)
                     .border(1.dp, R1.Hairline, R1.ShapeS)
-                    .r1Pressable(onClick = { onPick(domain, service, data) })
+                    .r1Pressable(onClick = { onPick(ex.domain, ex.service, ex.data) })
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
-                Text(text = label, style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = ex.label, style = R1.labelMicro, color = R1.InkSoft)
             }
         }
     }

@@ -250,7 +250,10 @@ class DashboardViewModel(
                 val totalPower = powerJob.await().getOrNull()?.trim()?.toIntOrNull() ?: -1
                 val lowBatteries = batteryJob.await().getOrNull()?.let { raw ->
                     runCatching {
-                        val arr = kotlinx.serialization.json.Json.parseToJsonElement(raw)
+                        // Reuse the HA-tolerant Json instance instead of the default singleton
+                        // so the parse stays consistent with the rest of the codebase
+                        // (ignoreUnknownKeys, explicitNulls=false).
+                        val arr = com.github.itskenny0.r1ha.core.ha.HaJson.parseToJsonElement(raw)
                             as? kotlinx.serialization.json.JsonArray
                         arr?.mapNotNull { (it as? JsonPrimitive)?.content }
                     }.getOrNull()

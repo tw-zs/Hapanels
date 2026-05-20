@@ -195,6 +195,41 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Reset only one category's slice of settings to defaults. Bounded blast
+     * radius — useful when a user accidentally messed up their wheel curve
+     * and doesn't want to lose the rest of their tuning. Server, favourites
+     * and pages are never touched regardless of which category resets.
+     *
+     * Categories that don't map to a discrete AppSettings sub-object (SERVER —
+     * has its own sign-out path; DASHBOARD — lives partially in pages which we
+     * preserve) are no-ops.
+     */
+    fun resetCategory(category: com.github.itskenny0.r1ha.core.prefs.SettingCategory) {
+        viewModelScope.launch {
+            val defaults = AppSettings()
+            settings.update { s ->
+                when (category) {
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT ->
+                        s.copy(wheel = defaults.wheel)
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI ->
+                        s.copy(ui = defaults.ui)
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR ->
+                        s.copy(behavior = defaults.behavior)
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE ->
+                        s.copy(theme = defaults.theme)
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS ->
+                        s.copy(integrations = defaults.integrations)
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER,
+                    com.github.itskenny0.r1ha.core.prefs.SettingCategory.DASHBOARD,
+                    -> s // server has its own sign-out path; dashboard lives in pages which we preserve.
+                }
+            }
+            Toaster.show("${category.label} reset")
+            R1Log.i("Settings.reset", "category=${category.name}")
+        }
+    }
+
     // ── Backup & restore ────────────────────────────────────────────────────
 
     /**

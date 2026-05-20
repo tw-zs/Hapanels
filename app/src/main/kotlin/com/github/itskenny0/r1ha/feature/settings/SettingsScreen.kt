@@ -451,7 +451,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Scroll wheel ───────────────────────────────────────────────────────
-            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }, modifiedCount = sectionModifiedCount["SCROLL WHEEL"] ?: 0) }
+            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }, modifiedCount = sectionModifiedCount["SCROLL WHEEL"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT) }) }
             if ("SCROLL WHEEL" in expandedSections) {
             item {
                 LabeledControl(label = "Step size") {
@@ -517,7 +517,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Card UI ────────────────────────────────────────────────────────────
-            item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }, modifiedCount = sectionModifiedCount["CARD UI"] ?: 0) }
+            item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }, modifiedCount = sectionModifiedCount["CARD UI"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI) }) }
             if ("CARD UI" in expandedSections) {
             item {
                 LabeledControl(label = "Display mode") {
@@ -653,7 +653,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Behaviour ──────────────────────────────────────────────────────────
-            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0) }
+            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR) }) }
             if ("BEHAVIOUR" in expandedSections) {
             item {
                 SwitchRow(
@@ -1030,7 +1030,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Integrations — per-surface refresh intervals + tuning ──────────
-            item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }, modifiedCount = sectionModifiedCount["INTEGRATIONS"] ?: 0) }
+            item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }, modifiedCount = sectionModifiedCount["INTEGRATIONS"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS) }) }
             if ("INTEGRATIONS" in expandedSections) {
             item { SubGroupLabel("AUTO-REFRESH INTERVALS") }
             item {
@@ -1147,7 +1147,7 @@ fun SettingsScreen(
             item { SectionDivider() }
 
             // ── Appearance ─────────────────────────────────────────────────────────
-            item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }, modifiedCount = sectionModifiedCount["APPEARANCE"] ?: 0) }
+            item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }, modifiedCount = sectionModifiedCount["APPEARANCE"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE) }) }
             if ("APPEARANCE" in expandedSections) {
             item {
                 NavRow(
@@ -1331,6 +1331,12 @@ private fun Section(
      *  title and the hairline rule so the user sees 'where did I change
      *  things?' at a glance, especially in collapsed view. 0 hides the pill. */
     modifiedCount: Int = 0,
+    /** Per-section reset hook. When non-null AND modifiedCount > 0 a small
+     *  "RESET" chip appears that arms on first tap and commits on the second
+     *  (3s auto-disarm). Single-tap reset is too easy to fire by accident on
+     *  the wheel-only R1; arm-confirm matches the wholesale-reset pattern at
+     *  the bottom of the Settings screen. */
+    onReset: (() -> Unit)? = null,
 ) {
     val modifier = Modifier
         .fillMaxWidth()
@@ -1363,6 +1369,44 @@ private fun Section(
                 .weight(1f)
                 .background(R1.Hairline),
         )
+        if (onReset != null && modifiedCount > 0) {
+            Spacer(Modifier.width(8.dp))
+            val armed = androidx.compose.runtime.remember(title) {
+                androidx.compose.runtime.mutableStateOf(false)
+            }
+            androidx.compose.runtime.LaunchedEffect(armed.value) {
+                if (armed.value) {
+                    kotlinx.coroutines.delay(3_000)
+                    armed.value = false
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(
+                        if (armed.value) R1.StatusAmber.copy(alpha = 0.22f) else R1.SurfaceMuted,
+                    )
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(
+                        onClick = {
+                            if (armed.value) {
+                                armed.value = false
+                                onReset()
+                            } else {
+                                armed.value = true
+                            }
+                        },
+                        contentDescription = "Reset $title to defaults",
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = if (armed.value) "CONFIRM" else "RESET",
+                    style = R1.labelMicro,
+                    color = if (armed.value) R1.StatusAmber else R1.InkSoft,
+                )
+            }
+        }
         if (onToggle != null) {
             Spacer(Modifier.width(10.dp))
             // Chevron-style indicator: '−' (minus) when expanded, '+' when collapsed.

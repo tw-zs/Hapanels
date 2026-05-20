@@ -207,6 +207,11 @@ fun LockPanel(state: EntityState, accent: Color, modifier: Modifier = Modifier) 
     if (state.id.domain != Domain.LOCK) return
     val dispatch = LocalOnEntityCall.current
     val needsCode = !state.lockCodeFormat.isNullOrBlank()
+    val hasChangedBy = !state.lockChangedBy.isNullOrBlank()
+    // Bail early for locks that have nothing to render — neither a code
+    // keypad to surface nor a `changed_by` attribute to display. The
+    // SwitchCard's UNLOCK/LOCK end-stops are enough for these.
+    if (!needsCode && !hasChangedBy) return
     var showKeypad by remember { mutableStateOf(false) }
     var pendingLock by remember { mutableStateOf(true) }
 

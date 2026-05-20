@@ -168,31 +168,23 @@ fun SwitchCard(
         // priority (vacuum → mower → lock → valve → water_heater → climate);
         // only one of these renders for a given entity since the domains are
         // disjoint.
+        // Each panel renders its own leading Spacer inline rather than us
+        // hard-coding 12 dp here; that way panels that early-return on no
+        // feature support don't leave a dangling 12 dp gap below the
+        // switch track.
         when (state.id.domain) {
-            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> {
-                Spacer(Modifier.height(12.dp))
-                VacuumPanel(state = state, accent = accent)
-            }
-            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> {
-                Spacer(Modifier.height(12.dp))
-                LawnMowerPanel(state = state, accent = accent)
-            }
-            com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> {
-                Spacer(Modifier.height(12.dp))
-                LockPanel(state = state, accent = accent)
-            }
-            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> {
-                Spacer(Modifier.height(12.dp))
-                ValvePanel(state = state, accent = accent)
-            }
-            com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER -> {
-                Spacer(Modifier.height(12.dp))
-                WaterHeaterPanel(state = state, accent = accent)
-            }
-            com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE -> {
-                Spacer(Modifier.height(12.dp))
-                ClimatePanel(state = state, accent = accent)
-            }
+            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM ->
+                VacuumPanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
+            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER ->
+                LawnMowerPanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
+            com.github.itskenny0.r1ha.core.ha.Domain.LOCK ->
+                LockPanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
+            com.github.itskenny0.r1ha.core.ha.Domain.VALVE ->
+                ValvePanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
+            com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER ->
+                WaterHeaterPanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
+            com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE ->
+                ClimatePanel(state = state, accent = accent, modifier = Modifier.padding(top = 12.dp))
             else -> Unit
         }
 

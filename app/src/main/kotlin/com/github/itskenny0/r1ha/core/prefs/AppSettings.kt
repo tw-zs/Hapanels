@@ -188,6 +188,14 @@ data class Behavior(
      */
     val wheelTogglesSwitches: Boolean = true,
     /**
+     * One-shot flag flipped true after the first wheel event the user fires.
+     * Drives a small "↻ WHEEL TO ADJUST" hint on the first sensor card so
+     * fresh installs aren't confronted with a static stack of cards and no
+     * obvious way to interact. Not surfaced in the Settings registry — it's
+     * pure onboarding state, not a user-tunable preference.
+     */
+    val wheelTutorialSeen: Boolean = false,
+    /**
      * Level threshold for the in-app diagnostic toast feed. OFF (default) is a clean
      * UI — no toasts unless the user explicitly opts in. WARN is the friendly
      * diagnostic level: failures, decoder drops, settings-save fallbacks pop up as

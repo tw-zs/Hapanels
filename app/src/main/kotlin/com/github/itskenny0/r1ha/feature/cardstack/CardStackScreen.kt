@@ -237,6 +237,7 @@ fun CardStackScreen(
         androidx.compose.runtime.mutableStateOf(false)
     }
     val pagerScope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(Unit) {
         wheelInput.events.collect { event ->
             // Modal gate: if any full-screen overlay above this scope is open
@@ -248,6 +249,17 @@ fun CardStackScreen(
             // later in this composable.
             if (tabManagementForId.value != null || quickActionsOpen.value) {
                 return@collect
+            }
+            // One-shot: first time the user spins the wheel, retire the
+            // tutorial hint. We test the flag inline rather than holding a
+            // remember so a fresh wheel event after sign-out / reset properly
+            // re-shows the hint.
+            if (!appSettings.behavior.wheelTutorialSeen) {
+                scope.launch {
+                    settings.update { s ->
+                        s.copy(behavior = s.behavior.copy(wheelTutorialSeen = true))
+                    }
+                }
             }
             // Defensive: never let a wheel event crash the collector — a single
             // bad event in the wheel-handler pipeline would tear down the
@@ -771,6 +783,43 @@ fun CardStackScreen(
         // recomposed the whole card-stack. Pushing the read into the
         // overlay's scope isolates the subscription.
         WheelHintOverlay(state = wheelHintAt)
+
+        // First-launch tutorial sticker. Fresh installs land on the card stack
+        // with no obvious indication that the wheel is the primary input; this
+        // small bottom-aligned hint dismisses on the first wheel event (handled
+        // in the collect block above via the wheelTutorialSeen flag flip) OR
+        // on tap. Only shows when there's actually content to interact with.
+        if (!appSettings.behavior.wheelTutorialSeen && cards.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 18.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.AccentWarm.copy(alpha = 0.18f))
+                        .border(1.dp, R1.AccentWarm.copy(alpha = 0.55f), R1.ShapeS)
+                        .r1Pressable(
+                            onClick = {
+                                scope.launch {
+                                    settings.update { s ->
+                                        s.copy(behavior = s.behavior.copy(wheelTutorialSeen = true))
+                                    }
+                                }
+                            },
+                            contentDescription = "Dismiss wheel tutorial hint",
+                        )
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                ) {
+                    Text(
+                        text = "↻ SPIN WHEEL TO ADJUST",
+                        style = R1.labelMicro,
+                        color = R1.AccentWarm,
+                    )
+                }
+            }
+        }
 
         } // end card-content island (max 600 dp on wide screens)
 

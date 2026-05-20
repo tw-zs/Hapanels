@@ -18,7 +18,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +55,8 @@ fun DevMenuScreen(
     tokens: com.github.itskenny0.r1ha.core.prefs.TokenStore,
     wheelInput: WheelInput,
     onBack: () -> Unit,
+    /** Optional repository for power-tool panels (FIRE EVENT). Null in previews. */
+    haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository? = null,
 ) {
     val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(settings, tokens))
     val state by vm.state.collectAsStateWithLifecycle(initialValue = AppSettings())
@@ -260,11 +265,106 @@ fun DevMenuScreen(
             }
             item { SectionDivider() }
 
+            // ── Fire event ──────────────────────────────────────────────────────────
+            if (haRepository != null) {
+                item { Section("FIRE EVENT") }
+                item { FireEventPanel(haRepository) }
+                item { SectionDivider() }
+            }
+
             // ── Log viewer ──────────────────────────────────────────────────────────
             item { Section("APP LOG") }
             item { LogViewer() }
 
             item { Spacer(Modifier.height(48.dp)) }
+        }
+    }
+}
+
+/**
+ * Power-user tool: fire an arbitrary HA event by type + optional JSON payload.
+ * POSTs to `/api/events/<event_type>`; useful for testing automations that listen
+ * for custom events (e.g. `r1_button_pressed`).
+ */
+@Composable
+private fun FireEventPanel(haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var eventType by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var data by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var inFlight by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var result by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var error by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Text(text = "EVENT TYPE", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = eventType,
+            onValueChange = { eventType = it.lowercase().filter { c -> c.isLetterOrDigit() || c == '_' } },
+            placeholder = "my_custom_event",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(text = "DATA (JSON, optional)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = data,
+            onValueChange = { data = it },
+            placeholder = """{"source":"r1"}""",
+            monospace = true,
+            singleLine = false,
+            minLines = 2,
+            modifier = Modifier.fillMaxWidth().height(72.dp),
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            com.github.itskenny0.r1ha.ui.components.R1Button(
+                text = if (inFlight) "FIRING…" else "FIRE",
+                enabled = !inFlight && eventType.isNotBlank(),
+                onClick = {
+                    val payload = if (data.isBlank()) {
+                        kotlinx.serialization.json.JsonObject(emptyMap())
+                    } else {
+                        runCatching {
+                            kotlinx.serialization.json.Json.parseToJsonElement(data)
+                                as? kotlinx.serialization.json.JsonObject
+                                ?: error("Data must be a JSON object")
+                        }.getOrElse { t ->
+                            error = "Bad JSON: ${t.message}"; return@R1Button
+                        }
+                    }
+                    inFlight = true
+                    error = null
+                    result = ""
+                    scope.launch {
+                        haRepository.fireEvent(eventType.trim(), payload).fold(
+                            onSuccess = { body ->
+                                inFlight = false
+                                result = body.ifBlank { "(fired)" }
+                            },
+                            onFailure = { t ->
+                                inFlight = false
+                                error = t.message ?: "fire_event failed"
+                            },
+                        )
+                    }
+                },
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "POST /api/events/${eventType.ifBlank { "<type>" }}",
+                style = R1.labelMicro,
+                color = R1.InkMuted,
+                maxLines = 1,
+            )
+        }
+        if (error != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(text = error ?: "", style = R1.labelMicro, color = R1.StatusRed)
+        }
+        if (result.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Text(text = result, style = R1.labelMicro, color = R1.InkSoft)
         }
     }
 }

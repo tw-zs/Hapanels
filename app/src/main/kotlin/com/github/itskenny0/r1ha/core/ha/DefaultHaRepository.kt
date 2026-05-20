@@ -1750,6 +1750,31 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun fireEvent(
+        eventType: String,
+        data: kotlinx.serialization.json.JsonObject,
+    ): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            require(eventType.matches(Regex("[a-z0-9_]+"))) { "Invalid event_type: '$eventType'" }
+            val s = settings.settings.first()
+            val server = s.server ?: error("Server URL not configured.")
+            refresher?.ensureFresh()
+            val url = "${server.url.trimEnd('/')}/api/events/$eventType"
+            val body = serviceCallRawBody(url, data) ?: run {
+                if (refresher?.forceRefresh() == true) {
+                    R1Log.i("HaRepo.evt", "401 → refreshed; retrying once")
+                    serviceCallRawBody(url, data)
+                        ?: error("Home Assistant returned HTTP 401 for /api/events after refresh.")
+                } else {
+                    error("Home Assistant returned HTTP 401 for /api/events.")
+                }
+            }
+            body
+        }.onFailure { t ->
+            R1Log.w("HaRepo.evt", "$eventType failed: ${t.message}")
+        }
+    }
+
     override suspend fun callRawService(
         domain: String,
         service: String,

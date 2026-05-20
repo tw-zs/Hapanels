@@ -241,6 +241,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 wheelInput = wheelInput,
                 onBack = { navController.popBackStack() },
+                haRepository = haRepository,
             )
         }
         composable(Routes.ASSIST) {

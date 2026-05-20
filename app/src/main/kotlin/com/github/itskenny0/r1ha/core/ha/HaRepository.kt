@@ -104,6 +104,18 @@ interface HaRepository {
     ): Result<String>
 
     /**
+     * Fire an arbitrary HA event by [eventType] — POSTs to
+     * `/api/events/<event_type>` with the given JSON [data] as the event
+     * payload. Used by the dev menu's fire-event tile for power users who
+     * need to trigger automations that listen for custom events.
+     * HA returns `{"message": "Event <type> fired."}` on success.
+     */
+    suspend fun fireEvent(
+        eventType: String,
+        data: kotlinx.serialization.json.JsonObject,
+    ): Result<String>
+
+    /**
      * List current HA persistent notifications. Goes through raw
      * `/api/states` rather than the [listAllEntities] decoder because
      * the `persistent_notification.*` domain isn't in our [Domain] enum

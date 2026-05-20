@@ -121,6 +121,8 @@ fun SystemHealthScreen(
                 // sticks until the next press; multiple consecutive presses show how
                 // variable the link is.
                 PingRow(haRepository)
+                Spacer(Modifier.size(12.dp))
+                ShareDebugBundleRow()
                 Spacer(Modifier.size(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "ERROR LOG (tail)", style = R1.labelMicro, color = R1.InkSoft)
@@ -280,6 +282,59 @@ private fun PingRow(haRepository: HaRepository) {
                 style = R1.labelMicro,
                 color = R1.InkSoft,
             )
+        }
+    }
+}
+
+@Composable
+private fun ShareDebugBundleRow() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = "SHARE DEBUG BUNDLE", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = {
+                    // Assemble a plaintext bundle from the in-memory log buffer + the
+                    // last crash file. Sharing via ACTION_SEND lets the user route to
+                    // any installed text-receiving app (email, GitHub Mobile, Slack,
+                    // even Notes); avoids forcing a specific share target.
+                    val sb = StringBuilder(8192)
+                    sb.append("R1HA debug bundle · ")
+                        .append(java.time.Instant.now().toString()).append('\n')
+                    sb.append("App ").append(com.github.itskenny0.r1ha.BuildConfig.VERSION_NAME)
+                        .append(" (").append(com.github.itskenny0.r1ha.BuildConfig.VERSION_CODE)
+                        .append(")\n")
+                    val crashFile = java.io.File(context.filesDir, "last_crash.txt")
+                    if (crashFile.exists()) {
+                        sb.append("\n--- LAST CRASH ---\n")
+                        sb.append(crashFile.readText())
+                    }
+                    sb.append("\n--- LOG TAIL (newest first) ---\n")
+                    val logs = com.github.itskenny0.r1ha.core.util.R1LogBuffer.snapshot().reversed()
+                    for (e in logs.take(200)) {
+                        val ts = java.time.Instant.ofEpochMilli(e.timestampMillis).toString()
+                        sb.append("[$ts] ").append(e.level).append(' ').append(e.tag)
+                            .append(" — ").append(e.message).append('\n')
+                    }
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "R1HA debug bundle")
+                        putExtra(android.content.Intent.EXTRA_TEXT, sb.toString())
+                    }
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent.createChooser(send, "Share debug bundle")
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                })
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        ) {
+            Text(text = "SHARE", style = R1.labelMicro, color = R1.InkSoft)
         }
     }
 }

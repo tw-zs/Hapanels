@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -435,12 +437,15 @@ private fun CounterControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) 
 
 @Composable
 private fun SelectControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
-    // Tap cycles forward; long-press cycles backward. The current option is
-    // highlighted; HA's dropdown UX doesn't translate well to the R1's portrait
-    // display, but a long-press affordance lets users back out of an overshoot
-    // without going all the way around the list.
+    // Tap cycles forward; long-press cycles backward. For lists longer than a
+    // few entries, that gets tedious fast; the small "···" chip opens a
+    // full-list picker so users can jump directly. Short lists still benefit
+    // from cycle-on-tap because no dialog round-trip is needed.
     val options = entry.options
     val currentIdx = options.indexOf(entry.state).coerceAtLeast(0)
+    val showPicker = androidx.compose.runtime.remember(entry.id.value) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -471,6 +476,97 @@ private fun SelectControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
             style = R1.labelMicro,
             color = R1.InkSoft,
         )
+        if (options.size > 3) {
+            Spacer(Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(
+                        onClick = { showPicker.value = true },
+                        contentDescription = "Pick from full list",
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                Text(text = "···", style = R1.labelMicro, color = R1.InkSoft)
+            }
+        }
+    }
+    if (showPicker.value) {
+        SelectOptionPicker(
+            options = options,
+            current = entry.state,
+            label = entry.name.ifBlank { entry.id.value },
+            onPick = { picked ->
+                vm.selectOption(entry, picked)
+                showPicker.value = false
+            },
+            onDismiss = { showPicker.value = false },
+        )
+    }
+}
+
+/**
+ * Full-list option picker for input_select. Rendered as an AlertDialog so it
+ * sits above the helpers screen with a scrim and a native dismiss gesture.
+ * The current option is highlighted in AccentWarm; everything else reads as
+ * a plain row to keep the picker visually quiet against the busy helpers list.
+ */
+@Composable
+private fun SelectOptionPicker(
+    options: List<String>,
+    current: String,
+    label: String,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .clip(R1.ShapeM)
+                .background(R1.Surface)
+                .border(1.dp, R1.Hairline, R1.ShapeM)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text = label.uppercase(),
+                style = R1.labelMicro,
+                color = R1.InkSoft,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.heightIn(max = 240.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                items(items = options, key = { it }) { opt ->
+                    val isCurrent = opt == current
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(R1.ShapeS)
+                            .background(
+                                if (isCurrent) R1.AccentWarm.copy(alpha = 0.18f) else R1.Bg,
+                            )
+                            .r1Pressable(onClick = { onPick(opt) })
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = opt,
+                            style = R1.body,
+                            color = if (isCurrent) R1.AccentWarm else R1.Ink,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (isCurrent) {
+                            Text(text = "•", style = R1.body, color = R1.AccentWarm)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -11,11 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -315,7 +313,6 @@ private fun PinKeypadDialog(
                     row.forEach { key ->
                         val isOk = key == "OK"
                         val isBack = key == "⌫"
-                        val keyEnabled = !isOk || valid
                         Box(
                             modifier = Modifier
                                 .height(44.dp)
@@ -458,13 +455,13 @@ fun ValvePanel(state: EntityState, accent: Color, modifier: Modifier = Modifier)
 fun WaterHeaterPanel(state: EntityState, accent: Color, modifier: Modifier = Modifier) {
     if (state.id.domain != Domain.WATER_HEATER) return
     val dispatch = LocalOnEntityCall.current
-    if (state.selectOptions.isEmpty() && state.climateHvacModes.isEmpty()) return
-    // HA's water_heater uses `operation_list` + `operation_mode` semantically
-    // identical to selectOptions/currentOption for the wheel cycle path; we
-    // re-use those fields when present, falling back to climateHvacModes if
-    // the parser routed the list through the climate sibling.
-    val modes = if (state.selectOptions.isNotEmpty()) state.selectOptions else state.climateHvacModes
-    val active = state.currentOption ?: state.climateHvacMode
+    // DefaultHaRepository stores HA's `operation_list` / `operation_mode`
+    // attributes in the climateHvacModes / climateHvacMode fields (the parser
+    // shares the climate sibling's branch for both domains). Empty list →
+    // nothing to render.
+    val modes = state.climateHvacModes
+    if (modes.isEmpty()) return
+    val active = state.climateHvacMode
     Column(modifier = modifier.fillMaxWidth()) {
         Text(text = "MODE", style = R1.labelMicro, color = R1.InkMuted)
         Spacer(Modifier.height(4.dp))

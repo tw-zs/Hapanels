@@ -70,7 +70,11 @@ object ColorfulCardsTheme : R1Theme {
         // Accent is white for body text + slider, with a per-card override (from
         // EntityOverride.accentColor) winning when set. The gradient backdrop already
         // carries the colour identity so we don't need a coloured accent on top.
-        val accent = model.accentOverride ?: Color.White
+        // Per-card override wins, then the global accent picker, then white
+        // (the readable default on every gradient backdrop).
+        val accent = model.accentOverride
+            ?: LocalThemeAccentOverride.current
+            ?: Color.White
 
         Row(
             modifier = modifier

@@ -80,7 +80,13 @@ object PragmaticHybridTheme : R1Theme {
         // Per-card accent override (from EntityOverride.accentColor) takes precedence
         // over the domain-derived role colour. Lets users tint individual cards without
         // touching their HA setup.
-        val accent = model.accentOverride ?: accentColor(model.accent)
+        // Resolution order for the card's accent colour:
+        //   1. Per-card override (EntityOverride.accentColor) — most specific.
+        //   2. Global theme-accent override (Settings → Theme → accent picker).
+        //   3. Domain-derived role colour for this theme.
+        val accent = model.accentOverride
+            ?: LocalThemeAccentOverride.current
+            ?: accentColor(model.accent)
         val ui = LocalUiOptions.current
 
         Row(

@@ -162,6 +162,10 @@ class SettingsRepository private constructor(
         val uiShowZeroPercentWhenOff = booleanPreferencesKey("ui.show_zero_percent_when_off")
 
         val theme = stringPreferencesKey("theme")
+        /** Optional global accent ARGB override (Int.MIN_VALUE sentinel = unset). */
+        val themeAccentArgb = intPreferencesKey("theme.accent_argb")
+        /** "Read-only guest mode" toggle — refuses outbound service calls. */
+        val guestModeEnabled = booleanPreferencesKey("guest_mode_enabled")
         /**
          * Encoded as a single newline-separated string of `entityId=customName` pairs;
          * names are URL-encoded so newlines/equals inside a name can't break the
@@ -253,6 +257,8 @@ class SettingsRepository private constructor(
                         ?: OrientationMode.FOLLOW_DEVICE,
                 ),
                 theme = p[K.theme]?.let { runCatching { ThemeId.valueOf(it) }.getOrNull() } ?: ThemeId.PRAGMATIC_HYBRID,
+                themeAccentArgb = p[K.themeAccentArgb],
+                guestModeEnabled = p[K.guestModeEnabled] ?: false,
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
                 entityOverrides = decodeEntityOverrides(p[K.entityOverrides]),
                 advanced = p[K.advancedJson]
@@ -366,6 +372,9 @@ class SettingsRepository private constructor(
                 p[K.uiChromeButtons] = encodeChromeButtons(next.ui.chromeButtons)
                 p[K.uiShowZeroPercentWhenOff] = next.ui.showZeroPercentWhenOff
                 p[K.theme] = next.theme.name
+                val accent = next.themeAccentArgb
+                if (accent == null) p.remove(K.themeAccentArgb) else p[K.themeAccentArgb] = accent
+                p[K.guestModeEnabled] = next.guestModeEnabled
                 p[K.nameOverrides] = encodeNameOverrides(next.nameOverrides)
                 p[K.entityOverrides] = encodeEntityOverrides(next.entityOverrides)
                 p[K.advancedJson] = advancedJson.encodeToString(

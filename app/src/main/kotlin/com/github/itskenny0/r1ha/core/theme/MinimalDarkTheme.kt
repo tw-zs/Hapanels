@@ -59,7 +59,10 @@ object MinimalDarkTheme : R1Theme {
         // Per-card accent override (from EntityOverride.accentColor) takes precedence
         // over MinimalDark's single warm accent. Lets the user tint a card without
         // switching themes.
-        val accent = model.accentOverride ?: themeAccent
+        // Per-card override > global theme-accent override > theme native accent.
+        val accent = model.accentOverride
+            ?: LocalThemeAccentOverride.current
+            ?: themeAccent
         Row(
             modifier = modifier
                 .fillMaxSize()

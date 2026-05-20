@@ -74,6 +74,8 @@ fun FavoritesPickerScreen(
     androidx.compose.runtime.CompositionLocalProvider(
         com.github.itskenny0.r1ha.core.theme.LocalHaRepository provides haRepository,
         com.github.itskenny0.r1ha.core.theme.LocalEntityOverrides provides appSettingsForOverrides.entityOverrides,
+        com.github.itskenny0.r1ha.core.theme.LocalThemeAccentOverride provides appSettingsForOverrides.themeAccentArgb
+            ?.let { androidx.compose.ui.graphics.Color(it) },
     ) {
     Box(modifier = Modifier.fillMaxSize().background(R1.Bg)) {
         Column(

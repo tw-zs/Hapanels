@@ -977,6 +977,17 @@ class DefaultHaRepository(
         cache.map { it.filterKeys { id -> id in entities } }
 
     override suspend fun call(call: ServiceCall): Result<Unit> {
+        // Read-only "guest mode": if the user has flipped the Settings toggle,
+        // refuse every outbound service call and surface a toast/log so the
+        // UX explains the silence. Observation paths (state subscriptions,
+        // /api/states, history fetches) are unaffected — only this dispatch
+        // entry is gated.
+        val current = settings.settings.first()
+        if (current.guestModeEnabled) {
+            R1Log.i("HaRepo.guest", "blocked ${call.target.value}/${call.service} in guest mode")
+            _callFailures.tryEmit(call.target)
+            return Result.failure(IllegalStateException("Guest mode is on. Toggle it off in Settings to control your home."))
+        }
         // Optimistic update was already applied by the ViewModel — the repo just forwards.
         // Key includes the service name so rapid taps of distinct buttons on the same
         // entity (PLAY then NEXT then VOL+ on a media_player) don't cancel each other.
@@ -1919,6 +1930,9 @@ class DefaultHaRepository(
         runCatching {
             require(eventType.matches(Regex("[a-z0-9_]+"))) { "Invalid event_type: '$eventType'" }
             val s = settings.settings.first()
+            if (s.guestModeEnabled) {
+                error("Guest mode is on. Toggle it off in Settings to fire events.")
+            }
             val server = s.server ?: error("Server URL not configured.")
             refresher?.ensureFresh()
             val url = "${server.url.trimEnd('/')}/api/events/$eventType"
@@ -1946,6 +1960,9 @@ class DefaultHaRepository(
             require(domain.matches(Regex("[a-z0-9_]+"))) { "Invalid service domain: '$domain'" }
             require(service.matches(Regex("[a-z0-9_]+"))) { "Invalid service name: '$service'" }
             val s = settings.settings.first()
+            if (s.guestModeEnabled) {
+                error("Guest mode is on. Toggle it off in Settings to call services.")
+            }
             val server = s.server ?: error("Server URL not configured.")
             refresher?.ensureFresh()
             val url = "${server.url.trimEnd('/')}/api/services/$domain/$service"

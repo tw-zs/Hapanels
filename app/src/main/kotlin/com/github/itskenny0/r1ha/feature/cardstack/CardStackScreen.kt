@@ -493,6 +493,8 @@ fun CardStackScreen(
         com.github.itskenny0.r1ha.core.theme.LocalHaRepository provides haRepository,
         com.github.itskenny0.r1ha.core.theme.LocalHaServerUrl provides appSettings.server?.url,
         com.github.itskenny0.r1ha.core.theme.LocalEntityOverrides provides appSettings.entityOverrides,
+        com.github.itskenny0.r1ha.core.theme.LocalThemeAccentOverride provides appSettings.themeAccentArgb
+            ?.let { androidx.compose.ui.graphics.Color(it) },
         com.github.itskenny0.r1ha.core.theme.LocalOnCycleLightMode provides onCycleLightMode,
         com.github.itskenny0.r1ha.core.theme.LocalOnSetLightWheelMode provides onSetLightWheelMode,
         com.github.itskenny0.r1ha.core.theme.LocalOnCycleLightEffect provides onCycleLightEffect,

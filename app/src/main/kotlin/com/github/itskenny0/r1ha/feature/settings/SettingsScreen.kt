@@ -737,6 +737,16 @@ fun SettingsScreen(
             }
             item { ToastLogLevelRow(current = s.behavior.toastLogLevel, onSelect = { vm.setToastLogLevel(it) }) }
             item { OrientationModeRow(current = s.behavior.orientationMode, onSelect = { vm.setOrientationMode(it) }) }
+            item {
+                SwitchRow(
+                    label = "Guest mode (read-only)",
+                    subtitle = "When on, the app refuses every outbound service call. " +
+                        "Lights, locks, scripts: everything is blocked until you turn this off. " +
+                        "Hand the device to a guest without worrying they'll toggle something.",
+                    checked = s.guestModeEnabled,
+                    onCheckedChange = { vm.setGuestModeEnabled(it) },
+                )
+            }
 
             // ── Quick Settings tile ─────────────────────────────────
             // Bind one HA entity_id to the system Quick Settings panel

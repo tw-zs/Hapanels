@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,8 +128,39 @@ fun EnergyScreen(
                 // ── TOP CONSUMERS ──────────────────────────────────────
                 if (ui.topConsumers.isNotEmpty()) {
                     Spacer(Modifier.size(4.dp))
-                    Text(text = "TOP CONSUMERS", style = R1.labelMicro, color = R1.InkSoft)
-                    for (c in ui.topConsumers.take(5)) {
+                    var consumersExpanded by androidx.compose.runtime.remember {
+                        androidx.compose.runtime.mutableStateOf(false)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "TOP CONSUMERS",
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (ui.topConsumers.size > 5) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(R1.ShapeS)
+                                    .background(R1.SurfaceMuted)
+                                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                                    .r1Pressable(onClick = { consumersExpanded = !consumersExpanded })
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = if (consumersExpanded) {
+                                        "COLLAPSE"
+                                    } else {
+                                        "SHOW ALL (${ui.topConsumers.size})"
+                                    },
+                                    style = R1.labelMicro,
+                                    color = R1.InkSoft,
+                                )
+                            }
+                        }
+                    }
+                    val visible = if (consumersExpanded) ui.topConsumers else ui.topConsumers.take(5)
+                    for (c in visible) {
                         ConsumerRow(c, onClick = { onOpenHistory(c.entityId) })
                     }
                 } else if (!ui.loading && ui.error == null && ui.currentDrawW == null) {

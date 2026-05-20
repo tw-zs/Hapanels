@@ -131,8 +131,16 @@ fun CardStackScreen(
             kotlinx.coroutines.delay(10_000L)
         }
     }
-    val wsSilent = connection is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
-        lastEventAt > 0L && (nowTick.longValue - lastEventAt) > 60_000L
+    // derivedStateOf so this only invalidates readers when wsSilent actually flips, not
+    // every 10s when nowTick ticks. Without it the entire CardStackScreen scope recomposed
+    // on every tick (nowTick read at the outer scope = invalidates everything that reads
+    // the outer composable's state).
+    val wsSilent by androidx.compose.runtime.remember(connection, lastEventAt) {
+        androidx.compose.runtime.derivedStateOf {
+            connection is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
+                lastEventAt > 0L && (nowTick.longValue - lastEventAt) > 60_000L
+        }
+    }
 
     // Wheel events are processed ONLY while CardStackScreen is composed. Navigating away
     // (e.g. into FavoritesPicker or Settings) suspends the collection so spinning the wheel

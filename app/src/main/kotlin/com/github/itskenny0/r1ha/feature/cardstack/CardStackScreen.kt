@@ -239,6 +239,16 @@ fun CardStackScreen(
     val pagerScope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(Unit) {
         wheelInput.events.collect { event ->
+            // Modal gate: if any full-screen overlay above this scope is open
+            // (tab management, quick actions), the wheel shouldn't reach past
+            // the overlay and silently adjust the card or page underneath. The
+            // jumpPickerOpen branch lower down is intentional (the picker
+            // wants wheel input as scroll); the customize-dialog gate lives
+            // closer to the dialog itself since its remember is declared
+            // later in this composable.
+            if (tabManagementForId.value != null || quickActionsOpen.value) {
+                return@collect
+            }
             // Defensive: never let a wheel event crash the collector — a single
             // bad event in the wheel-handler pipeline would tear down the
             // LaunchedEffect for the rest of the session and the user would

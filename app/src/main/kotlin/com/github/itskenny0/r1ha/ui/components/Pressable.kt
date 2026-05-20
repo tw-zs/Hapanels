@@ -16,6 +16,9 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 
 /**
  * Make any element tactile in the R1 idiom: a tight scale + alpha dip on press, and a
@@ -33,6 +36,7 @@ fun Modifier.r1Pressable(
     hapticOnClick: Boolean = true,
     pressedScale: Float = 0.97f,
     pressedAlpha: Float = 0.78f,
+    contentDescription: String? = null,
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -75,6 +79,22 @@ fun Modifier.r1Pressable(
                 onClick()
             },
         )
+        // Merge descendant semantics so a chip-with-Text reads as one Button node to
+        // TalkBack instead of "$text, double-tap to activate" split across two nodes.
+        // If a caller supplies an explicit contentDescription (icon-only buttons that
+        // have no readable text child), apply it here.
+        .then(
+            if (contentDescription != null) {
+                Modifier.semantics(mergeDescendants = true) {
+                    this.contentDescription = contentDescription
+                    role = androidx.compose.ui.semantics.Role.Button
+                }
+            } else {
+                Modifier.semantics(mergeDescendants = true) {
+                    role = androidx.compose.ui.semantics.Role.Button
+                }
+            },
+        )
 }
 
 /**
@@ -93,6 +113,7 @@ fun Modifier.r1RowPressable(
     onLongPress: () -> Unit,
     pressedScale: Float = 0.97f,
     pressedAlpha: Float = 0.78f,
+    contentDescription: String? = null,
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -147,4 +168,16 @@ fun Modifier.r1RowPressable(
                 },
             )
         }
+        .then(
+            if (contentDescription != null) {
+                Modifier.semantics(mergeDescendants = true) {
+                    this.contentDescription = contentDescription
+                    role = androidx.compose.ui.semantics.Role.Button
+                }
+            } else {
+                Modifier.semantics(mergeDescendants = true) {
+                    role = androidx.compose.ui.semantics.Role.Button
+                }
+            },
+        )
 }

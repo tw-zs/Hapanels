@@ -163,11 +163,16 @@ fun EntityCard(
     val perCardOverride = com.github.itskenny0.r1ha.core.theme.LocalEntityOverrides.current[state.id.value]
         ?: com.github.itskenny0.r1ha.core.prefs.EntityOverride.NONE
     val baseUi = com.github.itskenny0.r1ha.core.theme.LocalUiOptions.current
-    val mergedUi = baseUi.copy(
-        showOnOffPill = perCardOverride.showOnOffPill ?: baseUi.showOnOffPill,
-        showAreaLabel = perCardOverride.showAreaLabel ?: baseUi.showAreaLabel,
-        maxDecimalPlaces = perCardOverride.maxDecimalPlaces ?: baseUi.maxDecimalPlaces,
-    )
+    // Memoise the merged UiOptions so every card recomposition doesn't allocate a fresh
+    // copy + push it through CompositionLocalProvider (which re-invalidates every
+    // descendant reader). Only re-allocate when either side actually changes.
+    val mergedUi = androidx.compose.runtime.remember(baseUi, perCardOverride) {
+        baseUi.copy(
+            showOnOffPill = perCardOverride.showOnOffPill ?: baseUi.showOnOffPill,
+            showAreaLabel = perCardOverride.showAreaLabel ?: baseUi.showAreaLabel,
+            maxDecimalPlaces = perCardOverride.maxDecimalPlaces ?: baseUi.maxDecimalPlaces,
+        )
+    }
     androidx.compose.runtime.CompositionLocalProvider(
         com.github.itskenny0.r1ha.core.theme.LocalUiOptions provides mergedUi,
     ) {

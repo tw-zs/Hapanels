@@ -134,15 +134,18 @@ fun NotificationsScreen(
             // DISMISS ALL row visible and rely on the pull-to-refresh spinner instead,
             // so the user doesn't lose scroll position or bulk-action access during a
             // routine 30-second auto-refresh.
-            ui.loading && ui.notifications.isEmpty() && ui.error == null -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+            ui.loading && ui.notifications.isEmpty() && ui.error == null -> androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = R1.AccentWarm,
-                )
+                // Skeleton rows teach the eye where notifications will land
+                // instead of leaving a void with a tiny centred spinner.
+                // Three rows roughly cover the R1's portrait viewport.
+                repeat(3) {
+                    com.github.itskenny0.r1ha.ui.components.SkeletonRow()
+                }
             }
             ui.error != null && ui.notifications.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(22.dp),

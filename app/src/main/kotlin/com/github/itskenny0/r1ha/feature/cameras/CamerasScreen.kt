@@ -132,15 +132,18 @@ fun CamerasScreen(
             ViewModeRow(current = viewMode, onSelect = { viewModeOverride = it })
         }
         when {
-            ui.loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+            ui.loading -> androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(22.dp),
-                    strokeWidth = 2.dp,
-                    color = R1.AccentWarm,
-                )
+                // Skeleton rows give the eye a hint of "list of cameras
+                // incoming" instead of a context-free centred spinner. Three
+                // rows fit the R1's portrait viewport without scrolling.
+                repeat(3) {
+                    com.github.itskenny0.r1ha.ui.components.SkeletonRow()
+                }
             }
             ui.error != null && ui.cameras.isEmpty() -> Box(
                 modifier = Modifier.fillMaxSize().padding(22.dp),

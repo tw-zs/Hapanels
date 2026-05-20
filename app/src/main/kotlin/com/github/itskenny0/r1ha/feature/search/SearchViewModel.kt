@@ -98,6 +98,26 @@ class SearchViewModel(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /**
+     * Per-bucket entity counts, precomputed off Main so the BucketChips row doesn't
+     * eachCount() the entire registry on every recomposition. Keyed on the underlying
+     * [UiState.all] list reference: the chip counts only need recompute when the
+     * registry itself changes, not on every keystroke.
+     */
+    val bucketCounts: StateFlow<Map<Bucket, Int>> =
+        _ui.map { it.all }
+            .distinctUntilChanged()
+            .map { all ->
+                buildMap<Bucket, Int> {
+                    put(Bucket.ALL, all.size)
+                    Bucket.entries.filter { it != Bucket.ALL }.forEach { b ->
+                        put(b, all.count { e -> bucketOf(e.id.domain) == b })
+                    }
+                }
+            }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
     private fun filterAndSort(s: UiState): List<EntityState> {
         val q = s.query.trim().lowercase()
         if (q.isBlank() && s.bucket == Bucket.ALL) return emptyList()

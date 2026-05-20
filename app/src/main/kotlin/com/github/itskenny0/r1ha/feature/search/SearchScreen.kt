@@ -132,10 +132,10 @@ fun SearchScreen(
         R1TopBar(title = "QUICK SEARCH", onBack = onBack)
         com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         // Domain-bucket filter chips and search field are inside AdaptiveContent
-        // so they align with the results list at 800 dp on tablets.
-        val bucketCounts = remember(ui.all) {
-            ui.all.groupingBy { vm.bucketOf(it.id.domain) }.eachCount()
-        }
+        // so they align with the results list at 800 dp on tablets. bucketCounts is
+        // computed off Main in the ViewModel and exposed as a StateFlow so this
+        // composable doesn't iterate the full entity registry on every recomp.
+        val bucketCounts by vm.bucketCounts.collectAsState()
         BucketChips(
             current = ui.bucket,
             counts = bucketCounts,

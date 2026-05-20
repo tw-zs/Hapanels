@@ -93,7 +93,31 @@ fun AreasScreen(
             .background(R1.Bg)
             .systemBarsPadding(),
     ) {
-        R1TopBar(title = "AREAS", onBack = onBack)
+        R1TopBar(
+            title = "AREAS",
+            onBack = onBack,
+            action = {
+                // Sort chip: toggles between alphabetical and entity-count. A long
+                // tap-cycle reveal would be over-engineered; two states fit fine.
+                val nextSort = if (ui.sort == AreasViewModel.Sort.ALPHA)
+                    AreasViewModel.Sort.COUNT else AreasViewModel.Sort.ALPHA
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = { vm.setSort(nextSort) })
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = if (ui.sort == AreasViewModel.Sort.ALPHA) "A→Z" else "BY COUNT",
+                        style = R1.labelMicro,
+                        color = R1.InkSoft,
+                    )
+                }
+            },
+        )
+        val sortedAreas by vm.sortedAreas.collectAsState()
         com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         when {
             ui.loading -> Box(
@@ -135,7 +159,7 @@ fun AreasScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(items = ui.areas, key = { it.name }) { area ->
+                    items(items = sortedAreas, key = { it.name }) { area ->
                         AreaRow(
                             area = area,
                             expanded = expandedAreaName == area.name,

@@ -9,6 +9,9 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -45,15 +48,33 @@ class AreasViewModel(
         val entityIds: List<String>,
     )
 
+    enum class Sort { ALPHA, COUNT }
+
     @androidx.compose.runtime.Stable
     data class UiState(
         val loading: Boolean = true,
         val areas: List<Area> = emptyList(),
+        val sort: Sort = Sort.ALPHA,
         val error: String? = null,
     )
 
     private val _ui = MutableStateFlow(UiState())
     val ui: StateFlow<UiState> = _ui
+
+    fun setSort(sort: Sort) {
+        _ui.value = _ui.value.copy(sort = sort)
+    }
+
+    /** Sort applied at the read site so toggling never re-fetches. */
+    val sortedAreas: kotlinx.coroutines.flow.StateFlow<List<Area>> =
+        _ui.map { s ->
+            when (s.sort) {
+                Sort.ALPHA -> s.areas.sortedBy { it.name.lowercase() }
+                Sort.COUNT -> s.areas.sortedByDescending { it.entityIds.size }
+            }
+        }
+            .distinctUntilChanged()
+            .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
     fun refresh() {
         viewModelScope.launch {

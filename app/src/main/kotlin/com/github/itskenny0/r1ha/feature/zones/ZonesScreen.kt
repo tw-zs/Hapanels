@@ -229,11 +229,17 @@ private fun ZoneMap(zones: List<ZonesViewModel.Zone>) {
                 val centre = Offset(xFrac * w, yFrac * h)
                 // Translate radius_m to canvas units via the bounding-
                 // box span (in metres) → canvas span (in pixels) ratio.
-                // Cap at 24 px so a giant 'within 5 km' zone doesn't
-                // dwarf the whole map.
+                // Caps are relative to canvas size so a tablet's larger
+                // viewport doesn't render the same metric radii as visually
+                // smaller circles than the R1's portrait display does. The
+                // previous absolute (8f, 48f) was tuned for the R1's 240px
+                // canvas; on a 720px tablet that made every zone read as a
+                // sub-thumbnail dot.
                 val radiusM = zone.radiusMeters ?: 100.0
                 val canvasPerMeter = w / (lonSpan * metersPerLonDeg).toFloat().coerceAtLeast(1f)
-                val r = (radiusM.toFloat() * canvasPerMeter).coerceIn(8f, 48f)
+                val rMin = (w * 0.03f).coerceAtLeast(8f)
+                val rMax = (w * 0.18f).coerceAtMost(96f)
+                val r = (radiusM.toFloat() * canvasPerMeter).coerceIn(rMin, rMax)
                 val occupied = zone.occupants.isNotEmpty()
                 if (occupied) {
                     drawCircle(

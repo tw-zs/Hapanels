@@ -237,8 +237,31 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
             }
             return@Column
         }
-        val numeric = ui.points.mapNotNull { p -> p.numeric?.let { p.timestamp to it } }
-        if (numeric.size < 2) {
+        // Hoist the numeric projection out of the per-frame draw lambda. Previously
+        // the Canvas block recomputed numeric / yMin / yMax / tStart / tSpan and
+        // allocated a fresh List<Offset> on every invalidation. With remember
+        // keyed on ui.points, projection runs once per data refresh and the
+        // draw phase becomes a tight loop over precomputed normalized x/y.
+        val proj = androidx.compose.runtime.remember(ui.points) {
+            val numeric = ui.points.mapNotNull { p -> p.numeric?.let { p.timestamp to it } }
+            if (numeric.size < 2) return@remember null
+            val ys = numeric.map { it.second }
+            val yMin0 = ys.min()
+            val yMax0 = ys.max()
+            val yRange0 = (yMax0 - yMin0).takeIf { it > 1e-9 } ?: 1.0
+            val tStart0 = numeric.first().first
+            val tEnd0 = numeric.last().first
+            val tSpan0 = Duration.between(tStart0, tEnd0).toMillis().coerceAtLeast(1L)
+            val xs = FloatArray(numeric.size)
+            val ysn = FloatArray(numeric.size)
+            for (i in numeric.indices) {
+                val (ts, v) = numeric[i]
+                xs[i] = (Duration.between(tStart0, ts).toMillis().toFloat() / tSpan0)
+                ysn[i] = 1f - (((v - yMin0) / yRange0).toFloat())
+            }
+            ChartProjection(xs, ysn, yMin0, yMax0, tStart0, tEnd0, tSpan0)
+        }
+        if (proj == null) {
             Box(
                 modifier = Modifier.fillMaxWidth().height(180.dp),
                 contentAlignment = Alignment.Center,
@@ -251,13 +274,11 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
             }
             return@Column
         }
-        val ys = numeric.map { it.second }
-        val yMin = ys.min()
-        val yMax = ys.max()
-        val yRange = (yMax - yMin).takeIf { it > 1e-9 } ?: 1.0
-        val tStart = numeric.first().first
-        val tEnd = numeric.last().first
-        val tSpan = Duration.between(tStart, tEnd).toMillis().coerceAtLeast(1L)
+        val yMin = proj.yMin
+        val yMax = proj.yMax
+        val tStart = proj.tStart
+        val tEnd = proj.tEnd
+        val tSpan = proj.tSpan
         val zone = ZoneId.systemDefault()
         // Pick an axis-label format that scales with the window — for
         // sub-day windows we show HH:mm; for multi-day windows we drop
@@ -294,35 +315,31 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
                         end = Offset(w, h - 1f),
                         strokeWidth = 1f,
                     )
-                    // Project each numeric point onto the canvas:
-                    //   x = (t - tStart) / tSpan * width
-                    //   y = h - ((v - yMin) / yRange) * h
-                    val pts = numeric.map { (ts, v) ->
-                        val x = (Duration.between(tStart, ts).toMillis().toFloat() / tSpan) * w
-                        val y = h - (((v - yMin) / yRange).toFloat() * h)
-                        Offset(x, y)
-                    }
-                    for (i in 0 until pts.size - 1) {
+                    // Pre-projected normalized points scale by canvas size each draw.
+                    // Zero allocation in the draw phase; segment count is bounded by
+                    // the History VM's downsample step (the lambda below was previously
+                    // building a List<Offset> of length n on every invalidation).
+                    val xs = proj.xsNorm
+                    val ysn = proj.ysNorm
+                    val n = xs.size
+                    for (i in 0 until n - 1) {
                         drawLine(
                             color = R1.AccentWarm,
-                            start = pts[i],
-                            end = pts[i + 1],
+                            start = Offset(xs[i] * w, ysn[i] * h),
+                            end = Offset(xs[i + 1] * w, ysn[i + 1] * h),
                             strokeWidth = 2f,
                             cap = StrokeCap.Round,
                         )
                     }
-                    // Bookend dots so the start/end samples are clearly
-                    // located, particularly handy when the line is
-                    // mostly flat.
                     drawCircle(
                         color = R1.AccentWarm,
                         radius = 3f,
-                        center = pts.first(),
+                        center = Offset(xs[0] * w, ysn[0] * h),
                     )
                     drawCircle(
                         color = R1.AccentWarm,
                         radius = 3f,
-                        center = pts.last(),
+                        center = Offset(xs[n - 1] * w, ysn[n - 1] * h),
                     )
                 }
                 Spacer(Modifier.height(4.dp))
@@ -432,3 +449,19 @@ private fun SummaryRow(
 private fun formatNum(v: Double): String =
     if (kotlin.math.abs(v - v.toLong()) < 1e-9) "${v.toLong()}"
     else "%.2f".format(v)
+
+/**
+ * Pre-projected chart data: x/y in [0..1] space so the per-frame Canvas draw
+ * can scale by canvas size without re-running the full mapNotNull + min/max
+ * + per-point projection pipeline on every invalidation. Stored as FloatArrays
+ * (not List<Offset>) so iteration is allocation-free.
+ */
+private data class ChartProjection(
+    val xsNorm: FloatArray,
+    val ysNorm: FloatArray,
+    val yMin: Double,
+    val yMax: Double,
+    val tStart: java.time.Instant,
+    val tEnd: java.time.Instant,
+    val tSpan: Long,
+)

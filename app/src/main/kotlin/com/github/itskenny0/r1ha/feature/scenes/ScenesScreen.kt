@@ -309,6 +309,19 @@ private fun MasterActionPill(
             .then(pressable),
         contentAlignment = Alignment.Center,
     ) {
+        // Micro hint glyph in the corner when the pill has a hidden long-press action.
+        // ⋯ is the same affordance EntityCard uses for its long-press indicator, so the
+        // semantic is consistent across the app.
+        if (onLongClick != null && !inFlight && !armed) {
+            Text(
+                text = "⋯",
+                style = R1.labelMicro,
+                color = accent.copy(alpha = 0.7f),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 4.dp, top = 2.dp),
+            )
+        }
         Text(
             text = when {
                 inFlight -> "…"

@@ -269,7 +269,14 @@ class DefaultHaRepository(
                 }
             }.launchIn(this)
 
+            // Track the previous state alongside each onEach emission so the Disconnected
+            // branch can suppress its own reconnect when we transitioned out of AuthLost:
+            // the AuthLost handler already schedules a refresh + connectFromSettings, and
+            // double-scheduling here would race a second reconnect against the first.
+            var prevState: ConnectionState = ConnectionState.Idle
             ws.state.onEach { st ->
+                val previous = prevState
+                prevState = st
                 when (st) {
                     is ConnectionState.Connected -> {
                         reconnectAttempt = 0
@@ -300,7 +307,7 @@ class DefaultHaRepository(
                         val attempt = reconnectAttempt
                         reconnectAttempt = (attempt + 1).coerceAtMost(20)
                         // Fail any in-flight service-call deferreds whose Result will never
-                        // arrive — without this they leak into pendingCalls until the process
+                        // arrive: without this they leak into pendingCalls until the process
                         // dies and any awaiter would hang indefinitely.
                         if (pendingCalls.isNotEmpty()) {
                             pendingCalls.values.forEach {
@@ -308,7 +315,15 @@ class DefaultHaRepository(
                             }
                             pendingCalls.clear()
                         }
-                        reconnectLater(attempt)
+                        // If we just transitioned out of AuthLost (which fired its own
+                        // refresh + connectFromSettings) the Disconnected handler must NOT
+                        // also schedule a reconnect; both timers would otherwise race and
+                        // double-connect. The AuthLost path owns the reconnect dispatch.
+                        if (previous is ConnectionState.AuthLost) {
+                            R1Log.i("HaRepo.disconnect", "suppressing reconnect; AuthLost handler owns it")
+                        } else {
+                            reconnectLater(attempt)
+                        }
                     }
                     is ConnectionState.AuthLost -> {
                         // Access token was rejected — most often because the 30-minute lifetime

@@ -85,6 +85,15 @@ fun ThemePickerScreen(
     val appSettings by settings.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
     val currentThemeId = appSettings.theme
 
+    // Surface the chosen accent override here so the preview cards rendered
+    // below pick it up live: R1ThemeHost inside ThemeRow doesn't reset
+    // LocalThemeAccentOverride, so the override propagates from this scope
+    // into each preview. Without this, a user would have to navigate back
+    // to a real card screen to see the effect of an accent change.
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.github.itskenny0.r1ha.core.theme.LocalThemeAccentOverride provides appSettings.themeAccentArgb
+            ?.let { androidx.compose.ui.graphics.Color(it) },
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -121,6 +130,7 @@ fun ThemePickerScreen(
             }
         } // AdaptiveContent
     }
+    } // CompositionLocalProvider
 }
 
 @Composable

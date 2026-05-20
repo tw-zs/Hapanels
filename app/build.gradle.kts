@@ -156,7 +156,9 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons)
+    // material-icons-extended dropped: this app uses hand-drawn Compose Canvas
+    // glyphs (HistoryChartGlyph, AssistMicGlyph, SettingsCogGlyph, etc.) for chrome,
+    // so the ~3 MB icon set was carrying nothing at runtime.
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 

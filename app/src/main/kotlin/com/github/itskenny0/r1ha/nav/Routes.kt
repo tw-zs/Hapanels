@@ -23,6 +23,8 @@ object Routes {
     const val SYSTEM_HEALTH = "system_health"
     const val DASHBOARD = "dashboard"
     const val AREAS = "areas"
+    const val LABELS = "labels"
+    const val FLOORS = "floors"
     const val SERVICES = "services"
     const val SEARCH = "search"
     const val AUTOMATIONS = "automations"

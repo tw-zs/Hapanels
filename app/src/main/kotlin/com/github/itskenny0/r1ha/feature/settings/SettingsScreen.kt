@@ -67,6 +67,8 @@ fun SettingsScreen(
     onOpenSystemHealth: () -> Unit,
     onOpenDashboard: () -> Unit,
     onOpenAreas: () -> Unit,
+    onOpenLabels: () -> Unit,
+    onOpenFloors: () -> Unit,
     onOpenServices: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenAutomations: () -> Unit,
@@ -1225,6 +1227,12 @@ fun SettingsScreen(
             }
             item {
                 NavRow(label = "Areas", value = "HA area registry", onClick = onOpenAreas)
+            }
+            item {
+                NavRow(label = "Labels", value = "HA label registry (tags)", onClick = onOpenLabels)
+            }
+            item {
+                NavRow(label = "Floors", value = "Floor → areas hierarchy", onClick = onOpenFloors)
             }
             item {
                 NavRow(

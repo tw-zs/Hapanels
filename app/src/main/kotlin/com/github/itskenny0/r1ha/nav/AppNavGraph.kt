@@ -174,6 +174,12 @@ fun AppNavGraph(
                 onOpenAreas = {
                     navController.navigate(Routes.AREAS) { launchSingleTop = true }
                 },
+                onOpenLabels = {
+                    navController.navigate(Routes.LABELS) { launchSingleTop = true }
+                },
+                onOpenFloors = {
+                    navController.navigate(Routes.FLOORS) { launchSingleTop = true }
+                },
                 onOpenServices = {
                     navController.navigate(Routes.SERVICES) { launchSingleTop = true }
                 },
@@ -350,6 +356,22 @@ fun AppNavGraph(
         }
         composable(Routes.AREAS) {
             com.github.itskenny0.r1ha.feature.areas.AreasScreen(
+                haRepository = haRepository,
+                settings = settings,
+                wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.LABELS) {
+            com.github.itskenny0.r1ha.feature.labels.LabelsScreen(
+                haRepository = haRepository,
+                settings = settings,
+                wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.FLOORS) {
+            com.github.itskenny0.r1ha.feature.floors.FloorsScreen(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,

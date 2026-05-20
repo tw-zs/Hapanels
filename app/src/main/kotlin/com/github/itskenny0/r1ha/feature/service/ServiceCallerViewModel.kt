@@ -64,6 +64,20 @@ class ServiceCallerViewModel(
     fun setData(value: String) { _ui.value = _ui.value.copy(data = value) }
     fun clearRecent() { _ui.value = _ui.value.copy(recent = emptyList()) }
 
+    /**
+     * Job for the current in-flight service call. Stored so [cancel] can abort it
+     * when the user taps CANCEL during a slow call; HA's REST service endpoint can
+     * sit on a long-running automation script for many seconds and there was no
+     * way to back out until now.
+     */
+    private var fireJob: kotlinx.coroutines.Job? = null
+
+    fun cancel() {
+        fireJob?.cancel()
+        fireJob = null
+        _ui.value = _ui.value.copy(inFlight = false, error = "Cancelled")
+    }
+
     fun fire() {
         val s = _ui.value
         if (s.inFlight) return
@@ -85,7 +99,8 @@ class ServiceCallerViewModel(
             }
         }
         _ui.value = s.copy(inFlight = true, error = null, result = "")
-        viewModelScope.launch {
+        fireJob?.cancel()
+        fireJob = viewModelScope.launch {
             // Snapshot history depth from settings so each fire honours
             // the user's current Settings → INTEGRATIONS preference.
             historyDepth = settings.settings.first().integrations.recentHistoryDepth

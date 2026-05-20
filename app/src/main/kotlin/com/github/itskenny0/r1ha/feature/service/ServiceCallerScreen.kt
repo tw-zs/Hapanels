@@ -167,6 +167,19 @@ fun ServiceCallerScreen(
                     onClick = { vm.fire() },
                     enabled = !ui.inFlight && ui.domain.isNotBlank() && ui.service.isNotBlank(),
                 )
+                if (ui.inFlight) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.StatusRed.copy(alpha = 0.18f))
+                            .border(1.dp, R1.StatusRed.copy(alpha = 0.4f), R1.ShapeS)
+                            .r1Pressable(onClick = { vm.cancel() })
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    ) {
+                        Text(text = "CANCEL", style = R1.labelMicro, color = R1.StatusRed)
+                    }
+                }
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "POST /api/services/${ui.domain}/${ui.service}",

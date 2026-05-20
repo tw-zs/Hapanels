@@ -134,6 +134,7 @@ class SettingsRepository private constructor(
         val behaviorShowBatteryWhenHidden = booleanPreferencesKey("behavior.show_battery_when_status_bar_hidden")
         val behaviorStartOnDashboard = booleanPreferencesKey("behavior.start_on_dashboard")
         val behaviorWheelTogglesSwitches = booleanPreferencesKey("behavior.wheel_toggles_switches")
+        val behaviorWheelTutorialSeen = booleanPreferencesKey("behavior.wheel_tutorial_seen")
         val behaviorToastLogLevel = stringPreferencesKey("behavior.toast_log_level")
         /** entity_id bound to the Android Quick Settings tile. Empty
          *  string sentinel = unbound (a null-equivalent that the
@@ -241,6 +242,7 @@ class SettingsRepository private constructor(
                     showBatteryWhenStatusBarHidden = p[K.behaviorShowBatteryWhenHidden] ?: false,
                     startOnDashboard = p[K.behaviorStartOnDashboard] ?: false,
                     wheelTogglesSwitches = p[K.behaviorWheelTogglesSwitches] ?: true,
+                    wheelTutorialSeen = p[K.behaviorWheelTutorialSeen] ?: false,
                     toastLogLevel = p[K.behaviorToastLogLevel]
                         ?.let { runCatching { ToastLogLevel.valueOf(it) }.getOrNull() }
                         ?: ToastLogLevel.OFF,
@@ -351,6 +353,7 @@ class SettingsRepository private constructor(
                 p[K.behaviorShowBatteryWhenHidden] = next.behavior.showBatteryWhenStatusBarHidden
                 p[K.behaviorStartOnDashboard] = next.behavior.startOnDashboard
                 p[K.behaviorWheelTogglesSwitches] = next.behavior.wheelTogglesSwitches
+                p[K.behaviorWheelTutorialSeen] = next.behavior.wheelTutorialSeen
                 p[K.behaviorToastLogLevel] = next.behavior.toastLogLevel.name
                 p[K.behaviorQuickTileEntityId] = next.behavior.quickTileEntityId.orEmpty()
                 p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard

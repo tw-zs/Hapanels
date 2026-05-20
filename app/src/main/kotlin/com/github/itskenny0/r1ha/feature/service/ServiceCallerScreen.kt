@@ -24,6 +24,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -309,25 +311,64 @@ private fun ExampleChips(onPick: (String, String, String) -> Unit) {
             data = """{"title":"From R1","message":"hello"}""",
         ),
     )
-    Row(
+    // Fade-edge gradient hints at horizontal overflow. The chip row is wider than
+    // the screen on the R1's 240px viewport; without an edge fade the trailing
+    // chips look truncated rather than scrollable. drawWithContent + compositingStrategy
+    // lets the fade only mask the foreground content while leaving the surrounding
+    // surface untouched.
+    val chipScroll = rememberScrollState()
+    val fadeStart = chipScroll.value > 0
+    val fadeEnd = chipScroll.value < chipScroll.maxValue
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                if (fadeStart) {
+                    drawRect(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            colors = listOf(R1.Bg, androidx.compose.ui.graphics.Color.Transparent),
+                            startX = 0f,
+                            endX = 18.dp.toPx(),
+                        ),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        size = size,
+                    )
+                }
+                if (fadeEnd) {
+                    drawRect(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            colors = listOf(androidx.compose.ui.graphics.Color.Transparent, R1.Bg),
+                            startX = size.width - 18.dp.toPx(),
+                            endX = size.width,
+                        ),
+                        blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                        size = size,
+                    )
+                }
+            },
     ) {
-        Text(text = "TRY", style = R1.labelMicro, color = R1.InkMuted)
-        Spacer(Modifier.width(4.dp))
-        for (ex in examples) {
-            Box(
-                modifier = Modifier
-                    .clip(R1.ShapeS)
-                    .background(R1.SurfaceMuted)
-                    .border(1.dp, R1.Hairline, R1.ShapeS)
-                    .r1Pressable(onClick = { onPick(ex.domain, ex.service, ex.data) })
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-            ) {
-                Text(text = ex.label, style = R1.labelMicro, color = R1.InkSoft)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(chipScroll),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "TRY", style = R1.labelMicro, color = R1.InkMuted)
+            Spacer(Modifier.width(4.dp))
+            for (ex in examples) {
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = { onPick(ex.domain, ex.service, ex.data) })
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(text = ex.label, style = R1.labelMicro, color = R1.InkSoft)
+                }
             }
         }
     }

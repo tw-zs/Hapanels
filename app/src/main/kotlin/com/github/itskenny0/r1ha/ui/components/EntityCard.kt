@@ -310,6 +310,7 @@ fun EntityCard(
                     mediaIsMuted = state.id.domain == Domain.MEDIA_PLAYER && state.isVolumeMuted,
                     mediaSupportedFeatures = state.mediaSupportedFeatures,
                     lastChangedAt = state.lastChanged,
+                    entityState = state,
                 ),
                 modifier = Modifier
                     .fillMaxSize()

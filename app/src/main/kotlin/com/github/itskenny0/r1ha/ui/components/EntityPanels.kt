@@ -411,13 +411,20 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
         }
         val current = state.climateCurrentTemperature
         if (current != null) {
+            // Convert to the user's chosen temperature unit so the panel
+            // readout matches the BigReadout above (which already
+            // converts). Mismatched units inside one card would be a
+            // bug — the user sees 21 °C in the body and 70 °F here only
+            // because we forgot to thread the preference through.
+            val ui = com.github.itskenny0.r1ha.core.theme.LocalUiOptions.current
+            val nativeUnit = state.temperatureUnit ?: state.unit
+            val (converted, suffix) = convertTemperature(current, nativeUnit, ui.tempUnit)
             Spacer(Modifier.height(8.dp))
-            val unit = state.temperatureUnit ?: state.unit ?: "°"
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "NOW", style = R1.labelMicro, color = R1.InkMuted)
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    text = formatTemperature(current) + " " + unit,
+                    text = formatTemperature(converted) + " " + suffix,
                     style = R1.labelMicro,
                     color = accent,
                 )

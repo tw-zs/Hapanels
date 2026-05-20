@@ -11,7 +11,18 @@ data class BackoffPolicy(
     val rng: Random = Random.Default,
 ) {
     fun delayForAttempt(attempt: Int): Long {
-        val raw = baseMillis shl attempt.coerceIn(0, 20)
+        // shl on Long overflows silently at attempt + log2(baseMillis) ≥ 63; with the
+        // default baseMillis=1000 (~2^10) and the coerce(0,20) cap that's fine, but
+        // larger baseMillis values would silently wrap to a negative delay. Coerce the
+        // shift count down based on baseMillis so the result is always bounded.
+        val safeShift = attempt.coerceIn(
+            0,
+            // 62 - leading-zero-count(baseMillis) is the largest shift that keeps the
+            // result inside positive Long range. coerceAtLeast(0) covers the
+            // baseMillis = 0 degenerate case.
+            (62 - java.lang.Long.numberOfLeadingZeros(baseMillis.coerceAtLeast(1L))).coerceAtLeast(0),
+        )
+        val raw = baseMillis shl safeShift
         val capped = min(raw, capMillis)
         if (jitter == 0.0) return capped
         val window = (capped * jitter).toLong()

@@ -812,11 +812,25 @@ fun CardStackScreen(
                         )
                         .padding(horizontal = 14.dp, vertical = 6.dp),
                 ) {
-                    Text(
-                        text = "↻ SPIN WHEEL TO ADJUST",
-                        style = R1.labelMicro,
-                        color = R1.AccentWarm,
-                    )
+                    // Two-line hint: primary affordance on top, phone fallback
+                    // (volume rocker maps to the same wheel keycodes via
+                    // KEYCODE_VOLUME_UP/DOWN) on the secondary line so users
+                    // running the app on a regular Android phone aren't left
+                    // wondering which physical input drives the cards.
+                    androidx.compose.foundation.layout.Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = "↻ SPIN WHEEL TO ADJUST",
+                            style = R1.labelMicro,
+                            color = R1.AccentWarm,
+                        )
+                        Text(
+                            text = "OR USE VOLUME UP / DOWN",
+                            style = R1.labelMicro,
+                            color = R1.AccentWarm.copy(alpha = 0.75f),
+                        )
+                    }
                 }
             }
         }

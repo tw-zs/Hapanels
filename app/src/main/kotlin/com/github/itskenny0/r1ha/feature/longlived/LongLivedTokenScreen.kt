@@ -1,7 +1,10 @@
 package com.github.itskenny0.r1ha.feature.longlived
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -146,17 +149,59 @@ fun LongLivedTokenScreen(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            Text(text = "ACCESS TOKEN", style = R1.labelMicro, color = R1.InkSoft)
+            // Mask the token field by default with an eye-toggle to reveal. The token
+            // is highly sensitive (root access to HA); over-the-shoulder users could
+            // memorise it from the screen otherwise.
+            var revealed by remember { mutableStateOf(false) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "ACCESS TOKEN",
+                    style = R1.labelMicro,
+                    color = R1.InkSoft,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = { revealed = !revealed })
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = if (revealed) "HIDE" else "REVEAL",
+                        style = R1.labelMicro,
+                        color = R1.InkSoft,
+                    )
+                }
+            }
             Spacer(Modifier.height(4.dp))
+            val maskedToken = if (revealed || token.isEmpty()) token else "•".repeat(token.length.coerceAtMost(48))
             R1TextField(
-                value = token,
+                value = if (revealed) token else maskedToken,
                 onValueChange = { token = it },
                 placeholder = "eyJhbGciOiJIUzI1NiIs…",
                 monospace = true,
+                enabled = revealed || token.isEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 80.dp),
             )
+            // Light-touch paste validation: real HA long-lived tokens are JWTs
+            // (three base64url segments separated by dots, ~200 chars long). When the
+            // user pastes something that obviously isn't, surface a one-line hint so
+            // they don't try to sign in with a garbage value.
+            val looksLikeJwt = remember(token) {
+                token.isBlank() || (token.count { it == '.' } == 2 && token.length in 50..2000)
+            }
+            if (!looksLikeJwt) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Doesn't look like a HA token. Generate one via your HA profile → Long-lived access tokens.",
+                    style = R1.labelMicro,
+                    color = R1.StatusAmber,
+                )
+            }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 R1Button(

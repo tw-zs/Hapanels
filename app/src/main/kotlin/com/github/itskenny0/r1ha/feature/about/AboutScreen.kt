@@ -104,6 +104,13 @@ fun AboutScreen(
                 // F-Droid APK rather than just hiding it at runtime.
                 if (!BuildConfig.IS_FDROID_BUILD) {
                     item { UpdaterRow() }
+                } else {
+                    // F-Droid builds intentionally strip the self-updater (the
+                    // REQUEST_INSTALL_PACKAGES permission would trip the F-Droid
+                    // anti-feature scanner). Surface a one-line hint so users know
+                    // where to get the next release rather than wondering why the
+                    // GitHub UpdaterRow they read about online isn't here.
+                    item { FdroidUpdateHint() }
                 }
                 // File-a-bug link — drops the user straight into the GitHub issue
                 // tracker pre-filled with the app version. Lowers the friction for
@@ -484,6 +491,29 @@ private fun EntitiesDiagnosticRow(haRepository: HaRepository) {
  * which then fires ACTION_VIEW so Android's package installer prompts the user.
  * No silent installs.
  */
+/**
+ * F-Droid-flavour-only hint: tells the user where to get updates since the
+ * self-updater isn't compiled into this APK. Renders as a muted one-liner
+ * under the About section, matching the visual weight of other AboutScreen
+ * footer rows.
+ */
+@Composable
+private fun FdroidUpdateHint() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 10.dp),
+    ) {
+        Text(text = "UPDATES", style = R1.labelMicro, color = R1.InkSoft)
+        androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
+        Text(
+            text = "F-Droid distribution: install updates via your F-Droid client. GitHub Releases also publishes the same APK.",
+            style = R1.body,
+            color = R1.InkMuted,
+        )
+    }
+}
+
 @Composable
 private fun UpdaterRow() {
     val context = LocalContext.current

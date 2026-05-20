@@ -110,6 +110,13 @@ class DefaultHaRepository(
      * B, briefly painting server-A entities on server-B cards.
      */
     @Volatile private var seedJob: Job? = null
+    /**
+     * Tracks the cache.onEach collector that mirrors entity updates into the
+     * persister. Lives on [scope] (not [supervisorJob]) so it survives WS
+     * reconnects, but stop() needs to cancel it explicitly to avoid double-
+     * subscribing on a subsequent start().
+     */
+    @Volatile private var persisterCollectorJob: Job? = null
     /** Tracks the currently-scheduled reconnect-backoff job so [reconnectNow] can cancel it. */
     @Volatile private var pendingReconnect: Job? = null
 
@@ -226,11 +233,15 @@ class DefaultHaRepository(
                 R1Log.i("HaRepo", "seeded cache from disk: ${restored.size} entities")
             }
             // Bind the persister to start collecting markDirty ticks. The
-            // bind() call kicks off the debounce loop on [scope].
+            // bind() call kicks off the debounce loop on [scope]. Cancel any
+            // previously-bound collector so a stop()/start() cycle within the
+            // same process doesn't end up with two collectors fighting over
+            // the same persister.
+            persisterCollectorJob?.cancel()
             p.bind()
             // Mirror every cache change into the persister so the snapshot
             // stays current. Debouncing happens inside markDirty's flow.
-            cache.onEach { p.markDirty(it) }.launchIn(scope)
+            persisterCollectorJob = cache.onEach { p.markDirty(it) }.launchIn(scope)
         }
         supervisorJob = scope.launch {
             ws.inbound.onEach { msg ->
@@ -448,6 +459,7 @@ class DefaultHaRepository(
         latestAccessToken = null
         subscriptionId = null
         seedJob?.cancel(); seedJob = null
+        persisterCollectorJob?.cancel(); persisterCollectorJob = null
         supervisorJob?.cancel(); supervisorJob = null
         ws.disconnect()
     }

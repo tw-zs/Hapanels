@@ -250,9 +250,13 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         if (!::graph.isInitialized) return
         val conn = graph.haRepository.connection.value
-        val needsKick = conn !is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
-            conn !is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connecting &&
-            conn !is com.github.itskenny0.r1ha.core.ha.ConnectionState.Authenticating
+        // Resume-time reconnect kicks ONLY out of Disconnected / Idle. AuthLost has its
+        // own refresh + reconnect loop owned by the repository; piling onResume on top
+        // would produce a visible flicker (try → 401 → try → 401) until the loop's
+        // refresh path runs to completion, since the token is the same one that just
+        // got rejected.
+        val needsKick = conn is com.github.itskenny0.r1ha.core.ha.ConnectionState.Disconnected ||
+            conn is com.github.itskenny0.r1ha.core.ha.ConnectionState.Idle
         if (needsKick) {
             R1Log.i("MainActivity.onResume", "kicking reconnect; conn=$conn")
             graph.haRepository.reconnectNow()

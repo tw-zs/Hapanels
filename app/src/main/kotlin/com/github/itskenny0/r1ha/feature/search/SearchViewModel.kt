@@ -118,29 +118,14 @@ class SearchViewModel(
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
-    private fun filterAndSort(s: UiState): List<EntityState> {
-        val q = s.query.trim().lowercase()
-        if (q.isBlank() && s.bucket == Bucket.ALL) return emptyList()
-        return s.all.asSequence().filter { e ->
-            val matchesQuery = if (q.isBlank()) true else (
-                e.friendlyName.lowercase().contains(q) ||
-                    e.id.value.lowercase().contains(q) ||
-                    (e.area?.lowercase()?.contains(q) ?: false)
-                )
-            val matchesBucket = s.bucket == Bucket.ALL || bucketOf(e.id.domain) == s.bucket
-            matchesQuery && matchesBucket
-        }
-            .sortedWith(
-                compareByDescending<EntityState> {
-                    q.isNotBlank() && (
-                        it.friendlyName.lowercase().startsWith(q) ||
-                            it.id.value.lowercase().substringAfter('.').startsWith(q)
-                        )
-                }.thenBy { it.friendlyName.lowercase() },
-            )
-            .take(resultCap)
-            .toList()
-    }
+    private fun filterAndSort(s: UiState): List<EntityState> =
+        SearchRanker.filter(
+            all = s.all,
+            query = s.query,
+            bucket = s.bucket,
+            bucketOf = ::bucketOf,
+            resultCap = resultCap,
+        )
 
     fun refresh() {
         viewModelScope.launch {

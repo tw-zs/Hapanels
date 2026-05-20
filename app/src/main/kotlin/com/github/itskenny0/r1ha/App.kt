@@ -64,25 +64,39 @@ class App : Application() {
                 // Write the crash trace + recent log buffer to a file in
                 // filesDir so the dev menu's 'LAST CRASH' button can surface
                 // it after restart. Without this every crash is a black box
-                // on the R1 — logcat isn't accessible to most users.
-                val report = buildString {
-                    append("R1HA crash · ").append(java.time.Instant.now().toString()).append('\n')
-                    append("App ").append(BuildConfig.VERSION_NAME).append(" (")
-                        .append(BuildConfig.VERSION_CODE).append(")\n")
-                    append("Thread: ").append(thread.name).append('\n')
-                    append("Exception: ").append(ex::class.java.name)
-                    ex.message?.let { append(": ").append(it) }
-                    append("\n\nSTACK TRACE:\n")
-                    append(ex.stackTraceToString())
-                    append("\n\nRECENT LOGS (newest first):\n")
-                    val logs = com.github.itskenny0.r1ha.core.util.R1LogBuffer.snapshot().reversed()
-                    for (e in logs.take(100)) {
-                        val ts = java.time.Instant.ofEpochMilli(e.timestampMillis).toString()
-                        append("[$ts] ").append(e.level).append(' ').append(e.tag)
-                            .append(" — ").append(e.message).append('\n')
+                // on the R1: logcat isn't accessible to most users.
+                //
+                // Two-phase write so an OOM at the buildString step doesn't lose
+                // the actual stack trace. Phase 1 writes the bare minimum
+                // (exception + stack) using only pre-allocated capacity; phase 2
+                // appends the recent-log tail and runs inside an inner runCatching
+                // so a failure on the second buffer doesn't lose phase 1.
+                val crashFile = java.io.File(filesDir, "last_crash.txt")
+                runCatching {
+                    val essential = StringBuilder(4096).apply {
+                        append("R1HA crash · ").append(java.time.Instant.now().toString()).append('\n')
+                        append("App ").append(BuildConfig.VERSION_NAME).append(" (")
+                            .append(BuildConfig.VERSION_CODE).append(")\n")
+                        append("Thread: ").append(thread.name).append('\n')
+                        append("Exception: ").append(ex::class.java.name)
+                        ex.message?.let { append(": ").append(it) }
+                        append("\n\nSTACK TRACE:\n")
+                        append(ex.stackTraceToString())
                     }
+                    crashFile.writeText(essential.toString(), Charsets.UTF_8)
                 }
-                java.io.File(filesDir, "last_crash.txt").writeText(report, Charsets.UTF_8)
+                runCatching {
+                    val logs = com.github.itskenny0.r1ha.core.util.R1LogBuffer.snapshot().reversed()
+                    val tail = StringBuilder(8192).apply {
+                        append("\n\nRECENT LOGS (newest first):\n")
+                        for (e in logs.take(100)) {
+                            val ts = java.time.Instant.ofEpochMilli(e.timestampMillis).toString()
+                            append("[$ts] ").append(e.level).append(' ').append(e.tag)
+                                .append(" — ").append(e.message).append('\n')
+                        }
+                    }
+                    crashFile.appendText(tail.toString(), Charsets.UTF_8)
+                }
             }
             previousHandler?.uncaughtException(thread, ex)
         }

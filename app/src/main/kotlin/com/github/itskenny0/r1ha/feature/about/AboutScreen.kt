@@ -547,43 +547,71 @@ private fun UpdaterRow() {
                 is UpdaterState.Error -> R1.StatusRed
                 else -> R1.InkSoft
             }
-            Box(
-                modifier = Modifier
-                    .background(R1.SurfaceMuted, shape = R1.ShapeS)
-                    .r1Pressable(onClick = {
-                        // Tap dispatches based on current state: idle/up-to-date/
-                        // error → re-check; available → start download.
-                        when (val s = state.value) {
-                            is UpdaterState.Available -> {
-                                state.value = UpdaterState.Downloading(s.info, 0f)
-                                scope.launch {
-                                    runCatching {
-                                        updater.downloadAndInstall(context, s.info) { read, total ->
-                                            val frac = if (total > 0) (read.toFloat() / total).coerceIn(0f, 1f) else 0f
-                                            state.value = UpdaterState.Downloading(s.info, frac)
+            val downloadJob = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<kotlinx.coroutines.Job?>(null)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .background(R1.SurfaceMuted, shape = R1.ShapeS)
+                        .r1Pressable(onClick = {
+                            // Tap dispatches based on current state: idle/up-to-date/
+                            // error → re-check; available → start download.
+                            when (val s = state.value) {
+                                is UpdaterState.Available -> {
+                                    state.value = UpdaterState.Downloading(s.info, 0f)
+                                    downloadJob.value = scope.launch {
+                                        runCatching {
+                                            updater.downloadAndInstall(context, s.info) { read, total ->
+                                                val frac = if (total > 0) (read.toFloat() / total).coerceIn(0f, 1f) else 0f
+                                                state.value = UpdaterState.Downloading(s.info, frac)
+                                            }
+                                            // Hand-off complete: Android's installer
+                                            // takes over and the user lands back here
+                                            // after the new build starts.
+                                            state.value = UpdaterState.Available(s.info)
+                                        }.onFailure {
+                                            if (it is kotlinx.coroutines.CancellationException) {
+                                                state.value = UpdaterState.Available(s.info)
+                                            } else {
+                                                state.value = UpdaterState.Error(it.message ?: "download failed")
+                                            }
                                         }
-                                        // Hand-off complete — Android's installer
-                                        // takes over and the user lands back here
-                                        // after the new build starts.
-                                        state.value = UpdaterState.Available(s.info)
-                                    }.onFailure {
-                                        state.value = UpdaterState.Error(it.message ?: "download failed")
+                                        downloadJob.value = null
+                                    }
+                                }
+                                else -> {
+                                    state.value = UpdaterState.Checking
+                                    scope.launch {
+                                        val info = updater.checkForUpdate()
+                                        state.value = if (info != null) UpdaterState.Available(info)
+                                            else UpdaterState.UpToDate
                                     }
                                 }
                             }
-                            else -> {
-                                state.value = UpdaterState.Checking
-                                scope.launch {
-                                    val info = updater.checkForUpdate()
-                                    state.value = if (info != null) UpdaterState.Available(info)
-                                        else UpdaterState.UpToDate
-                                }
-                            }
-                        }
-                    })
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-            ) {
-                Text(pillText, style = R1.labelMicro, color = pillColor)
+                        })
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Text(pillText, style = R1.labelMicro, color = pillColor)
+                }
+                // CANCEL chip while a download is in flight. Aborts the underlying
+                // OkHttp stream + the Compose runtime's resume callbacks so a
+                // slow / failed download can be backed out without restarting
+                // the app.
+                if (state.value is UpdaterState.Downloading) {
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(R1.StatusRed.copy(alpha = 0.18f), shape = R1.ShapeS)
+                            .r1Pressable(onClick = {
+                                downloadJob.value?.cancel()
+                                downloadJob.value = null
+                            })
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    ) {
+                        Text(text = "CANCEL", style = R1.labelMicro, color = R1.StatusRed)
+                    }
+                }
             }
         }
         // Error / release-notes detail. Available + Error reveal additional text

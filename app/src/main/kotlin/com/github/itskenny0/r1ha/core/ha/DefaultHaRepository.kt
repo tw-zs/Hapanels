@@ -103,6 +103,13 @@ class DefaultHaRepository(
      * token refresh; tokens.load() is suspend and not safe to call from the listener.
      */
     @Volatile private var latestAccessToken: String? = null
+    /**
+     * Tracks the in-flight seedCacheFromHa coroutine so URL change / sign-out can
+     * cancel it before its retry loop finishes. Without this, a slow seed for
+     * server A can land in the cache after the user has already signed into server
+     * B, briefly painting server-A entities on server-B cards.
+     */
+    @Volatile private var seedJob: Job? = null
     /** Tracks the currently-scheduled reconnect-backoff job so [reconnectNow] can cancel it. */
     @Volatile private var pendingReconnect: Job? = null
 
@@ -273,7 +280,8 @@ class DefaultHaRepository(
                         // observer needs to be free to react to it, otherwise the conflated
                         // StateFlow would collapse a brief Connected → Disconnected → Connected
                         // bounce into a single observed Connected.
-                        scope.launch { seedCacheFromHa() }
+                        seedJob?.cancel()
+                        seedJob = scope.launch { seedCacheFromHa() }
                     }
                     is ConnectionState.Disconnected -> {
                         // The WS client always reports st.attempt=0 (it has no notion of
@@ -340,7 +348,8 @@ class DefaultHaRepository(
                     R1Log.i("HaRepo.favsChange", "favorites changed to ${it.size} entries")
                     if (ws.state.value is ConnectionState.Connected) {
                         resubscribe()
-                        scope.launch { seedCacheFromHa() }
+                        seedJob?.cancel()
+                        seedJob = scope.launch { seedCacheFromHa() }
                     }
                 }
                 .launchIn(this)
@@ -363,9 +372,12 @@ class DefaultHaRepository(
                     authLostRefreshAttempt = 0
                     if (url == null) {
                         // Drop any cached entity states from the previous server so the next
-                        // sign-in starts fresh — otherwise stale data from server A could be
+                        // sign-in starts fresh: otherwise stale data from server A could be
                         // briefly visible on cards when the user signs into server B with the
-                        // same entity IDs.
+                        // same entity IDs. Cancel any seedJob whose 3-retry loop is still
+                        // grinding so its results don't land in the new server's cache.
+                        seedJob?.cancel()
+                        seedJob = null
                         cache.update { emptyMap() }
                         subscriptionId = null
                         // Fail any outstanding service-call awaiters; their WS is going away.
@@ -435,6 +447,7 @@ class DefaultHaRepository(
         }
         latestAccessToken = null
         subscriptionId = null
+        seedJob?.cancel(); seedJob = null
         supervisorJob?.cancel(); supervisorJob = null
         ws.disconnect()
     }

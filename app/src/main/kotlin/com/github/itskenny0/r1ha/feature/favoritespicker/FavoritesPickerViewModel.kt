@@ -66,6 +66,20 @@ class FavoritesPickerViewModel(
          *  the row composable needing to know about the override mechanism. */
         val displayName: String,
     )
+    /**
+     * Sort order applied within a filter tab. FAVS always sorts by orderIndex
+     * regardless of this setting (the user is reasoning about card position
+     * there, not alphabetical order). Other tabs default to ALPHA and the
+     * user can flip into AREA (group physically) or DOMAIN (group by entity
+     * type, useful when CONTROLLABLE / ALL chips are showing a heterogeneous
+     * mix).
+     */
+    enum class SortOrder(val label: String) {
+        ALPHA("A→Z"),
+        AREA("BY AREA"),
+        DOMAIN("BY KIND"),
+    }
+
     data class UiState(
         val loading: Boolean = true,
         val rows: List<Row> = emptyList(),
@@ -81,6 +95,10 @@ class FavoritesPickerViewModel(
         /** Entity currently being renamed via the rename dialog, or null when no dialog
          *  is open. Picker observes this to show/hide the dialog overlay. */
         val editingEntityId: String? = null,
+        /** Per-filter-tab sort selector. Survives navigation back to the picker
+         *  but not process death — the picker is short-lived enough that DataStore
+         *  persistence felt like over-engineering. FAVS tab ignores this. */
+        val sortPerFilter: Map<PickerFilter, SortOrder> = emptyMap(),
     )
 
     private val _ui = MutableStateFlow(UiState())
@@ -233,7 +251,37 @@ class FavoritesPickerViewModel(
                 ?: snapshot.favorites
             _ui.value = cur.copy(
                 filter = filter,
-                rows = buildRows(entitiesCache, favs, filter, cur.query, snapshot.nameOverrides),
+                rows = buildRows(
+                    entitiesCache, favs, filter, cur.query, snapshot.nameOverrides,
+                    sortOrder = cur.sortPerFilter[filter] ?: SortOrder.ALPHA,
+                ),
+            )
+        }
+    }
+
+    /** Cycle the sort order for the active filter tab. Persists in [UiState]
+     *  so re-entering this tab later in the same picker session restores it.
+     *  FAVS ignores the setter — its sort is locked to orderIndex. */
+    fun cycleSortOrder() {
+        val cur = _ui.value
+        if (cur.filter == PickerFilter.FAVS) return
+        val now = cur.sortPerFilter[cur.filter] ?: SortOrder.ALPHA
+        val next = when (now) {
+            SortOrder.ALPHA -> SortOrder.AREA
+            SortOrder.AREA -> SortOrder.DOMAIN
+            SortOrder.DOMAIN -> SortOrder.ALPHA
+        }
+        viewModelScope.launch {
+            val snapshot = settings.settings.first()
+            val favs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }
+                ?.favorites
+                ?: snapshot.favorites
+            _ui.value = cur.copy(
+                sortPerFilter = cur.sortPerFilter + (cur.filter to next),
+                rows = buildRows(
+                    entitiesCache, favs, cur.filter, cur.query, snapshot.nameOverrides,
+                    sortOrder = next,
+                ),
             )
         }
     }
@@ -252,6 +300,7 @@ class FavoritesPickerViewModel(
         filter: PickerFilter,
         query: String,
         overrides: Map<String, String>,
+        sortOrder: SortOrder = SortOrder.ALPHA,
     ): List<Row> {
         val favOrder = favs.withIndex().associate { (idx, id) -> id to idx }
         val q = query.trim().lowercase()
@@ -285,10 +334,21 @@ class FavoritesPickerViewModel(
                 // and is the order they're reordering via the move-up/down chevrons.
                 // Every other view sorts alphabetically by display name (the usual case
                 // when they're hunting for something to favourite).
-                if (filter == PickerFilter.FAVS) {
-                    rows.sortedBy { it.orderIndex ?: Int.MAX_VALUE }
-                } else {
-                    rows.sortedBy { it.displayName.lowercase() }
+                when {
+                    filter == PickerFilter.FAVS ->
+                        rows.sortedBy { it.orderIndex ?: Int.MAX_VALUE }
+                    sortOrder == SortOrder.AREA ->
+                        // Stable alphabetical-within-area: empty area sinks to the bottom.
+                        rows.sortedWith(
+                            compareBy<Row> { it.state.area?.lowercase() ?: "￿" }
+                                .thenBy { it.displayName.lowercase() },
+                        )
+                    sortOrder == SortOrder.DOMAIN ->
+                        rows.sortedWith(
+                            compareBy<Row> { it.state.id.domain.name }
+                                .thenBy { it.displayName.lowercase() },
+                        )
+                    else -> rows.sortedBy { it.displayName.lowercase() }
                 }
             }
     }

@@ -98,6 +98,45 @@ fun FavoritesPickerScreen(
                     counts = ui.countsByFilter,
                     onSelect = { vm.setFilter(it) },
                 )
+                // Per-tab sort cycle. Hidden on the FAVS tab (where sort is
+                // locked to user-set order). Tapping rotates A→Z → BY AREA →
+                // BY KIND → back to A→Z within the active tab; the choice
+                // sticks while the picker is open so back-and-forward chip
+                // switches feel sticky.
+                if (ui.filter != PickerFilter.FAVS) {
+                    val activeSort = ui.sortPerFilter[ui.filter]
+                        ?: FavoritesPickerViewModel.SortOrder.ALPHA
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "SORT",
+                            style = R1.labelMicro,
+                            color = R1.InkMuted,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(R1.ShapeS)
+                                .background(R1.SurfaceMuted)
+                                .border(1.dp, R1.Hairline, R1.ShapeS)
+                                .r1Pressable(
+                                    onClick = { vm.cycleSortOrder() },
+                                    contentDescription = "Cycle sort order",
+                                )
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                text = activeSort.label,
+                                style = R1.labelMicro,
+                                color = R1.InkSoft,
+                            )
+                        }
+                    }
+                }
             }
 
             // Pull-to-refresh wrap so the user can re-fetch HA's entity list

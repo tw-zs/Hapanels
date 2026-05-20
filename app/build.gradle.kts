@@ -108,6 +108,20 @@ android {
         buildConfig = true
     }
 
+    // Compose compiler metrics + stability reports for the release variant. Emits
+    // composables.txt / classes.txt under build/compose_compiler so we can audit
+    // skip rates + stable-vs-unstable parameter classifications when chasing perf
+    // regressions. Gated behind a project property so opt-in (the build doesn't
+    // generate the reports unless `-PcomposeReports=true` is on the command line)
+    // since the files are large and CI builds don't need them.
+    val composeReports = providers.gradleProperty("composeReports").orNull == "true"
+    if (composeReports) {
+        composeCompiler {
+            metricsDestination = layout.buildDirectory.dir("compose_compiler/metrics")
+            reportsDestination = layout.buildDirectory.dir("compose_compiler/reports")
+        }
+    }
+
     packaging {
         resources.excludes += setOf(
             "/META-INF/{AL2.0,LGPL2.1}",
@@ -161,6 +175,10 @@ dependencies {
     // so the ~3 MB icon set was carrying nothing at runtime.
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
+    // LeakCanary auto-installs on debug builds; surfaces a heap-dump-backed
+    // notification when an Activity / Fragment / ViewModel leaks. Zero release
+    // impact (debugImplementation = scoped to the debug variant only).
+    debugImplementation(libs.leakcanary)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

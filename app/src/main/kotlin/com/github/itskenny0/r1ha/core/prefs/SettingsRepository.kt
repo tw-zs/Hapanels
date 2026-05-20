@@ -426,6 +426,35 @@ class SettingsRepository private constructor(
         }
     }
 
+    /**
+     * Append one [FavoritePage] per HA area, each pre-populated with the
+     * caller-supplied entity ids for that area. Existing pages are left
+     * intact; the new pages are appended at the end and the first newly-
+     * created page becomes the active tab so the user can see the result
+     * immediately. Empty areas are skipped so a HA install with 30
+     * declared areas but only 5 with entities doesn't produce 25 empty
+     * tabs. Returns the count of pages actually created.
+     */
+    suspend fun generatePagesFromAreas(areas: List<Pair<String, List<String>>>): Int {
+        val nonEmpty = areas.filter { it.second.isNotEmpty() }
+        if (nonEmpty.isEmpty()) return 0
+        val newPages = nonEmpty.map { (area, entityIds) ->
+            val newId = "p" + java.util.UUID.randomUUID().toString().replace("-", "").take(8)
+            FavoritePage(
+                id = newId,
+                name = area.replace('_', ' ').uppercase().take(20),
+                favorites = entityIds,
+            )
+        }
+        update { s ->
+            s.copy(
+                pages = s.pages + newPages,
+                activePageId = newPages.first().id,
+            )
+        }
+        return newPages.size
+    }
+
     /** Append a fresh empty page and switch the active id to it. Returns the new
      *  page's id so callers can immediately render its (empty) deck. */
     suspend fun addPage(name: String): String {

@@ -16,7 +16,10 @@ import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.WheelSettings
 import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -606,6 +609,47 @@ class CardStackViewModel(
     /** Add a fresh empty page and make it the active one. */
     fun addPage(name: String) {
         viewModelScope.launch { settings.addPage(name) }
+    }
+
+    /**
+     * Build one [FavoritePage] per HA area from the currently-loaded entity
+     * cache. Each generated page's name is the area display name (uppercased,
+     * truncated to 20 chars); its favourites list is every controllable
+     * entity HA reports as belonging to that area. Skips areas with no
+     * controllable entities so the user doesn't end up with a swarm of
+     * empty tabs. Surfaces the new-page count via a one-shot SharedFlow so
+     * the caller can toast the result.
+     */
+    private val _pagesGenerated = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val pagesGenerated: SharedFlow<Int> = _pagesGenerated.asSharedFlow()
+    fun generatePagesFromAreas() {
+        viewModelScope.launch {
+            // Pull a fresh entity listing rather than relying on the live
+            // card cache — the cache is filtered to a single page's
+            // favourites, but we want every entity HA reports.
+            val all = haRepository.listAllEntities().getOrNull().orEmpty()
+            val controllable = all.filter { e ->
+                val d = e.id.domain
+                // Surface domains the SwitchCard / theme.Card can actually
+                // operate on. Sensors / binary_sensors / cameras would just
+                // bloat the page since they aren't toggleable.
+                d == Domain.LIGHT || d == Domain.SWITCH || d == Domain.FAN ||
+                    d == Domain.COVER || d == Domain.MEDIA_PLAYER ||
+                    d == Domain.CLIMATE || d == Domain.HUMIDIFIER ||
+                    d == Domain.VALVE || d == Domain.WATER_HEATER ||
+                    d == Domain.LOCK || d == Domain.VACUUM ||
+                    d == Domain.LAWN_MOWER || d == Domain.INPUT_BOOLEAN ||
+                    d == Domain.INPUT_NUMBER || d == Domain.NUMBER
+            }
+            val byArea = controllable
+                .filter { !it.area.isNullOrBlank() }
+                .groupBy { it.area!! }
+            val ordered = byArea.toSortedMap().map { (area, list) ->
+                area to list.map { it.id.value }.sorted()
+            }
+            val created = settings.generatePagesFromAreas(ordered)
+            _pagesGenerated.tryEmit(created)
+        }
     }
 
     /** Rename an existing page in place. */

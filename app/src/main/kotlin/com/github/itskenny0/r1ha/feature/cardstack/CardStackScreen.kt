@@ -387,6 +387,20 @@ fun CardStackScreen(
         onDispose { view.keepScreenOn = false }
     }
 
+    // Surface a toast when the area-driven page generator completes so the
+    // user sees how many tabs were created (zero = no HA areas had
+    // controllable entities; common on a fresh HA install).
+    androidx.compose.runtime.LaunchedEffect(vm) {
+        vm.pagesGenerated.collect { count ->
+            val msg = when (count) {
+                0 -> "No HA areas with controllable entities. Set areas in HA first."
+                1 -> "1 page generated from HA areas."
+                else -> "$count pages generated from HA areas."
+            }
+            com.github.itskenny0.r1ha.core.util.Toaster.show(msg)
+        }
+    }
+
     // Auto-surface the last crash report if one exists on disk. Fires once
     // per CardStackScreen composition (i.e. once per launch). The expandable
     // error toast carries the full trace; tapping it expands so the user can
@@ -1020,6 +1034,10 @@ fun CardStackScreen(
                 canMoveRight = targetIdx >= 0 && targetIdx < appSettings.pages.lastIndex,
                 onAdd = { name ->
                     vm.addPage(name)
+                    tabManagementForId.value = null
+                },
+                onGenerateFromAreas = {
+                    vm.generatePagesFromAreas()
                     tabManagementForId.value = null
                 },
                 onRename = { id, name ->
@@ -1829,6 +1847,7 @@ private fun TabManageDialog(
     /** Mirror of [canMoveLeft] for the right side. */
     canMoveRight: Boolean,
     onAdd: (String) -> Unit,
+    onGenerateFromAreas: () -> Unit,
     onRename: (String, String) -> Unit,
     onDelete: (String) -> Unit,
     onMoveLeft: (String) -> Unit,
@@ -1916,6 +1935,21 @@ private fun TabManageDialog(
                         if (isAdd) onAdd(trimmed) else page?.let { onRename(it.id, trimmed) }
                     },
                     modifier = Modifier.weight(1f),
+                )
+            }
+            // Bulk generator — only in add mode. Pulls every HA area with at
+            // least one controllable entity and creates one tab per area,
+            // pre-populated with that area's lights, switches, climate, etc.
+            // Faster than naming and populating a tab manually for each
+            // room. The user can rename / re-accent / delete the generated
+            // tabs afterwards through the same dialog.
+            if (isAdd) {
+                Spacer(Modifier.height(8.dp))
+                R1Button(
+                    text = "GENERATE FROM HA AREAS",
+                    onClick = onGenerateFromAreas,
+                    modifier = Modifier.fillMaxWidth(),
+                    variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
                 )
             }
             // MOVE LEFT / MOVE RIGHT — shifts the page one slot in either

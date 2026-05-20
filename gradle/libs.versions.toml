@@ -39,6 +39,7 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 leakcanary = { module = "com.squareup.leakcanary:leakcanary-android", version = "2.14" }
 androidx-webkit = { module = "androidx.webkit:webkit", version = "1.12.1" }
+androidx-tracing = { module = "androidx.tracing:tracing-ktx", version = "1.2.0" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }

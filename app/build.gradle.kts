@@ -183,6 +183,11 @@ dependencies {
     // androidx.webkit: pulls in WebSettingsCompat so we can honour algorithmic
     // darkening on the Lovelace fallback (API 33+) without a manual SDK check.
     implementation(libs.androidx.webkit)
+    // androidx.tracing: trace() blocks let us wrap App.onCreate + AppGraph wiring
+    // so cold-start profiling tools (Perfetto, simpleperf) can show our intent
+    // instead of opaque app code regions. Tracing is a no-op in release if R8
+    // determines no tracing client is attached.
+    implementation(libs.androidx.tracing)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)

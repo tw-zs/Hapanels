@@ -53,6 +53,7 @@ class App : Application() {
     }
 
     override fun onCreate() {
+        androidx.tracing.Trace.beginSection("R1HA.App.onCreate")
         super.onCreate()
         // Debug-only StrictMode: catches main-thread disk + network I/O and common
         // VM-policy leaks (closeable not closed, untagged sockets, etc.). Release
@@ -146,9 +147,15 @@ class App : Application() {
         }
         R1Log.i("App.onCreate", "application starting")
         appScope.launch {
-            graph.haRepository.start()
+            androidx.tracing.Trace.beginSection("R1HA.haRepository.start")
+            try {
+                graph.haRepository.start()
+            } finally {
+                androidx.tracing.Trace.endSection()
+            }
             R1Log.i("App.onCreate", "haRepository.start() returned")
         }
+        androidx.tracing.Trace.endSection()
         // Mirror the latest WheelKeySource into a volatile field so MainActivity's
         // dispatchKeyEvent (which runs on the UI thread and can't suspend) can honour the
         // user's "Key source" setting synchronously.

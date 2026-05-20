@@ -54,11 +54,27 @@ class DebouncedCaller<K, V>(
             } else {
                 existing?.job?.cancel()
                 val firstSubmittedAt = existing?.firstSubmittedAt ?: now
+                // Use a placeholder Job assigned synchronously so the launched
+                // coroutine can compare against the current pending entry. Without
+                // the identity check, a submit landing between pending.remove and
+                // action() would start a fresh burst whose action also fires,
+                // breaking the "exactly one fire per quiet window" contract.
+                val ownJob = kotlinx.coroutines.CompletableDeferred<Job>()
                 val job = scope.launch {
+                    val self = ownJob.await()
                     delay(debounceMillis)
-                    mutex.withLock { pending.remove(key) }
-                    action(key, value)
+                    val stillOwn = mutex.withLock {
+                        val cur = pending[key]
+                        if (cur?.job === self) {
+                            pending.remove(key)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    if (stillOwn) action(key, value)
                 }
+                ownJob.complete(job)
                 pending[key] = Pending(value, job, firstSubmittedAt)
             }
         }

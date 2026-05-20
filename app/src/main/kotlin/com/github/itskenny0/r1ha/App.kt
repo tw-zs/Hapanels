@@ -18,6 +18,28 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Debug-only StrictMode: catches main-thread disk + network I/O and common
+        // VM-policy leaks (closeable not closed, untagged sockets, etc.). Release
+        // builds never install StrictMode so end-users don't pay the runtime cost
+        // or eat false-positive crashes if a third-party process throws.
+        if (BuildConfig.DEBUG) {
+            android.os.StrictMode.setThreadPolicy(
+                android.os.StrictMode.ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()
+                    .penaltyLog()
+                    .build(),
+            )
+            android.os.StrictMode.setVmPolicy(
+                android.os.StrictMode.VmPolicy.Builder()
+                    .detectLeakedClosableObjects()
+                    .detectLeakedRegistrationObjects()
+                    .detectActivityLeaks()
+                    .penaltyLog()
+                    .build(),
+            )
+        }
         Toaster.init(this)
         // Wire the album-art cache to the app's cache dir so HA media_player
         // entity_pictures persist across launches. Disk hit ≈ 0 ms vs the ~300

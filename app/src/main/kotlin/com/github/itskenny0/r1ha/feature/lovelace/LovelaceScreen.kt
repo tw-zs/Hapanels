@@ -171,10 +171,20 @@ private fun LovelaceWebView(
         WebView(context).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            // Allow HA's Material Web Components + service worker to
-            // initialise — they need DOM storage + cookies + mixed
-            // content (the WS upgrade) to function.
-            settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            // Mixed-content policy keyed to the base URL scheme. The previous
+            // COMPATIBILITY_MODE blanket-allowed HTTP subresources on an HTTPS
+            // page — a sub-resource downgrade attacker could swap a CDN-served
+            // dashboard asset for an HTTP-served one and inject JS into the
+            // HA frontend. Lock HTTPS bases to NEVER_ALLOW (HA's own assets are
+            // all same-origin HTTPS so this never affects the legit flow), and
+            // keep ALWAYS_ALLOW for HTTP bases (the entire load is already
+            // plaintext so blocking mixed content would just break the page
+            // without adding security).
+            settings.mixedContentMode = if (serverUrl.startsWith("https://", ignoreCase = true)) {
+                android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            } else {
+                android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
             // Honour the system / in-app dark theme. HA's frontend reads
             // prefers-color-scheme to flip its own theme tokens; without this
             // the embedded view always rendered light regardless of the

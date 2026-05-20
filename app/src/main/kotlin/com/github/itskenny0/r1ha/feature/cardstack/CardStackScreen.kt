@@ -122,12 +122,12 @@ fun CardStackScreen(
     // (cheap; only re-reads two StateFlow values) so the dot flips into amber
     // promptly after the WS goes silent and back to none when an event lands.
     val lastEventAt by haRepository.lastEventAtMillis.collectAsStateWithLifecycle()
-    val nowTick = androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis())
-    }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    // produceState binds the 10s tick to composition lifecycle automatically: the
+    // previous manual LaunchedEffect + mutableLongStateOf pair spelled out the
+    // cancellation behaviour produceState gives for free.
+    val nowTick by androidx.compose.runtime.produceState(initialValue = System.currentTimeMillis()) {
         while (true) {
-            nowTick.longValue = System.currentTimeMillis()
+            value = System.currentTimeMillis()
             kotlinx.coroutines.delay(10_000L)
         }
     }
@@ -136,7 +136,7 @@ fun CardStackScreen(
     // on every tick (nowTick read at the outer scope = invalidates everything that reads
     // the outer composable's state).
     // Key-less remember: derivedStateOf already reads connection / lastEventAt /
-    // nowTick.longValue inside its block and tracks them as Snapshot dependencies,
+    // nowTick inside its block and tracks them as Snapshot dependencies,
     // so re-creating the derived state every time one changes (the previous
     // `remember(connection, lastEventAt) { derivedStateOf { ... } }`) defeated the
     // memoisation. With a stable remember the derived value is computed once and
@@ -144,7 +144,7 @@ fun CardStackScreen(
     val wsSilent by androidx.compose.runtime.remember {
         androidx.compose.runtime.derivedStateOf {
             connection is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
-                lastEventAt > 0L && (nowTick.longValue - lastEventAt) > 60_000L
+                lastEventAt > 0L && (nowTick - lastEventAt) > 60_000L
         }
     }
 

@@ -217,7 +217,7 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
         if (query.isNotEmpty()) {
             Spacer(Modifier.width(6.dp))
             Box(
-                modifier = Modifier.size(28.dp).r1Pressable({ onQueryChange("") }),
+                modifier = Modifier.size(48.dp).r1Pressable({ onQueryChange("") }),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(text = "✕", style = R1.labelMicro, color = R1.InkSoft)

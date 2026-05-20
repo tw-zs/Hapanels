@@ -159,9 +159,11 @@ fun SearchScreen(
                 )
             }
             if (ui.query.isNotEmpty()) {
-                Spacer(Modifier.width(6.dp))
+                // 48 dp tap surface meets Android's interactive-target guidance; the
+                // visible ✕ stays glyph-sized via the inner Text. Same pattern
+                // applies on every clear-button across the app.
                 Box(
-                    modifier = Modifier.size(28.dp).r1Pressable({ vm.setQuery("") }),
+                    modifier = Modifier.size(48.dp).r1Pressable({ vm.setQuery("") }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(text = "✕", style = R1.labelMicro, color = R1.InkSoft)
@@ -400,7 +402,7 @@ private fun SearchResultRow(
         // green/red chart icon that visibly broke the row's tone.
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .r1Pressable(onClick = onHistory),
             contentAlignment = Alignment.Center,
         ) {
@@ -416,7 +418,7 @@ private fun SearchResultRow(
         // so the user doesn't fruitlessly re-tap.
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .r1Pressable(onClick = onFavorite),
             contentAlignment = Alignment.Center,
         ) {

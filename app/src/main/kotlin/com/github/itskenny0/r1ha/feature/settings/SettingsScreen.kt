@@ -1531,7 +1531,7 @@ private fun SettingsHeader(
                 Spacer(Modifier.width(6.dp))
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(48.dp)
                         .r1Pressable(
                             onClick = { onQueryChange("") },
                         ),

@@ -360,7 +360,7 @@ private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
             Spacer(Modifier.width(6.dp))
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(48.dp)
                     .r1Pressable({ onQueryChange("") }),
                 contentAlignment = Alignment.Center,
             ) {

@@ -2275,10 +2275,14 @@ private fun QuickActionsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "🏠", label = "TODAY", onClick = onOpenDashboard)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "🎤", label = "ASSIST", onClick = onOpenAssist)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "🔍", label = "SEARCH", onClick = onOpenSearch)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "🎬", label = "SCENES", onClick = onOpenScenes)
+                // Monochrome typographic glyphs only; the previous emoji set rendered
+                // multi-colour on most fonts and visibly broke the otherwise hairline
+                // chrome aesthetic. ⌂ ◉ ⌕ ▸ are all single-codepoint and share the
+                // chrome ink colour through their parent Text style.
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⌂", label = "TODAY", onClick = onOpenDashboard)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "◉", label = "ASSIST", onClick = onOpenAssist)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⌕", label = "SEARCH", onClick = onOpenSearch)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▸", label = "SCENES", onClick = onOpenScenes)
             }
             Spacer(Modifier.height(6.dp))
             Row(
@@ -2286,9 +2290,9 @@ private fun QuickActionsSheet(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⚙", label = "AUTO", onClick = onOpenAutomations)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⚡", label = "ENERGY", onClick = onOpenEnergy)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "📍", label = "ZONES", onClick = onOpenZones)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "📱", label = "DEVICE", onClick = onOpenDevice)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "↯", label = "ENERGY", onClick = onOpenEnergy)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⌖", label = "ZONES", onClick = onOpenZones)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▭", label = "DEVICE", onClick = onOpenDevice)
             }
             Spacer(Modifier.height(6.dp))
             // Third row — just the ALERTS tile for now (single-wide
@@ -2298,7 +2302,7 @@ private fun QuickActionsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "🔔", label = "ALERTS", onClick = onOpenNotifications)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "!", label = "ALERTS", onClick = onOpenNotifications)
                 Spacer(Modifier.weight(3f))
             }
             Spacer(Modifier.height(14.dp))

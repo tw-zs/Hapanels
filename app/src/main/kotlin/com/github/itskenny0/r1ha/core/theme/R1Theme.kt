@@ -123,6 +123,7 @@ data class CardRenderModel(
         VALVE,
         VACUUM,
         WATER_HEATER,
+        LAWN_MOWER,
     }
     enum class AccentRole { WARM, COOL, GREEN, NEUTRAL }
 }

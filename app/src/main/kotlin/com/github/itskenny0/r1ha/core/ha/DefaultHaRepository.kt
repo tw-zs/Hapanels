@@ -596,6 +596,11 @@ class DefaultHaRepository(
             Domain.VACUUM -> stateStr.equals("cleaning", ignoreCase = true) ||
                 stateStr.equals("returning", ignoreCase = true) ||
                 stateStr.equals("on", ignoreCase = true)
+            // Lawn mower: parallel state taxonomy to vacuum. Treat any active
+            // state (mowing, returning) as "on" so card visuals reflect motion.
+            Domain.LAWN_MOWER -> stateStr.equals("mowing", ignoreCase = true) ||
+                stateStr.equals("returning", ignoreCase = true) ||
+                stateStr.equals("on", ignoreCase = true)
             // Select / input_select have no on/off: they're settable enums. Pin
             // isOn to false so tap-toggle doesn't try to flip them; the dedicated
             // picker overlay is the only way to change the option.
@@ -673,6 +678,57 @@ class DefaultHaRepository(
             mediaSupportedFeatures = if (id.domain == Domain.MEDIA_PLAYER)
                 raw.attributes["supported_features"].asInt() ?: 0
             else 0,
+            mediaShuffle = id.domain == Domain.MEDIA_PLAYER &&
+                (raw.attributes["shuffle"].asBoolean() ?: false),
+            mediaRepeat = if (id.domain == Domain.MEDIA_PLAYER)
+                raw.attributes["repeat"].asString() else null,
+            mediaSource = if (id.domain == Domain.MEDIA_PLAYER)
+                raw.attributes["source"].asString() else null,
+            mediaSourceList = if (id.domain == Domain.MEDIA_PLAYER)
+                extractStringList(raw.attributes["source_list"]) else emptyList(),
+            vacuumSupportedFeatures = if (id.domain == Domain.VACUUM)
+                raw.attributes["supported_features"].asInt() ?: 0 else 0,
+            vacuumBatteryLevel = if (id.domain == Domain.VACUUM)
+                raw.attributes["battery_level"].asInt() else null,
+            vacuumStatus = if (id.domain == Domain.VACUUM)
+                raw.attributes["status"].asString() ?: stateStr else null,
+            vacuumFanSpeed = if (id.domain == Domain.VACUUM)
+                raw.attributes["fan_speed"].asString() else null,
+            vacuumFanSpeedList = if (id.domain == Domain.VACUUM)
+                extractStringList(raw.attributes["fan_speed_list"]) else emptyList(),
+            climateHvacMode = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                (if (id.domain == Domain.CLIMATE) stateStr
+                else raw.attributes["operation_mode"].asString()) else null,
+            climateHvacModes = if (id.domain == Domain.CLIMATE)
+                extractStringList(raw.attributes["hvac_modes"])
+            else if (id.domain == Domain.WATER_HEATER)
+                extractStringList(raw.attributes["operation_list"])
+            else emptyList(),
+            climateFanMode = if (id.domain == Domain.CLIMATE)
+                raw.attributes["fan_mode"].asString() else null,
+            climateFanModes = if (id.domain == Domain.CLIMATE)
+                extractStringList(raw.attributes["fan_modes"]) else emptyList(),
+            climateCurrentTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["current_temperature"].asDouble() else null,
+            climateTargetTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["temperature"].asDouble() else null,
+            climateTargetTempLow = if (id.domain == Domain.CLIMATE)
+                raw.attributes["target_temp_low"].asDouble() else null,
+            climateTargetTempHigh = if (id.domain == Domain.CLIMATE)
+                raw.attributes["target_temp_high"].asDouble() else null,
+            climateTempStep = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["target_temp_step"].asDouble() else null,
+            climateMinTemp = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["min_temp"].asDouble() else null,
+            climateMaxTemp = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["max_temp"].asDouble() else null,
+            temperatureUnit = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                raw.attributes["temperature_unit"].asString()
+                    ?: raw.attributes["unit_of_measurement"].asString() else null,
+            lockCodeFormat = if (id.domain == Domain.LOCK)
+                raw.attributes["code_format"].asString() else null,
+            lockChangedBy = if (id.domain == Domain.LOCK)
+                raw.attributes["changed_by"].asString() else null,
         )
         cache.update { it + (id to newState) }
         // Heartbeat: any successfully-applied event means the WS path is alive. The
@@ -723,7 +779,7 @@ class DefaultHaRepository(
         // Valve: same shape as cover — `current_position` 0..100 (closed..open).
         Domain.VALVE -> attrs["current_position"].asInt()?.coerceIn(0, 100)
         // Vacuums: percent abstraction doesn't apply (states are categorical).
-        Domain.VACUUM -> null
+        Domain.VACUUM, Domain.LAWN_MOWER -> null
         // Number / input_number: state is the value. We don't have access to row.state
         // here (computePercent takes only attrs), but we can read the entity's range
         // from attributes; the actual conversion uses minRaw/maxRaw at the VM layer
@@ -815,7 +871,7 @@ class DefaultHaRepository(
         Domain.CLIMATE, Domain.WATER_HEATER -> climateTargetTemp(attrs)
         Domain.SWITCH, Domain.INPUT_BOOLEAN, Domain.AUTOMATION, Domain.LOCK,
         Domain.SCENE, Domain.SCRIPT, Domain.BUTTON, Domain.INPUT_BUTTON,
-        Domain.BINARY_SENSOR, Domain.VACUUM,
+        Domain.BINARY_SENSOR, Domain.VACUUM, Domain.LAWN_MOWER,
         Domain.SELECT, Domain.INPUT_SELECT -> null
         // For plain sensors the *state* IS the reading — there's no attribute to read from.
         // The SensorCard renders the rawState string directly; we don't try to coerce it
@@ -893,8 +949,8 @@ class DefaultHaRepository(
         Domain.NUMBER, Domain.INPUT_NUMBER -> true
         // Pure on/off domains — no scalar; rendered as switch cards.
         Domain.SWITCH, Domain.INPUT_BOOLEAN, Domain.AUTOMATION, Domain.LOCK -> false
-        // Vacuums map naturally to switch cards (start/return-to-base on tap).
-        Domain.VACUUM -> false
+        // Vacuums + lawn mowers map naturally to switch cards (start/dock on tap).
+        Domain.VACUUM, Domain.LAWN_MOWER -> false
         // Action-only domains — no scalar; rendered as ActionCard tiles.
         Domain.SCENE, Domain.SCRIPT, Domain.BUTTON, Domain.INPUT_BUTTON -> false
         // Sensors are read-only — rendered as SensorCard, no wheel.
@@ -1033,6 +1089,9 @@ class DefaultHaRepository(
                         Domain.VACUUM -> stateStr.equals("cleaning", ignoreCase = true) ||
                             stateStr.equals("returning", ignoreCase = true) ||
                             stateStr.equals("on", ignoreCase = true)
+                        Domain.LAWN_MOWER -> stateStr.equals("mowing", ignoreCase = true) ||
+                            stateStr.equals("returning", ignoreCase = true) ||
+                            stateStr.equals("on", ignoreCase = true)
                         // Settable enums — no on/off concept.
                         Domain.SELECT, Domain.INPUT_SELECT -> false
                         // Helper-only — Helpers screen renders these bespoke.
@@ -1089,6 +1148,57 @@ class DefaultHaRepository(
                     mediaSupportedFeatures = if (id.domain == Domain.MEDIA_PLAYER)
                         attrs["supported_features"].asInt() ?: 0
                     else 0,
+                    mediaShuffle = id.domain == Domain.MEDIA_PLAYER &&
+                        (attrs["shuffle"].asBoolean() ?: false),
+                    mediaRepeat = if (id.domain == Domain.MEDIA_PLAYER)
+                        attrs["repeat"].asString() else null,
+                    mediaSource = if (id.domain == Domain.MEDIA_PLAYER)
+                        attrs["source"].asString() else null,
+                    mediaSourceList = if (id.domain == Domain.MEDIA_PLAYER)
+                        extractStringList(attrs["source_list"]) else emptyList(),
+                    vacuumSupportedFeatures = if (id.domain == Domain.VACUUM)
+                        attrs["supported_features"].asInt() ?: 0 else 0,
+                    vacuumBatteryLevel = if (id.domain == Domain.VACUUM)
+                        attrs["battery_level"].asInt() else null,
+                    vacuumStatus = if (id.domain == Domain.VACUUM)
+                        attrs["status"].asString() ?: stateStr else null,
+                    vacuumFanSpeed = if (id.domain == Domain.VACUUM)
+                        attrs["fan_speed"].asString() else null,
+                    vacuumFanSpeedList = if (id.domain == Domain.VACUUM)
+                        extractStringList(attrs["fan_speed_list"]) else emptyList(),
+                    climateHvacMode = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        (if (id.domain == Domain.CLIMATE) stateStr
+                        else attrs["operation_mode"].asString()) else null,
+                    climateHvacModes = if (id.domain == Domain.CLIMATE)
+                        extractStringList(attrs["hvac_modes"])
+                    else if (id.domain == Domain.WATER_HEATER)
+                        extractStringList(attrs["operation_list"])
+                    else emptyList(),
+                    climateFanMode = if (id.domain == Domain.CLIMATE)
+                        attrs["fan_mode"].asString() else null,
+                    climateFanModes = if (id.domain == Domain.CLIMATE)
+                        extractStringList(attrs["fan_modes"]) else emptyList(),
+                    climateCurrentTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["current_temperature"].asDouble() else null,
+                    climateTargetTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["temperature"].asDouble() else null,
+                    climateTargetTempLow = if (id.domain == Domain.CLIMATE)
+                        attrs["target_temp_low"].asDouble() else null,
+                    climateTargetTempHigh = if (id.domain == Domain.CLIMATE)
+                        attrs["target_temp_high"].asDouble() else null,
+                    climateTempStep = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["target_temp_step"].asDouble() else null,
+                    climateMinTemp = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["min_temp"].asDouble() else null,
+                    climateMaxTemp = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["max_temp"].asDouble() else null,
+                    temperatureUnit = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["temperature_unit"].asString()
+                            ?: attrs["unit_of_measurement"].asString() else null,
+                    lockCodeFormat = if (id.domain == Domain.LOCK)
+                        attrs["code_format"].asString() else null,
+                    lockChangedBy = if (id.domain == Domain.LOCK)
+                        attrs["changed_by"].asString() else null,
                 )
                 }.getOrElse { t ->
                     R1Log.w("HaRepo.listAll", "construction failed for ${row.entity_id}: ${t.message}")

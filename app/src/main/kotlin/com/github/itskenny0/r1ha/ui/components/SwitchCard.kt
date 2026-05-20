@@ -141,6 +141,10 @@ fun SwitchCard(
             // robot, tapping DOCK sends it back to base. Matches the actual
             // services dispatched (vacuum.start and vacuum.return_to_base).
             com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> "CLEAN" to "DOCK"
+            // Lawn mowers map identically — MOW kicks off the start_mowing
+            // service, DOCK sends the mower back. The DOCK label matches the
+            // service name `lawn_mower.dock` so the affordance reads true.
+            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> "MOW" to "DOCK"
             // Media players reach the SwitchCard path when they don't advertise
             // VOLUME_SET (radio streams, simple players). Tapping the top
             // end-stop dispatches media_play, bottom dispatches media_pause —
@@ -356,6 +360,14 @@ private fun friendlySwitchStateWord(state: EntityState): String {
             "returning" -> "RETURNING"
             "paused" -> "PAUSED"
             "idle" -> "IDLE"
+            "error" -> "ERROR"
+            else -> raw.uppercase()
+        }
+        com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> when (raw) {
+            "mowing" -> "MOWING"
+            "docked" -> "DOCKED"
+            "returning" -> "RETURNING"
+            "paused" -> "PAUSED"
             "error" -> "ERROR"
             else -> raw.uppercase()
         }

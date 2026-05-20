@@ -72,6 +72,7 @@ object PragmaticHybridTheme : R1Theme {
         CardRenderModel.Glyph.VALVE -> "VALVE"
         CardRenderModel.Glyph.VACUUM -> "VACUUM"
         CardRenderModel.Glyph.WATER_HEATER -> "WATER HEATER"
+        CardRenderModel.Glyph.LAWN_MOWER -> "MOWER"
     }
 
     @Composable

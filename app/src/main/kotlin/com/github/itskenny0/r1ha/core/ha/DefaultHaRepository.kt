@@ -1666,25 +1666,63 @@ class DefaultHaRepository(
             val server = s.server ?: error("Server URL not configured.")
             refresher?.ensureFresh()
             val url = "${server.url.trimEnd('/')}/api/error_log"
-            val body = simpleAuthedGet(url) ?: run {
+            // Stream the body and keep only the last 32 KB instead of materialising
+            // the whole response. HA's error log can be tens of MB on a misbehaving
+            // install, and the previous `resp.body.string() then takeLast()` shape
+            // allocated the entire body before truncating, which crashed the app
+            // with OOM on the 512MB-heap R1 when the log got pathological.
+            val maxBytes = 32 * 1024
+            val body = simpleAuthedGetTail(url, maxBytes) ?: run {
                 if (refresher?.forceRefresh() == true) {
-                    simpleAuthedGet(url)
+                    simpleAuthedGetTail(url, maxBytes)
                         ?: error("Home Assistant returned HTTP 401 for /api/error_log after refresh.")
                 } else {
                     error("Home Assistant returned HTTP 401 for /api/error_log.")
                 }
             }
-            // Cap body size — HA's error log can be megabytes on busy
-            // installs with WARN logging. Take the LAST ~32 KB which is
-            // where the most-recent events live.
-            val maxBytes = 32 * 1024
-            if (body.length > maxBytes) {
-                "… (truncated to last $maxBytes chars)\n" + body.takeLast(maxBytes)
-            } else body
+            body
         }.onFailure { t ->
             R1Log.w("HaRepo.errorLog", "fetch failed: ${t.message}")
         }
     }
+
+    /**
+     * Stream a body and keep the last [maxBytes] only. Uses an
+     * `okio.Buffer` as a sliding window — every 4 KB read appends to
+     * the buffer; once the buffer exceeds maxBytes we `skip()` the
+     * excess off the front. Memory is bounded by maxBytes + 4 KB
+     * regardless of upstream size.
+     */
+    private suspend fun simpleAuthedGetTail(url: String, maxBytes: Int): String? =
+        withContext(Dispatchers.IO) {
+            val t = tokens.load()
+                ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
+            val req = Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer ${t.accessToken}")
+                .get()
+                .build()
+            http.newCall(req).execute().use { resp ->
+                if (resp.code == 401) return@withContext null
+                require(resp.isSuccessful) { "HTTP ${resp.code} for $url" }
+                val source = resp.body?.source() ?: return@withContext ""
+                val window = okio.Buffer()
+                val tmp = okio.Buffer()
+                val chunk = 4 * 1024L
+                var totalRead = 0L
+                while (true) {
+                    val n = source.read(tmp, chunk)
+                    if (n == -1L) break
+                    totalRead += n
+                    tmp.readAll(window)
+                    val over = window.size - maxBytes
+                    if (over > 0) window.skip(over)
+                }
+                val truncated = totalRead > window.size
+                val tail = window.readUtf8()
+                if (truncated) "… (truncated to last $maxBytes chars)\n$tail" else tail
+            }
+        }
 
     /** Bearer-authed GET — returns the body as a String, or null on HTTP
      *  401 (so the caller can refresh + retry). Used by surfaces that

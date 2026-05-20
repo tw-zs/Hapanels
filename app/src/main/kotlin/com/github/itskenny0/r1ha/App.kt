@@ -16,6 +16,42 @@ class App : Application() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /**
+     * Debug-only main-thread health probe. Every [PROBE_INTERVAL_MS] we post a
+     * sentinel Runnable that toggles a flag; from a background thread we sleep
+     * for the same interval and check whether the flag flipped. If it didn't,
+     * the main thread is stuck and we dump its stack. False positives are
+     * possible during GC pauses but the threshold is generous enough that
+     * routine work rarely trips it.
+     */
+    private fun startDebugAnrWatchdog() {
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        val tick = java.util.concurrent.atomic.AtomicLong(0L)
+        val probeIntervalMs = 5_000L
+        val anrThresholdMs = 4_000L
+        Thread({
+            var lastSeen = -1L
+            while (true) {
+                main.post { tick.incrementAndGet() }
+                try {
+                    Thread.sleep(probeIntervalMs)
+                } catch (_: InterruptedException) {
+                    return@Thread
+                }
+                val now = tick.get()
+                if (now == lastSeen) {
+                    val trace = android.os.Looper.getMainLooper().thread.stackTrace
+                        .joinToString("\n") { "  at $it" }
+                    R1Log.w(
+                        "App.anr",
+                        "main thread didn't tick in ${anrThresholdMs / 1000}s\n$trace",
+                    )
+                }
+                lastSeen = now
+            }
+        }, "r1ha-anr-watchdog").apply { isDaemon = true }.start()
+    }
+
     override fun onCreate() {
         super.onCreate()
         // Debug-only StrictMode: catches main-thread disk + network I/O and common
@@ -45,6 +81,14 @@ class App : Application() {
         // entity_pictures persist across launches. Disk hit ≈ 0 ms vs the ~300
         // ms LAN round-trip every fresh fetch costs on the R1's slow stack.
         com.github.itskenny0.r1ha.ui.components.AsyncBitmapCache.init(this)
+        // Debug-only ANR watchdog: posts a sentinel to the main looper every 5 s
+        // and a paired check-completion ping; if the ping doesn't fire within the
+        // ANR threshold the main thread's current stack trace is logged. Cheap
+        // (~one Runnable per 5 s) and silent unless something's actually stuck.
+        // Release builds skip this so end-users don't pay even that cost.
+        if (BuildConfig.DEBUG) {
+            startDebugAnrWatchdog()
+        }
         // Install a JVM-wide uncaught-exception handler that copies the
         // stack trace into R1LogBuffer BEFORE chaining to the previous
         // handler (which lets Android's default behaviour — crash dialog +

@@ -350,10 +350,13 @@ fun AssistScreen(
                 )
             }
             Spacer(Modifier.width(6.dp))
+            // While in flight the SEND button morphs into STOP so a slow Assist
+            // call (local-LLM agents take 5-30s on weaker hardware) is
+            // interruptible instead of just disabled.
             R1Button(
-                text = "SEND",
-                onClick = { vm.send() },
-                enabled = ui.draft.isNotBlank() && !ui.inFlight,
+                text = if (ui.inFlight) "STOP" else "SEND",
+                onClick = { if (ui.inFlight) vm.cancel() else vm.send() },
+                enabled = ui.inFlight || ui.draft.isNotBlank(),
                 modifier = Modifier.widthIn(min = 64.dp),
             )
         }

@@ -56,6 +56,24 @@ class AssistViewModel(
         _ui.value = _ui.value.copy(draft = value)
     }
 
+    /** Job for the currently-in-flight conversation.process call. Tracked so [cancel]
+     *  can abort a slow local-LLM Assist round-trip; without this the SEND button
+     *  just sits disabled while the user waits for the timeout. */
+    private var sendJob: kotlinx.coroutines.Job? = null
+
+    fun cancel() {
+        sendJob?.cancel()
+        sendJob = null
+        _ui.value = _ui.value.copy(
+            inFlight = false,
+            messages = _ui.value.messages + AssistMessage(
+                text = "(cancelled)",
+                fromUser = false,
+                responseType = "error",
+            ),
+        )
+    }
+
     fun send() {
         val text = _ui.value.draft.trim()
         if (text.isEmpty() || _ui.value.inFlight) return
@@ -65,7 +83,8 @@ class AssistViewModel(
             draft = "",
             inFlight = true,
         )
-        viewModelScope.launch {
+        sendJob?.cancel()
+        sendJob = viewModelScope.launch {
             val result = haRepository.conversationProcess(text = text, conversationId = conversationId)
             result.fold(
                 onSuccess = { response ->

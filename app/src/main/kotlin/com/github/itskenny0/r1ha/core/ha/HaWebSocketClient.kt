@@ -178,6 +178,11 @@ class HaWebSocketClient internal constructor(
         // server's entities (mostly errors, occasionally surprising state changes if entity
         // IDs collided).
         while (outgoing.tryReceive().isSuccess) { /* discard */ }
+        // Reset the request-id counter so a fresh connection starts at 1. HA tolerates any
+        // monotonic sequence, but starting from a clean state makes logs/trace easier to
+        // read across sign-out + sign-in cycles, and any straggler pendingCalls referencing
+        // the old id range can no longer collide with a new request.
+        nextId.set(1)
         _state.value = ConnectionState.Idle
     }
 }

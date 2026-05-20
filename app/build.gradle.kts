@@ -11,6 +11,25 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlinx.kover)
+    alias(libs.plugins.ktlint)
+}
+
+// ktlint runs as an on-demand `./gradlew ktlintCheck` / `ktlintFormat` task.
+// Not auto-wired into the regular `check` task because the existing codebase
+// has style drift from before this plugin was added; forcing all of it through
+// the linter in one go would mean either a thousand-file format commit (which
+// muddies git blame) or a thousand-line baseline file. The pragmatic middle
+// ground: keep the linter available for newly-written code (run it manually
+// before opening a PR), accept the existing drift as is, and gradually heal
+// touched files as they're modified for real reasons.
+ktlint {
+    android = true
+    ignoreFailures = true // for `./gradlew check` paths that include this transitively
+    filter {
+        // Don't lint generated code (BuildConfig, R, etc.) or build outputs.
+        exclude { entry -> entry.file.path.contains("/build/") }
+        exclude("**/build/**")
+    }
 }
 
 android {

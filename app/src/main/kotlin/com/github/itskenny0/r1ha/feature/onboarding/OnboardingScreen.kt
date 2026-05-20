@@ -1,6 +1,8 @@
 package com.github.itskenny0.r1ha.feature.onboarding
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -263,6 +265,40 @@ private fun UrlEntryForm(
                 style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
                 color = com.github.itskenny0.r1ha.core.theme.R1.InkSoft,
             )
+        }
+        // OPEN IN BROWSER chip: lets the user sanity-check the normalised URL in the
+        // system browser before committing to the OAuth round-trip. Common pre-onboarding
+        // diagnostic for "is HA even reachable on this LAN" questions.
+        if (normalised.isNotBlank() && normalised.startsWith("http", ignoreCase = true)) {
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .clip(com.github.itskenny0.r1ha.core.theme.R1.ShapeS)
+                    .background(com.github.itskenny0.r1ha.core.theme.R1.SurfaceMuted)
+                    .border(
+                        1.dp,
+                        com.github.itskenny0.r1ha.core.theme.R1.Hairline,
+                        com.github.itskenny0.r1ha.core.theme.R1.ShapeS,
+                    )
+                    .r1Pressable(onClick = {
+                        runCatching {
+                            ctx.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(normalised),
+                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }
+                    })
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "OPEN IN BROWSER",
+                    style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
+                    color = com.github.itskenny0.r1ha.core.theme.R1.InkSoft,
+                )
+            }
         }
 
         if (error != null) {

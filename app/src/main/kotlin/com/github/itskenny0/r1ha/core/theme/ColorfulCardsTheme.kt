@@ -181,6 +181,39 @@ object ColorfulCardsTheme : R1Theme {
                         isMuted = model.mediaIsMuted,
                         supportedFeatures = model.mediaSupportedFeatures,
                     )
+                    if (model.entityState != null) {
+                        Spacer(Modifier.height(8.dp))
+                        com.github.itskenny0.r1ha.ui.components.MediaExtrasPanel(
+                            state = model.entityState,
+                            accent = accent,
+                        )
+                    }
+                }
+                if (model.entityState != null) {
+                    when (model.domainGlyph) {
+                        CardRenderModel.Glyph.CLIMATE -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.ClimatePanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        CardRenderModel.Glyph.WATER_HEATER -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.WaterHeaterPanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        CardRenderModel.Glyph.VALVE -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.ValvePanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        else -> Unit
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 if (ui.showOnOffPill) {

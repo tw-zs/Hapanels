@@ -174,6 +174,15 @@ data class EntityState(
      * PAUSE / RETURN / SPOT / LOCATE / FAN-SPEED buttons.
      */
     val vacuumSupportedFeatures: Int = 0,
+    /**
+     * Generic `supported_features` int for domains other than media_player /
+     * vacuum (which keep their own dedicated fields for back-compat). Populated
+     * for lawn_mower / climate / valve / water_heater so the per-domain
+     * `hasXFeature` helpers below have a uniform source. 0 = unknown / unset
+     * (the panel falls back to showing every button so an integration without
+     * a bitmask still has a usable UI).
+     */
+    val supportedFeatures: Int = 0,
     /** Vacuum-only: `battery_level` (0..100) when the integration reports it. */
     val vacuumBatteryLevel: Int? = null,
     /**
@@ -281,6 +290,16 @@ data class EntityState(
 
     fun hasVacuumFeature(featureBit: Int): Boolean =
         vacuumSupportedFeatures != 0 && (vacuumSupportedFeatures and featureBit) != 0
+
+    /**
+     * Generic bitmask check for lawn_mower / climate / valve / water_heater. Mirrors
+     * [hasVacuumFeature] but reads the shared [supportedFeatures] field. When the
+     * bitmask is 0 (unknown), returns `true` so panels stay usable on integrations
+     * that don't advertise their bitmask — the same forgive-an-omission rule we
+     * apply to vacuums and media_players.
+     */
+    fun hasFeature(featureBit: Int): Boolean =
+        supportedFeatures == 0 || (supportedFeatures and featureBit) != 0
 
     /**
      * Subset of HA's `ClimateEntityFeature` bitmask. Drives the dedicated climate

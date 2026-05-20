@@ -968,6 +968,22 @@ class CardStackViewModel(
      * one-shot service call with no payload; the volume wheel is still the primary way
      * to set absolute volume, but discrete +/- taps are easier for small adjustments.
      */
+    /**
+     * Generic service-call dispatch from a card panel — vacuum chips, climate
+     * mode picker, lock/unlock, valve open/close, water_heater mode, media
+     * shuffle/repeat/source. Each panel composes its own [ServiceCall] (with
+     * the right service name, target, and data payload) and routes it through
+     * here. Identical to [haRepository.call] from the panel's perspective; the
+     * indirection keeps panels free of repo references and lets failures
+     * surface uniformly via the existing [callFailures] observer.
+     */
+    fun callService(call: com.github.itskenny0.r1ha.core.ha.ServiceCall) {
+        R1Log.i("CardStack.callService", "${call.target} ${call.service}")
+        viewModelScope.launch {
+            haRepository.call(call)
+        }
+    }
+
     fun mediaTransport(entityId: EntityId, action: com.github.itskenny0.r1ha.core.ha.MediaTransport) {
         val entity = _state.value.cardsById[entityId] ?: return
         if (entity.id.domain != Domain.MEDIA_PLAYER) return

@@ -688,6 +688,15 @@ class DefaultHaRepository(
                 extractStringList(raw.attributes["source_list"]) else emptyList(),
             vacuumSupportedFeatures = if (id.domain == Domain.VACUUM)
                 raw.attributes["supported_features"].asInt() ?: 0 else 0,
+            // Generic supported_features for the domains that get a dedicated
+            // panel but don't share fields with the vacuum/media branches.
+            // Lawn-mower / climate / valve / water_heater each read this field
+            // via [EntityState.hasFeature] to gate their respective chips.
+            supportedFeatures = when (id.domain) {
+                Domain.LAWN_MOWER, Domain.CLIMATE, Domain.VALVE, Domain.WATER_HEATER ->
+                    raw.attributes["supported_features"].asInt() ?: 0
+                else -> 0
+            },
             vacuumBatteryLevel = if (id.domain == Domain.VACUUM)
                 raw.attributes["battery_level"].asInt() else null,
             vacuumStatus = if (id.domain == Domain.VACUUM)
@@ -1158,6 +1167,11 @@ class DefaultHaRepository(
                         extractStringList(attrs["source_list"]) else emptyList(),
                     vacuumSupportedFeatures = if (id.domain == Domain.VACUUM)
                         attrs["supported_features"].asInt() ?: 0 else 0,
+                    supportedFeatures = when (id.domain) {
+                        Domain.LAWN_MOWER, Domain.CLIMATE, Domain.VALVE, Domain.WATER_HEATER ->
+                            attrs["supported_features"].asInt() ?: 0
+                        else -> 0
+                    },
                     vacuumBatteryLevel = if (id.domain == Domain.VACUUM)
                         attrs["battery_level"].asInt() else null,
                     vacuumStatus = if (id.domain == Domain.VACUUM)

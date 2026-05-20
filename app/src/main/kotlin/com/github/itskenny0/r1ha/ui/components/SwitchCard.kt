@@ -162,6 +162,40 @@ fun SwitchCard(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Dedicated per-domain panels under the switch track. Each panel
+        // self-gates on the entity's `supported_features` bitmask so unused
+        // chip sets vanish quietly. The order mirrors the SwitchCard's domain
+        // priority (vacuum → mower → lock → valve → water_heater → climate);
+        // only one of these renders for a given entity since the domains are
+        // disjoint.
+        when (state.id.domain) {
+            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> {
+                Spacer(Modifier.height(12.dp))
+                VacuumPanel(state = state, accent = accent)
+            }
+            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> {
+                Spacer(Modifier.height(12.dp))
+                LawnMowerPanel(state = state, accent = accent)
+            }
+            com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> {
+                Spacer(Modifier.height(12.dp))
+                LockPanel(state = state, accent = accent)
+            }
+            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> {
+                Spacer(Modifier.height(12.dp))
+                ValvePanel(state = state, accent = accent)
+            }
+            com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER -> {
+                Spacer(Modifier.height(12.dp))
+                WaterHeaterPanel(state = state, accent = accent)
+            }
+            com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE -> {
+                Spacer(Modifier.height(12.dp))
+                ClimatePanel(state = state, accent = accent)
+            }
+            else -> Unit
+        }
+
         // Media-player extras — when a media_player lands on the SwitchCard path
         // (no VOLUME_SET feature / null volume_level), it would otherwise have no
         // transport at all. Render now-playing info + the same MediaControlsRow as

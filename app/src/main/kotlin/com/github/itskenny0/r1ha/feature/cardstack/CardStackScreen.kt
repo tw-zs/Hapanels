@@ -486,6 +486,9 @@ fun CardStackScreen(
     val onSetEntityPercent = androidx.compose.runtime.remember(vm) {
         { id: com.github.itskenny0.r1ha.core.ha.EntityId, pct: Int -> vm.setEntityPercent(id, pct) }
     }
+    val onEntityCall = androidx.compose.runtime.remember(vm) {
+        { call: com.github.itskenny0.r1ha.core.ha.ServiceCall -> vm.callService(call) }
+    }
     androidx.compose.runtime.CompositionLocalProvider(
         com.github.itskenny0.r1ha.core.theme.LocalHaRepository provides haRepository,
         com.github.itskenny0.r1ha.core.theme.LocalHaServerUrl provides appSettings.server?.url,
@@ -499,6 +502,7 @@ fun CardStackScreen(
         com.github.itskenny0.r1ha.core.theme.LocalOnOpenSelectPicker provides onOpenSelectPicker,
         com.github.itskenny0.r1ha.core.theme.LocalOnSetSelectOption provides onSetSelectOption,
         com.github.itskenny0.r1ha.core.theme.LocalOnSetEntityPercent provides onSetEntityPercent,
+        com.github.itskenny0.r1ha.core.theme.LocalOnEntityCall provides onEntityCall,
     ) {
     Box(modifier = Modifier.fillMaxSize().background(R1.Bg)) {
         // On wide displays (tablets in landscape) cap the card column at 600 dp and

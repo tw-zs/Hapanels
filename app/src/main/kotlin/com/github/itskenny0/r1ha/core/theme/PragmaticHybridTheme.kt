@@ -242,6 +242,44 @@ object PragmaticHybridTheme : R1Theme {
                         isMuted = model.mediaIsMuted,
                         supportedFeatures = model.mediaSupportedFeatures,
                     )
+                    if (model.entityState != null) {
+                        Spacer(Modifier.height(8.dp))
+                        com.github.itskenny0.r1ha.ui.components.MediaExtrasPanel(
+                            state = model.entityState,
+                            accent = accent,
+                        )
+                    }
+                }
+                // Dedicated per-domain panels for scalar entities. Climate /
+                // water_heater / valve land here when their setpoint range is
+                // present (see DefaultHaRepository.supportsScalar); the panels
+                // surface the discrete mode/command chips that the wheel + meter
+                // can't represent.
+                if (model.entityState != null) {
+                    when (model.domainGlyph) {
+                        CardRenderModel.Glyph.CLIMATE -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.ClimatePanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        CardRenderModel.Glyph.WATER_HEATER -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.WaterHeaterPanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        CardRenderModel.Glyph.VALVE -> {
+                            Spacer(Modifier.height(10.dp))
+                            com.github.itskenny0.r1ha.ui.components.ValvePanel(
+                                state = model.entityState,
+                                accent = accent,
+                            )
+                        }
+                        else -> Unit
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 if (ui.showOnOffPill) OnOffPill(isOn = model.isOn, accent = accent)

@@ -153,6 +153,15 @@ class SettingsViewModel(
             R1Log.i("Settings.signOut", "starting")
             tokens.clear()
             settings.update { it.copy(server = null) }
+            // Wipe the WebView cookie jar so re-signing in doesn't silently land
+            // on the previous HA session. Without this, the OAuth in-app WebView
+            // sees the existing HA cookies and skips the login form entirely,
+            // which is wrong after the user explicitly signed out.
+            runCatching {
+                android.webkit.CookieManager.getInstance().removeAllCookies(null)
+                android.webkit.CookieManager.getInstance().flush()
+                android.webkit.WebStorage.getInstance().deleteAllData()
+            }
             R1Log.i("Settings.signOut", "done")
             Toaster.show("Signed out")
             onAfter()

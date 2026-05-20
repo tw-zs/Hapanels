@@ -387,6 +387,28 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
                 }
             }
         }
+        if (state.climatePresetModes.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(text = "PRESET", style = R1.labelMicro, color = R1.InkMuted)
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                state.climatePresetModes.forEach { preset ->
+                    PanelChip(
+                        label = preset.replace('_', ' ').uppercase(),
+                        accent = accent,
+                        selected = state.climatePresetMode.equals(preset, ignoreCase = true),
+                        onClick = {
+                            dispatch?.invoke(ServiceCall.setPresetMode(state.id, preset))
+                        },
+                    )
+                }
+            }
+        }
         if (state.climateFanModes.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(text = "FAN", style = R1.labelMicro, color = R1.InkMuted)

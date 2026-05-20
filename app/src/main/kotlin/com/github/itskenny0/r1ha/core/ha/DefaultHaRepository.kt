@@ -717,6 +717,10 @@ class DefaultHaRepository(
                 raw.attributes["fan_mode"].asString() else null,
             climateFanModes = if (id.domain == Domain.CLIMATE)
                 extractStringList(raw.attributes["fan_modes"]) else emptyList(),
+            climatePresetMode = if (id.domain == Domain.CLIMATE)
+                raw.attributes["preset_mode"].asString() else null,
+            climatePresetModes = if (id.domain == Domain.CLIMATE)
+                extractStringList(raw.attributes["preset_modes"]) else emptyList(),
             climateCurrentTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
                 raw.attributes["current_temperature"].asDouble() else null,
             climateTargetTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
@@ -1203,6 +1207,10 @@ class DefaultHaRepository(
                         attrs["fan_mode"].asString() else null,
                     climateFanModes = if (id.domain == Domain.CLIMATE)
                         extractStringList(attrs["fan_modes"]) else emptyList(),
+                    climatePresetMode = if (id.domain == Domain.CLIMATE)
+                        attrs["preset_mode"].asString() else null,
+                    climatePresetModes = if (id.domain == Domain.CLIMATE)
+                        extractStringList(attrs["preset_modes"]) else emptyList(),
                     climateCurrentTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
                         attrs["current_temperature"].asDouble() else null,
                     climateTargetTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)

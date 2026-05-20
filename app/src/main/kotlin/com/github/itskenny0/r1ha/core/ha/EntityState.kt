@@ -227,6 +227,17 @@ data class EntityState(
      */
     val temperatureUnit: String? = null,
     /**
+     * Climate-only: HA's `preset_mode` attribute (eco / away / boost /
+     * comfort / sleep). Surfaced on the dedicated climate card under the
+     * HVAC mode picker when the entity advertises [ClimateFeature.PRESET_MODE].
+     */
+    val climatePresetMode: String? = null,
+    /**
+     * Climate-only: `preset_modes` list from HA. Empty for thermostats that
+     * don't expose any presets.
+     */
+    val climatePresetModes: List<String> = emptyList(),
+    /**
      * Lock-only: `code_format` attribute — a regex pattern (e.g. "^\\d{4}$") that
      * specifies the accepted PIN shape. Non-null means the lock requires a code on
      * lock/unlock; null means tap toggles directly.
@@ -317,6 +328,9 @@ data class EntityState(
         const val TURN_OFF = 128
         const val TURN_ON = 256
     }
+
+    fun hasClimateFeature(featureBit: Int): Boolean =
+        supportedFeatures != 0 && (supportedFeatures and featureBit) != 0
 
     /**
      * Subset of HA's `LawnMowerEntityFeature` bitmask. The lawn mower card surfaces

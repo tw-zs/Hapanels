@@ -472,6 +472,13 @@ data class ServiceCall(
             buildJsonObject { put("fan_mode", JsonPrimitive(mode)) },
         )
 
+        /** Climate `set_preset_mode` — eco / away / boost / comfort / sleep / etc. */
+        fun setPresetMode(target: EntityId, mode: String): ServiceCall = ServiceCall(
+            target,
+            "set_preset_mode",
+            buildJsonObject { put("preset_mode", JsonPrimitive(mode)) },
+        )
+
         /** Water heater `set_operation_mode` (eco / electric / heat_pump / off …). */
         fun setOperationMode(target: EntityId, mode: String): ServiceCall = ServiceCall(
             target,

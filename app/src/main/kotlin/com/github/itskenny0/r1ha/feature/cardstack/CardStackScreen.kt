@@ -787,6 +787,27 @@ fun CardStackScreen(
                     solidBackdrop = appSettings.ui.hideCardTailAbove,
                 )
             }
+            // Guest-mode banner — small read-only indicator surfaced
+            // immediately below the tab strip so the user has a constant
+            // visual reminder that the app won't fire service calls. Tap
+            // jumps to Settings so they can flip it off if they actually
+            // wanted to control something.
+            if (appSettings.guestModeEnabled) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(R1.AccentWarm.copy(alpha = 0.18f))
+                        .r1Pressable(onClick = onOpenSettings)
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "READ ONLY  ·  TAP TO DISABLE",
+                        style = R1.labelMicro,
+                        color = R1.AccentWarm,
+                    )
+                }
+            }
         }
 
         // ── Wheel-no-op hint ────────────────────────────────────────────────────────

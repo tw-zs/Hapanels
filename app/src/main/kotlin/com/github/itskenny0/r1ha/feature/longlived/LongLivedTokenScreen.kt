@@ -176,13 +176,23 @@ fun LongLivedTokenScreen(
                 }
             }
             Spacer(Modifier.height(4.dp))
-            val maskedToken = if (revealed || token.isEmpty()) token else "•".repeat(token.length.coerceAtMost(48))
+            // Keep the field enabled even while masked so the user can still backspace /
+            // append to fix a typo without REVEAL-ing the token first; just show the dot
+            // mask in the display value. Only suppress the mask when the user explicitly
+            // wants to read what they pasted.
             R1TextField(
-                value = if (revealed) token else maskedToken,
-                onValueChange = { token = it },
+                value = if (revealed || token.isEmpty()) token
+                else "•".repeat(token.length.coerceAtMost(48)),
+                onValueChange = { typed ->
+                    // If the field is masked, treat every input as a fresh value (paste
+                    // overwrites). Without this the user typing a single char while masked
+                    // would land beside the mask glyphs and corrupt the real token.
+                    token = if (revealed) typed
+                    else if (typed.length < token.length) typed.dropLast(token.length - typed.length).let { token.take(it.length) }
+                    else token + typed.drop(token.length).filterNot { it == '•' }
+                },
                 placeholder = "eyJhbGciOiJIUzI1NiIs…",
                 monospace = true,
-                enabled = revealed || token.isEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 80.dp),

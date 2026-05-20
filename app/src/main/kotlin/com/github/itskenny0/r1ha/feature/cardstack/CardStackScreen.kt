@@ -135,7 +135,13 @@ fun CardStackScreen(
     // every 10s when nowTick ticks. Without it the entire CardStackScreen scope recomposed
     // on every tick (nowTick read at the outer scope = invalidates everything that reads
     // the outer composable's state).
-    val wsSilent by androidx.compose.runtime.remember(connection, lastEventAt) {
+    // Key-less remember: derivedStateOf already reads connection / lastEventAt /
+    // nowTick.longValue inside its block and tracks them as Snapshot dependencies,
+    // so re-creating the derived state every time one changes (the previous
+    // `remember(connection, lastEventAt) { derivedStateOf { ... } }`) defeated the
+    // memoisation. With a stable remember the derived value is computed once and
+    // invalidates only when wsSilent actually flips.
+    val wsSilent by androidx.compose.runtime.remember {
         androidx.compose.runtime.derivedStateOf {
             connection is com.github.itskenny0.r1ha.core.ha.ConnectionState.Connected &&
                 lastEventAt > 0L && (nowTick.longValue - lastEventAt) > 60_000L

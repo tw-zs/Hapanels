@@ -218,6 +218,31 @@ private fun LovelaceWebView(
                 override fun onPageFinished(view: WebView, url: String) {
                     onLoadingChange(false)
                 }
+                override fun shouldOverrideUrlLoading(
+                    view: WebView,
+                    request: WebResourceRequest,
+                ): Boolean {
+                    // Keep navigation inside HA's own host (the configured
+                    // server URL); route every other link to the system
+                    // browser. HACS market cards link to GitHub repos,
+                    // integration docs link to home-assistant.io, etc.; we
+                    // don't want those navigating inside the in-app WebView
+                    // and trapping the user away from HA.
+                    val target = request.url ?: return false
+                    val configured = runCatching {
+                        android.net.Uri.parse(serverUrl).host
+                    }.getOrNull()
+                    if (configured != null && target.host == configured) return false
+                    return runCatching {
+                        view.context.startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                target,
+                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                        true
+                    }.getOrDefault(false)
+                }
                 override fun onReceivedError(
                     view: WebView,
                     request: WebResourceRequest,

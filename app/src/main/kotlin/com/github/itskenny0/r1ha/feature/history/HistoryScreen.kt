@@ -1,6 +1,8 @@
 package com.github.itskenny0.r1ha.feature.history
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -288,6 +290,14 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
         } else {
             DateTimeFormatter.ofPattern("d MMM").withZone(zone)
         }
+        // Tap-to-scrub state: nullable Int index into proj.xsNorm. Press-and-hold
+        // on the chart sets this to the nearest sample index; release clears it.
+        // Drawing a vertical guide + dot at the scrubbed sample plus a textual
+        // readout below the chart lets users read a precise value off the line
+        // without dropping into the table view.
+        val scrubIdx = androidx.compose.runtime.remember(proj) {
+            androidx.compose.runtime.mutableStateOf<Int?>(null)
+        }
         Row {
             // Y-axis labels on the right edge — min/max with units.
             Column(modifier = Modifier.weight(1f)) {
@@ -297,7 +307,29 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
                         .height(180.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(R1.Surface)
-                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                        .pointerInput(proj) {
+                            val canvasW = size.width.toFloat()
+                            detectTapGestures(
+                                onPress = { pressOffset ->
+                                    // Linear scan over normalized xs; chart sample count
+                                    // is bounded by HistoryVM downsampling (~250).
+                                    val target = (pressOffset.x / canvasW).coerceIn(0f, 1f)
+                                    var bestI = 0
+                                    var bestD = Float.POSITIVE_INFINITY
+                                    for (i in proj.xsNorm.indices) {
+                                        val d = kotlin.math.abs(proj.xsNorm[i] - target)
+                                        if (d < bestD) {
+                                            bestD = d
+                                            bestI = i
+                                        }
+                                    }
+                                    scrubIdx.value = bestI
+                                    tryAwaitRelease()
+                                    scrubIdx.value = null
+                                },
+                            )
+                        },
                 ) {
                     val w = size.width
                     val h = size.height
@@ -341,20 +373,69 @@ private fun HistoryChartPanel(ui: HistoryViewModel.UiState) {
                         radius = 3f,
                         center = Offset(xs[n - 1] * w, ysn[n - 1] * h),
                     )
+                    // Scrub guide + sample dot. Drawn on top of the line so it
+                    // remains visible against the warm accent stroke.
+                    val si = scrubIdx.value
+                    if (si != null && si in 0 until n) {
+                        val sx = xs[si] * w
+                        val sy = ysn[si] * h
+                        drawLine(
+                            color = R1.InkSoft,
+                            start = Offset(sx, 0f),
+                            end = Offset(sx, h),
+                            strokeWidth = 1f,
+                        )
+                        drawCircle(
+                            color = R1.Ink,
+                            radius = 4f,
+                            center = Offset(sx, sy),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
-                Row {
-                    Text(
-                        text = fmt.format(tStart),
-                        style = R1.labelMicro,
-                        color = R1.InkSoft,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = fmt.format(tEnd),
-                        style = R1.labelMicro,
-                        color = R1.InkSoft,
-                    )
+                // X-axis labels collapse into a "press-to-read" readout while the
+                // user is scrubbing. Two derived references (the value at the
+                // scrub index, and the closest sample timestamp) make the chart
+                // readable without a full table jump.
+                val si = scrubIdx.value
+                if (si != null && si in proj.xsNorm.indices) {
+                    val sample = ui.points.mapNotNull { p -> p.numeric?.let { p.timestamp to it } }
+                        .getOrNull(si)
+                    if (sample != null) {
+                        Row {
+                            Text(
+                                text = fmt.format(sample.first),
+                                style = R1.labelMicro,
+                                color = R1.Ink,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "${formatNum(sample.second)}${ui.unit?.let { " $it" } ?: ""}",
+                                style = R1.labelMicro,
+                                color = R1.AccentWarm,
+                            )
+                        }
+                    } else {
+                        Row {
+                            Text(
+                                text = fmt.format(tStart),
+                                style = R1.labelMicro,
+                                color = R1.InkSoft,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(text = fmt.format(tEnd), style = R1.labelMicro, color = R1.InkSoft)
+                        }
+                    }
+                } else {
+                    Row {
+                        Text(
+                            text = fmt.format(tStart),
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(text = fmt.format(tEnd), style = R1.labelMicro, color = R1.InkSoft)
+                    }
                 }
             }
             Spacer(Modifier.width(8.dp))

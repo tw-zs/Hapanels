@@ -377,7 +377,12 @@ private fun SearchResultRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = entity.id.domain.prefix.uppercase().take(6),
+            // Wider truncation (10 chars vs. previous 6) so "AUTOMATION" no
+            // longer reads "AUTOMA"; longer HA domains like INPUT_NUMBER still
+            // need ellipsis but the common ones now fit unbroken.
+            text = entity.id.domain.prefix.uppercase().let { p ->
+                if (p.length <= 10) p else p.take(9) + "…"
+            },
             style = R1.labelMicro,
             color = accentFor(entity.id.domain),
         )

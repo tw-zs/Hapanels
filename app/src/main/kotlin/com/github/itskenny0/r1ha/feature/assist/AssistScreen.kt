@@ -285,6 +285,11 @@ fun AssistScreen(
             if (best != null) {
                 vm.setDraft(best)
                 vm.send()
+            } else {
+                // System speech recognizer returned no usable transcript. Surface a
+                // soft hint so the user knows the mic tap landed; otherwise the silent
+                // bounce-back from the dialog is indistinguishable from a no-op tap.
+                com.github.itskenny0.r1ha.core.util.Toaster.show("No speech captured")
             }
         }
         Row(

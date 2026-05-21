@@ -193,19 +193,19 @@ interface HaRepository {
     suspend fun addTodoItem(entityId: String, summary: String): Result<Unit>
 
     /**
-     * Flip an item's completed status. Identifies the item by its summary
-     * since HA's update_item service accepts either summary OR uid as a
-     * lookup key, and summaries are what the user sees (uids leak from
-     * the wire format).
+     * Flip an item's completed status. Targets by HA's stable `uid` so
+     * lists with duplicate summaries (legitimate on shopping lists where
+     * "Apples" can appear twice) still route the call to the right row.
      */
     suspend fun updateTodoItem(
         entityId: String,
-        summary: String,
+        uid: String,
         completed: Boolean,
     ): Result<Unit>
 
-    /** Remove an item by summary. */
-    suspend fun removeTodoItem(entityId: String, summary: String): Result<Unit>
+    /** Remove an item by uid. Same duplicate-summary rationale as the
+     *  update path. */
+    suspend fun removeTodoItem(entityId: String, uid: String): Result<Unit>
 
     /** Bulk-delete every completed item from the named list. */
     suspend fun clearCompletedTodoItems(entityId: String): Result<Unit>

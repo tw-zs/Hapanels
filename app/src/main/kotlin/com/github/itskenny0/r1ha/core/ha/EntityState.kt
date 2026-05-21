@@ -299,8 +299,14 @@ data class EntityState(
         const val START = 8192
     }
 
+    /**
+     * Bitmask check for vacuums. Returns `true` when the integration
+     * didn't advertise a bitmask (== 0) so panels stay usable on
+     * minimally-configured MQTT vacuums — same forgive-an-omission
+     * rule as [hasFeature].
+     */
     fun hasVacuumFeature(featureBit: Int): Boolean =
-        vacuumSupportedFeatures != 0 && (vacuumSupportedFeatures and featureBit) != 0
+        vacuumSupportedFeatures == 0 || (vacuumSupportedFeatures and featureBit) != 0
 
     /**
      * Generic bitmask check for lawn_mower / climate / valve / water_heater. Mirrors
@@ -330,7 +336,7 @@ data class EntityState(
     }
 
     fun hasClimateFeature(featureBit: Int): Boolean =
-        supportedFeatures != 0 && (supportedFeatures and featureBit) != 0
+        supportedFeatures == 0 || (supportedFeatures and featureBit) != 0
 
     /**
      * Subset of HA's `LawnMowerEntityFeature` bitmask. The lawn mower card surfaces

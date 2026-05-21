@@ -2213,7 +2213,9 @@ class DefaultHaRepository(
         withContext(Dispatchers.IO) {
             runCatching {
                 val s = settings.settings.first()
-                if (s.guestModeEnabled) error("Guest mode is on. Toggle it off to fetch todo items.")
+                // Guest mode gates writes (call / callRawService / fireEvent),
+                // not reads. fetchTodoItems is a read — a guest holding the
+                // device still needs to see what's on the shopping list.
                 val server = s.server ?: error("Server URL not configured.")
                 refresher?.ensureFresh()
                 val payload = kotlinx.serialization.json.buildJsonObject {
@@ -2270,13 +2272,17 @@ class DefaultHaRepository(
 
     override suspend fun updateTodoItem(
         entityId: String,
-        summary: String,
+        uid: String,
         completed: Boolean,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val payload = kotlinx.serialization.json.buildJsonObject {
                 put("entity_id", JsonPrimitive(entityId))
-                put("item", JsonPrimitive(summary))
+                // HA's update_item / remove_item services accept the `item`
+                // field as either the summary string OR the stable uid; we
+                // pass the uid so duplicate-summary lists ("Apples" twice
+                // on a shopping list) target the right row.
+                put("item", JsonPrimitive(uid))
                 put("status", JsonPrimitive(if (completed) "completed" else "needs_action"))
             }
             callRawService("todo", "update_item", payload).getOrThrow()
@@ -2286,12 +2292,12 @@ class DefaultHaRepository(
         }
     }
 
-    override suspend fun removeTodoItem(entityId: String, summary: String): Result<Unit> =
+    override suspend fun removeTodoItem(entityId: String, uid: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val payload = kotlinx.serialization.json.buildJsonObject {
                     put("entity_id", JsonPrimitive(entityId))
-                    put("item", JsonPrimitive(summary))
+                    put("item", JsonPrimitive(uid))
                 }
                 callRawService("todo", "remove_item", payload).getOrThrow()
                 Unit

@@ -267,10 +267,14 @@ private fun PinKeypadDialog(
     onConfirm: (String) -> Unit,
 ) {
     var entered by remember { mutableStateOf("") }
+    // HA's code_format is sometimes anchored ("^\\d{4}$") and sometimes
+    // a bare fragment ("\\d{4}"); HA core itself uses re.match() which
+    // is prefix-not-whole-string. We use `containsMatchIn` so unanchored
+    // patterns don't reject otherwise-valid PINs.
     val pattern = remember(codeFormat) {
         runCatching { codeFormat?.let { Regex(it) } }.getOrNull()
     }
-    val valid = entered.isNotEmpty() && (pattern?.matches(entered) ?: true)
+    val valid = entered.isNotEmpty() && (pattern?.containsMatchIn(entered) ?: true)
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),

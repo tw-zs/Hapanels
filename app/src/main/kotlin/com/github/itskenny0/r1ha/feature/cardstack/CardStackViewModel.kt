@@ -490,6 +490,12 @@ class CardStackViewModel(
         // a phantom percent — wheels are deliberately a no-op there. Same story for
         // sensors / binary_sensors which are read-only.
         if (activeState.id.domain.isAction || activeState.id.domain.isSensor) return
+        // Code-required locks would route a wheel spin into setSwitch which
+        // fires lock.lock / lock.unlock without the code, and HA rejects
+        // with `code_required` — the user sees a silent failure. Skip the
+        // wheel here so the LockPanel's PIN keypad stays the only path.
+        if (activeState.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LOCK &&
+            !activeState.lockCodeFormat.isNullOrBlank()) return
 
         val sign = WheelInput.applyDirection(event.direction, wheel.invertDirection)
 

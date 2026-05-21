@@ -116,8 +116,11 @@ class ToDoViewModel(
 
     fun toggleCompleted(item: ToDoItem) {
         val entity = _ui.value.activeEntityId ?: return
-        if (item.summary in _ui.value.pendingItems) return
-        _ui.value = _ui.value.copy(pendingItems = _ui.value.pendingItems + item.summary)
+        // Key the pending-set by uid so duplicate-summary rows don't block
+        // each other's taps. With summary-keyed gating, toggling one
+        // "Apples" row froze the second one until the first settled.
+        if (item.uid in _ui.value.pendingItems) return
+        _ui.value = _ui.value.copy(pendingItems = _ui.value.pendingItems + item.uid)
         // Optimistic flip.
         _ui.value = _ui.value.copy(
             items = _ui.value.items.map {
@@ -125,10 +128,10 @@ class ToDoViewModel(
             },
         )
         viewModelScope.launch {
-            haRepository.updateTodoItem(entity, item.summary, !item.completed).fold(
+            haRepository.updateTodoItem(entity, item.uid, !item.completed).fold(
                 onSuccess = {
                     _ui.value = _ui.value.copy(
-                        pendingItems = _ui.value.pendingItems - item.summary,
+                        pendingItems = _ui.value.pendingItems - item.uid,
                     )
                 },
                 onFailure = { t ->
@@ -138,7 +141,7 @@ class ToDoViewModel(
                         items = _ui.value.items.map {
                             if (it.uid == item.uid) it.copy(completed = item.completed) else it
                         },
-                        pendingItems = _ui.value.pendingItems - item.summary,
+                        pendingItems = _ui.value.pendingItems - item.uid,
                     )
                 },
             )
@@ -166,20 +169,20 @@ class ToDoViewModel(
 
     fun remove(item: ToDoItem) {
         val entity = _ui.value.activeEntityId ?: return
-        if (item.summary in _ui.value.pendingItems) return
-        _ui.value = _ui.value.copy(pendingItems = _ui.value.pendingItems + item.summary)
+        if (item.uid in _ui.value.pendingItems) return
+        _ui.value = _ui.value.copy(pendingItems = _ui.value.pendingItems + item.uid)
         viewModelScope.launch {
-            haRepository.removeTodoItem(entity, item.summary).fold(
+            haRepository.removeTodoItem(entity, item.uid).fold(
                 onSuccess = {
                     _ui.value = _ui.value.copy(
                         items = _ui.value.items.filterNot { it.uid == item.uid },
-                        pendingItems = _ui.value.pendingItems - item.summary,
+                        pendingItems = _ui.value.pendingItems - item.uid,
                     )
                 },
                 onFailure = { t ->
                     Toaster.error("Remove failed: ${t.message ?: "unknown"}")
                     _ui.value = _ui.value.copy(
-                        pendingItems = _ui.value.pendingItems - item.summary,
+                        pendingItems = _ui.value.pendingItems - item.uid,
                     )
                 },
             )

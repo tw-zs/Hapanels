@@ -222,7 +222,7 @@ private fun ItemList(
         modifier = Modifier.fillMaxSize(),
     ) {
         items(items, key = { it.uid }) { item ->
-            val pending = item.summary in pendingItems
+            val pending = item.uid in pendingItems
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

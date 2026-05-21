@@ -2693,10 +2693,121 @@ private fun SecuritySection() {
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Derive a pin: openssl s_client -connect HOST:443 -servername HOST | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64",
+                text = "Derive a pin manually: openssl s_client -connect HOST:443 -servername HOST | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
             )
+            Spacer(Modifier.height(6.dp))
+            // FETCH-FROM-SERVER chip — runs a one-shot HEAD against the user's
+            // server URL (using an unpinned ephemeral client), pulls the leaf
+            // cert's SPKI hash, and offers ADD chips per certificate in the
+            // chain. Much friendlier than the openssl pipeline above for users
+            // who just want to pin their current cert. Server URL must be
+            // configured first; otherwise we have nothing to probe.
+            val fetchedPins = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<List<com.github.itskenny0.r1ha.core.security.PinFetcher.CertPin>?>(null)
+            }
+            val fetchInFlight = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(false)
+            }
+            val fetchError = androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf<String?>(null)
+            }
+            val app = (androidx.compose.ui.platform.LocalContext.current.applicationContext
+                as com.github.itskenny0.r1ha.App)
+            val serverUrl = app.graph.let { graph ->
+                graph.settings
+                run {
+                    val shadow = androidx.compose.ui.platform.LocalContext.current
+                        .getSharedPreferences("r1ha_shadow", android.content.Context.MODE_PRIVATE)
+                    shadow.getString("server.url", null)
+                }
+            }
+            val coScope = androidx.compose.runtime.rememberCoroutineScope()
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(onClick = {
+                        if (fetchInFlight.value) return@r1Pressable
+                        if (serverUrl.isNullOrBlank()) {
+                            fetchError.value = "Configure your HA server URL in SERVER first"
+                            return@r1Pressable
+                        }
+                        fetchInFlight.value = true
+                        fetchError.value = null
+                        coScope.launch {
+                            com.github.itskenny0.r1ha.core.security.PinFetcher.probe(serverUrl).fold(
+                                onSuccess = {
+                                    fetchedPins.value = it
+                                    fetchError.value = if (it.isEmpty()) "Server returned no certificates" else null
+                                },
+                                onFailure = { t ->
+                                    fetchError.value = t.message ?: t.toString()
+                                },
+                            )
+                            fetchInFlight.value = false
+                        }
+                    })
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = if (fetchInFlight.value) "FETCHING…" else "FETCH PINS FROM SERVER",
+                    style = R1.labelMicro,
+                    color = R1.AccentCool,
+                )
+            }
+            fetchError.value?.let { err ->
+                Spacer(Modifier.height(4.dp))
+                Text(text = err, style = R1.labelMicro, color = R1.StatusAmber)
+            }
+            fetchedPins.value?.let { pins ->
+                Spacer(Modifier.height(6.dp))
+                pins.forEach { p ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = p.label, style = R1.body, color = R1.Ink, maxLines = 1)
+                            Text(
+                                text = p.sha256Base64,
+                                style = R1.labelMicro.copy(
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                ),
+                                color = R1.InkMuted,
+                                maxLines = 1,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(R1.ShapeS)
+                                .background(R1.SurfaceMuted)
+                                .border(1.dp, R1.Hairline, R1.ShapeS)
+                                .r1Pressable(onClick = {
+                                    if (p.sha256Base64 in policy.sha256Pins) {
+                                        com.github.itskenny0.r1ha.core.util.Toaster.show(
+                                            "Pin already in list",
+                                        )
+                                    } else {
+                                        applyPolicy {
+                                            it.copy(sha256Pins = it.sha256Pins + p.sha256Base64)
+                                        }
+                                    }
+                                })
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text(
+                                text = if (p.sha256Base64 in policy.sha256Pins) "ADDED" else "ADD",
+                                style = R1.labelMicro,
+                                color = if (p.sha256Base64 in policy.sha256Pins) R1.InkMuted else R1.AccentWarm,
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // ── mTLS client certificate (optional) ────────────────────────

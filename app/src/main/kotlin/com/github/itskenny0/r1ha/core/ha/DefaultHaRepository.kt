@@ -2190,4 +2190,113 @@ class DefaultHaRepository(
             subscriptionId = newId
         }
     }
+
+    override suspend fun listTodoEntities(): Result<List<ToDoList>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val rows = fetchRawRowsForDomain("todo")
+            rows.map { row ->
+                // HA stores the item count in the entity's state as a numeric
+                // string. Fall back to 0 if it's missing or unparseable.
+                val count = row.state.toIntOrNull() ?: 0
+                ToDoList(
+                    entityId = row.entityId,
+                    friendlyName = row.friendlyName,
+                    itemCount = count,
+                )
+            }.sortedBy { it.friendlyName.lowercase() }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.todo", "list entities failed: ${t.message}")
+        }
+    }
+
+    override suspend fun fetchTodoItems(entityId: String): Result<List<ToDoItem>> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val s = settings.settings.first()
+                if (s.guestModeEnabled) error("Guest mode is on. Toggle it off to fetch todo items.")
+                val server = s.server ?: error("Server URL not configured.")
+                refresher?.ensureFresh()
+                val payload = kotlinx.serialization.json.buildJsonObject {
+                    put("entity_id", JsonPrimitive(entityId))
+                }
+                // HA 2024.1+ supports return_response on the REST service-call
+                // endpoint. The query param is what flips the response from
+                // "list of state changes" to "service's response data".
+                val url = "${server.url.trimEnd('/')}/api/services/todo/get_items?return_response=true"
+                val body = serviceCallRawBody(url, payload) ?: run {
+                    if (refresher?.forceRefresh() == true) {
+                        serviceCallRawBody(url, payload)
+                            ?: error("HTTP 401 for todo.get_items after refresh.")
+                    } else {
+                        error("HTTP 401 for todo.get_items.")
+                    }
+                }
+                // The response body looks like:
+                // {"changed_states":[...],"service_response":{"todo.shopping":{"items":[...]}}}
+                val root = listStatesJson.decodeFromString<kotlinx.serialization.json.JsonObject>(body)
+                val serviceResponse = root["service_response"] as? kotlinx.serialization.json.JsonObject
+                    ?: kotlinx.serialization.json.JsonObject(emptyMap())
+                val entityResponse = serviceResponse[entityId] as? kotlinx.serialization.json.JsonObject
+                    ?: kotlinx.serialization.json.JsonObject(emptyMap())
+                val items = entityResponse["items"] as? kotlinx.serialization.json.JsonArray
+                    ?: kotlinx.serialization.json.JsonArray(emptyList())
+                items.mapNotNull { el ->
+                    val obj = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                    val uid = (obj["uid"] as? JsonPrimitive)?.content
+                        ?: (obj["summary"] as? JsonPrimitive)?.content
+                        ?: return@mapNotNull null
+                    val summary = (obj["summary"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                    val status = (obj["status"] as? JsonPrimitive)?.content ?: "needs_action"
+                    ToDoItem(uid = uid, summary = summary, completed = status == "completed")
+                }
+            }.onFailure { t ->
+                R1Log.w("HaRepo.todo", "fetch items for $entityId failed: ${t.message}")
+            }
+        }
+
+    override suspend fun addTodoItem(entityId: String, summary: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val payload = kotlinx.serialization.json.buildJsonObject {
+                    put("entity_id", JsonPrimitive(entityId))
+                    put("item", JsonPrimitive(summary))
+                }
+                callRawService("todo", "add_item", payload).getOrThrow()
+                Unit
+            }.onFailure { t ->
+                R1Log.w("HaRepo.todo", "add to $entityId failed: ${t.message}")
+            }
+        }
+
+    override suspend fun updateTodoItem(
+        entityId: String,
+        summary: String,
+        completed: Boolean,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val payload = kotlinx.serialization.json.buildJsonObject {
+                put("entity_id", JsonPrimitive(entityId))
+                put("item", JsonPrimitive(summary))
+                put("status", JsonPrimitive(if (completed) "completed" else "needs_action"))
+            }
+            callRawService("todo", "update_item", payload).getOrThrow()
+            Unit
+        }.onFailure { t ->
+            R1Log.w("HaRepo.todo", "update on $entityId failed: ${t.message}")
+        }
+    }
+
+    override suspend fun removeTodoItem(entityId: String, summary: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val payload = kotlinx.serialization.json.buildJsonObject {
+                    put("entity_id", JsonPrimitive(entityId))
+                    put("item", JsonPrimitive(summary))
+                }
+                callRawService("todo", "remove_item", payload).getOrThrow()
+                Unit
+            }.onFailure { t ->
+                R1Log.w("HaRepo.todo", "remove from $entityId failed: ${t.message}")
+            }
+        }
 }

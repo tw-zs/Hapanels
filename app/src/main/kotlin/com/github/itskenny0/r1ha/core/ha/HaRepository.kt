@@ -172,6 +172,40 @@ interface HaRepository {
      * domain. Used by the Services Browser power-user surface.
      */
     suspend fun listServices(): Result<List<HaServiceDomain>>
+
+    /**
+     * List every `todo.*` entity the server exposes. Used by the To-do
+     * screen to populate its list-picker. Backs onto [listRawEntitiesByDomain]
+     * so we don't have to model todos in the [Domain] enum (the dashboard
+     * card stack doesn't show them; they live on their own screen).
+     */
+    suspend fun listTodoEntities(): Result<List<ToDoList>>
+
+    /**
+     * Fetch the items inside a single todo entity via the
+     * `/api/services/todo/get_items?return_response=true` REST endpoint.
+     * HA returns the items as part of the service-call response body
+     * since 2024.1.
+     */
+    suspend fun fetchTodoItems(entityId: String): Result<List<ToDoItem>>
+
+    /** Append a new item to the named todo list. */
+    suspend fun addTodoItem(entityId: String, summary: String): Result<Unit>
+
+    /**
+     * Flip an item's completed status. Identifies the item by its summary
+     * since HA's update_item service accepts either summary OR uid as a
+     * lookup key, and summaries are what the user sees (uids leak from
+     * the wire format).
+     */
+    suspend fun updateTodoItem(
+        entityId: String,
+        summary: String,
+        completed: Boolean,
+    ): Result<Unit>
+
+    /** Remove an item by summary. */
+    suspend fun removeTodoItem(entityId: String, summary: String): Result<Unit>
     suspend fun start()
     suspend fun stop()
 

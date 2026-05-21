@@ -73,6 +73,7 @@ fun SettingsScreen(
     onOpenSearch: () -> Unit,
     onOpenAutomations: () -> Unit,
     onOpenHelpers: () -> Unit,
+    onOpenTodo: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1209,6 +1210,13 @@ fun SettingsScreen(
                     label = "Helpers",
                     value = "input_*, counter, timer",
                     onClick = onOpenHelpers,
+                )
+            }
+            item {
+                NavRow(
+                    label = "To-do lists",
+                    value = "Shopping lists, tasks",
+                    onClick = onOpenTodo,
                 )
             }
 

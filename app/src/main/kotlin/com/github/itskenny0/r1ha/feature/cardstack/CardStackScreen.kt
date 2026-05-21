@@ -45,7 +45,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -522,21 +521,18 @@ fun CardStackScreen(
         com.github.itskenny0.r1ha.core.theme.LocalOnEntityCall provides onEntityCall,
     ) {
     Box(modifier = Modifier.fillMaxSize().background(R1.Bg)) {
-        // On wide displays (tablets in landscape) cap the card column at 600 dp and
-        // centre it. This prevents a single card stretching to 1280 dp while keeping
-        // the dark background filling the full screen. The overlays (dialogs, sheets)
-        // sit at the outer Box level so they cover the full screen independently.
-        val screenWidthDp = LocalConfiguration.current.screenWidthDp
+        // No max-width cap on the card column. An earlier 600 dp clamp here
+        // was meant to keep a card from stretching across a 1280 dp tablet,
+        // but it letterboxed the cardstack on every wide display, leaving
+        // the deck occupying roughly half the screen. Cards (and their
+        // theme renderers) adapt naturally to any width via the existing
+        // weight-based interior layout, so the cap was more harmful than
+        // helpful. Matches the earlier fix that turned ResponsiveColumn
+        // into a passthrough for the same reason.
         // displayedCards is hoisted here (outside the island Box) so the full-screen
         // overlays (customize dialog, jump picker, etc.) can reference it too.
         val cards = state.displayedCards
-        Box(
-            modifier = if (screenWidthDp > 600) {
-                Modifier.widthIn(max = 600.dp).fillMaxHeight().align(Alignment.Center)
-            } else {
-                Modifier.fillMaxSize()
-            },
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
         when {
             // Cold-start splash. DataStore is async on first read so for a brief
             // window the VM has its default state. Without this branch the user

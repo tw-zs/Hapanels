@@ -502,6 +502,17 @@ data class AdvancedSettings(
      * runtime the first time the user flips this on.
      */
     val mirrorHaNotifications: Boolean = false,
+    /**
+     * Opt-in: when the app is in the foreground, engage NFC reader mode and
+     * fire HA's `tag_scanned` event with the tag UID as `tag_id`. Useful for
+     * NFC-trigger automations the user has configured server-side.
+     *
+     * Foreground-only by design — we don't register the manifest's
+     * ACTION_NDEF_DISCOVERED filter because that would compete with the user's
+     * existing tag-scan handler (Companion app, NFC Tools, etc.) and force a
+     * "choose which app" prompt on every tag tap.
+     */
+    val nfcTagScannerEnabled: Boolean = false,
 )
 
 @Stable

@@ -292,6 +292,18 @@ class MainActivity : ComponentActivity() {
             R1Log.i("MainActivity.onResume", "kicking reconnect; conn=$conn")
             graph.haRepository.reconnectNow()
         }
+        // Engage NFC reader mode while the activity is foregrounded — the
+        // NfcReader checks the per-feature toggle internally before firing
+        // HA events, so calling bind() with the toggle off is a cheap no-op.
+        com.github.itskenny0.r1ha.feature.nfc.NfcReader.bind(this)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Release reader mode; without this another foreground app would have
+        // to wait for our adapter to time out before its own NFC features
+        // could engage. Safe to call when bind() was a no-op.
+        com.github.itskenny0.r1ha.feature.nfc.NfcReader.unbind(this)
     }
 
     private fun handleOAuthCallback(intent: Intent?) {

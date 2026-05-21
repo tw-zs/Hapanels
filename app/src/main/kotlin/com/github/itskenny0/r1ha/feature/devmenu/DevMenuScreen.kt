@@ -287,6 +287,14 @@ fun DevMenuScreen(
                     onChange = { v -> vm.updateAdvanced { it.copy(mirrorHaNotifications = v) } },
                 )
             }
+            item {
+                DevSwitchRow(
+                    label = "NFC tag scanner",
+                    subtitle = "When the app is foregrounded and an NFC tag is tapped against the device, fire HA's tag_scanned event with the tag's UID as tag_id. Foreground-only so it doesn't compete with other tag-handler apps installed on the device.",
+                    checked = advanced.nfcTagScannerEnabled,
+                    onChange = { v -> vm.updateAdvanced { it.copy(nfcTagScannerEnabled = v) } },
+                )
+            }
             item { SectionDivider() }
 
             // ── Fire event ──────────────────────────────────────────────────────────

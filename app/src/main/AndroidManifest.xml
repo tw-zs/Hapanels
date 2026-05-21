@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- NFC reading. Optional hardware: the NFC features still work when
+         present but we don't require it, so the app installs on phones
+         and tablets that don't ship with an NFC controller. -->
+    <uses-permission android:name="android.permission.NFC"/>
+    <uses-feature android:name="android.hardware.nfc" android:required="false"/>
     <!-- Required for Android 13+ to post the HA persistent-notification mirror.
          Users opt in via the toggle under Advanced; we only request the runtime
          permission when they enable the mirror, so installs that don't use the

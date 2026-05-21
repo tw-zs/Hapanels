@@ -33,7 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +51,7 @@ import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
+import kotlinx.coroutines.launch
 
 /**
  * Text-mode HA Assist surface — pipes a typed prompt into
@@ -68,7 +72,7 @@ fun AssistScreen(
     wheelInput: com.github.itskenny0.r1ha.core.input.WheelInput,
     onBack: () -> Unit,
 ) {
-    val vm: AssistViewModel = viewModel(factory = AssistViewModel.factory(haRepository))
+    val vm: AssistViewModel = viewModel(factory = AssistViewModel.factory(haRepository, settings))
     val ui by vm.ui.collectAsState()
     val listState = rememberLazyListState()
     // Wheel scroll for the transcript — long conversations span more
@@ -116,7 +120,56 @@ fun AssistScreen(
             .systemBarsPadding()
             .imePadding(),
     ) {
-        R1TopBar(title = "ASSIST", onBack = onBack)
+        // Agent picker dialog state — local to the screen because it's a
+        // pure UI toggle. The agent id itself lives in settings so it
+        // persists across navigations / restarts.
+        val agentDialogOpen = remember { mutableStateOf(false) }
+        val agentScope = rememberCoroutineScope()
+        R1TopBar(
+            title = "ASSIST",
+            onBack = onBack,
+            action = {
+                // Tiny chip showing the currently-configured conversation
+                // agent (or 'DEFAULT' when null). Tap opens the dialog so
+                // users with multiple agents (OpenAI + local Llama, etc.)
+                // can pick which one answers without round-tripping
+                // through HA's web UI.
+                val current = appSettings.behavior.assistAgentId
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(
+                            onClick = { agentDialogOpen.value = true },
+                            contentDescription = "Pick conversation agent",
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = "AGENT: ${current?.take(18) ?: "DEFAULT"}",
+                        style = R1.labelMicro,
+                        color = R1.InkSoft,
+                    )
+                }
+            },
+        )
+        if (agentDialogOpen.value) {
+            AgentPickerDialog(
+                current = appSettings.behavior.assistAgentId,
+                onDismiss = { agentDialogOpen.value = false },
+                onApply = { newId ->
+                    agentDialogOpen.value = false
+                    agentScope.launch {
+                        settings.update { s ->
+                            s.copy(behavior = s.behavior.copy(
+                                assistAgentId = newId?.takeIf { it.isNotBlank() },
+                            ))
+                        }
+                    }
+                },
+            )
+        }
         // On tablets the chat + input stay within 800 dp centred so a long
         // conversation doesn't stretch bubbles across a 1280 dp panel.
         AdaptiveContent(modifier = Modifier.weight(1f)) {
@@ -418,4 +471,66 @@ private fun AssistBubble(msg: AssistMessage) {
             Text(text = msg.text, style = R1.body, color = textColor)
         }
     }
+}
+
+/**
+ * Conversation-agent picker. Free-form text input rather than a fetched list
+ * because HA's WS API for enumerating agents/pipelines isn't wired through
+ * this client yet — manual entry is the pragmatic MVP. Common values:
+ * `homeassistant` (HA's built-in intent agent), `conversation.openai_conversation`
+ * (the OpenAI integration), or a pipeline UUID for the assist_pipeline path.
+ * Empty / blank input clears the override and routes back to HA's default.
+ */
+@Composable
+private fun AgentPickerDialog(
+    current: String?,
+    onDismiss: () -> Unit,
+    onApply: (String?) -> Unit,
+) {
+    var draft by remember { mutableStateOf(current.orEmpty()) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = R1.Bg,
+        title = {
+            Text(text = "CONVERSATION AGENT", style = R1.sectionHeader, color = R1.Ink)
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Agent ID to route Assist requests through. Leave blank to " +
+                        "use HA's default. Examples:",
+                    style = R1.body,
+                    color = R1.InkMuted,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "homeassistant\nconversation.openai_conversation\n<pipeline UUID>",
+                    style = R1.labelMicro,
+                    color = R1.InkSoft,
+                )
+                Spacer(Modifier.height(10.dp))
+                R1TextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    placeholder = "homeassistant",
+                    monospace = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onApply(draft) }),
+                )
+            }
+        },
+        confirmButton = {
+            R1Button(
+                text = "APPLY",
+                onClick = { onApply(draft) },
+            )
+        },
+        dismissButton = {
+            R1Button(
+                text = "USE DEFAULT",
+                onClick = { onApply(null) },
+                variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
+            )
+        },
+    )
 }

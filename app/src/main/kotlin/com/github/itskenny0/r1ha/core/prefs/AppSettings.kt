@@ -228,6 +228,17 @@ data class Behavior(
      */
     val assistAutoOpenKeyboard: Boolean = false,
     /**
+     * Conversation-agent ID passed to HA's `conversation/process` endpoint. Null = let
+     * HA pick its default agent (the normal Assist behaviour). When set, every Assist
+     * request routes to this specific agent — useful for installs with multiple agents
+     * configured (OpenAI / local Llama / Google) so the user can pick which back-end
+     * answers without round-tripping into HA's web UI to flip the default. Stored as
+     * a free-form string because HA accepts both legacy agent IDs (`"homeassistant"`,
+     * `"conversation.openai_conversation"`) and pipeline UUIDs; we don't second-guess
+     * the value.
+     */
+    val assistAgentId: String? = null,
+    /**
      * Whether the app follows the device rotation sensor or locks to portrait.
      * Defaults to FOLLOW_DEVICE so tablets and phones in landscape work out of
      * the box after the orientation-lock was removed. Users who prefer portrait

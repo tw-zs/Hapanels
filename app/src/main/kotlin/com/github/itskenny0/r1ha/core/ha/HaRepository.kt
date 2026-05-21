@@ -65,6 +65,13 @@ interface HaRepository {
         text: String,
         language: String? = null,
         conversationId: String? = null,
+        /**
+         * Conversation agent ID — e.g. `"homeassistant"`, `"conversation.openai_conversation"`,
+         * or a pipeline UUID. Null = HA picks the default agent (Assist's normal behaviour);
+         * non-null routes the request to a specific agent so users with multiple LLM
+         * back-ends configured (OpenAI + Local + Google) can pick which one answers.
+         */
+        agentId: String? = null,
     ): Result<ConversationResponse>
 
     /**

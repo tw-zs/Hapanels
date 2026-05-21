@@ -35,6 +35,15 @@ fun WheelScrollFor(
     listState: LazyListState,
     stepDp: Int = 56,
     settings: SettingsRepository? = null,
+    /**
+     * When `false`, the wheel-to-scroll collector is suspended for as long as the flag
+     * stays false. Screens that hand the wheel off to a per-row editor (e.g. Helpers'
+     * input_number stepper grabbing the wheel to nudge a value) flip this off while their
+     * editor is active so the same detent doesn't both scroll the list AND change the
+     * value. Re-keys the LaunchedEffect so flipping it back on rebuilds the collector
+     * cleanly without dropping events queued in the buffer.
+     */
+    enabled: Boolean = true,
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
@@ -44,7 +53,8 @@ fun WheelScrollFor(
     val accelEnabled by (settings?.settings?.map { it.wheel.acceleration }
         ?: kotlinx.coroutines.flow.flowOf(false))
         .collectAsState(initial = AppSettings().wheel.acceleration)
-    LaunchedEffect(listState, accelEnabled) {
+    LaunchedEffect(listState, accelEnabled, enabled) {
+        if (!enabled) return@LaunchedEffect
         // Sliding-window rate of recent wheel events for the acceleration calculation.
         // Same 250 ms window CardStackViewModel uses so the feel matches between the
         // card stack and the list views.

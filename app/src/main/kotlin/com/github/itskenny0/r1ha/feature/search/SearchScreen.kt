@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +93,12 @@ fun SearchScreen(
             ?.favorites?.toSet() ?: emptySet()
     }
     WheelScrollFor(wheelInput = wheelInput, listState = listState, settings = settings)
+    // History-peek state — entity currently being previewed via long-press.
+    // Holds an EntityState so the dialog can show the right name/unit even
+    // when results re-shuffle underneath. Null = no peek active.
+    var historyPeek by remember {
+        androidx.compose.runtime.mutableStateOf<EntityState?>(null)
+    }
     LaunchedEffect(Unit) {
         vm.refresh()
         kotlinx.coroutines.delay(80)
@@ -299,7 +306,13 @@ fun SearchScreen(
                             entity,
                             isFavorite = entity.id.value in activeFavourites,
                             onTap = { vm.activate(entity) },
-                            onLongPress = { openInHa(entity) },
+                            // Long-press now opens a compact history-peek dialog (with
+                            // an OPEN IN HA button inside for users who still want the
+                            // browser fallback). Replaces the previous "long-press =
+                            // open in HA" gesture because the inline peek is a more
+                            // useful default — most queries are "what is this sensor
+                            // doing?" rather than "let me jump to the web UI."
+                            onLongPress = { historyPeek = entity },
                             onFavorite = { vm.addToFavorites(entity.id) },
                             onHistory = { onOpenHistory(entity.id.value) },
                         )
@@ -309,6 +322,96 @@ fun SearchScreen(
         }
         } // AdaptiveContent
     }
+    historyPeek?.let { peeked ->
+        HistoryPeekDialog(
+            entity = peeked,
+            haRepository = haRepository,
+            onDismiss = { historyPeek = null },
+            onOpenFull = {
+                val id = peeked.id.value
+                historyPeek = null
+                onOpenHistory(id)
+            },
+            onOpenInHa = {
+                openInHa(peeked)
+                historyPeek = null
+            },
+        )
+    }
+}
+
+/**
+ * Inline history peek triggered by a long-press on a Search row. Fetches the
+ * last 24 hours of history via the repository, renders it through the same
+ * [com.github.itskenny0.r1ha.ui.components.SensorHistoryChart] component the
+ * card stack uses, and offers shortcuts to the full History screen or to
+ * HA's web UI. Bypassed when the entity is non-numeric — the chart component
+ * itself surfaces a "HISTORY ISN'T NUMERIC" hint in that case.
+ */
+@Composable
+private fun HistoryPeekDialog(
+    entity: EntityState,
+    haRepository: HaRepository,
+    onDismiss: () -> Unit,
+    onOpenFull: () -> Unit,
+    onOpenInHa: () -> Unit,
+) {
+    var points by remember(entity.id.value) {
+        androidx.compose.runtime.mutableStateOf<List<com.github.itskenny0.r1ha.core.ha.HistoryPoint>?>(null)
+    }
+    var error by remember(entity.id.value) {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(entity.id.value) {
+        haRepository.fetchHistory(entity.id, hours = 24).fold(
+            onSuccess = { points = it },
+            onFailure = { error = it.message ?: "fetch failed" },
+        )
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = R1.Bg,
+        title = {
+            androidx.compose.foundation.layout.Column {
+                Text(text = entity.friendlyName, style = R1.sectionHeader, color = R1.Ink)
+                Text(text = entity.id.value, style = R1.labelMicro, color = R1.InkSoft)
+            }
+        },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                when {
+                    error != null -> Text(
+                        text = "Couldn't load history: $error",
+                        style = R1.body,
+                        color = R1.StatusRed,
+                    )
+                    points == null -> Text(
+                        text = "LOADING…",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
+                    )
+                    else -> com.github.itskenny0.r1ha.ui.components.SensorHistoryChart(
+                        points = points ?: emptyList(),
+                        accent = R1.AccentWarm,
+                        unit = entity.unit,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            com.github.itskenny0.r1ha.ui.components.R1Button(
+                text = "OPEN FULL",
+                onClick = onOpenFull,
+            )
+        },
+        dismissButton = {
+            com.github.itskenny0.r1ha.ui.components.R1Button(
+                text = "OPEN IN HA",
+                onClick = onOpenInHa,
+                variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
+            )
+        },
+    )
 }
 
 @Composable

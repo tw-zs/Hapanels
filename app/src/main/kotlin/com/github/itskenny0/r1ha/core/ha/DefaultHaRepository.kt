@@ -1496,6 +1496,7 @@ class DefaultHaRepository(
         text: String,
         language: String?,
         conversationId: String?,
+        agentId: String?,
     ): Result<ConversationResponse> = withContext(Dispatchers.IO) {
         runCatching {
             val s = settings.settings.first()
@@ -1505,6 +1506,11 @@ class DefaultHaRepository(
                 put("text", JsonPrimitive(text))
                 if (!language.isNullOrBlank()) put("language", JsonPrimitive(language))
                 if (!conversationId.isNullOrBlank()) put("conversation_id", JsonPrimitive(conversationId))
+                // agent_id routes to a specific conversation agent. HA picks
+                // its default when omitted; passing it lets the user steer
+                // between multiple configured back-ends (OpenAI, local Llama,
+                // Google, etc.) from the same Assist surface.
+                if (!agentId.isNullOrBlank()) put("agent_id", JsonPrimitive(agentId))
             }
             val url = "${server.url.trimEnd('/')}/api/conversation/process"
             val body = conversationCallBody(url, payload) ?: run {

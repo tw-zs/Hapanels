@@ -25,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -82,7 +83,75 @@ fun HelpersScreen(
     }
     val ui by vm.ui.collectAsState()
     val listState = rememberLazyListState()
-    WheelScrollFor(wheelInput = wheelInput, listState = listState, settings = settings)
+    // Entity id of the input_number row currently grabbing the wheel for value
+    // stepping, or null when the wheel scrolls the list normally. Tap on the
+    // value text activates; tapping again (or 5 s of no wheel events) hands the
+    // wheel back. Stored as a string so the same `remember` survives recompose
+    // even if HelpersViewModel.Entry instances are reconstructed.
+    val numberWheelTarget = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    // Auto-release the wheel target after a quiet period so a user who walked
+    // away mid-edit doesn't lose normal scrolling forever. Each wheel detent
+    // bumps this; expiry clears the target.
+    val numberWheelLastEvent = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableLongStateOf(0L)
+    }
+    WheelScrollFor(
+        wheelInput = wheelInput,
+        listState = listState,
+        settings = settings,
+        // Hand the wheel off to the per-row stepper while a number row is
+        // active; otherwise the same detent would scroll the list AND step the
+        // value, which felt twitchy in early testing.
+        enabled = numberWheelTarget.value == null,
+    )
+    val tickHaptic = com.github.itskenny0.r1ha.ui.components.rememberTickHaptic()
+    androidx.compose.runtime.LaunchedEffect(numberWheelTarget.value) {
+        val targetId = numberWheelTarget.value ?: return@LaunchedEffect
+        // Seed the watchdog with "now" so the 5 s timeout starts from entry
+        // into wheel mode rather than from 1970 (which would fire instantly).
+        numberWheelLastEvent.longValue = System.currentTimeMillis()
+        // Auto-release watchdog: if no wheel events arrive for 5 s while
+        // stepping is active, drop the target so list scrolling resumes.
+        // 5 s is comfortably longer than a deliberate pause between detents
+        // (the user thinking about which way to go), shorter than the
+        // "user walked away" threshold. Runs as a child of the LE so it's
+        // cancelled cleanly when the target changes (which itself cancels
+        // and re-runs the LE).
+        val watchdog = launch {
+            while (true) {
+                val sinceLast = System.currentTimeMillis() - numberWheelLastEvent.longValue
+                val waitMs = (5_000L - sinceLast).coerceAtLeast(250L)
+                kotlinx.coroutines.delay(waitMs)
+                if (System.currentTimeMillis() - numberWheelLastEvent.longValue >= 5_000L) {
+                    numberWheelTarget.value = null
+                    break
+                }
+            }
+        }
+        try {
+            wheelInput.events.collect { event ->
+                val entry = vm.ui.value.entries.firstOrNull { it.id.value == targetId }
+                    ?: return@collect
+                if (entry.kind != HelpersViewModel.Kind.NUMBER) return@collect
+                val value = entry.numericValue ?: return@collect
+                val step = entry.step ?: 1.0
+                val sign = if (event.direction ==
+                    com.github.itskenny0.r1ha.core.input.WheelEvent.Direction.UP) +1 else -1
+                val next = (value + sign * step)
+                    .coerceAtLeast(entry.min ?: Double.NEGATIVE_INFINITY)
+                    .coerceAtMost(entry.max ?: Double.POSITIVE_INFINITY)
+                if (next != value) {
+                    vm.setNumber(entry, next)
+                    tickHaptic()
+                }
+                numberWheelLastEvent.longValue = System.currentTimeMillis()
+            }
+        } finally {
+            watchdog.cancel()
+        }
+    }
     LaunchedEffect(Unit) { vm.refresh() }
     Column(
         modifier = Modifier
@@ -180,6 +249,12 @@ fun HelpersScreen(
                                 entry = entry,
                                 vm = vm,
                                 isFavorite = entry.id.value in activeFavourites,
+                                isWheelActive = numberWheelTarget.value == entry.id.value,
+                                onToggleWheel = {
+                                    val cur = numberWheelTarget.value
+                                    numberWheelTarget.value = if (cur == entry.id.value) null
+                                    else entry.id.value
+                                },
                             )
                         }
                     }
@@ -265,13 +340,33 @@ private fun HelperRow(
     entry: HelpersViewModel.Entry,
     vm: HelpersViewModel,
     isFavorite: Boolean,
+    /**
+     * True when this row is currently grabbing the screen-level wheel input for
+     * value stepping. Drives a border-highlight and a WHEEL chip on the row so
+     * the user can see which value the wheel is driving. Only meaningful for
+     * input_number rows (the wheel handler ignores every other kind).
+     */
+    isWheelActive: Boolean = false,
+    /**
+     * Toggles wheel-stepping mode for this row. Fired by a tap on the value
+     * display. Tapping again (or 5 s of no wheel activity) hands the wheel
+     * back to the list scroller.
+     */
+    onToggleWheel: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(R1.ShapeS)
             .background(R1.SurfaceMuted)
-            .border(1.dp, R1.Hairline, R1.ShapeS)
+            // Highlight the row's border in the warm accent when the wheel is
+            // driving its value, so the user can see at a glance which row is
+            // the wheel target without scrolling around to verify.
+            .border(
+                1.dp,
+                if (isWheelActive) R1.AccentWarm else R1.Hairline,
+                R1.ShapeS,
+            )
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -282,6 +377,16 @@ private fun HelperRow(
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
             )
+            if (isWheelActive) {
+                // Visual confirmation of the wheel hand-off. Disappears the
+                // moment focus leaves the row (timeout or tap-elsewhere).
+                Text(
+                    text = "WHEEL",
+                    style = R1.labelMicro,
+                    color = R1.AccentWarm,
+                )
+                Spacer(Modifier.width(6.dp))
+            }
             Spacer(Modifier.width(6.dp))
             // ☆ pin-to-favourites — only for helpers whose entity_id
             // domain is recognised by the card stack (input_boolean
@@ -323,7 +428,12 @@ private fun HelperRow(
         // gets the affordance that fits HA's native semantic.
         when (entry.kind) {
             HelpersViewModel.Kind.BOOLEAN -> BooleanControl(entry, vm)
-            HelpersViewModel.Kind.NUMBER -> NumberControl(entry, vm)
+            HelpersViewModel.Kind.NUMBER -> NumberControl(
+                entry = entry,
+                vm = vm,
+                isWheelActive = isWheelActive,
+                onToggleWheel = onToggleWheel,
+            )
             HelpersViewModel.Kind.COUNTER -> CounterControl(entry, vm)
             HelpersViewModel.Kind.SELECT -> SelectControl(entry, vm)
             HelpersViewModel.Kind.TEXT -> ReadOnlyValue(entry.state)
@@ -361,7 +471,12 @@ private fun BooleanControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) 
 }
 
 @Composable
-private fun NumberControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
+private fun NumberControl(
+    entry: HelpersViewModel.Entry,
+    vm: HelpersViewModel,
+    isWheelActive: Boolean = false,
+    onToggleWheel: () -> Unit = {},
+) {
     val value = entry.numericValue
     val step = entry.step ?: 1.0
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -371,14 +486,29 @@ private fun NumberControl(entry: HelpersViewModel.Entry, vm: HelpersViewModel) {
         Spacer(Modifier.width(8.dp))
         // Live value display — formatted as integer when the step is
         // whole, otherwise as a one-decimal float so 0.5° helpers
-        // don't get rounded to an unhelpful integer.
+        // don't get rounded to an unhelpful integer. Tap toggles wheel
+        // stepping for this row so the user can dial a value with the
+        // R1 wheel instead of repeatedly hitting +/−. Visual accent
+        // matches the row's WHEEL chip / border highlight.
         val formatted = when {
             value == null -> entry.state
             step % 1.0 == 0.0 -> "${value.toInt()}"
             else -> "%.1f".format(value)
         }
         val withUnit = if (entry.unit.isNullOrBlank()) formatted else "$formatted ${entry.unit}"
-        Text(text = withUnit, style = R1.body, color = R1.Ink, modifier = Modifier.weight(1f))
+        Text(
+            text = withUnit,
+            style = R1.body,
+            color = if (isWheelActive) R1.AccentWarm else R1.Ink,
+            modifier = Modifier
+                .weight(1f)
+                .r1Pressable(
+                    onClick = onToggleWheel,
+                    contentDescription = if (isWheelActive)
+                        "Stop wheel stepping" else "Use wheel to step this value",
+                )
+                .padding(vertical = 4.dp),
+        )
         StepPill(label = "+", onClick = {
             if (value != null) vm.setNumber(entry, (value + step).coerceAtMost(entry.max ?: Double.POSITIVE_INFINITY))
         })

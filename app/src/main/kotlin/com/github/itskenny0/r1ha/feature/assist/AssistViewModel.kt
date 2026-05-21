@@ -8,6 +8,7 @@ import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +45,7 @@ data class AssistUiState(
 
 class AssistViewModel(
     private val haRepository: HaRepository,
+    private val settings: com.github.itskenny0.r1ha.core.prefs.SettingsRepository,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(AssistUiState())
@@ -85,7 +87,15 @@ class AssistViewModel(
         )
         sendJob?.cancel()
         sendJob = viewModelScope.launch {
-            val result = haRepository.conversationProcess(text = text, conversationId = conversationId)
+            // Read the user-picked agent fresh on every send so picking a new
+            // agent mid-conversation takes effect on the very next turn rather
+            // than waiting for screen recompose. Null = HA's default agent.
+            val agentId = settings.settings.first().behavior.assistAgentId
+            val result = haRepository.conversationProcess(
+                text = text,
+                conversationId = conversationId,
+                agentId = agentId,
+            )
             result.fold(
                 onSuccess = { response ->
                     R1Log.i(
@@ -126,8 +136,11 @@ class AssistViewModel(
     }
 
     companion object {
-        fun factory(haRepository: HaRepository) = viewModelFactory {
-            initializer { AssistViewModel(haRepository) }
+        fun factory(
+            haRepository: HaRepository,
+            settings: com.github.itskenny0.r1ha.core.prefs.SettingsRepository,
+        ) = viewModelFactory {
+            initializer { AssistViewModel(haRepository, settings) }
         }
     }
 }

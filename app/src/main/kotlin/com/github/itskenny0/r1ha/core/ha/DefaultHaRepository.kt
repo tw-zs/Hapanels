@@ -2242,15 +2242,27 @@ class DefaultHaRepository(
                     ?: kotlinx.serialization.json.JsonObject(emptyMap())
                 val items = entityResponse["items"] as? kotlinx.serialization.json.JsonArray
                     ?: kotlinx.serialization.json.JsonArray(emptyList())
-                items.mapNotNull { el ->
-                    val obj = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
-                    val uid = (obj["uid"] as? JsonPrimitive)?.content
-                        ?: (obj["summary"] as? JsonPrimitive)?.content
-                        ?: return@mapNotNull null
-                    val summary = (obj["summary"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                items.mapIndexedNotNull { idx, el ->
+                    val obj = el as? kotlinx.serialization.json.JsonObject ?: return@mapIndexedNotNull null
+                    // Prefer HA's stable `uid`; this is what update_item /
+                    // remove_item should target. When the provider doesn't
+                    // expose a uid (rare on Local To-do / Google Tasks /
+                    // Shopping List, but happens on some CalDAV providers)
+                    // we still need a LazyColumn key, so synthesise one
+                    // from summary + array index. The synthetic key never
+                    // leaves the ViewModel — service calls already use
+                    // the actual summary on items without a real uid.
+                    val rawUid = (obj["uid"] as? JsonPrimitive)?.content
+                    val summary = (obj["summary"] as? JsonPrimitive)?.content ?: return@mapIndexedNotNull null
+                    val uid = rawUid ?: summary
                     val status = (obj["status"] as? JsonPrimitive)?.content ?: "needs_action"
                     ToDoItem(uid = uid, summary = summary, completed = status == "completed")
                 }
+                    // Dedupe by uid as a final guard: a misbehaving integration
+                    // that returns two items with the same uid would otherwise
+                    // crash LazyColumn on its duplicate-key check. distinctBy
+                    // keeps the first occurrence.
+                    .distinctBy { it.uid }
             }.onFailure { t ->
                 R1Log.w("HaRepo.todo", "fetch items for $entityId failed: ${t.message}")
             }

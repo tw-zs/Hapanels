@@ -79,6 +79,7 @@ fun SettingsScreen(
     onOpenTodo: () -> Unit,
     onOpenUpdates: () -> Unit,
     onOpenRepairs: () -> Unit,
+    onOpenMediaBrowse: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1387,6 +1388,13 @@ fun SettingsScreen(
                     label = "Repairs",
                     value = "HA issues + ignore",
                     onClick = onOpenRepairs,
+                )
+            }
+            item {
+                NavRow(
+                    label = "Media Browse",
+                    value = "Browse + play any media_player library",
+                    onClick = onOpenMediaBrowse,
                 )
             }
             item {

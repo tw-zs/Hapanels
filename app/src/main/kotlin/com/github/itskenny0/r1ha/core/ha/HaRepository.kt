@@ -237,6 +237,22 @@ interface HaRepository {
      */
     suspend fun ignoreRepair(domain: String, issueId: String, ignore: Boolean = true): Result<Unit>
 
+    /**
+     * Browse the media library exposed by [entityId] one level at a time.
+     * Pass null for [mediaContentId] / [mediaContentType] to get the root
+     * (player's top-level sources); pass values from a previous [MediaBrowseEntry]
+     * (whose `canExpand == true`) to drill into a folder.
+     *
+     * Same WS-only constraint as the repairs surface: HA's media_player.browse_media
+     * is exposed via the WS command, not REST. Failure to find the entity, network
+     * issues, or unsupported integration responses all surface as Result.failure.
+     */
+    suspend fun browseMedia(
+        entityId: String,
+        mediaContentId: String? = null,
+        mediaContentType: String? = null,
+    ): Result<MediaBrowseResult>
+
     suspend fun start()
     suspend fun stop()
 

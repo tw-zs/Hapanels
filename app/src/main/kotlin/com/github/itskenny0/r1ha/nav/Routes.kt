@@ -40,6 +40,7 @@ object Routes {
     /** HA repairs / issues feed — surfaces server-side integration warnings + errors,
      *  same set HA's frontend shows under Settings > System > Repairs. */
     const val REPAIRS = "repairs"
+    const val MEDIA_BROWSE = "media_browse"
 
     /** "Modified settings" subscreen — lists every registry entry whose
      *  current value differs from its default. Reached from a chip near

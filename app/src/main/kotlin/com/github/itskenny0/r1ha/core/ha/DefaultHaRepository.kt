@@ -2486,5 +2486,47 @@ class DefaultHaRepository(
                 R1Log.w("HaRepo.repairs", "ignore $domain/$issueId failed: ${t.message}")
             }
         }
+
+    override suspend fun browseMedia(
+        entityId: String,
+        mediaContentId: String?,
+        mediaContentType: String?,
+    ): Result<MediaBrowseResult> = withContext(Dispatchers.IO) {
+        val extras = kotlinx.serialization.json.buildJsonObject {
+            put("entity_id", JsonPrimitive(entityId))
+            if (mediaContentId != null) put("media_content_id", JsonPrimitive(mediaContentId))
+            if (mediaContentType != null) put("media_content_type", JsonPrimitive(mediaContentType))
+        }
+        callWsExpectingPayload("media_player/browse_media", extras).mapCatching { payload ->
+            val root = payload as? kotlinx.serialization.json.JsonObject
+                ?: error("media browse returned a non-object payload")
+            val current = parseMediaEntry(root)
+                ?: error("media browse returned malformed root entry")
+            val childrenArr = root["children"] as? kotlinx.serialization.json.JsonArray
+            val children = childrenArr?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)?.let(::parseMediaEntry) }
+                ?: emptyList()
+            MediaBrowseResult(current = current, children = children)
+        }.onFailure { t ->
+            R1Log.w("HaRepo.media", "browse failed: ${t.message}")
+        }
+    }
+
+    /** Decode one [MediaBrowseEntry] from a HA browse_media payload object. */
+    private fun parseMediaEntry(obj: kotlinx.serialization.json.JsonObject): MediaBrowseEntry? {
+        fun str(key: String): String? = (obj[key] as? JsonPrimitive)?.content
+        fun bool(key: String): Boolean =
+            (obj[key] as? JsonPrimitive)?.booleanOrNull == true
+        val mediaContentId = str("media_content_id") ?: return null
+        val mediaContentType = str("media_content_type") ?: return null
+        return MediaBrowseEntry(
+            title = str("title") ?: mediaContentId,
+            mediaClass = str("media_class"),
+            mediaContentId = mediaContentId,
+            mediaContentType = mediaContentType,
+            canPlay = bool("can_play"),
+            canExpand = bool("can_expand"),
+            thumbnail = str("thumbnail"),
+        )
+    }
 }
 

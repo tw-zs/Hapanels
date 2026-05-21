@@ -219,6 +219,9 @@ fun AppNavGraph(
                 onOpenRepairs = {
                     navController.navigate(Routes.REPAIRS) { launchSingleTop = true }
                 },
+                onOpenMediaBrowse = {
+                    navController.navigate(Routes.MEDIA_BROWSE) { launchSingleTop = true }
+                },
                 onOpenEnergy = {
                     navController.navigate(Routes.ENERGY) { launchSingleTop = true }
                 },
@@ -464,6 +467,12 @@ fun AppNavGraph(
         }
         composable(Routes.REPAIRS) {
             com.github.itskenny0.r1ha.feature.repairs.RepairsScreen(
+                haRepository = haRepository,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.MEDIA_BROWSE) {
+            com.github.itskenny0.r1ha.feature.mediabrowse.MediaBrowseScreen(
                 haRepository = haRepository,
                 onBack = { navController.popBackStack() },
             )

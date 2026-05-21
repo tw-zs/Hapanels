@@ -117,13 +117,19 @@ fun ToDoScreen(
                         ui.items.isEmpty() ->
                             EmptyText("List is empty.")
                         else ->
-                            ItemList(
-                                items = ui.items,
-                                pendingItems = ui.pendingItems,
-                                listState = listState,
-                                onToggle = vm::toggleCompleted,
-                                onRemove = vm::remove,
-                            )
+                            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                                isRefreshing = ui.loadingItems,
+                                onRefresh = { ui.activeEntityId?.let { vm.refresh() } },
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                ItemList(
+                                    items = ui.items,
+                                    pendingItems = ui.pendingItems,
+                                    listState = listState,
+                                    onToggle = vm::toggleCompleted,
+                                    onRemove = vm::remove,
+                                )
+                            }
                     }
                 }
                 if (ui.error != null && ui.items.isEmpty()) {

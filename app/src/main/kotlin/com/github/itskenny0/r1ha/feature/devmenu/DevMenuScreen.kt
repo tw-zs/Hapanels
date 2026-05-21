@@ -279,6 +279,14 @@ fun DevMenuScreen(
                     onChange = { v -> vm.updateAdvanced { it.copy(backgroundRefreshEnabled = v) } },
                 )
             }
+            item {
+                DevSwitchRow(
+                    label = "Mirror HA notifications",
+                    subtitle = "Post HA persistent_notification entities as Android notifications, with a DISMISS action that fires persistent_notification.dismiss server-side. Polls at the same cadence as the Notifications screen. Off by default; Android 13+ will prompt for POST_NOTIFICATIONS the first time you enable it.",
+                    checked = advanced.mirrorHaNotifications,
+                    onChange = { v -> vm.updateAdvanced { it.copy(mirrorHaNotifications = v) } },
+                )
+            }
             item { SectionDivider() }
 
             // ── Fire event ──────────────────────────────────────────────────────────

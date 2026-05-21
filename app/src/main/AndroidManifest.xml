@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Required for Android 13+ to post the HA persistent-notification mirror.
+         Users opt in via the toggle under Advanced; we only request the runtime
+         permission when they enable the mirror, so installs that don't use the
+         feature never see the prompt. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Needed for the in-app self-update flow: after we download a newer APK from
          GitHub Releases we fire ACTION_VIEW with a content:// URI, which Android's
          PackageInstaller honours only when the source app holds this permission.
@@ -94,6 +99,17 @@
             android:name=".core.background.BackgroundRefreshJob"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE"/>
+
+        <!-- DISMISS-action receiver for the HA notification mirror. Fired when the
+             user taps the DISMISS button on a mirrored notification; routes to
+             persistent_notification.dismiss via the existing repository. -->
+        <receiver
+            android:name=".core.notifications.HaNotificationMirror$DismissActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.github.itskenny0.r1ha.action.DISMISS_HA_NOTIF"/>
+            </intent-filter>
+        </receiver>
 
         <!-- External-automation broadcast receiver. Lets Tasker / MacroDroid /
              Automate fire HA service calls through our already-configured client

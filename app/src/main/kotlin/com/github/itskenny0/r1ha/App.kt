@@ -181,5 +181,19 @@ class App : Application() {
                     }
                 }
         }
+        // HA notification mirror — same observe-and-react pattern as the background job,
+        // so a toggle flip immediately starts or stops the mirror without an app restart.
+        appScope.launch {
+            graph.settings.settings
+                .map { it.advanced.mirrorHaNotifications }
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    if (enabled) {
+                        com.github.itskenny0.r1ha.core.notifications.HaNotificationMirror.start(this@App)
+                    } else {
+                        com.github.itskenny0.r1ha.core.notifications.HaNotificationMirror.stop()
+                    }
+                }
+        }
     }
 }

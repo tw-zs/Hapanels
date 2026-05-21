@@ -482,6 +482,17 @@ data class AdvancedSettings(
      * Disabling cancels the scheduled job on the next App.onCreate cycle.
      */
     val backgroundRefreshEnabled: Boolean = false,
+    /**
+     * Opt-in: mirror HA's persistent notifications into the Android system
+     * notification shade so they're visible without opening the app. Posts one
+     * Android notification per HA notification id; the DISMISS action button
+     * fires persistent_notification.dismiss against the server.
+     *
+     * Off by default — pre-empts permission-prompt fatigue for users who never
+     * intended to use the feature. Android 13+ asks for POST_NOTIFICATIONS at
+     * runtime the first time the user flips this on.
+     */
+    val mirrorHaNotifications: Boolean = false,
 )
 
 @Stable

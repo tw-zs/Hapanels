@@ -28,7 +28,10 @@ class ToDoViewModel(
 
     @androidx.compose.runtime.Stable
     data class UiState(
-        val loadingLists: Boolean = false,
+        // Default to true so the first composition shows a spinner rather
+        // than briefly flashing the "No todo entities found" empty state
+        // before the initial refresh launches.
+        val loadingLists: Boolean = true,
         val loadingItems: Boolean = false,
         val lists: List<ToDoList> = emptyList(),
         val activeEntityId: String? = null,

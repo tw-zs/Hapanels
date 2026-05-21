@@ -614,6 +614,11 @@ class DefaultHaRepository(
             // pin-to-favorites + tap could be wired later without further
             // changes to isOn semantics.
             Domain.TIMER -> stateStr.equals("active", ignoreCase = true)
+            // Update entities have state "on" when an update is available and
+            // "off" when up to date. Surface that mapping so the Updates
+            // screen can read isOn as "update available" without touching
+            // attributesJson — useful for any future status surfacing.
+            Domain.UPDATE -> stateStr.equals("on", ignoreCase = true)
         }
         val available = stateStr != "unavailable" && stateStr != "unknown"
         val pct = computePercentWithState(id.domain, raw.attributes, stateStr)
@@ -809,7 +814,12 @@ class DefaultHaRepository(
         // for these. Counter / timer have integer / time values that
         // don't map to a 0..100 percent; input_text / input_datetime
         // are text-shaped.
-        Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> null
+        Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME,
+        // Update entities expose `update_percentage` for install progress but
+        // that's surfaced on the dedicated Updates screen — not a scalar
+        // brightness/volume-style percent, so we leave the card-stack
+        // percent null.
+        Domain.UPDATE -> null
     }
 
     /**
@@ -897,6 +907,9 @@ class DefaultHaRepository(
         Domain.NUMBER, Domain.INPUT_NUMBER -> null
         // Helper-only domains: no numeric raw the card stack needs.
         Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> null
+        // Update entities — version diff lives in attributes that the Updates
+        // screen reads directly; no card-stack raw value to expose.
+        Domain.UPDATE -> null
     }
 
     /**
@@ -975,6 +988,10 @@ class DefaultHaRepository(
         // Helper-only domains rendered exclusively on the Helpers screen; not
         // scalar from the card stack's perspective.
         Domain.COUNTER, Domain.TIMER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
+        // Update entities are managed from the dedicated Updates screen, not
+        // the card stack — return false so the Favourites picker filters them
+        // out of "controllable" buckets, just like sensors.
+        Domain.UPDATE -> false
     }
 
     override fun observe(entities: Set<EntityId>): Flow<Map<EntityId, EntityState>> =
@@ -1121,6 +1138,8 @@ class DefaultHaRepository(
                         // Helper-only — Helpers screen renders these bespoke.
                         Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
                         Domain.TIMER -> stateStr.equals("active", ignoreCase = true)
+                        // Update entity: "on" = update available.
+                        Domain.UPDATE -> stateStr.equals("on", ignoreCase = true)
                     },
                     percent = pct,
                     raw = rawNum,

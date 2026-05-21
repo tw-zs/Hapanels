@@ -126,6 +126,18 @@ enum class Domain(val prefix: String) {
      * Helpers VM's domain loop.
      */
     INPUT_DATETIME("input_datetime"),
+    /**
+     * Software-update entities — HA Core, Supervisor, OS, add-ons, integration
+     * firmware. State is `"on"` when an update is available, `"off"` when up to
+     * date. Attributes (`installed_version`, `latest_version`,
+     * `release_summary`, `release_url`, `in_progress`, `update_percentage`,
+     * `auto_update`, `title`, `entity_picture`, `supported_features`) drive
+     * the dedicated Updates screen. Services: `update.install` (with optional
+     * `version` and `backup` params), `update.skip`, `update.clear_skipped`.
+     * No card-stack archetype: updates aren't a card-deck concept and are
+     * surfaced from a dedicated review screen instead.
+     */
+    UPDATE("update"),
     ;
 
     /** Action-only domains — UI renders them as fire-and-forget ActionCard tiles. */

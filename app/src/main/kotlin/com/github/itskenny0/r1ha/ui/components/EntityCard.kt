@@ -74,6 +74,11 @@ fun EntityCard(
         // exhaustive. Pick something sensible-but-irrelevant.
         Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> CardRenderModel.Glyph.NUMBER
         Domain.TIMER -> CardRenderModel.Glyph.SWITCH
+        // Update entities are managed from the dedicated Updates screen and
+        // shouldn't end up on the card stack via normal flows. Defensive
+        // glyph keeps the when exhaustive without crashing if a user pins
+        // one manually via raw favourites JSON.
+        Domain.UPDATE -> CardRenderModel.Glyph.SWITCH
     }
     val accentRole = when (state.id.domain) {
         Domain.LIGHT -> CardRenderModel.AccentRole.WARM
@@ -116,6 +121,8 @@ fun EntityCard(
         // confusing.
         Domain.COUNTER, Domain.TIMER,
         Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> CardRenderModel.AccentRole.NEUTRAL
+        // Update entity defensive accent — see the glyph branch for context.
+        Domain.UPDATE -> CardRenderModel.AccentRole.COOL
     }
     // When the entity is unavailable, dim the whole card and overlay a "UNAVAILABLE" label so
     // the user doesn't think the card is just at 0%. The themes themselves don't honour

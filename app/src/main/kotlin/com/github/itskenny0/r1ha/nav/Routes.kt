@@ -35,6 +35,8 @@ object Routes {
     const val LOVELACE = "lovelace"
     const val DEVICE = "device"
     const val TODO = "todo"
+    /** HA / Supervisor / add-on / integration update viewer + installer. */
+    const val UPDATES = "updates"
 
     /** "Modified settings" subscreen — lists every registry entry whose
      *  current value differs from its default. Reached from a chip near

@@ -77,6 +77,7 @@ fun SettingsScreen(
     onOpenAutomations: () -> Unit,
     onOpenHelpers: () -> Unit,
     onOpenTodo: () -> Unit,
+    onOpenUpdates: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1332,6 +1333,13 @@ fun SettingsScreen(
             item { SectionDivider() }
             item { Section("POWER TOOLS", expanded = "POWER TOOLS" in expandedSections, onToggle = { toggleSection("POWER TOOLS") }, modifiedCount = sectionModifiedCount["POWER TOOLS"] ?: 0) }
             if ("POWER TOOLS" in expandedSections) {
+            item {
+                NavRow(
+                    label = "Updates",
+                    value = "HA Core, add-ons, integrations",
+                    onClick = onOpenUpdates,
+                )
+            }
             item {
                 NavRow(label = "Templates", value = "Jinja2 evaluator", onClick = onOpenTemplate)
             }

@@ -70,6 +70,11 @@ class SearchViewModel(
         Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> Bucket.SENSORS
         Domain.SCENE, Domain.SCRIPT, Domain.BUTTON, Domain.INPUT_BUTTON,
         Domain.AUTOMATION -> Bucket.ACTIONS
+        // Update entities live on the dedicated Updates screen; route them
+        // into OTHER so the CONTROLS/SENSORS/ACTIONS chips don't pollute
+        // with them, but they remain findable via the ALL chip + free-text
+        // search for users who know the entity_id.
+        Domain.UPDATE -> Bucket.OTHER
     }
 
     @androidx.compose.runtime.Stable

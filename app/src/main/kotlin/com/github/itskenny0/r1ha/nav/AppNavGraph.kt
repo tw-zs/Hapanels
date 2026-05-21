@@ -213,6 +213,9 @@ fun AppNavGraph(
                 onOpenTodo = {
                     navController.navigate(Routes.TODO) { launchSingleTop = true }
                 },
+                onOpenUpdates = {
+                    navController.navigate(Routes.UPDATES) { launchSingleTop = true }
+                },
                 onOpenEnergy = {
                     navController.navigate(Routes.ENERGY) { launchSingleTop = true }
                 },
@@ -442,6 +445,14 @@ fun AppNavGraph(
         }
         composable(Routes.HELPERS) {
             com.github.itskenny0.r1ha.feature.helpers.HelpersScreen(
+                haRepository = haRepository,
+                settings = settings,
+                wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.UPDATES) {
+            com.github.itskenny0.r1ha.feature.updates.UpdatesScreen(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,

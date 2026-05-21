@@ -132,6 +132,12 @@ data class ServiceCall(
                     "update_entity",
                     JsonObject(emptyMap()),
                 )
+                // Update entities never enter the wheel/percent path — they
+                // have their own install/skip flow surfaced from the Updates
+                // screen. Defensive: emit homeassistant.update_entity (a HA
+                // service that pokes the integration to re-poll its source)
+                // so a stray dispatch is a harmless refresh.
+                Domain.UPDATE -> ServiceCall(target, "update_entity", JsonObject(emptyMap()))
             }
         }
 
@@ -260,6 +266,38 @@ data class ServiceCall(
             )
         }
 
+        /**
+         * Install a software update for an `update.*` entity. [version] is optional —
+         * when null, HA installs the `latest_version`. [backup] requests a pre-install
+         * snapshot when the underlying integration supports it (HA Core / Supervisor
+         * / OS expose the `SUPPORT_BACKUP` bit; add-ons and integration firmware
+         * usually don't). Setting [backup] true on an entity that doesn't support it
+         * is a no-op rather than an error per HA's behaviour, so the caller can pass
+         * the user's intent without first checking the supported_features bitmask.
+         */
+        fun installUpdate(target: EntityId, version: String? = null, backup: Boolean = false): ServiceCall =
+            ServiceCall(
+                target,
+                "install",
+                buildJsonObject {
+                    if (!version.isNullOrBlank()) put("version", JsonPrimitive(version))
+                    if (backup) put("backup", JsonPrimitive(true))
+                },
+            )
+
+        /**
+         * Skip the currently-offered update for an `update.*` entity. The entity stays
+         * in the "available" state but the user has expressed "don't pester me about
+         * this version"; HA hides it from default views until a newer version arrives
+         * or [clearSkippedUpdate] is called.
+         */
+        fun skipUpdate(target: EntityId): ServiceCall =
+            ServiceCall(target, "skip", JsonObject(emptyMap()))
+
+        /** Inverse of [skipUpdate] — re-surface a skipped update so it can be installed. */
+        fun clearSkippedUpdate(target: EntityId): ServiceCall =
+            ServiceCall(target, "clear_skipped", JsonObject(emptyMap()))
+
         fun tapAction(target: EntityId, isOn: Boolean): ServiceCall = when (target.domain) {
             Domain.LIGHT, Domain.FAN -> ServiceCall(
                 target,
@@ -344,6 +382,11 @@ data class ServiceCall(
                 "update_entity",
                 JsonObject(emptyMap()),
             )
+            // Update entities have a bespoke install/skip/clear flow surfaced
+            // from the dedicated Updates screen — card-stack tap / wheel
+            // dispatches never reach them today. Defensive no-op keeps every
+            // generic dispatch path safe if a future surface routes here.
+            Domain.UPDATE -> ServiceCall(target, "update_entity", JsonObject(emptyMap()))
         }
 
         /**
@@ -418,6 +461,11 @@ data class ServiceCall(
                 "update_entity",
                 JsonObject(emptyMap()),
             )
+            // Update entities have a bespoke install/skip/clear flow surfaced
+            // from the dedicated Updates screen — card-stack tap / wheel
+            // dispatches never reach them today. Defensive no-op keeps every
+            // generic dispatch path safe if a future surface routes here.
+            Domain.UPDATE -> ServiceCall(target, "update_entity", JsonObject(emptyMap()))
         }
 
         /**

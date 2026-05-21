@@ -80,6 +80,7 @@ fun SettingsScreen(
     onOpenUpdates: () -> Unit,
     onOpenRepairs: () -> Unit,
     onOpenMediaBrowse: () -> Unit,
+    onOpenBackups: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1440,6 +1441,13 @@ fun SettingsScreen(
                     label = "Media Browse",
                     value = "Browse + play any media_player library",
                     onClick = onOpenMediaBrowse,
+                )
+            }
+            item {
+                NavRow(
+                    label = "Backups",
+                    value = "View + create HA backups",
+                    onClick = onOpenBackups,
                 )
             }
             item {

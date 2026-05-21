@@ -2511,6 +2511,34 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun listBackups(): Result<List<BackupInfo>> = withContext(Dispatchers.IO) {
+        callWsExpectingPayload("backup/info").mapCatching { payload ->
+            val obj = payload as? kotlinx.serialization.json.JsonObject ?: return@mapCatching emptyList()
+            // HA wraps the backup list under either "backups" (2024.4+) or
+            // "data.backups" (Supervisor-routed); accept both shapes.
+            val arr = (obj["backups"] as? kotlinx.serialization.json.JsonArray)
+                ?: ((obj["data"] as? kotlinx.serialization.json.JsonObject)?.get("backups") as? kotlinx.serialization.json.JsonArray)
+                ?: return@mapCatching emptyList()
+            arr.mapNotNull { el ->
+                val r = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                fun str(key: String): String? = (r[key] as? JsonPrimitive)?.content
+                fun long(key: String): Long? = (r[key] as? JsonPrimitive)?.content?.toLongOrNull()
+                fun bool(key: String): Boolean = (r[key] as? JsonPrimitive)?.booleanOrNull == true
+                val id = str("backup_id") ?: str("slug") ?: return@mapNotNull null
+                BackupInfo(
+                    backupId = id,
+                    name = str("name") ?: id,
+                    createdAt = str("date") ?: str("created"),
+                    sizeBytes = long("size") ?: long("size_bytes"),
+                    protected = bool("protected"),
+                    type = str("type"),
+                )
+            }.sortedByDescending { it.createdAt ?: "" }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.backup", "list failed: ${t.message}")
+        }
+    }
+
     /** Decode one [MediaBrowseEntry] from a HA browse_media payload object. */
     private fun parseMediaEntry(obj: kotlinx.serialization.json.JsonObject): MediaBrowseEntry? {
         fun str(key: String): String? = (obj[key] as? JsonPrimitive)?.content

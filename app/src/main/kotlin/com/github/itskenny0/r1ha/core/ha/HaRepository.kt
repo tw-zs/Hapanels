@@ -253,6 +253,14 @@ interface HaRepository {
         mediaContentType: String? = null,
     ): Result<MediaBrowseResult>
 
+    /**
+     * List the backups HA's backup integration knows about. HA Core 2024.4+ exposes
+     * this via the `backup/info` WS command; older HA installs return failure
+     * (caller surfaces "(no backups visible)" rather than treating that as a hard
+     * error since restore APIs differ between Supervisor and Core).
+     */
+    suspend fun listBackups(): Result<List<BackupInfo>>
+
     suspend fun start()
     suspend fun stop()
 

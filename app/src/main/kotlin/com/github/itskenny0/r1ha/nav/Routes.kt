@@ -41,6 +41,7 @@ object Routes {
      *  same set HA's frontend shows under Settings > System > Repairs. */
     const val REPAIRS = "repairs"
     const val MEDIA_BROWSE = "media_browse"
+    const val BACKUPS = "backups"
 
     /** "Modified settings" subscreen — lists every registry entry whose
      *  current value differs from its default. Reached from a chip near

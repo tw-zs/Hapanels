@@ -128,7 +128,12 @@ fun ToDoScreen(
                         ui.loadingLists && ui.lists.isEmpty() ->
                             CenteredSpinner()
                         ui.lists.isEmpty() ->
-                            EmptyText("No todo entities found. Add a todo integration in HA.")
+                            EmptyText(
+                                "No to-do lists found.\n\n" +
+                                "Add one in Home Assistant: Settings → Devices & services " +
+                                "→ Add integration → Local To-do. Or install one of the " +
+                                "Google Tasks / CalDAV / Shopping List integrations.",
+                            )
                         ui.activeEntityId == null ->
                             EmptyText("Pick a list to view items.")
                         ui.loadingItems && ui.items.isEmpty() ->

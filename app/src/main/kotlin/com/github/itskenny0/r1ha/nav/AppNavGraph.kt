@@ -78,7 +78,25 @@ fun AppNavGraph(
                 // double-fire of the swipe gesture can't stack two copies of the same screen
                 // on the back stack (which would otherwise need two back-presses to escape).
                 onOpenFavoritesPicker = {
-                    navController.navigate(Routes.FAVORITES_PICKER) { launchSingleTop = true }
+                    // Guard against duplicate / mid-transition navigation. Rapid taps on
+                    // the hamburger (or a tap that lands while a pager swipe is still
+                    // animating) could otherwise fire the navigate twice; launchSingleTop
+                    // alone has historically not been enough to prevent a second nav from
+                    // racing through while the back-stack entry for the first is still
+                    // being created. Restricting to the CARD_STACK route makes it a no-op
+                    // unless we're actually still on the deck.
+                    if (navController.currentDestination?.route == Routes.CARD_STACK) {
+                        com.github.itskenny0.r1ha.core.util.R1Log.i(
+                            "Nav.openFavoritesPicker",
+                            "navigating to FAVORITES_PICKER",
+                        )
+                        navController.navigate(Routes.FAVORITES_PICKER) { launchSingleTop = true }
+                    } else {
+                        com.github.itskenny0.r1ha.core.util.R1Log.w(
+                            "Nav.openFavoritesPicker",
+                            "skipping navigate; currentDestination=${navController.currentDestination?.route}",
+                        )
+                    }
                 },
                 onOpenSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }

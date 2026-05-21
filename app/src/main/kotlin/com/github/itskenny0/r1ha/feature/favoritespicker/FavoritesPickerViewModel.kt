@@ -145,7 +145,14 @@ class FavoritesPickerViewModel(
             _ui.value = _ui.value.copy(loading = true, error = null)
             val snapshot = settings.settings.first()
             R1Log.i("FavoritesPicker.refresh", "server=${snapshot.server?.url ?: "null"} favoritesSoFar=${snapshot.favorites.size}")
-            val all = repo.listAllEntities()
+            // 20s overall ceiling. OkHttp already enforces connect/read timeouts, but
+            // a wedged DNS lookup or an HA that accepts the TCP connection and then
+            // never responds can still pile multiple sub-timeouts on top of each
+            // other. Capping the whole call guarantees the loading state can't
+            // outlast the user's patience; on expiry we surface an error rather than
+            // letting the picker sit on its spinner indefinitely.
+            val all = kotlinx.coroutines.withTimeoutOrNull(20_000L) { repo.listAllEntities() }
+                ?: Result.failure(java.util.concurrent.TimeoutException("Took longer than 20 s"))
             // Picker shows favourites of the ACTIVE page (other pages aren't visible
             // here; the user would switch pages on the card stack first). Falls back
             // to flat-union when there's no active page resolved (shouldn't happen

@@ -56,6 +56,17 @@ fun FavoritesPickerScreen(
     onBack: () -> Unit,
 ) {
     BackHandler(onBack = onBack)
+    // Diagnostic: a black-screen-on-favorites bug has been reported. Log on first
+    // composition so future occurrences leave a footprint in the crash bundle —
+    // if the log is present the picker DID compose (suspect a stuck loading or a
+    // child composable crashing later); if it's absent the navigation never
+    // mounted the screen and the issue is upstream in NavController.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.github.itskenny0.r1ha.core.util.R1Log.i(
+            "FavoritesPicker.compose",
+            "entering composition",
+        )
+    }
     val vm: FavoritesPickerViewModel = viewModel(
         factory = FavoritesPickerViewModel.factory(repo = haRepository, settings = settings)
     )

@@ -122,6 +122,10 @@ fun SystemHealthScreen(
                 // variable the link is.
                 PingRow(haRepository)
                 Spacer(Modifier.size(12.dp))
+                Text(text = "NETWORK SECURITY", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.size(4.dp))
+                NetworkSecurityPanel()
+                Spacer(Modifier.size(12.dp))
                 ShareDebugBundleRow()
                 Spacer(Modifier.size(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -283,6 +287,47 @@ private fun PingRow(haRepository: HaRepository) {
                 color = R1.InkSoft,
             )
         }
+    }
+}
+
+/**
+ * Read-only diagnostic for the recently-added TLS pinning + mTLS surface.
+ * Reads directly from [SecurityPolicyStore] (sync) and renders three lines:
+ * pinning state, mTLS state, and a one-line summary. Lives in System Health
+ * so a user wondering "is my certificate actually being enforced?" can find
+ * out without re-entering Settings.
+ */
+@Composable
+private fun NetworkSecurityPanel() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as com.github.itskenny0.r1ha.App
+    val policy = androidx.compose.runtime.remember { app.graph.securityPolicy.current() }
+    val pinningStatus = when {
+        policy.tlsPinningEnabled && policy.sha256Pins.isNotEmpty() ->
+            "ON · ${policy.sha256Pins.size} pin${if (policy.sha256Pins.size == 1) "" else "s"}"
+        policy.tlsPinningEnabled -> "ARMED · no pins configured"
+        else -> "OFF"
+    }
+    val mtlsStatus = when {
+        policy.mtlsEnabled && !policy.mtlsKeystorePath.isNullOrBlank() -> "ON · keystore loaded"
+        policy.mtlsEnabled -> "ARMED · no keystore"
+        else -> "OFF"
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(R1.ShapeS)
+            .background(R1.SurfaceMuted)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Pair("TLS pinning", pinningStatus).render()
+        Pair("mTLS", mtlsStatus).render()
+        Pair(
+            "Effective at",
+            "next app launch (policy reads at OkHttp build time)",
+        ).render(multiline = true)
     }
 }
 

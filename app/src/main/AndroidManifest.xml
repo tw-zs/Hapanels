@@ -86,6 +86,15 @@
                 android:value="false"/>
         </service>
 
+        <!-- Background-refresh JobService. Wakes the app every ~15 min (subject to
+             Doze) and warms the HA entity cache via /api/states. Opt-in via the
+             Advanced setting; never scheduled by default to avoid the battery hit
+             on users who never see the benefit. -->
+        <service
+            android:name=".core.background.BackgroundRefreshJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE"/>
+
         <!-- External-automation broadcast receiver. Lets Tasker / MacroDroid /
              Automate fire HA service calls through our already-configured client
              by broadcasting the action below with ha_domain + ha_service extras.

@@ -473,6 +473,15 @@ data class AdvancedSettings(
      * accidentally exposes their HA install.
      */
     val externalAutomationEnabled: Boolean = false,
+    /**
+     * Opt-in: schedule a periodic JobService that warms the HA entity cache via
+     * /api/states every ~15 minutes (the Android platform's minimum periodic
+     * interval). Off by default because the foreground card stack already
+     * keeps the cache current via the WS; the background job mostly benefits
+     * Quick Tile freshness and the cold-start paint after device sleep.
+     * Disabling cancels the scheduled job on the next App.onCreate cycle.
+     */
+    val backgroundRefreshEnabled: Boolean = false,
 )
 
 @Stable

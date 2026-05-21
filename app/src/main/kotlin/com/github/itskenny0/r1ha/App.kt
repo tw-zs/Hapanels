@@ -165,5 +165,21 @@ class App : Application() {
                 .distinctUntilChanged()
                 .collect { graph.latestKeySource = it }
         }
+        // Honour the background-refresh advanced toggle: schedule or cancel the periodic
+        // JobService on every emission so a flip-flop at runtime takes effect on the
+        // next setting tick rather than waiting for an app restart. JobScheduler is
+        // idempotent on schedule with the same JOB_ID.
+        appScope.launch {
+            graph.settings.settings
+                .map { it.advanced.backgroundRefreshEnabled }
+                .distinctUntilChanged()
+                .collect { enabled ->
+                    if (enabled) {
+                        com.github.itskenny0.r1ha.core.background.BackgroundRefreshJob.schedule(this@App)
+                    } else {
+                        com.github.itskenny0.r1ha.core.background.BackgroundRefreshJob.cancel(this@App)
+                    }
+                }
+        }
     }
 }

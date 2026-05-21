@@ -271,6 +271,14 @@ fun DevMenuScreen(
                     onChange = { v -> vm.updateAdvanced { it.copy(externalAutomationEnabled = v) } },
                 )
             }
+            item {
+                DevSwitchRow(
+                    label = "Background refresh",
+                    subtitle = "Schedule a JobService that warms the entity cache via /api/states every ~15 min while the app is closed. Useful for Quick Tile freshness + cold-start paint speed; the foreground WS already does this when the app is open. Takes effect on next app launch.",
+                    checked = advanced.backgroundRefreshEnabled,
+                    onChange = { v -> vm.updateAdvanced { it.copy(backgroundRefreshEnabled = v) } },
+                )
+            }
             item { SectionDivider() }
 
             // ── Fire event ──────────────────────────────────────────────────────────

@@ -267,6 +267,27 @@ interface HaRepository {
         suspend fun cancel()
     }
 
+    /** Handle for a live event subscription. Same contract as [TemplateSubscription]. */
+    interface EventSubscription {
+        suspend fun cancel()
+    }
+
+    /**
+     * Subscribe to HA's event bus for events of [eventType]. Each event is delivered
+     * to [onEvent] with the full event payload (entity_id, data, time_fired, etc.).
+     *
+     * Common useful types: "state_changed" (every entity state change), "logbook_entry"
+     * (HA's logbook stream), "homeassistant_start" / "homeassistant_stop". Pass null to
+     * subscribe to ALL events; volume is large so prefer a specific type when known.
+     *
+     * Uses the same inboundRawText + sendRawText machinery as [subscribeTemplate]; the
+     * returned handle's [cancel] sends an unsubscribe_events frame server-side.
+     */
+    suspend fun subscribeEvents(
+        eventType: String?,
+        onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+    ): Result<EventSubscription>
+
     /**
      * Subscribe to live re-renders of [template] via HA's `render_template` WS
      * command. The repository handles the subscription lifecycle: returns a

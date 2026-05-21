@@ -2511,6 +2511,64 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun subscribeEvents(
+        eventType: String?,
+        onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+    ): Result<HaRepository.EventSubscription> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (ws.state.value !is ConnectionState.Connected) {
+                error("WS not connected (state=${ws.state.value::class.simpleName})")
+            }
+            val id = ws.nextRequestId()
+            val resultDeferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
+            pendingPayloads[id] = resultDeferred
+            val frame = kotlinx.serialization.json.buildJsonObject {
+                put("id", JsonPrimitive(id))
+                put("type", JsonPrimitive("subscribe_events"))
+                if (eventType != null) put("event_type", JsonPrimitive(eventType))
+            }
+            if (!ws.sendRawText(frame.toString())) {
+                pendingPayloads.remove(id)
+                error("WS refused subscribe_events")
+            }
+            val initial = kotlinx.coroutines.withTimeout(15_000) { resultDeferred.await() }
+            initial.getOrThrow()
+
+            val collectorJob = scope.launch {
+                ws.inboundRawText.collect { raw ->
+                    val obj = runCatching {
+                        kotlinx.serialization.json.Json.parseToJsonElement(raw)
+                            as? kotlinx.serialization.json.JsonObject
+                    }.getOrNull() ?: return@collect
+                    val frameId = (obj["id"] as? JsonPrimitive)?.content?.toIntOrNull()
+                    if (frameId != id) return@collect
+                    val type = (obj["type"] as? JsonPrimitive)?.content
+                    if (type != "event") return@collect
+                    val event = obj["event"] as? kotlinx.serialization.json.JsonObject
+                        ?: return@collect
+                    onEvent(event)
+                }
+            }
+
+            object : HaRepository.EventSubscription {
+                override suspend fun cancel() {
+                    runCatching {
+                        val unsubId = ws.nextRequestId()
+                        val unsub = kotlinx.serialization.json.buildJsonObject {
+                            put("id", JsonPrimitive(unsubId))
+                            put("type", JsonPrimitive("unsubscribe_events"))
+                            put("subscription", JsonPrimitive(id))
+                        }
+                        ws.sendRawText(unsub.toString())
+                    }
+                    collectorJob.cancel()
+                }
+            }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.events", "subscribe failed: ${t.message}")
+        }
+    }
+
     override suspend fun subscribeTemplate(
         template: String,
         onResult: (String) -> Unit,

@@ -1143,6 +1143,13 @@ class CardStackViewModel(
     fun tapToggle() {
         val activeState = _state.value.activeState ?: return
         if (!activeState.isAvailable) return  // can't toggle an unreachable entity
+        // Code-required locks: the SwitchTrack is hidden and the PIN keypad
+        // surfaced from LockPanel is the only path. A passthrough tapToggle
+        // here would fire lock.lock / lock.unlock with no code attached
+        // and HA would reject — same silent-failure shape we just fixed
+        // for the wheel handler.
+        if (activeState.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LOCK &&
+            !activeState.lockCodeFormat.isNullOrBlank()) return
         viewModelScope.launch {
             val stopService = when (activeState.id.domain) {
                 com.github.itskenny0.r1ha.core.ha.Domain.COVER -> "stop_cover"
@@ -1174,6 +1181,10 @@ class CardStackViewModel(
     fun setSwitchOn(on: Boolean) {
         val activeState = _state.value.activeState ?: return
         if (!activeState.isAvailable) return
+        // Same code-required-lock guard as [tapToggle] and [onWheel] — the
+        // PIN keypad in LockPanel is the only path for those entities.
+        if (activeState.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LOCK &&
+            !activeState.lockCodeFormat.isNullOrBlank()) return
         val newPct = if (on) 100 else 0
         _state.value = _state.value.copy(
             optimisticPercents = _state.value.optimisticPercents + (activeState.id to newPct)

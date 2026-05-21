@@ -107,6 +107,26 @@ class SettingsViewModel(
             it.copy(behavior = it.behavior.copy(quickTileEntityId = cleaned))
         }
 
+    /** Slot B/C/D quick-tile bindings — each tile in the Android shade reads
+     *  from its own slot, so updates here only affect that tile's next refresh. */
+    fun setQuickTileEntityIdB(entityId: String?) =
+        update {
+            val cleaned = entityId?.trim()?.takeIf { it.isNotBlank() }
+            it.copy(behavior = it.behavior.copy(quickTileEntityIdB = cleaned))
+        }
+
+    fun setQuickTileEntityIdC(entityId: String?) =
+        update {
+            val cleaned = entityId?.trim()?.takeIf { it.isNotBlank() }
+            it.copy(behavior = it.behavior.copy(quickTileEntityIdC = cleaned))
+        }
+
+    fun setQuickTileEntityIdD(entityId: String?) =
+        update {
+            val cleaned = entityId?.trim()?.takeIf { it.isNotBlank() }
+            it.copy(behavior = it.behavior.copy(quickTileEntityIdD = cleaned))
+        }
+
     /** Whether opening Assist auto-focuses the input + pops the
      *  keyboard. Off by default; the user can flip this on if they
      *  prefer keyboard-first interaction. */

@@ -18,6 +18,10 @@
 
     <!-- Label shown under the Quick Settings tile chooser when the user
          adds the tile from the system shade. The actual label shown
-         once added comes from the tile's live state. -->
+         once added comes from the tile's live state. Slots B/C/D get
+         distinct labels so the user can tell them apart in the chooser. -->
     <string name="quick_tile_label">HA Toggle</string>
+    <string name="quick_tile_label_b">HA Toggle 2</string>
+    <string name="quick_tile_label_c">HA Toggle 3</string>
+    <string name="quick_tile_label_d">HA Toggle 4</string>
 </resources>

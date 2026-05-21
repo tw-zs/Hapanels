@@ -72,16 +72,56 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
-        <!-- Quick Settings tile — mirrors one HA entity's on/off state in
-             the Android notification-shade Quick Settings panel. The bound
-             entity is configured via Settings → BEHAVIOUR. Single tile
-             per app (the platform limit) which fits the R1 client's
-             'one toggle I want everywhere' niche. -->
+        <!-- Quick Settings tiles — mirror up to four HA entities' on/off state in
+             the Android notification-shade Quick Settings panel. Each tile binds
+             to a separate entity_id slot in Settings → BEHAVIOUR; slot A is the
+             legacy default, B/C/D expose extra bindings for users with more than
+             one "tile-worthy" entity. Each tile needs its own TileService class
+             because Android binds tiles by class name. -->
         <service
             android:name=".feature.quicktile.HaQuickTileService"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/quick_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false"/>
+        </service>
+        <service
+            android:name=".feature.quicktile.HaQuickTileServiceB"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/quick_tile_label_b"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false"/>
+        </service>
+        <service
+            android:name=".feature.quicktile.HaQuickTileServiceC"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/quick_tile_label_c"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false"/>
+        </service>
+        <service
+            android:name=".feature.quicktile.HaQuickTileServiceD"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/quick_tile_label_d"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE"/>

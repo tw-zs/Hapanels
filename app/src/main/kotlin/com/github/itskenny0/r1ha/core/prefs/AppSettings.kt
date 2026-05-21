@@ -216,6 +216,15 @@ data class Behavior(
      * common 'one toggle I want everywhere' use case the R1 client serves.
      */
     val quickTileEntityId: String? = null,
+    /** Slots B, C, D — additional Quick Settings tiles bound to extra entities.
+     *  The HA Companion app supports 40 tiles via 40 declared TileService
+     *  classes; we cap at four (A + B + C + D) which covers the common
+     *  "morning/evening/away/quick scene" mental model without bloating the
+     *  manifest or the picker. Empty/null = the corresponding tile shows a
+     *  'tap to set up' placeholder. */
+    val quickTileEntityIdB: String? = null,
+    val quickTileEntityIdC: String? = null,
+    val quickTileEntityIdD: String? = null,
     /**
      * When on, opening the Assist screen immediately focuses the
      * input field — which pops up the soft keyboard on devices

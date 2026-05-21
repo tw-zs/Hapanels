@@ -806,6 +806,51 @@ fun SettingsScreen(
                     )
                 }
             }
+            // Extra Quick-Settings tile slots B/C/D. Same picker UX but each
+            // binds a separate manifest-declared TileService so the user
+            // can drag up to four HA-bound tiles into their shade.
+            item {
+                LabeledControl(label = "Quick Settings tile · slot B (HA Toggle 2)") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            R1TextField(
+                                value = s.behavior.quickTileEntityIdB ?: "",
+                                onValueChange = { vm.setQuickTileEntityIdB(it) },
+                                placeholder = "switch.coffee_machine",
+                                monospace = true,
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                LabeledControl(label = "Quick Settings tile · slot C (HA Toggle 3)") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            R1TextField(
+                                value = s.behavior.quickTileEntityIdC ?: "",
+                                onValueChange = { vm.setQuickTileEntityIdC(it) },
+                                placeholder = "script.goodnight",
+                                monospace = true,
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                LabeledControl(label = "Quick Settings tile · slot D (HA Toggle 4)") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            R1TextField(
+                                value = s.behavior.quickTileEntityIdD ?: "",
+                                onValueChange = { vm.setQuickTileEntityIdD(it) },
+                                placeholder = "scene.away",
+                                monospace = true,
+                            )
+                        }
+                    }
+                }
+            }
 
             }
             item { SectionDivider() }

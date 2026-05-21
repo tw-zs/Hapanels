@@ -141,6 +141,9 @@ class SettingsRepository private constructor(
          *  preferences API can store; we map empty → null at read
          *  time). */
         val behaviorQuickTileEntityId = stringPreferencesKey("behavior.quick_tile_entity_id")
+        val behaviorQuickTileEntityIdB = stringPreferencesKey("behavior.quick_tile_entity_id_b")
+        val behaviorQuickTileEntityIdC = stringPreferencesKey("behavior.quick_tile_entity_id_c")
+        val behaviorQuickTileEntityIdD = stringPreferencesKey("behavior.quick_tile_entity_id_d")
         val behaviorAssistAutoOpenKeyboard = booleanPreferencesKey("behavior.assist_auto_open_keyboard")
         val behaviorAssistAgentId = stringPreferencesKey("behavior.assist_agent_id")
         val behaviorAssistMacros = stringPreferencesKey("behavior.assist_macros")
@@ -257,6 +260,9 @@ class SettingsRepository private constructor(
                         ?.let { runCatching { ToastLogLevel.valueOf(it) }.getOrNull() }
                         ?: ToastLogLevel.OFF,
                     quickTileEntityId = p[K.behaviorQuickTileEntityId]?.takeIf { it.isNotBlank() },
+                    quickTileEntityIdB = p[K.behaviorQuickTileEntityIdB]?.takeIf { it.isNotBlank() },
+                    quickTileEntityIdC = p[K.behaviorQuickTileEntityIdC]?.takeIf { it.isNotBlank() },
+                    quickTileEntityIdD = p[K.behaviorQuickTileEntityIdD]?.takeIf { it.isNotBlank() },
                     assistAutoOpenKeyboard = p[K.behaviorAssistAutoOpenKeyboard] ?: false,
                     assistAgentId = p[K.behaviorAssistAgentId]?.takeIf { it.isNotBlank() },
                     assistMacros = p[K.behaviorAssistMacros]
@@ -384,6 +390,9 @@ class SettingsRepository private constructor(
                 p[K.behaviorWheelTutorialSeen] = next.behavior.wheelTutorialSeen
                 p[K.behaviorToastLogLevel] = next.behavior.toastLogLevel.name
                 p[K.behaviorQuickTileEntityId] = next.behavior.quickTileEntityId.orEmpty()
+                p[K.behaviorQuickTileEntityIdB] = next.behavior.quickTileEntityIdB.orEmpty()
+                p[K.behaviorQuickTileEntityIdC] = next.behavior.quickTileEntityIdC.orEmpty()
+                p[K.behaviorQuickTileEntityIdD] = next.behavior.quickTileEntityIdD.orEmpty()
                 p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard
                 p[K.behaviorAssistAgentId] = next.behavior.assistAgentId.orEmpty()
                 p[K.behaviorAssistMacros] = next.behavior.assistMacros

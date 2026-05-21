@@ -1,0 +1,130 @@
+package com.github.itskenny0.r1ha.feature.quicktile
+
+import android.content.Context
+import android.graphics.drawable.Icon
+import android.service.quicksettings.Tile
+import com.github.itskenny0.r1ha.App
+import com.github.itskenny0.r1ha.R
+import com.github.itskenny0.r1ha.core.ha.EntityId
+import com.github.itskenny0.r1ha.core.ha.ServiceCall
+import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.util.R1Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonObject
+
+/**
+ * Shared logic backing the multiple `HaQuickTileService*` classes. Android requires one
+ * concrete TileService class per Quick Settings tile (binding is by class name); rather
+ * than duplicate ~80 lines of state-machine code per tile, every service delegates here
+ * and provides a function that picks the right `quickTileEntityId*` slot from settings.
+ *
+ * The selector reads from [AppSettings.behavior] so a future schema migration that adds
+ * a fifth slot can land by extending the selector function — the manifest service entry
+ * + a new selector arg is all that's needed to expose another tile.
+ */
+internal object QuickTileLogic {
+
+    /**
+     * Refresh the visible label/state of a tile from the live entity cache. Safe to
+     * call from any TileService callback that has access to its `qsTile`.
+     */
+    fun refresh(
+        context: Context,
+        qsTile: Tile?,
+        scope: CoroutineScope,
+        selector: (AppSettings) -> String?,
+    ) {
+        val graph = (context.applicationContext as App).graph
+        scope.launch {
+            try {
+                val tile = qsTile ?: return@launch
+                val settings = graph.settings.settings.first()
+                val rawId = selector(settings)?.takeIf { it.isNotBlank() }
+                if (rawId.isNullOrBlank()) {
+                    tile.state = Tile.STATE_INACTIVE
+                    tile.label = "HA. Set entity"
+                    tile.subtitle = "Tap to open app"
+                    tile.icon = Icon.createWithResource(context, R.mipmap.ic_launcher)
+                    tile.updateTile()
+                    return@launch
+                }
+                val entityId = runCatching { EntityId(rawId) }.getOrNull()
+                if (entityId == null) {
+                    tile.state = Tile.STATE_UNAVAILABLE
+                    tile.label = "HA. Bad entity_id"
+                    tile.icon = Icon.createWithResource(context, R.mipmap.ic_launcher)
+                    tile.updateTile()
+                    return@launch
+                }
+                val live = graph.haRepository.listAllEntities().getOrNull()
+                    ?.firstOrNull { it.id == entityId }
+                if (live == null) {
+                    tile.state = Tile.STATE_UNAVAILABLE
+                    tile.label = entityId.value
+                    tile.subtitle = "not loaded yet"
+                    tile.icon = Icon.createWithResource(context, R.mipmap.ic_launcher)
+                    tile.updateTile()
+                    return@launch
+                }
+                tile.label = live.friendlyName
+                tile.subtitle = if (live.isOn) "ON" else "OFF"
+                tile.state = if (live.isOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+                tile.icon = Icon.createWithResource(context, R.mipmap.ic_launcher)
+                tile.updateTile()
+            } catch (t: Throwable) {
+                R1Log.w("QuickTileLogic", "refresh failed: ${t.message}")
+            }
+        }
+    }
+
+    /**
+     * Handle a tile tap: fetch the bound entity, dispatch a toggle (or action-fire for
+     * scene/script/button), and refresh after a brief settle delay so the displayed
+     * state matches what HA echoed back.
+     */
+    fun click(
+        context: Context,
+        qsTile: Tile?,
+        scope: CoroutineScope,
+        selector: (AppSettings) -> String?,
+        launchAppForSetup: () -> Unit,
+    ) {
+        val graph = (context.applicationContext as App).graph
+        scope.launch {
+            try {
+                val settings = graph.settings.settings.first()
+                val rawId = selector(settings)?.takeIf { it.isNotBlank() }
+                if (rawId == null) {
+                    R1Log.i("QuickTileLogic", "no entity bound; opening app")
+                    launchAppForSetup()
+                    return@launch
+                }
+                val entityId = runCatching { EntityId(rawId) }.getOrNull()
+                if (entityId == null) {
+                    R1Log.w("QuickTileLogic", "stored entity_id has unsupported domain: $rawId")
+                    return@launch
+                }
+                val live = graph.haRepository.listAllEntities().getOrNull()
+                    ?.firstOrNull { it.id == entityId }
+                if (live == null) {
+                    R1Log.w("QuickTileLogic", "${entityId.value} not in entity map yet")
+                    return@launch
+                }
+                val call = if (live.id.domain.isAction) {
+                    ServiceCall(target = live.id, service = "turn_on", data = JsonObject(emptyMap()))
+                } else {
+                    ServiceCall.tapAction(live.id, live.isOn)
+                }
+                graph.haRepository.call(call)
+                R1Log.i("QuickTileLogic", "tapped ${entityId.value} (was on=${live.isOn})")
+                delay(600L)
+                refresh(context, qsTile, scope, selector)
+            } catch (t: Throwable) {
+                R1Log.w("QuickTileLogic", "click failed: ${t.message}")
+            }
+        }
+    }
+}

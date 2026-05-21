@@ -147,6 +147,7 @@ fun HistoryScreen(
                 WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
                 HistoryChartPanel(ui)
                 SummaryPanel(ui)
+                RewindPanel(ui)
                 // Surface refresh errors even when the chart still has stale points; the
                 // prior gate of `ui.points.isEmpty()` silently swallowed errors during
                 // routine re-fetches, so a user staring at an old line had no way to
@@ -505,6 +506,57 @@ private fun SummaryPanel(ui: HistoryViewModel.UiState) {
             value = "${ui.points.size}",
             accent = R1.InkSoft,
         )
+    }
+}
+
+/**
+ * "What was this reading N minutes ago?" — at-a-glance rewind for sensors,
+ * separate from the chart-scrub interaction. Picks a small set of preset
+ * offsets so a tap gives an instant answer without scrubbing or zooming.
+ * Offsets that fall outside the loaded window are skipped (no point
+ * showing "1d ago" when only 1h of data is loaded) so the panel only
+ * surfaces meaningful values.
+ */
+@Composable
+private fun RewindPanel(ui: HistoryViewModel.UiState) {
+    val points = ui.points
+    if (points.size < 2) return
+    val now = java.time.Instant.now()
+    // Curated offsets. Capped to the loaded window so the user doesn't see
+    // a row that says "1d ago — —" when only an hour of data is available.
+    val candidateOffsets = listOf(
+        "15 MIN" to 15L * 60,
+        "1 HR" to 60L * 60,
+        "6 HR" to 6L * 3600,
+        "24 HR" to 24L * 3600,
+    )
+    val windowSeconds = java.time.Duration.between(points.first().timestamp, points.last().timestamp).seconds
+    val applicable = candidateOffsets.filter { it.second <= windowSeconds }
+    if (applicable.isEmpty()) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(R1.ShapeS)
+            .background(R1.SurfaceMuted)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(text = "REWIND", style = R1.labelMicro, color = R1.InkSoft)
+        for ((label, offsetSec) in applicable) {
+            val target = now.minusSeconds(offsetSec)
+            // Pick the latest point at or before the target time, falling back
+            // to the earliest if nothing is found (which shouldn't happen given
+            // the applicable filter above, but stays defensive).
+            val prior = points.filter { !it.timestamp.isAfter(target) }
+                .maxByOrNull { it.timestamp }
+                ?: points.first()
+            val unit = ui.unit?.let { " $it" } ?: ""
+            val displayValue = prior.numeric?.let { formatNum(it) + unit }
+                ?: prior.state.takeIf { it.isNotBlank() }
+                ?: "—"
+            SummaryRow(label = label, value = displayValue, accent = R1.InkSoft)
+        }
     }
 }
 

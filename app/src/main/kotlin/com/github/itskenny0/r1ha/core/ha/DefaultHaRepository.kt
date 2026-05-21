@@ -2511,6 +2511,83 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun subscribeTemplate(
+        template: String,
+        onResult: (String) -> Unit,
+    ): Result<HaRepository.TemplateSubscription> = withContext(Dispatchers.IO) {
+        runCatching {
+            if (ws.state.value !is ConnectionState.Connected) {
+                error("WS not connected (state=${ws.state.value::class.simpleName})")
+            }
+            val id = ws.nextRequestId()
+            // Wait for the initial Result frame so we can surface server-side
+            // Jinja errors before returning a "successful" subscription handle.
+            // Both pendingPayloads (for the initial Result) and the inboundRawText
+            // listener (for the streaming Event frames) participate.
+            val resultDeferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
+            pendingPayloads[id] = resultDeferred
+            val frame = kotlinx.serialization.json.buildJsonObject {
+                put("id", JsonPrimitive(id))
+                put("type", JsonPrimitive("render_template"))
+                put("template", JsonPrimitive(template))
+                // Report errors via the event channel so we don't trigger a Result
+                // frame on every Jinja failure; the user sees the error inline.
+                put("report_errors", JsonPrimitive(true))
+            }
+            if (!ws.sendRawText(frame.toString())) {
+                pendingPayloads.remove(id)
+                error("WS refused render_template subscribe")
+            }
+            // First Result frame confirms the subscription registered. Failure
+            // here means the template didn't compile; bail before wiring the
+            // streaming collector.
+            val initial = kotlinx.coroutines.withTimeout(15_000) { resultDeferred.await() }
+            initial.getOrThrow()
+
+            // Collect inbound text frames, match by id, decode the result, and
+            // hand it to the caller. We do this on the repo's scope so a screen
+            // teardown doesn't abruptly cancel the collector — the
+            // cancel-by-handle path below is the authoritative shutdown.
+            val collectorJob = scope.launch {
+                ws.inboundRawText.collect { raw ->
+                    val obj = runCatching {
+                        kotlinx.serialization.json.Json.parseToJsonElement(raw)
+                            as? kotlinx.serialization.json.JsonObject
+                    }.getOrNull() ?: return@collect
+                    val frameId = (obj["id"] as? JsonPrimitive)?.content?.toIntOrNull()
+                    if (frameId != id) return@collect
+                    val type = (obj["type"] as? JsonPrimitive)?.content
+                    if (type != "event") return@collect
+                    val event = obj["event"] as? kotlinx.serialization.json.JsonObject
+                    val rendered = (event?.get("result") as? JsonPrimitive)?.content
+                        ?: (event?.get("error") as? JsonPrimitive)?.content
+                        ?: return@collect
+                    onResult(rendered)
+                }
+            }
+
+            object : HaRepository.TemplateSubscription {
+                override suspend fun cancel() {
+                    runCatching {
+                        // Unsubscribe server-side via the standard unsubscribe_events
+                        // frame; HA's render_template subscriptions live in the same
+                        // id space as event subscriptions for cleanup purposes.
+                        val unsubId = ws.nextRequestId()
+                        val unsub = kotlinx.serialization.json.buildJsonObject {
+                            put("id", JsonPrimitive(unsubId))
+                            put("type", JsonPrimitive("unsubscribe_events"))
+                            put("subscription", JsonPrimitive(id))
+                        }
+                        ws.sendRawText(unsub.toString())
+                    }
+                    collectorJob.cancel()
+                }
+            }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.template.live", "subscribe failed: ${t.message}")
+        }
+    }
+
     override suspend fun listBackups(): Result<List<BackupInfo>> = withContext(Dispatchers.IO) {
         callWsExpectingPayload("backup/info").mapCatching { payload ->
             val obj = payload as? kotlinx.serialization.json.JsonObject ?: return@mapCatching emptyList()

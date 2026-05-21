@@ -104,11 +104,34 @@ fun TemplateScreen(
                 R1Button(
                     text = if (ui.inFlight) "RENDERING…" else "RENDER",
                     onClick = { vm.render() },
-                    enabled = ui.template.isNotBlank() && !ui.inFlight,
+                    enabled = ui.template.isNotBlank() && !ui.inFlight && !ui.live,
                 )
                 Spacer(Modifier.width(8.dp))
+                // LIVE toggle — subscribes to HA's render_template WS command,
+                // streaming re-renders on every relevant state change. The
+                // manual RENDER button is disabled while LIVE is on (the
+                // subscription owns the rendered value).
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(if (ui.live) R1.AccentCool.copy(alpha = 0.18f) else R1.SurfaceMuted)
+                        .border(
+                            1.dp,
+                            if (ui.live) R1.AccentCool.copy(alpha = 0.6f) else R1.Hairline,
+                            R1.ShapeS,
+                        )
+                        .r1Pressable(onClick = { vm.setLive(!ui.live) })
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = if (ui.live) "LIVE · ON" else "LIVE",
+                        style = R1.labelMicro,
+                        color = if (ui.live) R1.AccentCool else R1.AccentWarm,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "POSTs /api/template",
+                    text = if (ui.live) "subscribed to render_template" else "POSTs /api/template",
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                 )

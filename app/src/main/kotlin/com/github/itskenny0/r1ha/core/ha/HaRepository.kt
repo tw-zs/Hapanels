@@ -261,6 +261,29 @@ interface HaRepository {
      */
     suspend fun listBackups(): Result<List<BackupInfo>>
 
+    /** Handle for a live template subscription. [cancel] tears down both the
+     *  server-side subscription and the local collector. Safe to call twice. */
+    interface TemplateSubscription {
+        suspend fun cancel()
+    }
+
+    /**
+     * Subscribe to live re-renders of [template] via HA's `render_template` WS
+     * command. The repository handles the subscription lifecycle: returns a
+     * [TemplateSubscription] handle whose `cancel()` unsubscribes server-side
+     * and stops the local collector. [onResult] is invoked on the repository's
+     * IO scope each time HA emits a fresh render; the first invocation lands
+     * within ~50 ms of subscribing.
+     *
+     * Failures in HA's evaluation (Jinja syntax error, undefined entity) come
+     * through the same callback with the error message as the result; the
+     * caller decides whether to surface them.
+     */
+    suspend fun subscribeTemplate(
+        template: String,
+        onResult: (String) -> Unit,
+    ): Result<TemplateSubscription>
+
     suspend fun start()
     suspend fun stop()
 

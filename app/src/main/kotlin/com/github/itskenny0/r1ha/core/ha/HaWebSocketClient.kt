@@ -44,6 +44,20 @@ class HaWebSocketClient internal constructor(
     )
     val inbound: SharedFlow<HaInbound> = _inbound.asSharedFlow()
 
+    /**
+     * Raw inbound text frames. Emitted alongside [inbound] so consumers that need the
+     * full JSON payload (template subscriptions whose `event` frames don't match the
+     * state-trigger shape HaInbound.Event expects, future commands we haven't typed
+     * yet) can read the original text and parse on their own terms. Same backpressure
+     * shape as [_inbound]: bounded buffer with DROP_OLDEST so a stalled consumer can't
+     * grow memory unbounded.
+     */
+    private val _inboundRawText = MutableSharedFlow<String>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val inboundRawText: SharedFlow<String> = _inboundRawText.asSharedFlow()
+
     private val nextId = AtomicInteger(1)
     fun nextRequestId(): Int = nextId.getAndIncrement()
 
@@ -125,6 +139,10 @@ class HaWebSocketClient internal constructor(
                     else -> Unit
                 }
                 _inbound.tryEmit(msg)
+                // Also publish the raw text frame so consumers that need full payload
+                // access (template subscriptions, future commands) don't pay the round-
+                // trip of re-serialising the parsed model.
+                _inboundRawText.tryEmit(text)
             }
             override fun onMessage(ws: WebSocket, bytes: ByteString) { /* HA only sends text */ }
             override fun onClosed(ws: WebSocket, code: Int, reason: String) {

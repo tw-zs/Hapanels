@@ -42,6 +42,11 @@ class TemplateViewModel(
          *  syntactically-incorrect template from yesterday doesn't haunt
          *  today's session). */
         val recent: List<String> = emptyList(),
+        /** When true the screen is subscribed to live HA template events;
+         *  every state change that affects the template's outputs re-renders.
+         *  Off by default — REST-render is the simpler ask for one-off
+         *  evaluations and doesn't tie up a WS subscription. */
+        val live: Boolean = false,
     )
 
     private val _ui = MutableStateFlow(UiState())
@@ -49,10 +54,78 @@ class TemplateViewModel(
 
     fun setTemplate(value: String) {
         _ui.value = _ui.value.copy(template = value)
+        // If the user edits the template while LIVE is on, drop the existing
+        // subscription and resubscribe so the new template is what's evaluated.
+        if (_ui.value.live) {
+            viewModelScope.launch {
+                liveSubscription?.cancel()
+                liveSubscription = null
+                startLiveSubscription()
+            }
+        }
     }
 
     fun clearRecent() {
         _ui.value = _ui.value.copy(recent = emptyList())
+    }
+
+    /** Active render_template subscription handle. Held so [setLive] off + screen
+     *  teardown can tear it down explicitly without leaking the WS subscription
+     *  server-side. */
+    @Volatile
+    private var liveSubscription: HaRepository.TemplateSubscription? = null
+
+    /**
+     * Toggle LIVE mode. On = subscribe to render_template events; off = cancel any
+     * active subscription and revert to manual RENDER. Toggling has no effect on
+     * the displayed [UiState.rendered] until the next event lands.
+     */
+    fun setLive(enabled: Boolean) {
+        if (_ui.value.live == enabled) return
+        _ui.value = _ui.value.copy(live = enabled, error = null)
+        if (enabled) {
+            startLiveSubscription()
+        } else {
+            viewModelScope.launch {
+                liveSubscription?.cancel()
+                liveSubscription = null
+            }
+        }
+    }
+
+    private fun startLiveSubscription() {
+        val template = _ui.value.template
+        if (template.isBlank()) return
+        viewModelScope.launch {
+            haRepository.subscribeTemplate(template) { rendered ->
+                // Renders land on the IO scope; push into _ui from there since
+                // MutableStateFlow.value is thread-safe.
+                _ui.value = _ui.value.copy(rendered = rendered.trim(), error = null)
+            }.fold(
+                onSuccess = { sub ->
+                    liveSubscription = sub
+                    R1Log.i("Template", "live subscribe registered")
+                },
+                onFailure = { t ->
+                    R1Log.w("Template", "live subscribe failed: ${t.message}")
+                    _ui.value = _ui.value.copy(
+                        live = false,
+                        error = t.message ?: "Live subscribe failed",
+                    )
+                },
+            )
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Best-effort teardown so a screen-exit doesn't leak the WS subscription.
+        // Using runBlocking inside onCleared is awkward but the suspend cancel is
+        // tiny (a single WS frame send), and we don't have a ViewModelScope that
+        // outlives onCleared.
+        runCatching {
+            kotlinx.coroutines.runBlocking { liveSubscription?.cancel() }
+        }
     }
 
     fun render() {

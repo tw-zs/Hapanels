@@ -330,15 +330,14 @@ fun CardStackScreen(
                 // vm.onWheel for the actual toggle.
                 !active.supportsScalar && !appSettings.behavior.wheelTogglesSwitches ->
                     wheelHintAt.longValue = now
-                // Select entities — wheel is intentionally a no-op. Cycling through
-                // options on every detent meant a quick spin would skip past the
-                // desired option and (because the wheel double-as-scroll-driver
-                // anywhere else) accidentally change HVAC mode / source / preset
-                // when the user was just trying to navigate. The picker overlay
-                // (tap to open) is the deliberate selection path; the wheel just
-                // shows the hint to confirm it's not broken.
+                // Select entities — wheel steps one option per detent. We pass
+                // sign verbatim (no rate-based acceleration) so a fast spin
+                // can't skip past the desired option; one click = one step.
+                // The SelectCard hint advertises this affordance, and the
+                // tap-to-open picker remains for direct selection on long
+                // lists.
                 active.id.domain.isSelect ->
-                    wheelHintAt.longValue = now
+                    vm.cycleSelectOption(active.id, sign)
                 else -> vm.onWheel(event)
             }
             }.onFailure { t ->

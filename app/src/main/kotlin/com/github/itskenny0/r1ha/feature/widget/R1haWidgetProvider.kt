@@ -1,0 +1,81 @@
+package com.github.itskenny0.r1ha.feature.widget
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.widget.RemoteViews
+import com.github.itskenny0.r1ha.MainActivity
+import com.github.itskenny0.r1ha.R
+
+/**
+ * Home-screen widget — a single-tile quick-launch tile that opens R1HA's
+ * main activity. Doesn't bind to an HA entity because (a) RemoteViews
+ * have a constrained drawing surface that doesn't match the in-app card
+ * idiom and (b) live data would require a periodic poll that fights with
+ * Doze for power; the existing Quick Settings tiles cover the live-state
+ * mirror use case better.
+ *
+ * Tap target: the whole tile fires a single PendingIntent to MainActivity.
+ * Future expansion: a configuration activity could let the user pick an
+ * initial_route (assist / search / dashboard / today) — for now we always
+ * launch the default screen so the widget is a clean app shortcut.
+ */
+class R1haWidgetProvider : AppWidgetProvider() {
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
+        for (id in appWidgetIds) {
+            updateOne(context, appWidgetManager, id)
+        }
+    }
+
+    private fun updateOne(
+        context: Context,
+        manager: AppWidgetManager,
+        widgetId: Int,
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.r1ha_widget)
+        val launchIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pending = PendingIntent.getActivity(
+            context,
+            widgetId,
+            launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        // Whole-tile click — the icon and the label both forward through
+        // because we set the click handler on the layout root.
+        views.setOnClickPendingIntent(android.R.id.background, pending)
+        // RemoteViews binds the root by android.R.id.background if set; older
+        // launchers ignore it, so also bind the children explicitly.
+        views.setOnClickPendingIntent(R.id.widget_icon, pending)
+        views.setOnClickPendingIntent(R.id.widget_label, pending)
+        manager.updateAppWidget(widgetId, views)
+    }
+
+    companion object {
+        /** Public helper to nudge all instances to repaint — used after a
+         *  settings change (e.g. theme accent override) so the widget pulls
+         *  the new colours. */
+        fun nudgeAll(context: Context) {
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(
+                ComponentName(context, R1haWidgetProvider::class.java),
+            )
+            if (ids.isNotEmpty()) {
+                val intent = Intent(context, R1haWidgetProvider::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                }
+                context.sendBroadcast(intent)
+            }
+        }
+    }
+}

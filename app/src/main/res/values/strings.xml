@@ -24,4 +24,10 @@
     <string name="quick_tile_label_b">HA Toggle 2</string>
     <string name="quick_tile_label_c">HA Toggle 3</string>
     <string name="quick_tile_label_d">HA Toggle 4</string>
+
+    <!-- Home-screen widget labels. description is surfaced when the user
+         long-presses on the widget catalog entry; button_label sits inside
+         the rendered widget. -->
+    <string name="widget_description">Quick-launch R1HA</string>
+    <string name="widget_button_label">R1HA</string>
 </resources>

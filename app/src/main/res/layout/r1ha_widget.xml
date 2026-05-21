@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home-screen widget layout. Single root LinearLayout because RemoteViews
+  only support a constrained subset of Compose-less Views (LinearLayout,
+  FrameLayout, RelativeLayout, GridLayout, plus a handful of widgets).
+  Compose isn't usable here without the Glance dependency.
+
+  The whole layout is bound to a tap-intent via setOnClickPendingIntent
+  in R1haWidgetProvider — we don't break the launcher into icon vs label
+  click regions because the whole tile is one launch affordance.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="6dp"
+    android:background="@android:color/transparent">
+
+    <ImageView
+        android:id="@+id/widget_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@mipmap/ic_launcher_round"
+        android:contentDescription="@string/app_name"/>
+
+    <TextView
+        android:id="@+id/widget_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_button_label"
+        android:textColor="#EDEDED"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:layout_marginTop="2dp"/>
+</LinearLayout>

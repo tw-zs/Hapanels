@@ -78,6 +78,7 @@ fun SettingsScreen(
     onOpenHelpers: () -> Unit,
     onOpenTodo: () -> Unit,
     onOpenUpdates: () -> Unit,
+    onOpenRepairs: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1379,6 +1380,13 @@ fun SettingsScreen(
                     label = "Updates",
                     value = "HA Core, add-ons, integrations",
                     onClick = onOpenUpdates,
+                )
+            }
+            item {
+                NavRow(
+                    label = "Repairs",
+                    value = "HA issues + ignore",
+                    onClick = onOpenRepairs,
                 )
             }
             item {

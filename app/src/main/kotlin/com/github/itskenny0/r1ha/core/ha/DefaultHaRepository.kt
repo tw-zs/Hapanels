@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -90,6 +91,17 @@ class DefaultHaRepository(
 
     private val cache = MutableStateFlow<Map<EntityId, EntityState>>(emptyMap())
     private val pendingCalls = ConcurrentHashMap<Int, CompletableDeferred<Result<Unit>>>()
+    /**
+     * Parallel awaiter map keyed by the same request id space as [pendingCalls], but
+     * the deferred completes with the inbound Result frame's `result` payload (a
+     * JsonElement) rather than dropping it. Used by [callWsExpectingPayload] for
+     * WS-only commands (`repairs/list_issues`, `backup/info`, etc.) where the
+     * caller needs the response body.
+     *
+     * Kept distinct from [pendingCalls] so the call_service path (which doesn't
+     * care about the payload) doesn't pay for an extra alloc on every gesture.
+     */
+    private val pendingPayloads = ConcurrentHashMap<Int, CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>>()
     private var supervisorJob: Job? = null
     // Volatile because the WS listener thread (OkHttp dispatch) reads it from the
     // AuthRequired handler while the repo coroutine writes it from connectFromSettings
@@ -255,7 +267,19 @@ class DefaultHaRepository(
                                     IllegalStateException(msg.error?.message ?: "ha_error")
                                 )
                             )
-                        } else {
+                        }
+                        // Same id space serves payload-awaiters too; complete in parallel
+                        // with the response body (or null when HA didn't include one).
+                        val payloadDeferred = pendingPayloads.remove(msg.id)
+                        if (payloadDeferred != null) {
+                            payloadDeferred.complete(
+                                if (msg.success) Result.success(msg.result)
+                                else Result.failure(
+                                    IllegalStateException(msg.error?.message ?: "ha_error")
+                                )
+                            )
+                        }
+                        if (deferred == null && payloadDeferred == null) {
                             // A Result arriving for an id we no longer track means either
                             // the deferred already timed out (and we replaced its failure
                             // text 15s ago) or sign-out drained the map while HA's reply
@@ -315,6 +339,12 @@ class DefaultHaRepository(
                             }
                             pendingCalls.clear()
                         }
+                        if (pendingPayloads.isNotEmpty()) {
+                            pendingPayloads.values.forEach {
+                                it.complete(Result.failure(IllegalStateException("WS disconnected mid-call")))
+                            }
+                            pendingPayloads.clear()
+                        }
                         // If we just transitioned out of AuthLost (which fired its own
                         // refresh + connectFromSettings) the Disconnected handler must NOT
                         // also schedule a reconnect; both timers would otherwise race and
@@ -339,6 +369,12 @@ class DefaultHaRepository(
                                 it.complete(Result.failure(IllegalStateException("WS auth lost")))
                             }
                             pendingCalls.clear()
+                        }
+                        if (pendingPayloads.isNotEmpty()) {
+                            pendingPayloads.values.forEach {
+                                it.complete(Result.failure(IllegalStateException("WS auth lost")))
+                            }
+                            pendingPayloads.clear()
                         }
                         val attempt = authLostRefreshAttempt
                         if (attempt >= MAX_AUTHLOST_RETRIES) {
@@ -411,6 +447,10 @@ class DefaultHaRepository(
                             it.complete(Result.failure(IllegalStateException("Signed out")))
                         }
                         pendingCalls.clear()
+                        pendingPayloads.values.forEach {
+                            it.complete(Result.failure(IllegalStateException("Signed out")))
+                        }
+                        pendingPayloads.clear()
                         ws.disconnect()
                         return@onEach
                     }
@@ -470,6 +510,12 @@ class DefaultHaRepository(
                 it.complete(Result.failure(IllegalStateException("Repository stopped")))
             }
             pendingCalls.clear()
+        }
+        if (pendingPayloads.isNotEmpty()) {
+            pendingPayloads.values.forEach {
+                it.complete(Result.failure(IllegalStateException("Repository stopped")))
+            }
+            pendingPayloads.clear()
         }
         latestAccessToken = null
         subscriptionId = null
@@ -2355,4 +2401,90 @@ class DefaultHaRepository(
                 R1Log.w("HaRepo.todo", "clear completed on $entityId failed: ${t.message}")
             }
         }
+
+    /**
+     * Generic WS request-response helper. Builds a JSON frame `{"id": N, "type": ...}`
+     * with [extras] merged at the top level, sends it via [HaWebSocketClient.sendRawText],
+     * and awaits the matching [HaInbound.Result] frame's `result` payload (or its error
+     * field on failure).
+     *
+     * Bails immediately when the WS isn't Connected — there's no point queueing a
+     * request that depends on a paired response while the link is down. Caller surfaces
+     * "(disconnected)" rather than hanging.
+     *
+     * 15 s timeout matches the call_service path; same rationale: HA's WS commands are
+     * snappy in practice, and a longer timeout just delays the user's "retry" decision.
+     */
+    private suspend fun callWsExpectingPayload(
+        type: String,
+        extras: kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.JsonObject(emptyMap()),
+    ): Result<kotlinx.serialization.json.JsonElement?> = withContext(Dispatchers.IO) {
+        if (ws.state.value !is ConnectionState.Connected) {
+            return@withContext Result.failure(
+                IllegalStateException("WS not connected (state=${ws.state.value::class.simpleName})"),
+            )
+        }
+        val id = ws.nextRequestId()
+        val deferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
+        pendingPayloads[id] = deferred
+        val frame = kotlinx.serialization.json.buildJsonObject {
+            put("id", JsonPrimitive(id))
+            put("type", JsonPrimitive(type))
+            extras.forEach { (k, v) -> put(k, v) }
+        }
+        val sent = ws.sendRawText(frame.toString())
+        if (!sent) {
+            pendingPayloads.remove(id)
+            return@withContext Result.failure(IllegalStateException("WS send refused"))
+        }
+        try {
+            kotlinx.coroutines.withTimeout(15_000) { deferred.await() }
+        } catch (t: kotlinx.coroutines.TimeoutCancellationException) {
+            pendingPayloads.remove(id)
+            Result.failure(IllegalStateException("WS request '$type' timed out after 15s"))
+        }
+    }
+
+    override suspend fun listRepairs(): Result<List<RepairIssue>> = withContext(Dispatchers.IO) {
+        callWsExpectingPayload("repairs/list_issues").mapCatching { payload ->
+            val obj = payload as? kotlinx.serialization.json.JsonObject ?: return@mapCatching emptyList()
+            val arr = obj["issues"] as? kotlinx.serialization.json.JsonArray ?: return@mapCatching emptyList()
+            arr.mapNotNull { el ->
+                val r = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                fun str(key: String): String? = (r[key] as? JsonPrimitive)?.content
+                // booleanOrNull is the spec-safe accessor on JsonPrimitive; `.boolean`
+                // would throw when HA stuffs a string into the field (which it has
+                // historically done for some integration-defined repair payloads).
+                fun bool(key: String): Boolean =
+                    (r[key] as? JsonPrimitive)?.booleanOrNull == true
+                val domain = str("domain") ?: return@mapNotNull null
+                val issueId = str("issue_id") ?: return@mapNotNull null
+                RepairIssue(
+                    domain = domain,
+                    issueId = issueId,
+                    severity = str("severity") ?: "warning",
+                    translationKey = str("translation_key"),
+                    description = str("learn_more_url") ?: str("breaks_in_ha_version"),
+                    isFixable = bool("is_fixable"),
+                    ignored = bool("ignored"),
+                    createdAt = str("created"),
+                )
+            }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.repairs", "list failed: ${t.message}")
+        }
+    }
+
+    override suspend fun ignoreRepair(domain: String, issueId: String, ignore: Boolean): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val extras = kotlinx.serialization.json.buildJsonObject {
+                put("domain", JsonPrimitive(domain))
+                put("issue_id", JsonPrimitive(issueId))
+                put("ignore", JsonPrimitive(ignore))
+            }
+            callWsExpectingPayload("repairs/ignore", extras).map { }.onFailure { t ->
+                R1Log.w("HaRepo.repairs", "ignore $domain/$issueId failed: ${t.message}")
+            }
+        }
 }
+

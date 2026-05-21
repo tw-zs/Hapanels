@@ -37,6 +37,9 @@ object Routes {
     const val TODO = "todo"
     /** HA / Supervisor / add-on / integration update viewer + installer. */
     const val UPDATES = "updates"
+    /** HA repairs / issues feed — surfaces server-side integration warnings + errors,
+     *  same set HA's frontend shows under Settings > System > Repairs. */
+    const val REPAIRS = "repairs"
 
     /** "Modified settings" subscreen — lists every registry entry whose
      *  current value differs from its default. Reached from a chip near

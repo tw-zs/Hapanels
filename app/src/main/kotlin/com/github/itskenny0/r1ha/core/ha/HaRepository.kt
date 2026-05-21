@@ -216,6 +216,27 @@ interface HaRepository {
 
     /** Bulk-delete every completed item from the named list. */
     suspend fun clearCompletedTodoItems(entityId: String): Result<Unit>
+
+    /**
+     * List the current repairs / issues HA's `repairs` integration knows about.
+     * Unlike persistent_notifications, repairs are NOT exposed via REST — they
+     * only flow over WS via the `repairs/list_issues` command. The repository
+     * routes that command through the active WS connection and decodes the
+     * `issues` array in the reply. Returns failure (without UI noise) when the
+     * WS is disconnected: callers should fall back to a "(server offline)"
+     * placeholder rather than treating that as a hard error.
+     */
+    suspend fun listRepairs(): Result<List<RepairIssue>>
+
+    /**
+     * Ignore (skip) a single repair issue. Same WS-only constraint as
+     * [listRepairs] — fires `repairs/ignore { issue_id, domain, ignore: true }`.
+     * The server hides ignored issues from future list responses until the
+     * issue is re-raised. No-op (success with no effect) when the WS is
+     * disconnected.
+     */
+    suspend fun ignoreRepair(domain: String, issueId: String, ignore: Boolean = true): Result<Unit>
+
     suspend fun start()
     suspend fun stop()
 

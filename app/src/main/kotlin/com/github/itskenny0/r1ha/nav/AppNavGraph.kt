@@ -216,6 +216,9 @@ fun AppNavGraph(
                 onOpenUpdates = {
                     navController.navigate(Routes.UPDATES) { launchSingleTop = true }
                 },
+                onOpenRepairs = {
+                    navController.navigate(Routes.REPAIRS) { launchSingleTop = true }
+                },
                 onOpenEnergy = {
                     navController.navigate(Routes.ENERGY) { launchSingleTop = true }
                 },
@@ -456,6 +459,12 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.REPAIRS) {
+            com.github.itskenny0.r1ha.feature.repairs.RepairsScreen(
+                haRepository = haRepository,
                 onBack = { navController.popBackStack() },
             )
         }

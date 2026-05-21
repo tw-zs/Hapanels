@@ -154,6 +154,26 @@ class HaWebSocketClient internal constructor(
         webSocket = http.newWebSocket(req, listener)
     }
 
+    /**
+     * Synchronously send a raw JSON text frame on the live WebSocket. Returns true if the
+     * frame was accepted by OkHttp (which usually means "queued for socket write"), false if
+     * the socket is not open or send is rejected.
+     *
+     * Used by repository methods that need to invoke WS-only HA commands (`repairs/list_issues`,
+     * `backup/info`, `media_player/browse_media`, etc.) without each one having to declare a
+     * type-safe [HaOutbound] variant. Caller is responsible for assigning a unique [HaInbound.Result.id]
+     * via [nextRequestId] and registering the awaiter before sending so the inbound reply isn't
+     * dropped by the deserialiser's default Unknown sink.
+     *
+     * Bypasses the outgoing channel + DROP_OLDEST guard because the typical caller is a
+     * user-initiated query (Repairs screen open, Backups screen refresh) rather than a
+     * high-rate gesture-driven event; the wheel-debounce backpressure doesn't apply.
+     */
+    fun sendRawText(text: String): Boolean {
+        val ws = webSocket ?: return false
+        return ws.send(text)
+    }
+
     /** Enqueue an outbound message. Safe to call before [connect] has completed; the queue drains once connected. */
     fun send(msg: HaOutbound) {
         val result = outgoing.trySend(msg)

@@ -263,6 +263,14 @@ fun DevMenuScreen(
                     onChange = { v -> vm.updateAdvanced { it.copy(keepOptimisticOnFailure = v) } },
                 )
             }
+            item {
+                DevSwitchRow(
+                    label = "External automation intent",
+                    subtitle = "Let Tasker / MacroDroid / Automate broadcast com.github.itskenny0.r1ha.action.HA_SERVICE_CALL to fire HA service calls through this app's connection. Off by default: every installed app can broadcast, so flipping this on widens the attack surface. Extras: ha_domain (str), ha_service (str), ha_entity_id (str, opt), ha_data_json (str, opt).",
+                    checked = advanced.externalAutomationEnabled,
+                    onChange = { v -> vm.updateAdvanced { it.copy(externalAutomationEnabled = v) } },
+                )
+            }
             item { SectionDivider() }
 
             // ── Fire event ──────────────────────────────────────────────────────────

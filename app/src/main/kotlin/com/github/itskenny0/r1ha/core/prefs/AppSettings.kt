@@ -462,6 +462,17 @@ data class AdvancedSettings(
      * mismatch; users who want the cold-start speedup can opt in here.
      */
     val persistCacheToDisk: Boolean = false,
+    /**
+     * Opt-in: allow third-party automation apps (Tasker, MacroDroid, Automate)
+     * to fire HA service calls through this app by broadcasting
+     * [com.github.itskenny0.r1ha.core.extern.AutomationReceiver.ACTION_HA_SERVICE_CALL].
+     * Off by default because every installed app on the device can broadcast
+     * intents — flipping it on widens the attack surface from "this app's UI"
+     * to "anyone with the action string and the right domain/service extras."
+     * Power-user feature; documented in the dev menu so the casual user never
+     * accidentally exposes their HA install.
+     */
+    val externalAutomationEnabled: Boolean = false,
 )
 
 @Stable

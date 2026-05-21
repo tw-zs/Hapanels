@@ -45,7 +45,60 @@ class AppGraph(context: Context) {
             // a Disconnected and schedules a backoff reconnect.
             .pingInterval(30, TimeUnit.SECONDS)
         attachCertificatePinner(builder)
+        attachMtlsKeystore(builder)
         builder.build()
+    }
+
+    /**
+     * If the security policy enables mTLS and a readable PKCS12 keystore is
+     * configured, build an [javax.net.ssl.SSLContext] that presents the
+     * client certificate during TLS handshake and attach its socket
+     * factory to [builder]. Any failure (file missing, wrong password,
+     * malformed PKCS12) is logged and treated as if mTLS were off rather
+     * than throwing at app startup — a broken cert shouldn't brick the
+     * client entirely, the user needs the rest of the app to navigate
+     * back to Settings.
+     */
+    private fun attachMtlsKeystore(builder: OkHttpClient.Builder) {
+        val policy = securityPolicy.current()
+        if (!policy.mtlsEnabled) return
+        val path = policy.mtlsKeystorePath ?: run {
+            R1Log.w("AppGraph", "mTLS enabled but no keystore path configured")
+            return
+        }
+        val file = java.io.File(path)
+        if (!file.exists() || !file.canRead()) {
+            R1Log.w("AppGraph", "mTLS keystore not readable: $path")
+            return
+        }
+        runCatching {
+            val keystore = java.security.KeyStore.getInstance("PKCS12")
+            file.inputStream().use { input ->
+                keystore.load(input, policy.mtlsKeystorePassword.toCharArray())
+            }
+            val kmf = javax.net.ssl.KeyManagerFactory.getInstance(
+                javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm(),
+            )
+            kmf.init(keystore, policy.mtlsKeystorePassword.toCharArray())
+            // Use the default trust manager so server cert validation still
+            // goes through the system trust store (or through the
+            // CertificatePinner we may have already attached). We don't
+            // override server trust here: that's [attachCertificatePinner]'s
+            // job and the two are orthogonal.
+            val tmf = javax.net.ssl.TrustManagerFactory.getInstance(
+                javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm(),
+            )
+            tmf.init(null as java.security.KeyStore?)
+            val ctx = javax.net.ssl.SSLContext.getInstance("TLS")
+            ctx.init(kmf.keyManagers, tmf.trustManagers, java.security.SecureRandom())
+            val x509Tm = tmf.trustManagers.filterIsInstance<javax.net.ssl.X509TrustManager>()
+                .firstOrNull()
+                ?: error("no X509TrustManager in default factory")
+            builder.sslSocketFactory(ctx.socketFactory, x509Tm)
+            R1Log.i("AppGraph", "mTLS active: keystore=$path")
+        }.onFailure { t ->
+            R1Log.w("AppGraph", "mTLS keystore load failed: ${t.message}", t)
+        }
     }
 
     /**

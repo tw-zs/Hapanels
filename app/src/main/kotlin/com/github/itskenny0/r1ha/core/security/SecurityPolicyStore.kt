@@ -29,6 +29,24 @@ data class SecurityPolicy(
      *  list entry; the user adds the backup pin too so a normal cert rotation
      *  doesn't strand them. */
     val sha256Pins: List<String> = emptyList(),
+    /** When true and [mtlsKeystorePath] points to a readable PKCS12, OkHttp presents
+     *  the client cert during TLS handshake. mTLS is opt-in because misconfiguring
+     *  it (wrong cert, wrong password, expired cert) breaks every request to the
+     *  server until corrected; the toggle lets users stage a known-good cert
+     *  before flipping. */
+    val mtlsEnabled: Boolean = false,
+    /** Absolute path inside the app's private filesDir to the imported PKCS12
+     *  blob. Stored as a path (not the bytes inline) because SharedPreferences is
+     *  a key-value store and embedding ~2 KB binary as base64 every commit is
+     *  wasteful. Null = no cert imported yet. */
+    val mtlsKeystorePath: String? = null,
+    /** Password for [mtlsKeystorePath]. Stored in plain SharedPreferences for
+     *  simplicity — the app sandbox already isolates this file from other apps
+     *  on non-rooted devices, and pairing it with the .p12 file (which holds the
+     *  actual key material) means each in isolation is useless. A strong .p12
+     *  password is still the right move because export-from-this-device-then-
+     *  uninstall is the practical threat. */
+    val mtlsKeystorePassword: String = "",
 )
 
 /**
@@ -60,7 +78,13 @@ class SecurityPolicyStore private constructor(
         val enabled = prefs.getBoolean(KEY_ENABLED, false)
         val raw = prefs.getString(KEY_PINS, null).orEmpty()
         val pins = raw.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
-        return SecurityPolicy(tlsPinningEnabled = enabled, sha256Pins = pins)
+        return SecurityPolicy(
+            tlsPinningEnabled = enabled,
+            sha256Pins = pins,
+            mtlsEnabled = prefs.getBoolean(KEY_MTLS_ENABLED, false),
+            mtlsKeystorePath = prefs.getString(KEY_MTLS_PATH, null)?.takeIf { it.isNotBlank() },
+            mtlsKeystorePassword = prefs.getString(KEY_MTLS_PASS, "").orEmpty(),
+        )
     }
 
     /** Reactive view of the policy. Emits on every successful commit; replays the
@@ -78,6 +102,9 @@ class SecurityPolicyStore private constructor(
         val ok = prefs.edit()
             .putBoolean(KEY_ENABLED, next.tlsPinningEnabled)
             .putString(KEY_PINS, next.sha256Pins.joinToString("\n"))
+            .putBoolean(KEY_MTLS_ENABLED, next.mtlsEnabled)
+            .putString(KEY_MTLS_PATH, next.mtlsKeystorePath.orEmpty())
+            .putString(KEY_MTLS_PASS, next.mtlsKeystorePassword)
             .commit()
         if (!ok) {
             R1Log.w("SecurityPolicyStore", "commit failed for next=$next")
@@ -90,6 +117,9 @@ class SecurityPolicyStore private constructor(
         private const val PREFS_NAME = "r1ha_security"
         private const val KEY_ENABLED = "tls.pinning.enabled"
         private const val KEY_PINS = "tls.pinning.pins"
+        private const val KEY_MTLS_ENABLED = "tls.mtls.enabled"
+        private const val KEY_MTLS_PATH = "tls.mtls.path"
+        private const val KEY_MTLS_PASS = "tls.mtls.password"
 
         /**
          * Validate a candidate pin string. A pin is acceptable when it is the

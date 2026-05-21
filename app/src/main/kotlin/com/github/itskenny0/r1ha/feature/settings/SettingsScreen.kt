@@ -2629,6 +2629,185 @@ private fun SecuritySection() {
                 color = R1.InkMuted,
             )
         }
+
+        // ── mTLS client certificate (optional) ────────────────────────
+        // Some HA deployments behind a reverse proxy (Caddy + client-CA,
+        // NGINX with `ssl_verify_client on`) require the client to
+        // present a cert during the TLS handshake. This section lets the
+        // user pick a .p12 keystore (the typical export format from
+        // step-ca / openssl) plus its password. The keystore file is
+        // copied to filesDir/mtls/ on import; mTLS is opt-in via the
+        // toggle and changes need an app restart to apply.
+        Spacer(Modifier.height(12.dp))
+        MtlsClientCertEditor(store = store, policy = policy, onUpdated = { policyState.value = store.current() })
+    }
+}
+
+/**
+ * mTLS client-certificate editor. Distinct from the pin editor above
+ * because the input mechanism (SAF file picker + password) and the
+ * surface (import button + remove button + state badge) are different
+ * enough to warrant a dedicated composable.
+ */
+@Composable
+private fun MtlsClientCertEditor(
+    store: com.github.itskenny0.r1ha.core.security.SecurityPolicyStore,
+    policy: com.github.itskenny0.r1ha.core.security.SecurityPolicy,
+    onUpdated: () -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pendingPassword = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(policy.mtlsKeystorePassword)
+    }
+    androidx.compose.runtime.LaunchedEffect(policy.mtlsKeystorePassword) {
+        // Reflect external updates (RESET, IMPORT) into the local password field
+        // so the input doesn't lag behind reality.
+        pendingPassword.value = policy.mtlsKeystorePassword
+    }
+    // SAF launcher for picking the PKCS12 keystore. We copy the bytes into
+    // filesDir/mtls/client.p12 immediately so the import doesn't depend on
+    // the source URI staying valid (the user may have picked it off a USB
+    // stick that gets unmounted, or from a cloud-storage app that may
+    // revoke the temp URI after the activity result lands).
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri: android.net.Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            val dir = java.io.File(context.filesDir, "mtls").apply { mkdirs() }
+            val dest = java.io.File(dir, "client.p12")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                dest.outputStream().use { out -> input.copyTo(out) }
+            } ?: error("couldn't open input stream")
+            store.update { it.copy(mtlsKeystorePath = dest.absolutePath) }
+            onUpdated()
+            com.github.itskenny0.r1ha.core.util.Toaster.show(
+                "Client certificate imported. Set password and toggle mTLS to apply (restart required).",
+            )
+        }.onFailure { t ->
+            com.github.itskenny0.r1ha.core.util.R1Log.w(
+                "MtlsEditor", "import failed: ${t.message}",
+            )
+            com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                shortText = "Cert import failed",
+                fullText = t.message ?: t.toString(),
+            )
+        }
+    }
+
+    Text(
+        text = "MTLS CLIENT CERTIFICATE",
+        style = R1.labelMicro,
+        color = R1.AccentWarm,
+        modifier = Modifier.padding(horizontal = 22.dp, vertical = 6.dp),
+    )
+    SwitchRow(
+        label = "Present client certificate",
+        subtitle = "Use the imported PKCS12 keystore for mutual TLS. Off by default: turning on without a known-good keystore configured will brick every request. Takes effect on next app launch.",
+        checked = policy.mtlsEnabled,
+        onCheckedChange = { v ->
+            store.update { it.copy(mtlsEnabled = v) }
+            onUpdated()
+        },
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 4.dp)
+            .clip(R1.ShapeS)
+            .background(R1.Surface)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = if (policy.mtlsKeystorePath.isNullOrBlank()) "NO CERTIFICATE IMPORTED"
+            else "KEYSTORE: ${java.io.File(policy.mtlsKeystorePath).name}",
+            style = R1.labelMicro,
+            color = if (policy.mtlsKeystorePath.isNullOrBlank()) R1.InkMuted else R1.Ink,
+        )
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = {
+                    importLauncher.launch(arrayOf("application/x-pkcs12", "*/*"))
+                })
+                .padding(vertical = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = if (policy.mtlsKeystorePath.isNullOrBlank()) "IMPORT .P12" else "REPLACE .P12",
+                style = R1.labelMicro,
+                color = R1.AccentWarm,
+            )
+        }
+        if (!policy.mtlsKeystorePath.isNullOrBlank()) {
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(onClick = {
+                        runCatching {
+                            policy.mtlsKeystorePath?.let { java.io.File(it).delete() }
+                        }
+                        store.update {
+                            it.copy(
+                                mtlsEnabled = false,
+                                mtlsKeystorePath = null,
+                                mtlsKeystorePassword = "",
+                            )
+                        }
+                        onUpdated()
+                        com.github.itskenny0.r1ha.core.util.Toaster.show(
+                            "Certificate removed (restart to apply).",
+                        )
+                    })
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) {
+                Text(text = "REMOVE", style = R1.labelMicro, color = R1.StatusAmber)
+            }
+        }
+    }
+    // Password field — stored as plain text alongside the keystore path.
+    // Documented as such in the threat-model comment on the data class.
+    LabeledControl(label = "Keystore password") {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(modifier = Modifier.weight(1f)) {
+                R1TextField(
+                    value = pendingPassword.value,
+                    onValueChange = { pendingPassword.value = it },
+                    placeholder = "(empty)",
+                    monospace = true,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .border(1.dp, R1.Hairline, R1.ShapeS)
+                    .r1Pressable(onClick = {
+                        store.update { it.copy(mtlsKeystorePassword = pendingPassword.value) }
+                        onUpdated()
+                        com.github.itskenny0.r1ha.core.util.Toaster.show(
+                            "Password saved (restart to apply).",
+                        )
+                    })
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(text = "SAVE", style = R1.labelMicro, color = R1.AccentWarm)
+            }
+        }
     }
 }
 

@@ -181,6 +181,16 @@ fun CardStackScreen(
     // VM's own deque (which accelerates scalar percent steps) but lives at the screen
     // layer because navigation is a screen concern, not a per-card one.
     val navTimestamps = remember { ArrayDeque<Long>() }
+    // Per-card accumulator for select-option cycling. Needs two same-direction
+    // detents (or one same-direction detent within 800 ms of the last) to
+    // fire, so a brushing motion doesn't accidentally cycle a select. Tracks
+    // the entity it's accumulating for so a tab swap doesn't carry a stale
+    // partial count into the new card.
+    val selectAccumulatorEntity = remember {
+        androidx.compose.runtime.mutableStateOf<com.github.itskenny0.r1ha.core.ha.EntityId?>(null)
+    }
+    val selectAccumulatorSum = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val selectAccumulatorAt = remember { androidx.compose.runtime.mutableLongStateOf(0L) }
     // Transient hint shown on read-only / explicit-button-only cards when the user
     // spins the wheel — they previously expected nav, but the wheel no longer moves
     // between cards (swipe / pip-tap are the deck-nav affordances). The hint surfaces
@@ -318,8 +328,23 @@ fun CardStackScreen(
                 curve = appSettings.wheel.accelerationCurve,
             ).coerceIn(1, 8)
             val navDelta = sign * navStep
+            // Per-card wheel override: explicit On / Off / Inherit. Defaults
+            // depend on the domain — select / input_select default OFF
+            // because cycling on every detent was too easy to trigger
+            // accidentally; every other domain defaults ON. The user can
+            // flip either side from the card's customize dialog.
+            val perCardOverride = active?.id?.value?.let { appSettings.entityOverrides[it] }
+                ?: com.github.itskenny0.r1ha.core.prefs.EntityOverride.NONE
+            val wheelEnabledHere = active?.let {
+                perCardOverride.resolvedWheelEnabled(it.id.domain.prefix)
+            } ?: false
             when {
                 active == null -> Unit
+                // Per-card wheel-disabled override (or per-domain default for
+                // select). Show the hint so the user understands the wheel
+                // is intentionally inert here.
+                !wheelEnabledHere ->
+                    wheelHintAt.longValue = now
                 // Sensors / actions have nothing to drive — show the hint.
                 active.id.domain.isSensor || active.id.domain.isAction ->
                     wheelHintAt.longValue = now
@@ -330,14 +355,30 @@ fun CardStackScreen(
                 // vm.onWheel for the actual toggle.
                 !active.supportsScalar && !appSettings.behavior.wheelTogglesSwitches ->
                     wheelHintAt.longValue = now
-                // Select entities — wheel steps one option per detent. We pass
-                // sign verbatim (no rate-based acceleration) so a fast spin
-                // can't skip past the desired option; one click = one step.
-                // The SelectCard hint advertises this affordance, and the
-                // tap-to-open picker remains for direct selection on long
-                // lists.
-                active.id.domain.isSelect ->
-                    vm.cycleSelectOption(active.id, sign)
+                // Select entities — wheel steps one option per accumulated
+                // pair of detents. Accumulator threshold mitigates the
+                // "too easy to trigger accidentally" feel: a brushing
+                // motion of one or two detents won't cycle, a deliberate
+                // spin of three+ will. Anchor resets after 800 ms of no
+                // wheel events (a deliberate slow rotate still counts).
+                active.id.domain.isSelect -> {
+                    val anchor = selectAccumulatorEntity.value
+                    val activeId = active.id
+                    if (anchor != activeId || now - selectAccumulatorAt.longValue > 800L) {
+                        selectAccumulatorEntity.value = activeId
+                        selectAccumulatorSum.intValue = 0
+                    }
+                    selectAccumulatorAt.longValue = now
+                    selectAccumulatorSum.intValue += sign
+                    val accum = selectAccumulatorSum.intValue
+                    if (accum >= 2) {
+                        selectAccumulatorSum.intValue = 0
+                        vm.cycleSelectOption(activeId, +1)
+                    } else if (accum <= -2) {
+                        selectAccumulatorSum.intValue = 0
+                        vm.cycleSelectOption(activeId, -1)
+                    }
+                }
                 else -> vm.onWheel(event)
             }
             }.onFailure { t ->
@@ -364,7 +405,17 @@ fun CardStackScreen(
     // earlier key (percent only) double-fired). For scalar entities the value is the
     // percent itself; for switches it's 0 or 1 keyed on isOn.
     val hapticKey = state.activeState?.let { active ->
-        if (active.supportsScalar) active.percent else if (active.isOn) 1 else 0
+        when {
+            // Select / input_select: the meaningful change is the picked
+            // option string. Keying on it makes the haptic fire once per
+            // accepted wheel-cycle (optimistic snap immediately, then again
+            // only if HA echoes a different string — we coalesce that via
+            // the optimistic clearing logic so the second tick is rare).
+            active.id.domain.isSelect -> active.currentOption
+            active.supportsScalar -> active.percent
+            active.isOn -> 1
+            else -> 0
+        }
     }
     LaunchedEffect(state.activeState?.id, hapticKey) {
         // Defensive: View.performHapticFeedback can theoretically fail when

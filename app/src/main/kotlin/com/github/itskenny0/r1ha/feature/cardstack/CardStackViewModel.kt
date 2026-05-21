@@ -59,6 +59,14 @@ data class CardStackUiState(
     /** Optimistic percent overrides per entity, applied while waiting for HA state_changed. */
     val optimisticPercents: Map<EntityId, Int> = emptyMap(),
     /**
+     * Optimistic select-option overrides per select / input_select entity.
+     * Applied to the rendered card so the wheel-cycle feels instant
+     * (no waiting for HA's state_changed echo, which can be 200-400 ms
+     * away on a busy server). Cleared by the cache observer once HA
+     * confirms the new option matches what the user picked.
+     */
+    val optimisticSelectOptions: Map<EntityId, String> = emptyMap(),
+    /**
      * Number of entity IDs in the user's favourites list, regardless of whether HA has
      * sent state for them yet. Distinguishes "no favourites set" (zero) from "favourites
      * set but waiting on HA" (non-zero with empty `cards`).
@@ -115,7 +123,7 @@ data class CardStackUiState(
      * doesn't bounce.
      */
     val displayedCards: List<EntityState>
-        get() = if (optimisticPercents.isEmpty()) {
+        get() = if (optimisticPercents.isEmpty() && optimisticSelectOptions.isEmpty()) {
             // Common case: no wheel/tap is in flight. Skip the allocation of
             // the mapped list entirely — recompositions during static viewing
             // (e.g. swiping between pages, just looking at the deck) were
@@ -124,7 +132,12 @@ data class CardStackUiState(
             // with a null override returns the same instance.
             cards
         } else {
-            cards.map { state -> state.applyOptimistic(optimisticPercents[state.id]) }
+            cards.map { state ->
+                state.applyOptimistic(
+                    optimisticPercents[state.id],
+                    optimisticSelectOptions[state.id],
+                )
+            }
         }
 
     val activeState: EntityState?
@@ -134,8 +147,10 @@ data class CardStackUiState(
             // Short-circuit the optimistic application when nothing is in
             // flight for the active card.
             val card = cards.getOrNull(currentIndex) ?: return null
-            val override = optimisticPercents[card.id] ?: return card
-            return card.applyOptimistic(override)
+            val pctOverride = optimisticPercents[card.id]
+            val selOverride = optimisticSelectOptions[card.id]
+            if (pctOverride == null && selOverride == null) return card
+            return card.applyOptimistic(pctOverride, selOverride)
         }
 
     /**
@@ -146,18 +161,22 @@ data class CardStackUiState(
         get() = displayedCards.getOrNull(currentIndex)
 }
 
-/** Layer the optimistic override onto a cached state. */
-private fun EntityState.applyOptimistic(override: Int?): EntityState {
-    if (override == null) return this
-    return if (supportsScalar) {
-        // Scalar entity: optimistic just overrides the percent.
-        copy(percent = override)
-    } else {
-        // Switch entity: encode desired ON in optimistic >= 1, OFF in 0. Flip isOn
-        // immediately so the switch card snaps to the chosen position rather than
-        // waiting for HA's state broadcast.
-        copy(percent = override, isOn = override > 0)
+/** Layer the optimistic override(s) onto a cached state. */
+private fun EntityState.applyOptimistic(
+    percentOverride: Int?,
+    selectOverride: String? = null,
+): EntityState {
+    val pctApplied = when {
+        percentOverride == null -> this
+        supportsScalar -> copy(percent = percentOverride)
+        else -> copy(percent = percentOverride, isOn = percentOverride > 0)
     }
+    if (selectOverride == null) return pctApplied
+    // For select / input_select entities the displayed value is
+    // currentOption. We also rewrite rawState so themes that fall back to
+    // it (SelectCard does, for the "unavailable" path) reflect the pick
+    // optimistically too.
+    return pctApplied.copy(currentOption = selectOverride, rawState = selectOverride)
 }
 
 class CardStackViewModel(
@@ -325,6 +344,7 @@ class CardStackViewModel(
                 R1Log.w("CardStack.failure", "$id rejected by HA — reverting optimistic")
                 _state.value = _state.value.copy(
                     optimisticPercents = _state.value.optimisticPercents - id,
+                    optimisticSelectOptions = _state.value.optimisticSelectOptions - id,
                 )
             }
             .launchIn(viewModelScope)
@@ -460,11 +480,20 @@ class CardStackViewModel(
                         cached.isOn != (optPct > 0)
                     }
                 }
+                // Same shape for the select-option overrides: keep the
+                // override while HA still reports the old option, drop it
+                // once the cached value catches up.
+                val newSelectOpt = cur.optimisticSelectOptions.filter { (id, optVal) ->
+                    if (id !in favoriteSet) return@filter false
+                    val cached = entityMap[id] ?: return@filter true
+                    cached.currentOption != optVal
+                }
                 _state.value = cur.copy(
                     cards = ordered,
                     cardsById = ordered.associateBy { it.id },
                     currentIndex = clampedIndex,
                     optimisticPercents = newOptimistic,
+                    optimisticSelectOptions = newSelectOpt,
                     favouritesCount = favouriteIds.size,
                     settingsLoaded = true,
                     cardsByPage = cardsByPage,
@@ -993,17 +1022,26 @@ class CardStackViewModel(
      * when the entity has no options or only one (nothing to choose).
      */
     fun cycleSelectOption(entityId: EntityId, delta: Int) {
-        val entity = _state.value.cardsById[entityId] ?: return
+        val cur = _state.value
+        val entity = cur.cardsById[entityId] ?: return
         if (!entity.id.domain.isSelect) return
         val options = entity.selectOptions
         if (options.size < 2) return
-        val curIdx = options.indexOf(entity.currentOption).let { if (it == -1) 0 else it }
+        // Use the optimistic option (if any) as the cycle anchor so a quick
+        // back-to-back wheel detent advances from where the user left off,
+        // not from the stale HA-confirmed value.
+        val anchor = cur.optimisticSelectOptions[entityId] ?: entity.currentOption
+        val curIdx = options.indexOf(anchor).let { if (it == -1) 0 else it }
         val nextIdx = ((curIdx + delta) % options.size + options.size) % options.size
         val next = options[nextIdx]
-        R1Log.i("CardStack.cycleSelect", "$entityId: ${entity.currentOption ?: "?"} → $next")
-        // No optimistic update because select state IS the entity state (no separate
-        // attribute to nudge); the next state_changed will arrive within a couple
-        // hundred ms and re-render the card.
+        R1Log.i("CardStack.cycleSelect", "$entityId: ${anchor ?: "?"} → $next")
+        // Optimistic update so the card snaps to the new option immediately
+        // instead of waiting for HA's state_changed echo (typically 200-400 ms
+        // away on a busy server). The cache observer in observeFavorites
+        // clears the override when HA confirms the new value matches.
+        _state.value = cur.copy(
+            optimisticSelectOptions = cur.optimisticSelectOptions + (entityId to next),
+        )
         viewModelScope.launch {
             haRepository.call(com.github.itskenny0.r1ha.core.ha.ServiceCall.setSelectOption(entityId, next))
         }

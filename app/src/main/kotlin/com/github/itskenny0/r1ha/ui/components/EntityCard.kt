@@ -209,6 +209,12 @@ fun EntityCard(
                 domainLabel = if (state.id.domain == Domain.INPUT_SELECT) "SELECT" else "SELECT",
                 showArea = com.github.itskenny0.r1ha.core.theme.LocalUiOptions.current.showAreaLabel,
                 textSizeSp = perCardOverride.textSizeSp,
+                // Hint copy below the CHOOSE button only makes sense if the
+                // wheel is actually wired to this card. Resolves the
+                // three-state override to a concrete boolean so the picker is
+                // the only affordance visible when the user has explicitly
+                // turned wheel-cycling off (or the per-domain default does).
+                wheelEnabled = perCardOverride.resolvedWheelEnabled(state.id.domain.prefix),
                 modifier = Modifier.fillMaxSize().alpha(themeAlpha),
             )
         } else if (state.id.domain.isAction) {

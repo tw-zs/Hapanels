@@ -172,7 +172,38 @@ class MainActivity : ComponentActivity() {
             val bearerToken by produceState<String?>(initialValue = null, connectedHaVersion) {
                 value = runCatching { graph.tokens.load()?.accessToken }.getOrNull()
             }
-            R1ThemeHost(themeId = settings.theme) {
+            // Effective theme — auto-mode swaps to the night theme between the
+            // configured night hours. produceState ticks every minute so the
+            // crossover at 22:00 / 06:00 happens without waiting for the next
+            // settings emission. The auto flag short-circuits the tick when off
+            // (keepers of constant-theme installs don't pay for a recompose-
+            // per-minute they don't need).
+            val themeNow by androidx.compose.runtime.produceState(
+                initialValue = settings.theme,
+                settings.theme, settings.nightTheme, settings.autoThemeEnabled,
+                settings.nightStartHour, settings.nightEndHour,
+            ) {
+                while (true) {
+                    val now = java.time.LocalTime.now()
+                    val hour = now.hour
+                    val night = if (!settings.autoThemeEnabled) false
+                    else if (settings.nightStartHour == settings.nightEndHour) false
+                    else if (settings.nightStartHour < settings.nightEndHour) {
+                        hour in settings.nightStartHour until settings.nightEndHour
+                    } else {
+                        // Wrap-around window — e.g. 22 → 06 — night is "outside
+                        // the day window."
+                        hour >= settings.nightStartHour || hour < settings.nightEndHour
+                    }
+                    value = if (night) settings.nightTheme else settings.theme
+                    // Sleep until the top of the next minute so the crossover
+                    // happens precisely at the configured boundary instead of
+                    // up-to-60-seconds late.
+                    val msUntilMinute = 60_000L - (System.currentTimeMillis() % 60_000L)
+                    kotlinx.coroutines.delay(msUntilMinute.coerceAtLeast(1_000L))
+                }
+            }
+            R1ThemeHost(themeId = themeNow) {
                 CompositionLocalProvider(
                     LocalUiOptions provides settings.ui,
                     com.github.itskenny0.r1ha.core.theme.LocalHaBearerToken provides bearerToken,

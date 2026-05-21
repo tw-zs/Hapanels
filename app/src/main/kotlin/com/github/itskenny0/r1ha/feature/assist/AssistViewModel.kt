@@ -127,6 +127,45 @@ class AssistViewModel(
         }
     }
 
+    /**
+     * Send a macro directly — bypasses the draft field so a tap on a macro chip
+     * fires immediately without first populating the input. Multi-tapping the
+     * same macro fires it each time (HA's conversation engine handles dedupe at
+     * its end; we don't second-guess intent). No-ops while a request is in
+     * flight so a frantic tap-tap-tap can't pile concurrent requests onto HA.
+     */
+    fun sendMacro(text: String) {
+        if (text.isBlank() || _ui.value.inFlight) return
+        _ui.value = _ui.value.copy(draft = text)
+        send()
+    }
+
+    fun saveCurrentDraftAsMacro() {
+        val text = _ui.value.draft.trim()
+        if (text.isEmpty()) return
+        viewModelScope.launch {
+            settings.update { s ->
+                val existing = s.behavior.assistMacros
+                if (text in existing) return@update s
+                // Cap at 12 entries — chip row gets unreadable past that on
+                // narrow screens. Drop oldest to make room.
+                val next = (existing + text).takeLast(12)
+                s.copy(behavior = s.behavior.copy(assistMacros = next))
+            }
+            com.github.itskenny0.r1ha.core.util.Toaster.show("Macro saved")
+        }
+    }
+
+    fun deleteMacro(text: String) {
+        viewModelScope.launch {
+            settings.update { s ->
+                s.copy(behavior = s.behavior.copy(
+                    assistMacros = s.behavior.assistMacros - text,
+                ))
+            }
+        }
+    }
+
     /** Start a fresh conversation — drops the threaded id so the next
      *  send re-anchors HA's context. The transcript is also cleared so
      *  the UI doesn't pretend the previous turn is still live. */

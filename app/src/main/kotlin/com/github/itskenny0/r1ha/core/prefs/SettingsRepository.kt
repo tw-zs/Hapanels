@@ -143,6 +143,7 @@ class SettingsRepository private constructor(
         val behaviorQuickTileEntityId = stringPreferencesKey("behavior.quick_tile_entity_id")
         val behaviorAssistAutoOpenKeyboard = booleanPreferencesKey("behavior.assist_auto_open_keyboard")
         val behaviorAssistAgentId = stringPreferencesKey("behavior.assist_agent_id")
+        val behaviorAssistMacros = stringPreferencesKey("behavior.assist_macros")
         val behaviorOrientationMode = stringPreferencesKey("behavior.orientation_mode")
         val advancedJson = stringPreferencesKey("advanced.json")
         val dashboardJson = stringPreferencesKey("dashboard.json")
@@ -163,6 +164,10 @@ class SettingsRepository private constructor(
         val uiShowZeroPercentWhenOff = booleanPreferencesKey("ui.show_zero_percent_when_off")
 
         val theme = stringPreferencesKey("theme")
+        val autoThemeEnabled = booleanPreferencesKey("theme.auto_enabled")
+        val nightTheme = stringPreferencesKey("theme.night")
+        val nightStartHour = intPreferencesKey("theme.night_start_hour")
+        val nightEndHour = intPreferencesKey("theme.night_end_hour")
         /** Optional global accent ARGB override (Int.MIN_VALUE sentinel = unset). */
         val themeAccentArgb = intPreferencesKey("theme.accent_argb")
         /** "Read-only guest mode" toggle — refuses outbound service calls. */
@@ -254,11 +259,26 @@ class SettingsRepository private constructor(
                     quickTileEntityId = p[K.behaviorQuickTileEntityId]?.takeIf { it.isNotBlank() },
                     assistAutoOpenKeyboard = p[K.behaviorAssistAutoOpenKeyboard] ?: false,
                     assistAgentId = p[K.behaviorAssistAgentId]?.takeIf { it.isNotBlank() },
+                    assistMacros = p[K.behaviorAssistMacros]
+                        ?.split('\n')
+                        ?.mapNotNull { line ->
+                            // URL-decoded to recover newlines / equals inside the saved
+                            // macro text. Empty lines are skipped so a trailing newline
+                            // in the stored string doesn't surface as a blank chip.
+                            runCatching {
+                                java.net.URLDecoder.decode(line, Charsets.UTF_8.name())
+                            }.getOrNull()?.takeIf { it.isNotBlank() }
+                        }
+                        ?: emptyList(),
                     orientationMode = p[K.behaviorOrientationMode]
                         ?.let { runCatching { OrientationMode.valueOf(it) }.getOrNull() }
                         ?: OrientationMode.FOLLOW_DEVICE,
                 ),
                 theme = p[K.theme]?.let { runCatching { ThemeId.valueOf(it) }.getOrNull() } ?: ThemeId.PRAGMATIC_HYBRID,
+                autoThemeEnabled = p[K.autoThemeEnabled] ?: false,
+                nightTheme = p[K.nightTheme]?.let { runCatching { ThemeId.valueOf(it) }.getOrNull() } ?: ThemeId.MINIMAL_DARK,
+                nightStartHour = (p[K.nightStartHour] ?: 22).coerceIn(0, 23),
+                nightEndHour = (p[K.nightEndHour] ?: 6).coerceIn(0, 23),
                 themeAccentArgb = p[K.themeAccentArgb],
                 guestModeEnabled = p[K.guestModeEnabled] ?: false,
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
@@ -366,6 +386,13 @@ class SettingsRepository private constructor(
                 p[K.behaviorQuickTileEntityId] = next.behavior.quickTileEntityId.orEmpty()
                 p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard
                 p[K.behaviorAssistAgentId] = next.behavior.assistAgentId.orEmpty()
+                p[K.behaviorAssistMacros] = next.behavior.assistMacros
+                    .filter { it.isNotBlank() }
+                    .joinToString("\n") { line ->
+                        // URL-encoded so a macro containing a literal newline or '='
+                        // doesn't break the separator scheme on the next decode.
+                        java.net.URLEncoder.encode(line, Charsets.UTF_8.name())
+                    }
                 p[K.behaviorOrientationMode] = next.behavior.orientationMode.name
                 p[K.uiTextHistoryLen] = next.ui.textHistoryLength
                 p[K.uiHideCardTail] = next.ui.hideCardTailAbove
@@ -375,6 +402,10 @@ class SettingsRepository private constructor(
                 p[K.uiChromeButtons] = encodeChromeButtons(next.ui.chromeButtons)
                 p[K.uiShowZeroPercentWhenOff] = next.ui.showZeroPercentWhenOff
                 p[K.theme] = next.theme.name
+                p[K.autoThemeEnabled] = next.autoThemeEnabled
+                p[K.nightTheme] = next.nightTheme.name
+                p[K.nightStartHour] = next.nightStartHour
+                p[K.nightEndHour] = next.nightEndHour
                 val accent = next.themeAccentArgb
                 if (accent == null) p.remove(K.themeAccentArgb) else p[K.themeAccentArgb] = accent
                 p[K.guestModeEnabled] = next.guestModeEnabled

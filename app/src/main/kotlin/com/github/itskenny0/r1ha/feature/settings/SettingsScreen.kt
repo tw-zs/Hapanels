@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -1172,6 +1175,56 @@ fun SettingsScreen(
                     onClick = onOpenThemePicker,
                 )
             }
+            item {
+                SwitchRow(
+                    label = "Auto night theme",
+                    subtitle = "Swap themes inside the configured night window",
+                    checked = s.autoThemeEnabled,
+                    onCheckedChange = { vm.setAutoThemeEnabled(it) },
+                )
+            }
+            if (s.autoThemeEnabled) {
+                item {
+                    val nightThemeDialog = remember { mutableStateOf(false) }
+                    NavRow(
+                        label = "Night theme",
+                        value = s.nightTheme.name
+                            .replace('_', ' ')
+                            .lowercase()
+                            .replaceFirstChar { it.uppercase() },
+                        onClick = { nightThemeDialog.value = true },
+                    )
+                    if (nightThemeDialog.value) {
+                        NightThemePickerDialog(
+                            current = s.nightTheme,
+                            onPick = {
+                                vm.setNightTheme(it)
+                                nightThemeDialog.value = false
+                            },
+                            onDismiss = { nightThemeDialog.value = false },
+                        )
+                    }
+                }
+                item {
+                    val hoursDialog = remember { mutableStateOf(false) }
+                    NavRow(
+                        label = "Night window",
+                        value = "${s.nightStartHour}:00 → ${s.nightEndHour}:00",
+                        onClick = { hoursDialog.value = true },
+                    )
+                    if (hoursDialog.value) {
+                        NightHoursDialog(
+                            startHour = s.nightStartHour,
+                            endHour = s.nightEndHour,
+                            onApply = { start, end ->
+                                vm.setNightWindow(start, end)
+                                hoursDialog.value = false
+                            },
+                            onDismiss = { hoursDialog.value = false },
+                        )
+                    }
+                }
+            }
 
             }
             item { SectionDivider() }
@@ -2155,6 +2208,139 @@ private fun <T> Segmented(
                         .background(R1.Bg),
                 )
             }
+        }
+    }
+}
+
+/**
+ * Picker for the night-mode theme. Same three options as the main theme picker
+ * but rendered inline as a dialog (no full-screen route) because picking a
+ * night theme is a smaller, more transactional choice — the user already
+ * decided to enable auto-mode and is just confirming which theme to swap to.
+ */
+@Composable
+private fun NightThemePickerDialog(
+    current: com.github.itskenny0.r1ha.core.prefs.ThemeId,
+    onPick: (com.github.itskenny0.r1ha.core.prefs.ThemeId) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = R1.Bg,
+        title = { Text(text = "NIGHT THEME", style = R1.sectionHeader, color = R1.Ink) },
+        text = {
+            Column {
+                for (theme in com.github.itskenny0.r1ha.core.prefs.ThemeId.entries) {
+                    val selected = theme == current
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp)
+                            .clip(R1.ShapeS)
+                            .background(if (selected) R1.AccentWarm.copy(alpha = 0.2f) else R1.Bg)
+                            .border(
+                                1.dp,
+                                if (selected) R1.AccentWarm else R1.Hairline,
+                                R1.ShapeS,
+                            )
+                            .r1Pressable(onClick = { onPick(theme) })
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Text(
+                            text = theme.name.replace('_', ' ').lowercase()
+                                .replaceFirstChar { it.uppercase() },
+                            style = R1.body,
+                            color = if (selected) R1.AccentWarm else R1.Ink,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            com.github.itskenny0.r1ha.ui.components.R1Button(text = "CLOSE", onClick = onDismiss)
+        },
+    )
+}
+
+/**
+ * Hour-range picker for the night-theme window. Two ±-steppers for start and
+ * end hours (0–23, local). Wraparound (start > end) is allowed: e.g. 22 → 6
+ * means "night is 22:00–06:00 the next morning." Renders the resulting window
+ * as a sentence so the user can sanity-check before applying.
+ */
+@Composable
+private fun NightHoursDialog(
+    startHour: Int,
+    endHour: Int,
+    onApply: (Int, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var start by remember { mutableStateOf(startHour.coerceIn(0, 23)) }
+    var end by remember { mutableStateOf(endHour.coerceIn(0, 23)) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = R1.Bg,
+        title = { Text(text = "NIGHT WINDOW", style = R1.sectionHeader, color = R1.Ink) },
+        text = {
+            Column {
+                HourStepper(label = "Start hour", value = start, onChange = { start = it })
+                Spacer(Modifier.height(8.dp))
+                HourStepper(label = "End hour", value = end, onChange = { end = it })
+                Spacer(Modifier.height(10.dp))
+                val rangeStr = if (start == end) {
+                    "Night theme disabled (start == end)"
+                } else if (start < end) {
+                    "Night theme active from $start:00 to $end:00"
+                } else {
+                    "Night theme active from $start:00 to $end:00 (overnight)"
+                }
+                Text(text = rangeStr, style = R1.body, color = R1.InkMuted)
+            }
+        },
+        confirmButton = {
+            com.github.itskenny0.r1ha.ui.components.R1Button(text = "APPLY", onClick = { onApply(start, end) })
+        },
+        dismissButton = {
+            com.github.itskenny0.r1ha.ui.components.R1Button(
+                text = "CANCEL",
+                onClick = onDismiss,
+                variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
+            )
+        },
+    )
+}
+
+@Composable
+private fun HourStepper(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text = label, style = R1.body, color = R1.Ink, modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .r1Pressable(onClick = { onChange(((value - 1) + 24) % 24) }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = "−", style = R1.body, color = R1.Ink)
+        }
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 12.dp)
+                .widthIn(min = 40.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = "$value:00", style = R1.bodyEmph, color = R1.Ink)
+        }
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .r1Pressable(onClick = { onChange((value + 1) % 24) }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = "+", style = R1.body, color = R1.Ink)
         }
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -320,6 +321,48 @@ fun AssistScreen(
                 }
             }
         }
+        // Macro chip row — saved user prompts that fire on a single tap. Hidden
+        // when empty so the input area doesn't reserve space until the user
+        // actually saves one. Long-press a chip to delete it (with toast
+        // confirmation so an accidental long-press is recoverable). Horizontal
+        // scroll handles overflow when the row of chips exceeds the screen
+        // width instead of wrapping and pushing the input row down.
+        val macros = appSettings.behavior.assistMacros
+        if (macros.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (macro in macros) {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 4.dp)
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1RowPressable(
+                                onTap = { vm.sendMacro(macro) },
+                                onLongPress = {
+                                    vm.deleteMacro(macro)
+                                    com.github.itskenny0.r1ha.core.util.Toaster.show(
+                                        "Macro removed",
+                                    )
+                                },
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            text = macro.take(40) + if (macro.length > 40) "…" else "",
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                        )
+                    }
+                }
+            }
+        }
         // Input row — text field + SEND button. Plus a small RESET chip on
         // the left so the user can drop the conversation_id and start fresh
         // without backing out.
@@ -359,6 +402,37 @@ fun AssistScreen(
                     .padding(horizontal = 8.dp, vertical = 8.dp),
             ) {
                 Text(text = "↺", style = R1.labelMicro, color = R1.InkSoft)
+            }
+            Spacer(Modifier.width(4.dp))
+            // Save-as-macro chip — turns the current draft into a saved macro
+            // chip rendered above the input row. Disabled when the draft is
+            // blank so an empty tap doesn't save an unusable empty macro.
+            // Filled accent when active so the affordance reads as "this will
+            // do something" rather than dead chrome.
+            val saveActive = ui.draft.isNotBlank()
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(
+                        if (saveActive) R1.AccentWarm.copy(alpha = 0.18f)
+                        else R1.Bg,
+                    )
+                    .border(
+                        1.dp,
+                        if (saveActive) R1.AccentWarm.copy(alpha = 0.5f) else R1.Hairline,
+                        R1.ShapeS,
+                    )
+                    .r1Pressable(
+                        onClick = { if (saveActive) vm.saveCurrentDraftAsMacro() },
+                        contentDescription = "Save draft as macro",
+                    )
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = "★+",
+                    style = R1.labelMicro,
+                    color = if (saveActive) R1.AccentWarm else R1.InkMuted,
+                )
             }
             Spacer(Modifier.width(4.dp))
             // Voice button — fires the system speech recognizer. Disabled

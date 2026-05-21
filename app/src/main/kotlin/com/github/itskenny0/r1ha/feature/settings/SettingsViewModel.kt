@@ -150,6 +150,17 @@ class SettingsViewModel(
 
     fun setTheme(themeId: ThemeId) = update { it.copy(theme = themeId) }
 
+    fun setAutoThemeEnabled(enabled: Boolean) = update { it.copy(autoThemeEnabled = enabled) }
+
+    fun setNightTheme(themeId: ThemeId) = update { it.copy(nightTheme = themeId) }
+
+    fun setNightWindow(startHour: Int, endHour: Int) = update {
+        it.copy(
+            nightStartHour = startHour.coerceIn(0, 23),
+            nightEndHour = endHour.coerceIn(0, 23),
+        )
+    }
+
     // ── Account ─────────────────────────────────────────────────────────────
 
     /**

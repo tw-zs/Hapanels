@@ -37,6 +37,10 @@ data class AppBackup(
     val haVersion: String? = null,
 
     val theme: ThemeId = ThemeId.PRAGMATIC_HYBRID,
+    val autoThemeEnabled: Boolean = false,
+    val nightTheme: ThemeId = ThemeId.MINIMAL_DARK,
+    val nightStartHour: Int = 22,
+    val nightEndHour: Int = 6,
 
     val wheelStepPercent: Int = 2,
     val wheelAcceleration: Boolean = true,
@@ -103,6 +107,10 @@ fun AppSettings.toBackup(createdAt: String): AppBackup = AppBackup(
     serverUrl = server?.url,
     haVersion = server?.haVersion,
     theme = theme,
+    autoThemeEnabled = autoThemeEnabled,
+    nightTheme = nightTheme,
+    nightStartHour = nightStartHour,
+    nightEndHour = nightEndHour,
     wheelStepPercent = wheel.stepPercent,
     wheelAcceleration = wheel.acceleration,
     wheelInvertDirection = wheel.invertDirection,
@@ -153,6 +161,10 @@ fun AppBackup.applyOnto(prev: AppSettings): AppSettings {
     return prev.copy(
         server = newServer ?: prev.server,
         theme = theme,
+        autoThemeEnabled = autoThemeEnabled,
+        nightTheme = nightTheme,
+        nightStartHour = nightStartHour,
+        nightEndHour = nightEndHour,
         wheel = WheelSettings(
             stepPercent = wheelStepPercent,
             acceleration = wheelAcceleration,

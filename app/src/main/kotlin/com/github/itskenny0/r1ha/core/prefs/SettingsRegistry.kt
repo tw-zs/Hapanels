@@ -93,6 +93,33 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         isDefault = { it.theme == defaults.theme },
         currentDisplay = { it.theme.name.lowercase().replace('_', ' ') },
     ),
+    SettingEntry(
+        id = "theme.autoEnabled",
+        category = SettingCategory.APPEARANCE,
+        label = "Auto night theme",
+        description = "Swap to a different theme between the configured night hours",
+        isDefault = { it.autoThemeEnabled == defaults.autoThemeEnabled },
+        currentDisplay = { if (it.autoThemeEnabled) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "theme.night",
+        category = SettingCategory.APPEARANCE,
+        label = "Night theme",
+        description = "Theme used while inside the night window",
+        isDefault = { it.nightTheme == defaults.nightTheme },
+        currentDisplay = { it.nightTheme.name.lowercase().replace('_', ' ') },
+    ),
+    SettingEntry(
+        id = "theme.nightHours",
+        category = SettingCategory.APPEARANCE,
+        label = "Night window",
+        description = "Hours during which the night theme is active (local time)",
+        isDefault = {
+            it.nightStartHour == defaults.nightStartHour &&
+                it.nightEndHour == defaults.nightEndHour
+        },
+        currentDisplay = { "${it.nightStartHour}:00 → ${it.nightEndHour}:00" },
+    ),
 
     // ── Scroll wheel ────────────────────────────────────────────────────
     SettingEntry(

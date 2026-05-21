@@ -239,6 +239,16 @@ data class Behavior(
      */
     val assistAgentId: String? = null,
     /**
+     * User-saved Assist prompt macros — quick-fire chips above the Assist input
+     * that send the saved text on a single tap. Useful for repeat queries
+     * ("what's the temperature?", "lock everything", "turn off all lights")
+     * and for kiosk installs where the operator picks from a curated set
+     * rather than typing. Stored newline-separated in DataStore; capped at a
+     * reasonable number of entries by the UI so the chip row doesn't grow
+     * unbounded.
+     */
+    val assistMacros: List<String> = emptyList(),
+    /**
      * Whether the app follows the device rotation sensor or locks to portrait.
      * Defaults to FOLLOW_DEVICE so tablets and phones in landscape work out of
      * the box after the orientation-lock was removed. Users who prefer portrait
@@ -487,6 +497,20 @@ data class AppSettings(
     val ui: UiOptions = UiOptions(),
     val behavior: Behavior = Behavior(),
     val theme: ThemeId = ThemeId.PRAGMATIC_HYBRID,
+    /**
+     * Time-of-day automatic theme switching. When [autoThemeEnabled] is true the
+     * app uses [theme] during the day and [nightTheme] between [nightStartHour]
+     * and [nightEndHour] (24 h, local time). Defaults match the convention of
+     * "darker UI after 10 PM, normal UI from 6 AM" — most kiosk users want the
+     * minimal-dark theme overnight so the wall-mounted R1 doesn't light up the
+     * room while no-one's looking at it.
+     */
+    val autoThemeEnabled: Boolean = false,
+    val nightTheme: ThemeId = ThemeId.MINIMAL_DARK,
+    /** Hour (0..23 local) at which the night theme begins. Default 22 (10 PM). */
+    val nightStartHour: Int = 22,
+    /** Hour (0..23 local) at which the day theme resumes. Default 6 (6 AM). */
+    val nightEndHour: Int = 6,
     /**
      * Optional global accent colour override (ARGB int). When set, replaces
      * every theme's domain-derived accent role (WARM / COOL / GREEN /

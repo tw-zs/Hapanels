@@ -757,7 +757,9 @@ private fun encodeEntityOverrides(map: Map<String, EntityOverride>): String {
         val tapStr = when (o.tapToToggle) { true -> "1"; false -> "0"; null -> "?" }
         // Per-card wheel-enabled override. Tri-state shape mirrors tap.
         val whStr = when (o.wheelEnabled) { true -> "1"; false -> "0"; null -> "?" }
-        "$idEnc=$sizeStr|$pillStr|$areaStr|$lpEnc|$decStr|$accStr|$ctStr|$btnsStr|$tapStr|$whStr"
+        // Per-card hide-when-unavailable. Tri-state same as the other booleans.
+        val hideStr = when (o.hideWhenUnavailable) { true -> "1"; false -> "0"; null -> "?" }
+        "$idEnc=$sizeStr|$pillStr|$areaStr|$lpEnc|$decStr|$accStr|$ctStr|$btnsStr|$tapStr|$whStr|$hideStr"
     }
 }
 
@@ -801,6 +803,7 @@ private fun decodeEntityOverrides(raw: String?): Map<String, EntityOverride> {
                 else btnsBlob.mapNotNull { com.github.itskenny0.r1ha.core.prefs.LightCardButton.fromCode(it) }.toSet()
             val tap = when (parts.getOrNull(8)) { "1" -> true; "0" -> false; else -> null }
             val wheel = when (parts.getOrNull(9)) { "1" -> true; "0" -> false; else -> null }
+            val hideUnavail = when (parts.getOrNull(10)) { "1" -> true; "0" -> false; else -> null }
             id to EntityOverride(
                 textSizeSp = size,
                 showOnOffPill = pill,
@@ -812,6 +815,7 @@ private fun decodeEntityOverrides(raw: String?): Map<String, EntityOverride> {
                 lightButtonsHidden = buttons,
                 tapToToggle = tap,
                 wheelEnabled = wheel,
+                hideWhenUnavailable = hideUnavail,
             )
         }.getOrNull()
     }.toMap()

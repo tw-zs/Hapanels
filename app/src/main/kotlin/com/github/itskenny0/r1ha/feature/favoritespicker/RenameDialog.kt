@@ -314,6 +314,22 @@ fun RenameDialog(
                 onSelect = { override = override.copy(wheelEnabled = it) },
             )
 
+            // ── HIDE WHEN UNAVAILABLE (per-card override) ────────────────────────────
+            SectionHeader("HIDE WHEN UNAVAILABLE")
+            Text(
+                text = "When ON, this card is removed from the deck whenever HA reports " +
+                    "the entity as unavailable / unknown. Useful for entities that come " +
+                    "and go (a vacuum that disappears when docked, a guest device). " +
+                    "Other unavailable cards still appear dimmed.",
+                style = R1.body,
+                color = R1.InkMuted,
+            )
+            Spacer(Modifier.height(6.dp))
+            TapToToggleRow(
+                selected = override.hideWhenUnavailable,
+                onSelect = { override = override.copy(hideWhenUnavailable = it) },
+            )
+
             // ── GESTURE ──────────────────────────────────────────────────────────────
             SectionHeader("GESTURE")
             Text(

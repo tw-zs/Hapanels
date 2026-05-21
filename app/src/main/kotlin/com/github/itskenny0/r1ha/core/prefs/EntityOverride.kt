@@ -84,6 +84,16 @@ data class EntityOverride(
      * The customize dialog surfaces this as Inherit / On / Off chips.
      */
     val wheelEnabled: Boolean? = null,
+    /**
+     * When true, this card is hidden from the deck whenever its entity is
+     * unavailable (HA state `unavailable` / `unknown` / blank). False / null
+     * keeps the previous behaviour: an unavailable card stays in the deck,
+     * dimmed via the UNAVAILABLE treatment. Useful for "sometimes-on" devices
+     * (a vacuum that disappears when docked, a guest's phone, a
+     * non-permanently-paired Bluetooth speaker) where the deck would
+     * otherwise carry dead stubs.
+     */
+    val hideWhenUnavailable: Boolean? = null,
 ) {
     companion object {
         /** Curated CT presets surfaced in the customize dialog. */

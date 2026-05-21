@@ -370,6 +370,13 @@ class CardStackViewModel(
             val activeId: String,
             val unionFavorites: List<String>,
             val overrides: Map<String, String>,
+            /**
+             * Per-card overrides — bundled into the snapshot so the page-build
+             * loop downstream can apply `hideWhenUnavailable` filtering without
+             * an additional Flow.combine. distinctUntilChanged still collapses
+             * no-op updates (the per-card map structurally equals).
+             */
+            val entityOverrides: Map<String, com.github.itskenny0.r1ha.core.prefs.EntityOverride>,
         )
         val sourceFlow = settings.settings
             .map { s ->
@@ -380,6 +387,7 @@ class CardStackViewModel(
                     activeId = s.activePageId,
                     unionFavorites = unionFavorites,
                     overrides = s.nameOverrides,
+                    entityOverrides = s.entityOverrides,
                 )
             }
             .distinctUntilChanged()
@@ -405,6 +413,16 @@ class CardStackViewModel(
                 fun materializeRow(id: String): EntityState? {
                     val eid = runCatching { EntityId(id) }.getOrNull() ?: return null
                     val state = entityMap[eid] ?: return null
+                    // Per-card "hide while unavailable" — drop the card from
+                    // the deck so the user isn't stuck staring at an
+                    // UNAVAILABLE tile they explicitly opted to hide. Other
+                    // unavailable cards still render dimmed as before (the
+                    // override is null = inherit, which keeps the old
+                    // behaviour for cards the user hasn't touched).
+                    val override = snap.entityOverrides[state.id.value]
+                    if (override?.hideWhenUnavailable == true && !state.isAvailable) {
+                        return null
+                    }
                     val renamed = snap.overrides[state.id.value]
                     return if (renamed != null) state.copy(friendlyName = renamed) else state
                 }

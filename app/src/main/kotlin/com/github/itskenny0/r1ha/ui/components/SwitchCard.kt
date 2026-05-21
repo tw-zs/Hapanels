@@ -153,14 +153,25 @@ fun SwitchCard(
             com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> "PLAY" to "PAUSE"
             else -> "ON" to "OFF"
         }
-        SwitchTrack(
-            isOn = state.isOn,
-            accent = accent,
-            onSetOn = onSetOn,
-            onLabel = onLabel,
-            offLabel = offLabel,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Hide the SwitchTrack for code-required locks. The LockPanel below
+        // surfaces explicit LOCK / UNLOCK chips that open the PIN keypad;
+        // tapping the SwitchTrack here would otherwise fire lock.unlock
+        // without the code and HA would reject with `code_required`,
+        // looking like the app silently lost the tap. For locks without a
+        // code_format the track still drives the entity directly since
+        // there's no keypad to gate it.
+        val needsLockCode = state.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LOCK &&
+            !state.lockCodeFormat.isNullOrBlank()
+        if (!needsLockCode) {
+            SwitchTrack(
+                isOn = state.isOn,
+                accent = accent,
+                onSetOn = onSetOn,
+                onLabel = onLabel,
+                offLabel = offLabel,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         // Dedicated per-domain panels under the switch track. Each panel
         // self-gates on the entity's `supported_features` bitmask so unused

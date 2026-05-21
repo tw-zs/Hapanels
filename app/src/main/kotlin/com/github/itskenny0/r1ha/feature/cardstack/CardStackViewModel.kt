@@ -627,7 +627,15 @@ class CardStackViewModel(
             // Pull a fresh entity listing rather than relying on the live
             // card cache — the cache is filtered to a single page's
             // favourites, but we want every entity HA reports.
-            val all = haRepository.listAllEntities().getOrNull().orEmpty()
+            val result = haRepository.listAllEntities()
+            if (result.isFailure) {
+                // Distinguish "fetch failed" from "no areas have entities" by
+                // emitting -1 so the screen can show a network-error toast
+                // instead of the misleading "no areas with entities" one.
+                _pagesGenerated.tryEmit(-1)
+                return@launch
+            }
+            val all = result.getOrNull().orEmpty()
             val controllable = all.filter { e ->
                 val d = e.id.domain
                 // Surface domains the SwitchCard / theme.Card can actually

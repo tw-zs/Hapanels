@@ -392,9 +392,10 @@ fun CardStackScreen(
     // controllable entities; common on a fresh HA install).
     androidx.compose.runtime.LaunchedEffect(vm) {
         vm.pagesGenerated.collect { count ->
-            val msg = when (count) {
-                0 -> "No HA areas with controllable entities. Set areas in HA first."
-                1 -> "1 page generated from HA areas."
+            val msg = when {
+                count < 0 -> "Couldn't reach HA. Try again when you're back online."
+                count == 0 -> "No HA areas with controllable entities. Set areas in HA first."
+                count == 1 -> "1 page generated from HA areas."
                 else -> "$count pages generated from HA areas."
             }
             com.github.itskenny0.r1ha.core.util.Toaster.show(msg)

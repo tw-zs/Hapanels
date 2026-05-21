@@ -142,6 +142,25 @@ class ToDoViewModel(
         }
     }
 
+    fun clearCompleted() {
+        val entity = _ui.value.activeEntityId ?: return
+        val completedCount = _ui.value.items.count { it.completed }
+        if (completedCount == 0) return
+        viewModelScope.launch {
+            haRepository.clearCompletedTodoItems(entity).fold(
+                onSuccess = {
+                    _ui.value = _ui.value.copy(
+                        items = _ui.value.items.filterNot { it.completed },
+                    )
+                    Toaster.show("Cleared $completedCount completed item${if (completedCount == 1) "" else "s"}")
+                },
+                onFailure = { t ->
+                    Toaster.error("Clear failed: ${t.message ?: "unknown"}")
+                },
+            )
+        }
+    }
+
     fun remove(item: ToDoItem) {
         val entity = _ui.value.activeEntityId ?: return
         if (item.summary in _ui.value.pendingItems) return

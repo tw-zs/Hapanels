@@ -206,6 +206,9 @@ interface HaRepository {
 
     /** Remove an item by summary. */
     suspend fun removeTodoItem(entityId: String, summary: String): Result<Unit>
+
+    /** Bulk-delete every completed item from the named list. */
+    suspend fun clearCompletedTodoItems(entityId: String): Result<Unit>
     suspend fun start()
     suspend fun stop()
 

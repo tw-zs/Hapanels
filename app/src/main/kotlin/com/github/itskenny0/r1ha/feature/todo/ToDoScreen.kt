@@ -80,19 +80,38 @@ fun ToDoScreen(
             title = "TO-DO",
             onBack = onBack,
             action = {
-                Box(
-                    modifier = Modifier
-                        .clip(R1.ShapeS)
-                        .background(R1.SurfaceMuted)
-                        .border(1.dp, R1.Hairline, R1.ShapeS)
-                        .r1Pressable(onClick = { vm.refresh() })
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        text = if (ui.loadingItems || ui.loadingLists) "…" else "REFRESH",
-                        style = R1.labelMicro,
-                        color = R1.InkSoft,
-                    )
+                val hasCompleted = ui.items.any { it.completed }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (hasCompleted) {
+                        Box(
+                            modifier = Modifier
+                                .clip(R1.ShapeS)
+                                .background(R1.SurfaceMuted)
+                                .border(1.dp, R1.AccentWarm.copy(alpha = 0.5f), R1.ShapeS)
+                                .r1Pressable(onClick = { vm.clearCompleted() })
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                text = "CLEAR DONE",
+                                style = R1.labelMicro,
+                                color = R1.AccentWarm,
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1Pressable(onClick = { vm.refresh() })
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = if (ui.loadingItems || ui.loadingLists) "…" else "REFRESH",
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                        )
+                    }
                 }
             },
         )

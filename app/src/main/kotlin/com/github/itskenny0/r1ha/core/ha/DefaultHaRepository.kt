@@ -2299,4 +2299,17 @@ class DefaultHaRepository(
                 R1Log.w("HaRepo.todo", "remove from $entityId failed: ${t.message}")
             }
         }
+
+    override suspend fun clearCompletedTodoItems(entityId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val payload = kotlinx.serialization.json.buildJsonObject {
+                    put("entity_id", JsonPrimitive(entityId))
+                }
+                callRawService("todo", "remove_completed_items", payload).getOrThrow()
+                Unit
+            }.onFailure { t ->
+                R1Log.w("HaRepo.todo", "clear completed on $entityId failed: ${t.message}")
+            }
+        }
 }

@@ -128,7 +128,7 @@ fun SettingsScreen(
     // settings tree as the entry point.
     val allSectionNames = listOf(
         "SERVER", "SCROLL WHEEL", "CARD UI", "BEHAVIOUR",
-        "BACKUP & RESTORE", "DASHBOARD", "INTEGRATIONS", "APPEARANCE",
+        "BACKUP & RESTORE", "SECURITY", "DASHBOARD", "INTEGRATIONS", "APPEARANCE",
         "TODAY", "TALK & FIRE", "STATUS VIEWS", "POWER TOOLS",
     )
     var expandedSections by androidx.compose.runtime.remember {
@@ -895,6 +895,18 @@ fun SettingsScreen(
             }
             item { SectionDivider() }
 
+            // ── Security ──────────────────────────────────────────────────────────
+            // TLS certificate pinning. SharedPreferences-backed instead of
+            // routed through SettingsRepository because the OkHttpClient
+            // builds at process start and reads the pin list sync. Changes
+            // here take effect on the next app launch; the subtitle on each
+            // affected row spells that out.
+            item { Section("SECURITY", expanded = "SECURITY" in expandedSections, onToggle = { toggleSection("SECURITY") }, modifiedCount = sectionModifiedCount["SECURITY"] ?: 0) }
+            if ("SECURITY" in expandedSections) {
+                item { SecuritySection() }
+            }
+            item { SectionDivider() }
+
             // ── Dashboard layout — per-section visibility + thresholds ─────────
             item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }, modifiedCount = sectionModifiedCount["DASHBOARD"] ?: 0) }
             if ("DASHBOARD" in expandedSections) {
@@ -1358,6 +1370,71 @@ fun SettingsScreen(
                     value = "Open HA's frontend in-app",
                     onClick = onOpenLovelace,
                 )
+            }
+            // Create-backup action. Two-stage confirm because triggering a
+            // backup on a busy HA install can momentarily hammer the disk
+            // and a stray tap shouldn't kick that off. Fires the standard
+            // `backup.create` service (HA Core 2024.4+); the supervisor
+            // surface handles the rest of the lifecycle (compression,
+            // encryption, location) per the user's HA backup config so we
+            // don't need to expose those knobs here.
+            item {
+                val backupArmed = androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(false)
+                }
+                androidx.compose.runtime.LaunchedEffect(backupArmed.value) {
+                    if (backupArmed.value) {
+                        kotlinx.coroutines.delay(3_000)
+                        backupArmed.value = false
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp, vertical = 6.dp),
+                ) {
+                    Text(text = "BACKUP", style = R1.labelMicro, color = R1.AccentWarm)
+                    Spacer(Modifier.height(4.dp))
+                    com.github.itskenny0.r1ha.ui.components.R1Button(
+                        text = if (backupArmed.value) "CONFIRM · CREATE BACKUP NOW" else "CREATE BACKUP NOW",
+                        onClick = {
+                            if (backupArmed.value) {
+                                backupArmed.value = false
+                                coroutineScope.launch {
+                                    haRepository.callRawService(
+                                        domain = "backup",
+                                        service = "create",
+                                        data = kotlinx.serialization.json.JsonObject(emptyMap()),
+                                    ).fold(
+                                        onSuccess = {
+                                            com.github.itskenny0.r1ha.core.util.Toaster.show(
+                                                "Backup creation started",
+                                            )
+                                        },
+                                        onFailure = { t ->
+                                            com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                                                shortText = "Backup failed to start",
+                                                fullText = t.message ?: t.toString(),
+                                            )
+                                        },
+                                    )
+                                }
+                            } else {
+                                backupArmed.value = true
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (backupArmed.value)
+                            "Triggers HA's backup.create service. Honors your supervisor's backup destination + retention config."
+                        else
+                            "Fires backup.create on your HA server (HA Core 2024.4+).",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
+                    )
+                }
             }
 
             }
@@ -2352,3 +2429,177 @@ private fun HourStepper(label: String, value: Int, onChange: (Int) -> Unit) {
         }
     }
 }
+
+/**
+ * SECURITY section content. Renders the TLS pinning toggle, the list of currently
+ * configured SHA-256 pins, and an inline "add pin" form.
+ *
+ * State is held in [SecurityPolicyStore], which is SharedPreferences-backed and
+ * outside the DataStore-flow path used by the rest of Settings. The OkHttpClient
+ * builds from the policy at process start and never rebuilds, so every mutation
+ * here surfaces a small "restart required" badge — the user gets immediate
+ * feedback in the UI (pin appears in the list) but the actual handshake
+ * enforcement waits until the next launch.
+ */
+@Composable
+private fun SecuritySection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app = context.applicationContext as com.github.itskenny0.r1ha.App
+    val store = app.graph.securityPolicy
+    val policyState = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(store.current()) }
+    val pendingPin = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    val pendingPinError = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    // Snapshot the persisted state at first composition. Changes go through
+    // [store.update] which we mirror back into the local state — saves a flow
+    // collector for what is, in practice, a one-screen-at-a-time surface.
+    val policy = policyState.value
+
+    fun applyPolicy(transform: (com.github.itskenny0.r1ha.core.security.SecurityPolicy) -> com.github.itskenny0.r1ha.core.security.SecurityPolicy) {
+        store.update(transform)
+        policyState.value = store.current()
+        com.github.itskenny0.r1ha.core.util.Toaster.show("Saved. Restart app to apply.")
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SwitchRow(
+            label = "TLS certificate pinning",
+            subtitle = "Reject any TLS certificate the server presents whose SHA-256 SPKI hash isn't in the list below. Pin at least two values (current key + backup) so a normal cert rotation doesn't lock you out. Takes effect on next app launch.",
+            checked = policy.tlsPinningEnabled,
+            onCheckedChange = { v -> applyPolicy { it.copy(tlsPinningEnabled = v) } },
+        )
+
+        // Live status banner: green when active, amber when armed but with no
+        // pins (which means OkHttp won't apply any pinner, so the toggle is
+        // a no-op — surface that so the user doesn't think they're protected).
+        val active = policy.tlsPinningEnabled && policy.sha256Pins.isNotEmpty()
+        val armedNoPins = policy.tlsPinningEnabled && policy.sha256Pins.isEmpty()
+        val statusText = when {
+            active -> "${policy.sha256Pins.size} PIN${if (policy.sha256Pins.size == 1) "" else "S"} ACTIVE · ENFORCED ON NEXT LAUNCH"
+            armedNoPins -> "PINNING ON BUT NO PINS CONFIGURED · ADD AT LEAST ONE PIN BELOW"
+            else -> "PINNING OFF · TRUSTS THE SYSTEM CERTIFICATE STORE"
+        }
+        val statusColor = when {
+            active -> R1.AccentCool
+            armedNoPins -> R1.StatusAmber
+            else -> R1.InkMuted
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 4.dp)
+                .clip(R1.ShapeS)
+                .background(R1.Surface)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(text = statusText, style = R1.labelMicro, color = statusColor)
+        }
+
+        // Pin list. Each row: monospace hash + REMOVE.
+        if (policy.sha256Pins.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            policy.sha256Pins.forEachIndexed { idx, pin ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(text = "#${idx + 1}", style = R1.labelMicro, color = R1.InkMuted)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = pin,
+                        style = R1.body.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                        color = R1.Ink,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1Pressable(onClick = {
+                                applyPolicy { it.copy(sha256Pins = it.sha256Pins.toMutableList().also { l -> l.removeAt(idx) }) }
+                            })
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Text(text = "REMOVE", style = R1.labelMicro, color = R1.StatusAmber)
+                    }
+                }
+            }
+        }
+
+        // Add-pin form. The user pastes a base64 SHA-256 hash (with or
+        // without the `sha256/` prefix). [SecurityPolicyStore.normalisePin]
+        // rejects anything that doesn't decode to a 32-byte digest — the
+        // typical shape of a copy-paste from a `openssl s_client … |
+        // openssl dgst -sha256 -binary | openssl enc -base64` pipeline,
+        // which is the standard way to derive a pin from the server cert.
+        Spacer(Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp, vertical = 6.dp),
+        ) {
+            Text(text = "ADD PIN", style = R1.labelMicro, color = R1.AccentWarm)
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier.weight(1f)) {
+                    R1TextField(
+                        value = pendingPin.value,
+                        onValueChange = {
+                            pendingPin.value = it
+                            pendingPinError.value = null
+                        },
+                        placeholder = "base64 SHA-256 (sha256/...)",
+                        monospace = true,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = {
+                            val canonical = com.github.itskenny0.r1ha.core.security.SecurityPolicyStore
+                                .normalisePin(pendingPin.value)
+                            if (canonical == null) {
+                                pendingPinError.value = "Not a SHA-256 base64 hash (expected 32 decoded bytes)"
+                            } else if (canonical in policy.sha256Pins) {
+                                pendingPinError.value = "Pin already in list"
+                            } else {
+                                applyPolicy { it.copy(sha256Pins = it.sha256Pins + canonical) }
+                                pendingPin.value = ""
+                                pendingPinError.value = null
+                            }
+                        })
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(text = "ADD", style = R1.labelMicro, color = R1.AccentWarm)
+                }
+            }
+            pendingPinError.value?.let { err ->
+                Spacer(Modifier.height(4.dp))
+                Text(text = err, style = R1.labelMicro, color = R1.StatusAmber)
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Derive a pin: openssl s_client -connect HOST:443 -servername HOST | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64",
+                style = R1.labelMicro,
+                color = R1.InkMuted,
+            )
+        }
+    }
+}
+

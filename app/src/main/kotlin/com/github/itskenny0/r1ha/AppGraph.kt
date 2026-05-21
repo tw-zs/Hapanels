@@ -9,9 +9,12 @@ import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
 import com.github.itskenny0.r1ha.core.prefs.WheelKeySource
+import com.github.itskenny0.r1ha.core.security.SecurityPolicyStore
+import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import okhttp3.CertificatePinner
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -25,8 +28,14 @@ class AppGraph(context: Context) {
 
     private val appContext: Context = context.applicationContext
 
+    /** SharedPreferences-backed TLS pinning policy. Read synchronously at the first
+     *  [okHttp] access so the CertificatePinner can be wired before any HTTP traffic
+     *  flows; mutations only take effect on next process start, which the Settings UI
+     *  surfaces to the user. */
+    val securityPolicy: SecurityPolicyStore by lazy { SecurityPolicyStore(appContext) }
+
     val okHttp: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)
@@ -35,7 +44,42 @@ class AppGraph(context: Context) {
             // OkHttp surfaces a missing PONG as onFailure, which our state machine treats as
             // a Disconnected and schedules a backoff reconnect.
             .pingInterval(30, TimeUnit.SECONDS)
-            .build()
+        attachCertificatePinner(builder)
+        builder.build()
+    }
+
+    /**
+     * Build a [CertificatePinner] from the current security policy and attach it to
+     * [builder]. No-op when pinning is disabled or no pins are configured, when the
+     * server URL isn't set yet, or when the host can't be parsed: a pinner that
+     * doesn't know which host to pin would silently let everything through, and a
+     * pinner aimed at the wrong host would silently lock the user out.
+     *
+     * Reads the host out of SharedPreferences directly. The SettingsRepository
+     * shadow store mirrors it there before DataStore writes; we use the shadow
+     * because it's synchronous and always at-least-as-fresh as DataStore.
+     */
+    private fun attachCertificatePinner(builder: OkHttpClient.Builder) {
+        val policy = securityPolicy.current()
+        if (!policy.tlsPinningEnabled || policy.sha256Pins.isEmpty()) return
+        val shadow = appContext.getSharedPreferences("r1ha_shadow", Context.MODE_PRIVATE)
+        val url = shadow.getString("server.url", null) ?: return
+        // java.net.URI is robust enough for the URL shapes the user types into the
+        // onboarding screen (with or without scheme, with or without trailing slash);
+        // OkHttp's HttpUrl.parse() is stricter and rejects schemeless inputs that we
+        // happily accept elsewhere in the app.
+        val host = runCatching {
+            val withScheme = if (url.startsWith("http")) url else "https://$url"
+            java.net.URI(withScheme).host
+        }.getOrNull() ?: return
+        if (host.isBlank()) return
+        val pinner = CertificatePinner.Builder().apply {
+            policy.sha256Pins.forEach { pin ->
+                add(host, "sha256/$pin")
+            }
+        }.build()
+        builder.certificatePinner(pinner)
+        R1Log.i("AppGraph", "TLS pinning ON: host=$host pins=${policy.sha256Pins.size}")
     }
 
     val settings: SettingsRepository by lazy {

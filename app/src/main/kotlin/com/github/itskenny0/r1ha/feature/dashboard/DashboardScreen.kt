@@ -214,31 +214,61 @@ fun DashboardScreen(
                 // pair is visible it falls back to full width automatically.
                 val isTablet = LocalConfiguration.current.screenWidthDp >= 600
 
-                DashboardPair(
-                    isTablet = isTablet,
-                    leftVisible = ds.showWeather && ui.weather != null,
-                    rightVisible = ds.showPersons && ui.persons != null,
-                    left = { ui.weather?.let { WeatherCard(it, onClick = onOpenWeather) } },
-                    right = { ui.persons?.let { PersonsCard(it, onClick = onOpenPersons) } },
-                )
-                DashboardPair(
-                    isTablet = isTablet,
-                    leftVisible = ds.showSun && ui.sun != null,
-                    rightVisible = ds.showNextEvent && ui.nextEvent != null,
-                    left = { ui.sun?.let { SunCard(it, onClick = { onOpenHistory("sun.sun") }) } },
-                    right = { ui.nextEvent?.let { CalendarCard(it, onClick = onOpenCalendars) } },
-                )
-                if (ds.showTimers && ui.timers.isNotEmpty()) {
-                    Text(text = "TIMERS", style = R1.labelMicro, color = R1.InkSoft)
-                    // On tablets show 2 timers per row; phones stay 1 per row.
-                    if (isTablet) {
-                        ui.timers.chunked(2).forEach { pair ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                pair.forEach { t ->
-                                    Box(Modifier.weight(1f)) {
+                // Tile rendering — each branch checks the per-tile show* flag plus any
+                // data presence guards that were already in place. Order is driven by
+                // ds.tileOrder so the user can reorder under Settings → DASHBOARD →
+                // TILE ORDER without us hardcoding the sequence here. Unknown ids are
+                // skipped (forward-compat for future tile additions).
+                val resolvedOrder = ds.tileOrder.ifEmpty {
+                    com.github.itskenny0.r1ha.core.prefs.DashboardSettings.DEFAULT_TILE_ORDER
+                }
+                for (tileId in resolvedOrder.distinct()) {
+                    val tile = runCatching {
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.valueOf(tileId)
+                    }.getOrNull() ?: continue
+                    when (tile) {
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.WEATHER_PERSONS -> {
+                            DashboardPair(
+                                isTablet = isTablet,
+                                leftVisible = ds.showWeather && ui.weather != null,
+                                rightVisible = ds.showPersons && ui.persons != null,
+                                left = { ui.weather?.let { WeatherCard(it, onClick = onOpenWeather) } },
+                                right = { ui.persons?.let { PersonsCard(it, onClick = onOpenPersons) } },
+                            )
+                        }
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.SUN_CALENDAR -> {
+                            DashboardPair(
+                                isTablet = isTablet,
+                                leftVisible = ds.showSun && ui.sun != null,
+                                rightVisible = ds.showNextEvent && ui.nextEvent != null,
+                                left = { ui.sun?.let { SunCard(it, onClick = { onOpenHistory("sun.sun") }) } },
+                                right = { ui.nextEvent?.let { CalendarCard(it, onClick = onOpenCalendars) } },
+                            )
+                        }
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.TIMERS -> {
+                            if (ds.showTimers && ui.timers.isNotEmpty()) {
+                                Text(text = "TIMERS", style = R1.labelMicro, color = R1.InkSoft)
+                                if (isTablet) {
+                                    ui.timers.chunked(2).forEach { pair ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            pair.forEach { t ->
+                                                Box(Modifier.weight(1f)) {
+                                                    TimerCard(
+                                                        t,
+                                                        onPause = { vm.timerService(t.entityId, "pause") },
+                                                        onResume = { vm.timerService(t.entityId, "start") },
+                                                        onCancel = { vm.timerService(t.entityId, "cancel") },
+                                                    )
+                                                }
+                                            }
+                                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                                        }
+                                    }
+                                } else {
+                                    for (t in ui.timers) {
                                         TimerCard(
                                             t,
                                             onPause = { vm.timerService(t.entityId, "pause") },
@@ -247,76 +277,71 @@ fun DashboardScreen(
                                         )
                                     }
                                 }
-                                if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
-                    } else {
-                        for (t in ui.timers) {
-                            TimerCard(
-                                t,
-                                onPause = { vm.timerService(t.entityId, "pause") },
-                                onResume = { vm.timerService(t.entityId, "start") },
-                                onCancel = { vm.timerService(t.entityId, "cancel") },
-                            )
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.MEDIA -> {
+                            if (ds.showMedia && ui.media.isNotEmpty()) {
+                                Text(text = "NOW PLAYING", style = R1.labelMicro, color = R1.InkSoft)
+                                for (m in ui.media) {
+                                    MediaCard(
+                                        media = m,
+                                        onPlayPause = {
+                                            vm.mediaTransport(
+                                                m.entityId,
+                                                com.github.itskenny0.r1ha.core.ha.MediaTransport.PLAY_PAUSE,
+                                            )
+                                        },
+                                        onNext = {
+                                            vm.mediaTransport(
+                                                m.entityId,
+                                                com.github.itskenny0.r1ha.core.ha.MediaTransport.NEXT,
+                                            )
+                                        },
+                                        onPrev = {
+                                            vm.mediaTransport(
+                                                m.entityId,
+                                                com.github.itskenny0.r1ha.core.ha.MediaTransport.PREVIOUS,
+                                            )
+                                        },
+                                    )
+                                }
+                            }
                         }
-                    }
-                }
-                if (ds.showMedia && ui.media.isNotEmpty()) {
-                    Text(text = "NOW PLAYING", style = R1.labelMicro, color = R1.InkSoft)
-                    for (m in ui.media) {
-                        MediaCard(
-                            media = m,
-                            onPlayPause = {
-                                vm.mediaTransport(
-                                    m.entityId,
-                                    com.github.itskenny0.r1ha.core.ha.MediaTransport.PLAY_PAUSE,
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.METRICS -> {
+                            if (ds.showMetrics) {
+                                MetricsRow(
+                                    cameraCount = ui.cameraCount,
+                                    notificationCount = ui.notifications.size,
+                                    lightsOnCount = ui.lightsOnCount,
+                                    totalPowerW = if (ds.showPower) ui.totalPowerW else -1,
+                                    amberW = ds.powerAmberThresholdW,
+                                    redW = ds.powerRedThresholdW,
+                                    onLights = onOpenScenes,
+                                    onLightsLongPress = { vm.allLightsOff() },
+                                    onCameras = onOpenCameras,
+                                    onNotifications = onOpenNotifications,
+                                    onPower = onOpenEnergy,
                                 )
-                            },
-                            onNext = {
-                                vm.mediaTransport(
-                                    m.entityId,
-                                    com.github.itskenny0.r1ha.core.ha.MediaTransport.NEXT,
-                                )
-                            },
-                            onPrev = {
-                                vm.mediaTransport(
-                                    m.entityId,
-                                    com.github.itskenny0.r1ha.core.ha.MediaTransport.PREVIOUS,
-                                )
-                            },
-                        )
-                    }
-                }
-                if (ds.showMetrics) {
-                    MetricsRow(
-                        cameraCount = ui.cameraCount,
-                        notificationCount = ui.notifications.size,
-                        lightsOnCount = ui.lightsOnCount,
-                        totalPowerW = if (ds.showPower) ui.totalPowerW else -1,
-                        amberW = ds.powerAmberThresholdW,
-                        redW = ds.powerRedThresholdW,
-                        onLights = onOpenScenes,
-                        onLightsLongPress = { vm.allLightsOff() },
-                        onCameras = onOpenCameras,
-                        onNotifications = onOpenNotifications,
-                        onPower = onOpenEnergy,
-                    )
-                }
-                if (ds.showLowBattery && ui.lowBatteries.isNotEmpty()) {
-                    LowBatteryCard(ui.lowBatteries, onOpenHistory = onOpenHistory)
-                }
-                // If there are notifications, surface the first N inline below
-                // the metrics row so the user sees what HA is shouting about
-                // without having to drill in. Count comes from settings.
-                if (ds.showInlineAlerts && ui.notifications.isNotEmpty() && ds.inlineAlertsCount > 0) {
-                    Spacer(Modifier.size(2.dp))
-                    Text(text = "RECENT ALERTS", style = R1.labelMicro, color = R1.InkSoft)
-                    for (notif in ui.notifications.take(ds.inlineAlertsCount)) {
-                        NotificationPreview(
-                            notif,
-                            onClick = onOpenNotifications,
-                            onDismiss = { vm.dismissNotification(notif.notificationId) },
-                        )
+                            }
+                        }
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.LOW_BATTERY -> {
+                            if (ds.showLowBattery && ui.lowBatteries.isNotEmpty()) {
+                                LowBatteryCard(ui.lowBatteries, onOpenHistory = onOpenHistory)
+                            }
+                        }
+                        com.github.itskenny0.r1ha.core.prefs.DashboardTile.INLINE_ALERTS -> {
+                            if (ds.showInlineAlerts && ui.notifications.isNotEmpty() && ds.inlineAlertsCount > 0) {
+                                Spacer(Modifier.size(2.dp))
+                                Text(text = "RECENT ALERTS", style = R1.labelMicro, color = R1.InkSoft)
+                                for (notif in ui.notifications.take(ds.inlineAlertsCount)) {
+                                    NotificationPreview(
+                                        notif,
+                                        onClick = onOpenNotifications,
+                                        onDismiss = { vm.dismissNotification(notif.notificationId) },
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 if (!anyVisible) {

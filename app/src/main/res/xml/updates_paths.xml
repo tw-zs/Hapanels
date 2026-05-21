@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FileProvider path mapping for the in-app self-update flow. The updater writes
-  the downloaded APK into the app's cache directory (subfolder "updates"); this
-  file lets the FileProvider expose that path as a content:// URI without
-  surfacing any other cache contents.
+  FileProvider path mappings.
+   * updates/: in-app self-update flow writes the downloaded APK here for the
+     package installer to read via a content:// URI.
+   * share/: snapshot PNGs (energy summary etc.) written here are shared out
+     to any installed app via Intent.ACTION_SEND.
+  Mapping each subdir individually (rather than exposing the entire cache-dir)
+  keeps the provider scope minimal: nothing else in cache is reachable.
 -->
 <paths>
     <cache-path name="updates" path="updates/"/>
+    <cache-path name="share" path="share/"/>
 </paths>

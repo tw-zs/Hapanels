@@ -305,7 +305,46 @@ data class DashboardSettings(
     val inlineAlertsCount: Int = 2,
     /** Max media-player rows shown when playing/paused. */
     val mediaSummaryCount: Int = 3,
-)
+    /**
+     * Render order for the dashboard tile groups, top to bottom. Stored as a list
+     * of string ids (matching the [DashboardTile] enum's `name`) rather than the
+     * enum directly so an unknown id from a future build deserialises cleanly via
+     * `ignoreUnknownKeys = true` and skips that entry. The Greeting always sits
+     * first regardless of this list because it's the at-a-glance header; this
+     * list controls the order of every section beneath it.
+     */
+    val tileOrder: List<String> = DEFAULT_TILE_ORDER,
+) {
+    companion object {
+        /** Canonical default order — matches the layout shipped before custom
+         *  reorder was introduced, so users who don't touch the setting see no
+         *  change. [DashboardTile.entries] order also seeds the picker UI. */
+        val DEFAULT_TILE_ORDER: List<String> = listOf(
+            "WEATHER_PERSONS", "SUN_CALENDAR", "TIMERS", "MEDIA",
+            "METRICS", "LOW_BATTERY", "INLINE_ALERTS",
+        )
+    }
+}
+
+/**
+ * Re-orderable tile groups on the TODAY dashboard. Names persist in
+ * [DashboardSettings.tileOrder] verbatim, so renaming an entry is a schema
+ * change — add new entries by appending here (back-compat) rather than
+ * renaming existing ones.
+ *
+ * Some entries are pair-cards (WEATHER_PERSONS, SUN_CALENDAR) that render two
+ * tiles side-by-side on tablet width tiers; the visibility of each side is
+ * still controlled by the per-card [DashboardSettings.showWeather] etc. flags.
+ */
+enum class DashboardTile(val label: String) {
+    WEATHER_PERSONS("Weather + People"),
+    SUN_CALENDAR("Sun + Next event"),
+    TIMERS("Timers"),
+    MEDIA("Now Playing"),
+    METRICS("Metrics row"),
+    LOW_BATTERY("Low-battery alerts"),
+    INLINE_ALERTS("Inline alert previews"),
+}
 
 /**
  * Per-surface refresh intervals + integration tweaks. Each value is

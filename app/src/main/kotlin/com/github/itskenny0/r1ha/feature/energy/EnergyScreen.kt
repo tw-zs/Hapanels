@@ -72,23 +72,51 @@ fun EnergyScreen(
             .background(R1.Bg)
             .systemBarsPadding(),
     ) {
+        val context = androidx.compose.ui.platform.LocalContext.current
         R1TopBar(
             title = "ENERGY",
             onBack = onBack,
             action = {
-                Box(
-                    modifier = Modifier
-                        .clip(R1.ShapeS)
-                        .background(R1.SurfaceMuted)
-                        .border(1.dp, R1.Hairline, R1.ShapeS)
-                        .r1Pressable(onClick = { vm.refresh() })
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        text = if (ui.loading) "…" else "REFRESH",
-                        style = R1.labelMicro,
-                        color = R1.InkSoft,
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1Pressable(onClick = {
+                                // Snapshot the current UI state into a square PNG and fire the
+                                // share-intent. Done on the UI thread because Canvas-backed
+                                // rendering takes ~30 ms on the R1 and the file write is
+                                // bounded by cache size; no need for a coroutine.
+                                runCatching {
+                                    val bmp = EnergyShareSnapshot.render(ui)
+                                    EnergyShareSnapshot.shareAsPng(context, bmp)
+                                    bmp.recycle()
+                                }.onFailure { t ->
+                                    com.github.itskenny0.r1ha.core.util.Toaster.error(
+                                        "Share failed: ${t.message ?: "unknown"}",
+                                    )
+                                }
+                            })
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(text = "SHARE", style = R1.labelMicro, color = R1.AccentWarm)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1Pressable(onClick = { vm.refresh() })
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = if (ui.loading) "…" else "REFRESH",
+                            style = R1.labelMicro,
+                            color = R1.InkSoft,
+                        )
+                    }
                 }
             },
         )

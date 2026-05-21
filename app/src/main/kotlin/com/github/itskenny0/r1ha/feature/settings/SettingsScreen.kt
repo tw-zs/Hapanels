@@ -1054,6 +1054,35 @@ fun SettingsScreen(
                     onChange = { v -> vm.updateDashboard { it.copy(mediaSummaryCount = v) } },
                 )
             }
+            item { SubGroupLabel("TILE ORDER") }
+            item {
+                Text(
+                    text = "Drag-style reorder isn't on the R1's small screen yet. Use the arrows to nudge each tile up or down.",
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+                )
+            }
+            item {
+                TileOrderEditor(
+                    order = s.dashboard.tileOrder,
+                    onMove = { from, to ->
+                        vm.updateDashboard {
+                            val list = it.tileOrder.toMutableList()
+                            if (from in list.indices && to in list.indices) {
+                                val item = list.removeAt(from)
+                                list.add(to, item)
+                            }
+                            it.copy(tileOrder = list)
+                        }
+                    },
+                    onReset = {
+                        vm.updateDashboard {
+                            it.copy(tileOrder = com.github.itskenny0.r1ha.core.prefs.DashboardSettings.DEFAULT_TILE_ORDER)
+                        }
+                    },
+                )
+            }
 
             }
             item { SectionDivider() }
@@ -2599,6 +2628,88 @@ private fun SecuritySection() {
                 style = R1.labelMicro,
                 color = R1.InkMuted,
             )
+        }
+    }
+}
+
+/**
+ * Tile-order editor for the TODAY dashboard. Each row shows the tile's human
+ * label plus ↑ / ↓ pills; pressing one swaps the tile with its neighbour and
+ * the VM persists the new ordering. Unknown ids (saved on a newer build,
+ * decoded by an older one) render with their raw name so the user can at least
+ * see them; pressing the arrows still moves them so an out-of-order downgrade
+ * doesn't strand a future tile at the bottom.
+ *
+ * Renders inside the DASHBOARD section so the user sees tile visibility +
+ * order in the same place. RESET dumps back to [DEFAULT_TILE_ORDER] without
+ * touching show* flags.
+ */
+@Composable
+private fun TileOrderEditor(
+    order: List<String>,
+    onMove: (Int, Int) -> Unit,
+    onReset: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        order.forEachIndexed { idx, id ->
+            val label = runCatching {
+                com.github.itskenny0.r1ha.core.prefs.DashboardTile.valueOf(id).label
+            }.getOrNull() ?: id
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(R1.SurfaceMuted)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(text = "${idx + 1}", style = R1.labelMicro, color = R1.InkMuted)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(text = label, style = R1.body, color = R1.Ink, modifier = Modifier.weight(1f))
+                val canUp = idx > 0
+                val canDown = idx < order.lastIndex
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(R1.ShapeS)
+                        .background(if (canUp) R1.SurfaceMuted else R1.Bg)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = { if (canUp) onMove(idx, idx - 1) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "↑", style = R1.body, color = if (canUp) R1.Ink else R1.InkMuted)
+                }
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(R1.ShapeS)
+                        .background(if (canDown) R1.SurfaceMuted else R1.Bg)
+                        .border(1.dp, R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = { if (canDown) onMove(idx, idx + 1) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "↓", style = R1.body, color = if (canDown) R1.Ink else R1.InkMuted)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 22.dp, vertical = 4.dp)
+                .clip(R1.ShapeS)
+                .background(R1.SurfaceMuted)
+                .border(1.dp, R1.Hairline, R1.ShapeS)
+                .r1Pressable(onClick = onReset)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(text = "RESET ORDER", style = R1.labelMicro, color = R1.AccentWarm)
         }
     }
 }

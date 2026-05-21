@@ -207,6 +207,10 @@ fun SwitchCard(
                 isMuted = state.isVolumeMuted,
                 supportedFeatures = state.mediaSupportedFeatures,
             )
+            // Shuffle / repeat / source row — same panel as the scalar
+            // path so a non-VOLUME_SET media player still gets the
+            // discrete media controls.
+            MediaExtrasPanel(state = state, accent = accent, modifier = Modifier.padding(top = 8.dp))
         }
 
         Spacer(Modifier.weight(1f))

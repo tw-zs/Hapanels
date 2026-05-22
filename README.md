@@ -54,7 +54,12 @@ Where the official [Home Assistant Companion app](https://github.com/home-assist
 - **Live template subscriptions**: Templates screen has a LIVE toggle that subscribes to HA's `render_template` WS command. Every state change that affects the template re-renders in place.
 - **Live activity tail**: Recent Activity screen has a TAIL toggle that subscribes to HA's `logbook_entry` event stream. New entries prepend in real time while the REST window query still backs the initial fill.
 - **NFC tag scanning**: opt-in foreground reader. Tap an NFC tag against the device while R1HA is open and the app fires HA's `tag_scanned` event with the tag UID as `tag_id`.
-- **Home-screen widget**: single-tile launcher widget. Tap to open the app — drop it anywhere on your launcher for one-touch access.
+- **iBeacon advertiser**: opt-in BLE peripheral that broadcasts as an iBeacon (configurable UUID + major + minor). HA's iBeacon integration picks the device up as a device_tracker for presence / proximity automations.
+- **Zigbee pairing**: opens the network for joins on whichever Zigbee backend HA is using (ZHA, Zigbee2MQTT, or deCONZ), surfaces newly-discovered entities as they enrol, and lets you rename + assign an area from a single sheet without leaving the app.
+- **Webhook receiver**: opt-in foreground TCP listener. HA's webhook automations can POST at `http://<device-ip>:<port>/webhook/<id>` and the body shows up as an expandable toast. Useful for triggering on-device feedback from a server-side rule.
+- **MQTT publish**: one-shot client that connects to any broker, fires a single publish (configurable topic, payload, retain flag, TLS, auth), and disconnects. Implemented by hand so the APK doesn't pick up a daemon-style dependency for what's really a fire-and-forget message.
+- **Voice satellite**: push-to-talk surface that pipes mic audio at HA's assist pipeline (STT, conversation, TTS) over the existing WebSocket and plays the response. No wake-word yet; that needs an on-device model and is a separate cycle's work.
+- **Home-screen widget**: single-tile launcher widget. Tap to open the app, drop it anywhere on your launcher for one-touch access.
 - **Background entity-cache refresh**: opt-in JobService warms the entity cache every ~15 min while the app is closed so Quick Tile state and cold-start paint stay fresh.
 - **Long-lived access token entry**: alternative to OAuth for kiosk-style R1s. Paste an HA long-lived access token; stored encrypted at rest with the same AndroidKeystore-wrapped AES-256/GCM key as OAuth tokens.
 - **Gesture-first navigation**: swipe left for Settings, right for the Favourites picker, tap the value area to toggle on/off; small chevron-back buttons on every sub-screen plus full system-back support.

@@ -83,6 +83,11 @@ class VoiceSatelliteEngine(
         _state.value = State.Connecting
         sttText = ""
         responseText = ""
+        // Mic permission must already be granted; the screen handles that.
+        // We start the AudioRecord eagerly so the user sees the listening
+        // animation the moment HA confirms the run. Frames buffer until we
+        // have a handler byte; the recorder loop drops audio until it's set.
+        startRecorder(appContext)
         scope.launch {
             val run = haRepository.startAssistPipeline(
                 pipelineId = pipelineId,
@@ -91,6 +96,14 @@ class VoiceSatelliteEngine(
             ).getOrElse { t ->
                 _state.value = State.Error(t.message ?: "Failed to open pipeline")
                 R1Log.w("VoiceSat", "pipeline open failed: ${t.message}")
+                // If the pipeline never opens, the recorder we just started has
+                // nothing to feed; tear it down so we don't hold the mic open
+                // while the screen shows the error state.
+                recorderJob?.cancel()
+                recorderJob = null
+                runCatching { audioRecord?.stop() }
+                runCatching { audioRecord?.release() }
+                audioRecord = null
                 return@launch
             }
             pipeline = run
@@ -98,11 +111,6 @@ class VoiceSatelliteEngine(
             // (via onPipelineEvent). Until then we stay in Connecting so the
             // UI shows a spinner.
         }
-        // Mic permission must already be granted; the screen handles that.
-        // We start the AudioRecord eagerly so the user sees the listening
-        // animation the moment HA confirms the run. Frames buffer until we
-        // have a handler byte; the recorder loop sleeps until the byte is set.
-        startRecorder(appContext)
     }
 
     /** Signal end-of-utterance to HA. The pipeline keeps emitting events

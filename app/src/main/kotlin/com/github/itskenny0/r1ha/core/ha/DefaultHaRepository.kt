@@ -2615,6 +2615,53 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun startAssistPipeline(
+        pipelineId: String?,
+        conversationId: String?,
+        onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+    ): Result<HaRepository.PipelineRun> = withContext(Dispatchers.IO) {
+        runCatching {
+            // HA's assist_pipeline/run starts a pipeline that emits a stream of events
+            // (run-start, stt-start, stt-end, intent-start, intent-end, tts-start,
+            // tts-end, run-end) on its subscription id. The client speaks audio at
+            // HA via binary frames prefixed with the byte from run-start's
+            // `runner_data.stt_binary_handler_id`; finish_audio sends a single-byte
+            // frame to signal end-of-utterance.
+            val extras = kotlinx.serialization.json.buildJsonObject {
+                put("start_stage", JsonPrimitive("stt"))
+                put("end_stage", JsonPrimitive("tts"))
+                put(
+                    "input",
+                    kotlinx.serialization.json.buildJsonObject {
+                        put("sample_rate", JsonPrimitive(16000))
+                    },
+                )
+                if (pipelineId != null) put("pipeline", JsonPrimitive(pipelineId))
+                if (conversationId != null) put("conversation_id", JsonPrimitive(conversationId))
+            }
+            val handle = registerLiveSubscription(
+                frameType = "assist_pipeline/run",
+                frameExtras = extras,
+                onEvent = onEvent,
+                logTag = "HaRepo.pipeline",
+            )
+            object : HaRepository.PipelineRun {
+                override fun sendAudio(handlerByte: Byte, pcm: ByteArray): Boolean {
+                    val frame = ByteArray(pcm.size + 1)
+                    frame[0] = handlerByte
+                    System.arraycopy(pcm, 0, frame, 1, pcm.size)
+                    return ws.sendRawBytes(frame)
+                }
+                override fun finishAudio(handlerByte: Byte): Boolean {
+                    return ws.sendRawBytes(byteArrayOf(handlerByte))
+                }
+                override suspend fun cancel() = cancelLiveSubscription(handle)
+            }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.pipeline", "start failed: ${t.message}")
+        }
+    }
+
     override suspend fun subscribeTemplate(
         template: String,
         onResult: (String) -> Unit,

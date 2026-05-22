@@ -292,6 +292,17 @@ fun AppNavGraph(
                 settings = settings,
                 wheelInput = wheelInput,
                 onBack = { navController.popBackStack() },
+                onOpenVoiceSatellite = {
+                    navController.navigate(Routes.VOICE_SATELLITE) { launchSingleTop = true }
+                },
+            )
+        }
+        composable(Routes.VOICE_SATELLITE) {
+            com.github.itskenny0.r1ha.feature.voicesat.VoiceSatelliteScreen(
+                haRepository = haRepository,
+                settings = settings,
+                tokens = tokens,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.SCENES) {

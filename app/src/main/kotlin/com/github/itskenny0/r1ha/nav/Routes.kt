@@ -46,6 +46,10 @@ object Routes {
      *  and surfaces newly-discovered entities as they enrol. */
     const val ZHA_PAIRING = "zha_pairing"
 
+    /** Voice satellite — push-to-talk surface that pipes mic audio at HA's
+     *  assist pipeline (STT → conversation → TTS) and plays the response. */
+    const val VOICE_SATELLITE = "voice_satellite"
+
     /** "Modified settings" subscreen — lists every registry entry whose
      *  current value differs from its default. Reached from a chip near
      *  the top of the main Settings screen. */

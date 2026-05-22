@@ -192,6 +192,21 @@ class HaWebSocketClient internal constructor(
         return ws.send(text)
     }
 
+    /**
+     * Send a raw binary frame on the live WebSocket. Used by the assist-pipeline
+     * voice satellite to stream PCM audio frames at the `stt_binary_handler_id`
+     * byte prefix that HA's pipeline expects. Bypasses the JSON outgoing queue;
+     * audio is high-rate and the frames are already minimal, so the channel
+     * abstraction would just add latency.
+     *
+     * Returns false if no socket is connected (callers should check connection
+     * state before opening the mic so they don't drop audio into the void).
+     */
+    fun sendRawBytes(bytes: ByteArray): Boolean {
+        val ws = webSocket ?: return false
+        return ws.send(ByteString.of(*bytes))
+    }
+
     /** Enqueue an outbound message. Safe to call before [connect] has completed; the queue drains once connected. */
     fun send(msg: HaOutbound) {
         val result = outgoing.trySend(msg)

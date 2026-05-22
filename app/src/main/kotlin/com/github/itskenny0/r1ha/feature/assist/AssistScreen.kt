@@ -72,6 +72,8 @@ fun AssistScreen(
     settings: com.github.itskenny0.r1ha.core.prefs.SettingsRepository,
     wheelInput: com.github.itskenny0.r1ha.core.input.WheelInput,
     onBack: () -> Unit,
+    /** Optional: open the voice-satellite surface. Null hides the chip. */
+    onOpenVoiceSatellite: (() -> Unit)? = null,
 ) {
     val vm: AssistViewModel = viewModel(factory = AssistViewModel.factory(haRepository, settings))
     val ui by vm.ui.collectAsState()
@@ -152,6 +154,28 @@ fun AssistScreen(
                         style = R1.labelMicro,
                         color = R1.InkSoft,
                     )
+                }
+                if (onOpenVoiceSatellite != null) {
+                    androidx.compose.foundation.layout.Spacer(
+                        modifier = Modifier.width(6.dp),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(R1.ShapeS)
+                            .background(R1.SurfaceMuted)
+                            .border(1.dp, R1.Hairline, R1.ShapeS)
+                            .r1Pressable(
+                                onClick = onOpenVoiceSatellite,
+                                contentDescription = "Open voice satellite",
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = "VOICE",
+                            style = R1.labelMicro,
+                            color = R1.AccentWarm,
+                        )
+                    }
                 }
             },
         )

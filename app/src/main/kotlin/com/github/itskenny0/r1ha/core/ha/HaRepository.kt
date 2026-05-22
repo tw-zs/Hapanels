@@ -302,6 +302,47 @@ interface HaRepository {
     }
 
     /**
+     * Handle for an in-flight assist pipeline run. The voice satellite uses
+     * this to push PCM audio frames at HA over the same WebSocket the events
+     * arrive on. [sendAudio] prepends [com.github.itskenny0.r1ha.core.voice.VoiceSatelliteEngine]'s
+     * STT binary handler byte (provided by HA in the `run-start` event); the
+     * caller is responsible for finding and supplying it before driving audio.
+     *
+     * [cancel] tears down the server-side subscription. The pipeline will
+     * also end naturally once [finishAudio] is called and HA delivers the
+     * `run-end` event.
+     */
+    interface PipelineRun {
+        /** Stream one PCM 16-bit, 16 kHz, mono audio chunk to HA. Returns
+         *  false if the WS isn't connected. [handlerByte] is the byte HA
+         *  asked us to prefix audio frames with in the `run-start` event. */
+        fun sendAudio(handlerByte: Byte, pcm: ByteArray): Boolean
+        /** Signal end-of-utterance by sending a single-byte frame containing
+         *  just the handler byte. HA will run STT to completion and continue
+         *  the pipeline through intent → TTS. */
+        fun finishAudio(handlerByte: Byte): Boolean
+        suspend fun cancel()
+    }
+
+    /**
+     * Open an assist pipeline run over the WebSocket. HA pipes events back
+     * (run-start → stt-start → stt-end → intent-start → intent-end →
+     * tts-start → tts-end → run-end) on the returned [PipelineRun]'s
+     * subscription. Audio is pushed via [PipelineRun.sendAudio] using the
+     * handler byte HA hands back in the `run-start` event's
+     * `data.runner_data.stt_binary_handler_id`.
+     *
+     * [pipelineId] selects a specific configured pipeline; null = the
+     * default. [conversationId] threads multi-turn context; null = start a
+     * fresh conversation.
+     */
+    suspend fun startAssistPipeline(
+        pipelineId: String?,
+        conversationId: String?,
+        onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+    ): Result<PipelineRun>
+
+    /**
      * Subscribe to HA's event bus for events of [eventType]. Each event is delivered
      * to [onEvent] with the full event payload (entity_id, data, time_fired, etc.).
      *

@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">R1HA</string>
+    <string name="app_name" translatable="false">R1HA</string>
+
+    <!-- ────────────────────────────────────────────────────────────────
+         Translation policy
+
+         User-visible chrome (top bars, dialog buttons, common labels,
+         empty states) goes here so a translator can hit them in one
+         file. Dev-menu strings, R1Log messages, and the literal entity
+         IDs used by HA stay inline; they're for power users or never
+         visible. Mark a string `translatable="false"` if it's a proper
+         noun (the app name, the HA brand) or an identifier we ship
+         verbatim regardless of locale.
+
+         Convention: keys are snake_case grouped by surface, e.g.
+         dialog_cancel, dialog_ok, chrome_settings, today_title.
+         Strings that already have a unique technical key (shortcut_*,
+         widget_*, quick_tile_*) keep theirs for back-compat with the
+         manifest references that point at them.
+        ──────────────────────────────────────────────────────────────── -->
 
     <!-- App-shortcut labels — surfaced when the user long-presses the
          launcher icon. Each routes through MainActivity's extras-based
@@ -30,4 +48,83 @@
          the rendered widget. -->
     <string name="widget_description">Quick-launch R1HA</string>
     <string name="widget_button_label">R1HA</string>
+
+    <!-- ── Dialog buttons ─────────────────────────────────────────── -->
+    <string name="dialog_cancel">CANCEL</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_save">SAVE</string>
+    <string name="dialog_close">CLOSE</string>
+    <string name="dialog_delete">DELETE</string>
+    <string name="dialog_remove">REMOVE</string>
+    <string name="dialog_retry">RETRY</string>
+    <string name="dialog_confirm">CONFIRM</string>
+    <string name="dialog_share">SHARE</string>
+    <string name="dialog_reset">RESET</string>
+    <string name="dialog_clear">CLEAR</string>
+    <string name="dialog_done">DONE</string>
+    <string name="dialog_back">BACK</string>
+    <string name="dialog_next">NEXT</string>
+    <string name="dialog_export">EXPORT</string>
+    <string name="dialog_yes">Yes</string>
+    <string name="dialog_no">No</string>
+
+    <!-- ── Top-bar / chrome ───────────────────────────────────────── -->
+    <string name="chrome_settings">Settings</string>
+    <string name="chrome_assist">Assist</string>
+    <string name="chrome_battery">Battery</string>
+    <string name="chrome_menu">Menu</string>
+    <string name="chrome_edit_favorites">Edit favourites</string>
+    <string name="chrome_back">Back</string>
+
+    <!-- ── Top-level screen titles ────────────────────────────────── -->
+    <string name="title_today">TODAY</string>
+    <string name="title_search">SEARCH</string>
+    <string name="title_assist">ASSIST</string>
+    <string name="title_scenes">SCENES</string>
+    <string name="title_automations">AUTOMATIONS</string>
+    <string name="title_helpers">HELPERS</string>
+    <string name="title_notifications">NOTIFICATIONS</string>
+    <string name="title_logbook">LOGBOOK</string>
+    <string name="title_areas">AREAS</string>
+    <string name="title_devices">DEVICES</string>
+    <string name="title_cameras">CAMERAS</string>
+    <string name="title_history">HISTORY</string>
+    <string name="title_calendars">CALENDARS</string>
+    <string name="title_weather">WEATHER</string>
+    <string name="title_persons">PEOPLE</string>
+    <string name="title_zones">ZONES</string>
+    <string name="title_energy">ENERGY</string>
+    <string name="title_todo">TO DO</string>
+    <string name="title_services">SERVICES</string>
+    <string name="title_about">ABOUT</string>
+    <string name="title_dev_menu">DEV MENU</string>
+    <string name="title_themes">THEMES</string>
+    <string name="title_backups">BACKUPS</string>
+    <string name="title_updates">UPDATES</string>
+    <string name="title_repairs">REPAIRS</string>
+    <string name="title_labels">LABELS</string>
+    <string name="title_floors">FLOORS</string>
+
+    <!-- ── Card stack empty + connection states ───────────────────── -->
+    <string name="cardstack_empty_title">No favourites yet</string>
+    <string name="cardstack_empty_hint">Pick entities to control from your HA setup.</string>
+    <string name="cardstack_empty_action">CHOOSE FAVOURITES</string>
+    <string name="conn_disconnected">Disconnected</string>
+    <string name="conn_reconnecting">Reconnecting…</string>
+    <string name="conn_connecting">Connecting…</string>
+    <string name="conn_auth_lost">Auth lost; sign in again</string>
+
+    <!-- ── Onboarding ─────────────────────────────────────────────── -->
+    <string name="onboarding_url_label">Home Assistant URL</string>
+    <string name="onboarding_url_placeholder">http://homeassistant.local:8123</string>
+    <string name="onboarding_continue">CONTINUE</string>
+    <string name="onboarding_sign_in_browser">Sign in (browser)</string>
+    <string name="onboarding_sign_in_token">Sign in with long-lived token</string>
+    <string name="onboarding_open_ha">Open HA in browser</string>
+
+    <!-- ── Pull-to-refresh + generic affordances ──────────────────── -->
+    <string name="pull_to_refresh">Pull to refresh</string>
+    <string name="loading">Loading…</string>
+    <string name="empty_no_results">No results</string>
+    <string name="error_generic">Something went wrong</string>
 </resources>

@@ -46,7 +46,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.itskenny0.r1ha.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.ha.ConnectionState
@@ -1991,13 +1993,13 @@ private fun TabManageDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 R1Button(
-                    text = "CANCEL",
+                    text = stringResource(R.string.dialog_cancel),
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
                 )
                 R1Button(
-                    text = "SAVE",
+                    text = stringResource(R.string.dialog_save),
                     onClick = {
                         val trimmed = name.trim().ifBlank { if (isAdd) "NEW" else (page?.name ?: "PAGE") }
                         if (isAdd) onAdd(trimmed) else page?.let { onRename(it.id, trimmed) }
@@ -2326,7 +2328,7 @@ private fun CardContextMenu(
             )
             Spacer(Modifier.height(8.dp))
             R1Button(
-                text = "CANCEL",
+                text = stringResource(R.string.dialog_cancel),
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
                 variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
@@ -2519,7 +2521,7 @@ private fun QuickActionsSheet(
             }
             Spacer(Modifier.height(8.dp))
             R1Button(
-                text = "CANCEL",
+                text = stringResource(R.string.dialog_cancel),
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth(),
                 variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,

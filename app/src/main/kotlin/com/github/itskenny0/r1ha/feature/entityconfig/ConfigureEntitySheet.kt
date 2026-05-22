@@ -26,7 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.core.ha.AreaInfo
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.theme.R1
@@ -178,7 +180,7 @@ fun ConfigureEntitySheet(
         },
         confirmButton = {
             R1Button(
-                text = if (inFlight) "SAVING…" else "SAVE",
+                text = if (inFlight) "SAVING…" else stringResource(R.string.dialog_save),
                 enabled = !inFlight,
                 onClick = {
                     inFlight = true
@@ -207,7 +209,7 @@ fun ConfigureEntitySheet(
         },
         dismissButton = {
             R1Button(
-                text = "CANCEL",
+                text = stringResource(R.string.dialog_cancel),
                 variant = R1ButtonVariant.Outlined,
                 onClick = onDismiss,
             )

@@ -1,0 +1,89 @@
+# Baseline Profile — hand-authored cold-start hot path.
+#
+# Lists classes ART should AOT-compile + preload on first launch. Every line
+# is a JVM-style descriptor: 'L<package/Class>;' for whole classes, or
+# '<flags>L<class>;-><method>(<args>)<ret>' for individual methods.
+# Flag letters:  H = hot, S = startup, P = post-startup. AGP merges this
+# file into the APK at build time (assets/dexopt/baseline.prof); ART
+# consumes it on install to skip JIT warm-up on the listed entries.
+#
+# Scope: the cold-start path from process launch → first interactive paint.
+# Two top-level cases:
+#   1. No server configured yet → OnboardingScreen renders.
+#   2. Server configured        → CardStackScreen renders.
+# Both cases share App + AppGraph + the theme + nav scaffold + the HA
+# repo/settings wiring.
+
+# ── App entry + dependency wiring ─────────────────────────────────────
+HSPLcom/github/itskenny0/r1ha/App;-><init>()V
+HSPLcom/github/itskenny0/r1ha/App;->onCreate()V
+Lcom/github/itskenny0/r1ha/App;
+Lcom/github/itskenny0/r1ha/AppGraph;
+HSPLcom/github/itskenny0/r1ha/MainActivity;-><init>()V
+HSPLcom/github/itskenny0/r1ha/MainActivity;->onCreate(Landroid/os/Bundle;)V
+Lcom/github/itskenny0/r1ha/MainActivity;
+
+# ── Settings store (read by every Composable in the tree) ──────────────
+Lcom/github/itskenny0/r1ha/core/prefs/SettingsRepository;
+Lcom/github/itskenny0/r1ha/core/prefs/AppSettings;
+Lcom/github/itskenny0/r1ha/core/prefs/UiOptions;
+Lcom/github/itskenny0/r1ha/core/prefs/Behavior;
+Lcom/github/itskenny0/r1ha/core/prefs/WheelSettings;
+Lcom/github/itskenny0/r1ha/core/prefs/AdvancedSettings;
+Lcom/github/itskenny0/r1ha/core/prefs/DashboardSettings;
+Lcom/github/itskenny0/r1ha/core/prefs/IntegrationsSettings;
+Lcom/github/itskenny0/r1ha/core/prefs/ServerConfig;
+
+# ── Token + security plumbing (must initialise before WS connect) ──────
+Lcom/github/itskenny0/r1ha/core/auth/TokenStore;
+Lcom/github/itskenny0/r1ha/core/auth/TokenRefresher;
+Lcom/github/itskenny0/r1ha/core/security/SecurityPolicyStore;
+
+# ── HA repository + transport (warmed during App.start()) ──────────────
+Lcom/github/itskenny0/r1ha/core/ha/DefaultHaRepository;
+Lcom/github/itskenny0/r1ha/core/ha/HaWebSocketClient;
+Lcom/github/itskenny0/r1ha/core/ha/HaRestClient;
+Lcom/github/itskenny0/r1ha/core/ha/HaOutbound;
+Lcom/github/itskenny0/r1ha/core/ha/HaInbound;
+Lcom/github/itskenny0/r1ha/core/ha/EntityState;
+Lcom/github/itskenny0/r1ha/core/ha/ConnectionState;
+
+# ── Util surfaces hit during App.onCreate ──────────────────────────────
+Lcom/github/itskenny0/r1ha/core/util/R1Log;
+Lcom/github/itskenny0/r1ha/core/util/R1LogBuffer;
+Lcom/github/itskenny0/r1ha/core/util/Toaster;
+
+# ── Theme (every Composable reads these CompositionLocals) ─────────────
+Lcom/github/itskenny0/r1ha/ui/theme/R1Theme;
+Lcom/github/itskenny0/r1ha/ui/theme/R1;
+Lcom/github/itskenny0/r1ha/ui/theme/Tokens;
+Lcom/github/itskenny0/r1ha/ui/theme/ThemePalette;
+
+# ── Layout primitives used on every screen ─────────────────────────────
+Lcom/github/itskenny0/r1ha/ui/layout/AdaptiveContent;
+Lcom/github/itskenny0/r1ha/ui/layout/Breakpoints;
+Lcom/github/itskenny0/r1ha/ui/components/R1TopBar;
+Lcom/github/itskenny0/r1ha/ui/components/ChromeRow;
+Lcom/github/itskenny0/r1ha/ui/components/ToastHost;
+
+# ── Card stack first paint ─────────────────────────────────────────────
+Lcom/github/itskenny0/r1ha/feature/cardstack/CardStackScreen;
+Lcom/github/itskenny0/r1ha/feature/cardstack/CardStackViewModel;
+Lcom/github/itskenny0/r1ha/ui/components/EntityCard;
+Lcom/github/itskenny0/r1ha/ui/components/EntityPanels;
+Lcom/github/itskenny0/r1ha/ui/components/SensorCard;
+Lcom/github/itskenny0/r1ha/ui/components/SwitchCard;
+Lcom/github/itskenny0/r1ha/ui/components/ActionCard;
+Lcom/github/itskenny0/r1ha/ui/components/Pressable;
+Lcom/github/itskenny0/r1ha/ui/components/WheelScroll;
+Lcom/github/itskenny0/r1ha/ui/components/R1Haptic;
+Lcom/github/itskenny0/r1ha/ui/components/AutoRefresh;
+
+# ── Onboarding (fired when no server is configured yet) ────────────────
+Lcom/github/itskenny0/r1ha/feature/onboarding/OnboardingScreen;
+Lcom/github/itskenny0/r1ha/feature/onboarding/OnboardingViewModel;
+Lcom/github/itskenny0/r1ha/feature/onboarding/UrlNormalizer;
+
+# ── Dashboard (alt entry when behavior.startOnDashboard is on) ─────────
+Lcom/github/itskenny0/r1ha/feature/dashboard/DashboardScreen;
+Lcom/github/itskenny0/r1ha/feature/dashboard/DashboardViewModel;

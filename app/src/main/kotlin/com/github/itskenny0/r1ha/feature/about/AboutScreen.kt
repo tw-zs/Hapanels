@@ -131,6 +131,9 @@ fun AboutScreen(
                     LinkRow(
                         label = "File a bug",
                         url = bugUrl,
+                        // Bare tracker path; the actual URL has a ~300-char
+                        // URL-encoded body pre-fill that dominates the row.
+                        displayUrl = "${BuildConfig.SOURCE_URL}/issues/new",
                         onOpen = {
                             runCatching {
                                 context.startActivity(
@@ -695,7 +698,16 @@ private fun InfoRow(label: String, value: String, mono: Boolean = false) {
 }
 
 @Composable
-private fun LinkRow(label: String, url: String, onOpen: () -> Unit) {
+private fun LinkRow(
+    label: String,
+    url: String,
+    onOpen: () -> Unit,
+    /** Optional shorter preview rendered in place of the full [url]. Use when
+     *  the actual URL is long (deep-linked tracker form, signed media URL,
+     *  etc.) and rendering it raw would dominate the row. The click still
+     *  opens [url]. */
+    displayUrl: String = url,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -706,13 +718,15 @@ private fun LinkRow(label: String, url: String, onOpen: () -> Unit) {
         Text(label, style = R1.bodyEmph, color = R1.Ink)
         Spacer(Modifier.height(2.dp))
         Text(
-            text = url,
+            text = displayUrl,
             // Underline so the URL reads as interactive even without a chevron.
             style = R1.body.copy(
                 fontFamily = FontFamily.Monospace,
                 textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
             ),
             color = R1.AccentWarm,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

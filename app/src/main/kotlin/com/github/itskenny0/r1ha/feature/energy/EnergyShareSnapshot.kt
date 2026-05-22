@@ -107,7 +107,7 @@ internal object EnergyShareSnapshot {
             canvas.drawText("(no power sensors)", PADDING, y, rowMutedPaint)
         } else {
             for (row in rows) {
-                val w = String.format("%.0f W", row.watts)
+                val w = String.format(FMT, "%.0f W", row.watts)
                 canvas.drawText(row.name.take(28), PADDING, y, rowPaint)
                 val wWidth = textWidth(w, rowPaint)
                 canvas.drawText(w, SIZE - PADDING - wWidth, y, rowPaint.apply { color = ACCENT_WARM })
@@ -165,9 +165,15 @@ internal object EnergyShareSnapshot {
 
     private fun textWidth(text: String, paint: Paint): Float = paint.measureText(text)
 
+    // Locale.US so comma-decimal locales (de, fr) still see "1234" / "12.34"
+    // in the shared image — matching the in-app readout, which uses the same
+    // approach for the live tile values. The shared PNG is a snapshot of the
+    // UI; preserving its number formatting keeps the artefact consistent.
+    private val FMT = java.util.Locale.US
+
     private fun formatW(w: Double?): String =
-        if (w == null) "—" else String.format("%.0f", w)
+        if (w == null) "—" else String.format(FMT, "%.0f", w)
 
     private fun formatKwh(k: Double?): String =
-        if (k == null) "—" else String.format("%.2f", k)
+        if (k == null) "—" else String.format(FMT, "%.2f", k)
 }

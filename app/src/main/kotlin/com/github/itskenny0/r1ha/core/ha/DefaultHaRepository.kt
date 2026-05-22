@@ -2484,13 +2484,25 @@ class DefaultHaRepository(
      * 15 s timeout matches the call_service path; same rationale: HA's WS commands are
      * snappy in practice, and a longer timeout just delays the user's "retry" decision.
      */
+    /** Map a [ConnectionState] to a user-readable error message for surfaces that
+     *  refuse to run while the WS is down. The repository's exception message is
+     *  read verbatim by failure toasts in several screens. */
+    private fun friendlyDisconnectedMessage(state: ConnectionState): String = when (state) {
+        is ConnectionState.Disconnected -> "Home Assistant is offline; reconnecting…"
+        is ConnectionState.AuthLost -> "Sign-in expired. Sign out and back in from Settings."
+        is ConnectionState.Idle -> "Home Assistant connection hasn't started yet."
+        is ConnectionState.Connecting -> "Home Assistant is connecting; try again in a moment."
+        is ConnectionState.Authenticating -> "Home Assistant is authenticating; try again in a moment."
+        is ConnectionState.Connected -> "Home Assistant is connected (unexpected state mismatch)."
+    }
+
     private suspend fun callWsExpectingPayload(
         type: String,
         extras: kotlinx.serialization.json.JsonObject = kotlinx.serialization.json.JsonObject(emptyMap()),
     ): Result<kotlinx.serialization.json.JsonElement?> = withContext(Dispatchers.IO) {
         if (ws.state.value !is ConnectionState.Connected) {
             return@withContext Result.failure(
-                IllegalStateException("WS not connected (state=${ws.state.value::class.simpleName})"),
+                IllegalStateException(friendlyDisconnectedMessage(ws.state.value)),
             )
         }
         val id = ws.nextRequestId()
@@ -2650,7 +2662,7 @@ class DefaultHaRepository(
         logTag: String,
     ): Int {
         if (ws.state.value !is ConnectionState.Connected) {
-            error("WS not connected (state=${ws.state.value::class.simpleName})")
+            error(friendlyDisconnectedMessage(ws.state.value))
         }
         val handle = nextLiveSubHandle.getAndIncrement()
         val wsId = ws.nextRequestId()

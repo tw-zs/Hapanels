@@ -140,4 +140,62 @@ class SettingsRepositoryTest {
             cancelAndConsumeRemainingEvents()
         }
     }
+
+    /**
+     * Dashboard tile order persists as a list of enum-name strings. Default
+     * matches the canonical layout; an explicitly-set order round-trips.
+     */
+    @Test fun dashboardTileOrderRoundTrips() = runTest {
+        val repo = newRepo()
+        repo.settings.test {
+            val s = awaitItem()
+            assertThat(s.dashboard.tileOrder)
+                .isEqualTo(DashboardSettings.DEFAULT_TILE_ORDER)
+            cancelAndConsumeRemainingEvents()
+        }
+        // Reverse the order; round-trip via the JSON-encoded persistence path.
+        val reversed = DashboardSettings.DEFAULT_TILE_ORDER.reversed()
+        repo.update { s -> s.copy(dashboard = s.dashboard.copy(tileOrder = reversed)) }
+        repo.settings.test {
+            val s = awaitItem()
+            assertThat(s.dashboard.tileOrder).isEqualTo(reversed)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    /**
+     * Slot B/C/D quick-tile entity ids round-trip alongside the legacy slot-A
+     * field. Each slot is independent — saving slot B doesn't touch A/C/D.
+     */
+    @Test fun quickTileSlotsBcdPersistIndependently() = runTest {
+        val repo = newRepo()
+        repo.update { s ->
+            s.copy(
+                behavior = s.behavior.copy(
+                    quickTileEntityId = "light.kitchen",
+                    quickTileEntityIdB = "switch.coffee",
+                    quickTileEntityIdC = "script.goodnight",
+                    quickTileEntityIdD = "scene.away",
+                ),
+            )
+        }
+        repo.settings.test {
+            val s = awaitItem()
+            assertThat(s.behavior.quickTileEntityId).isEqualTo("light.kitchen")
+            assertThat(s.behavior.quickTileEntityIdB).isEqualTo("switch.coffee")
+            assertThat(s.behavior.quickTileEntityIdC).isEqualTo("script.goodnight")
+            assertThat(s.behavior.quickTileEntityIdD).isEqualTo("scene.away")
+            cancelAndConsumeRemainingEvents()
+        }
+        // Clear slot B; A/C/D should remain unchanged.
+        repo.update { s -> s.copy(behavior = s.behavior.copy(quickTileEntityIdB = null)) }
+        repo.settings.test {
+            val s = awaitItem()
+            assertThat(s.behavior.quickTileEntityId).isEqualTo("light.kitchen")
+            assertThat(s.behavior.quickTileEntityIdB).isNull()
+            assertThat(s.behavior.quickTileEntityIdC).isEqualTo("script.goodnight")
+            assertThat(s.behavior.quickTileEntityIdD).isEqualTo("scene.away")
+            cancelAndConsumeRemainingEvents()
+        }
+    }
 }

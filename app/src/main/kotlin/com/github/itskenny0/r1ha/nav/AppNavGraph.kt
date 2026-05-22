@@ -225,6 +225,9 @@ fun AppNavGraph(
                 onOpenBackups = {
                     navController.navigate(Routes.BACKUPS) { launchSingleTop = true }
                 },
+                onOpenZhaPairing = {
+                    navController.navigate(Routes.ZHA_PAIRING) { launchSingleTop = true }
+                },
                 onOpenEnergy = {
                     navController.navigate(Routes.ENERGY) { launchSingleTop = true }
                 },
@@ -482,6 +485,12 @@ fun AppNavGraph(
         }
         composable(Routes.BACKUPS) {
             com.github.itskenny0.r1ha.feature.backups.BackupsScreen(
+                haRepository = haRepository,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.ZHA_PAIRING) {
+            com.github.itskenny0.r1ha.feature.zha.ZhaPairingScreen(
                 haRepository = haRepository,
                 onBack = { navController.popBackStack() },
             )

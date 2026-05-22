@@ -81,6 +81,7 @@ fun SettingsScreen(
     onOpenRepairs: () -> Unit,
     onOpenMediaBrowse: () -> Unit,
     onOpenBackups: () -> Unit,
+    onOpenZhaPairing: () -> Unit,
     onOpenEnergy: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenLovelace: () -> Unit,
@@ -1448,6 +1449,13 @@ fun SettingsScreen(
                     label = "Backups",
                     value = "View + create HA backups",
                     onClick = onOpenBackups,
+                )
+            }
+            item {
+                NavRow(
+                    label = "Zigbee pair",
+                    value = "Open the network to enrol new devices",
+                    onClick = onOpenZhaPairing,
                 )
             }
             item {

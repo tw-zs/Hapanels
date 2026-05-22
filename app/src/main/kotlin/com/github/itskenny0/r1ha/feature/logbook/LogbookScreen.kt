@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.feature.logbook
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -122,7 +123,34 @@ fun LogbookScreen(
             .systemBarsPadding()
             .imePadding(),
     ) {
-        R1TopBar(title = "RECENT ACTIVITY", onBack = onBack)
+        R1TopBar(
+            title = "RECENT ACTIVITY",
+            onBack = onBack,
+            action = {
+                // TAIL chip — subscribes to HA's logbook_entry event stream and
+                // prepends events in real-time. The window picker is still
+                // honoured for the initial REST fetch; TAIL just adds the
+                // live additions.
+                Box(
+                    modifier = Modifier
+                        .clip(R1.ShapeS)
+                        .background(if (ui.tail) R1.AccentCool.copy(alpha = 0.18f) else R1.SurfaceMuted)
+                        .border(
+                            1.dp,
+                            if (ui.tail) R1.AccentCool.copy(alpha = 0.6f) else R1.Hairline,
+                            R1.ShapeS,
+                        )
+                        .r1Pressable(onClick = { vm.setTail(!ui.tail) })
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = if (ui.tail) "TAIL · ON" else "TAIL",
+                        style = R1.labelMicro,
+                        color = if (ui.tail) R1.AccentCool else R1.InkSoft,
+                    )
+                }
+            },
+        )
         com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         WindowChips(current = ui.window, onSelect = { vm.setWindow(it) })
         SearchBar(query = ui.query, onQueryChange = { vm.setQuery(it) })

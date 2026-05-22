@@ -55,6 +55,9 @@ class LogbookViewModel(
         val all: List<LogbookEntry> = emptyList(),
         val query: String = "",
         val error: String? = null,
+        /** TAIL mode: subscribed to HA's logbook_entry event stream so new
+         *  events arrive in real time and prepend to [all]. */
+        val tail: Boolean = false,
     ) {
         /** Filtered subset shown in the list. Substring-matches case-
          *  insensitively against the event name, message and entity_id. */
@@ -119,6 +122,78 @@ class LogbookViewModel(
     fun setQuery(query: String) {
         if (_ui.value.query == query) return
         _ui.value = _ui.value.copy(query = query)
+    }
+
+    /** Live subscription to HA's logbook_entry events. Active when TAIL is on. */
+    @Volatile
+    private var tailSubscription: HaRepository.EventSubscription? = null
+
+    /** Cap on the in-memory log buffer when TAIL is on. Without this a busy HA
+     *  install can grow the list unbounded over an overnight tail session. */
+    private val tailBufferCap = 1000
+
+    fun setTail(enabled: Boolean) {
+        if (_ui.value.tail == enabled) return
+        _ui.value = _ui.value.copy(tail = enabled, error = null)
+        if (enabled) startTail() else viewModelScope.launch {
+            tailSubscription?.cancel()
+            tailSubscription = null
+        }
+    }
+
+    private fun startTail() {
+        viewModelScope.launch {
+            haRepository.subscribeEvents("logbook_entry") { eventObj ->
+                // logbook_entry events look like {data: {name, message, entity_id,
+                // domain, state}, time_fired: ISO, ...}. We don't have an Instant
+                // parser handy in this scope so we use Instant.parse + fall back
+                // to "now" if HA omits time_fired.
+                val data = (eventObj["data"] as? kotlinx.serialization.json.JsonObject)
+                    ?: return@subscribeEvents
+                fun str(key: String): String? =
+                    (data[key] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                val name = str("name") ?: return@subscribeEvents
+                val message = str("message").orEmpty()
+                val entityIdRaw = str("entity_id")
+                val entityId = entityIdRaw?.let {
+                    runCatching { com.github.itskenny0.r1ha.core.ha.EntityId(it) }.getOrNull()
+                }
+                val timeFired = (eventObj["time_fired"] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content
+                val ts = timeFired?.let { runCatching { java.time.Instant.parse(it) }.getOrNull() }
+                    ?: java.time.Instant.now()
+                val entry = LogbookEntry(
+                    timestamp = ts,
+                    name = name,
+                    message = message,
+                    entityId = entityId,
+                    domain = str("domain"),
+                    state = str("state"),
+                )
+                _ui.value = _ui.value.let { current ->
+                    current.copy(all = (listOf(entry) + current.all).take(tailBufferCap))
+                }
+            }.fold(
+                onSuccess = { sub ->
+                    tailSubscription = sub
+                    R1Log.i("Logbook.tail", "subscribe registered")
+                },
+                onFailure = { t ->
+                    R1Log.w("Logbook.tail", "subscribe failed: ${t.message}")
+                    _ui.value = _ui.value.copy(
+                        tail = false,
+                        error = "Live tail unavailable: ${t.message}",
+                    )
+                },
+            )
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        runCatching {
+            kotlinx.coroutines.runBlocking { tailSubscription?.cancel() }
+        }
     }
 
     /**

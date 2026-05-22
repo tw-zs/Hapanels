@@ -253,6 +253,14 @@ class VoiceSatelliteEngine(
                     ?: "Pipeline error"
                 _state.value = State.Error(msg)
                 R1Log.w("VoiceSat", "pipeline error: $msg")
+                // Same recorder + pipeline teardown as run-end; whatever state
+                // we were in (Listening / Thinking / Speaking), HA isn't going
+                // to continue, so we shouldn't hold the mic open.
+                recorderJob?.cancel()
+                recorderJob = null
+                runCatching { audioRecord?.stop() }
+                runCatching { audioRecord?.release() }
+                audioRecord = null
                 scope.launch { pipeline?.cancel(); pipeline = null }
             }
         }

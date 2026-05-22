@@ -349,9 +349,33 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         id = "behavior.quickTileEntityId",
         category = SettingCategory.BEHAVIOUR,
         label = "Quick Settings tile",
-        description = "Entity bound to the Android notification-shade tile",
+        description = "Entity bound to the Android notification-shade tile (slot A)",
         isDefault = { it.behavior.quickTileEntityId == defaults.behavior.quickTileEntityId },
         currentDisplay = { it.behavior.quickTileEntityId?.takeIf { v -> v.isNotBlank() } ?: "(unbound)" },
+    ),
+    SettingEntry(
+        id = "behavior.quickTileEntityIdB",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Quick Settings tile · slot B",
+        description = "Entity bound to the 'HA Toggle 2' tile",
+        isDefault = { it.behavior.quickTileEntityIdB == defaults.behavior.quickTileEntityIdB },
+        currentDisplay = { it.behavior.quickTileEntityIdB?.takeIf { v -> v.isNotBlank() } ?: "(unbound)" },
+    ),
+    SettingEntry(
+        id = "behavior.quickTileEntityIdC",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Quick Settings tile · slot C",
+        description = "Entity bound to the 'HA Toggle 3' tile",
+        isDefault = { it.behavior.quickTileEntityIdC == defaults.behavior.quickTileEntityIdC },
+        currentDisplay = { it.behavior.quickTileEntityIdC?.takeIf { v -> v.isNotBlank() } ?: "(unbound)" },
+    ),
+    SettingEntry(
+        id = "behavior.quickTileEntityIdD",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Quick Settings tile · slot D",
+        description = "Entity bound to the 'HA Toggle 4' tile",
+        isDefault = { it.behavior.quickTileEntityIdD == defaults.behavior.quickTileEntityIdD },
+        currentDisplay = { it.behavior.quickTileEntityIdD?.takeIf { v -> v.isNotBlank() } ?: "(unbound)" },
     ),
     SettingEntry(
         id = "behavior.assistAutoOpenKeyboard",
@@ -464,6 +488,22 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         },
         currentDisplay = { "${it.dashboard.lowBatteryThresholdPct} %" },
     ),
+    SettingEntry(
+        id = "dashboard.tileOrder",
+        category = SettingCategory.DASHBOARD,
+        label = "Tile order",
+        description = "Top-to-bottom order of dashboard tiles (Settings → DASHBOARD → TILE ORDER)",
+        isDefault = { it.dashboard.tileOrder == DashboardSettings.DEFAULT_TILE_ORDER },
+        currentDisplay = {
+            if (it.dashboard.tileOrder == DashboardSettings.DEFAULT_TILE_ORDER) "default"
+            else "customised"
+        },
+    ),
+    // Advanced / power-user toggles (background refresh, NFC scanner, notification
+    // mirror, external automation intent) live under About > Dev menu rather than
+    // the main Settings tree, so they're intentionally absent from this registry.
+    // Surfacing them in the in-settings search would mislead users into expecting
+    // a main-tree row they can tap; the dev-menu is the discoverable path.
 )
 
 /**

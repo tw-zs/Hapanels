@@ -549,6 +549,25 @@ data class AdvancedSettings(
      *  ASCII (letters / digits / dash / underscore); shorter is friendlier in
      *  the HA UI. */
     val webhookId: String = "r1",
+    /**
+     * MQTT broker host. Empty disables the publish action entirely. We don't
+     * run a long-lived MQTT client — the publish surface in the dev menu and
+     * any future automation use the bare-bones one-shot publish in
+     * [com.github.itskenny0.r1ha.core.mqtt.MqttPublisher]. Plain TCP by default;
+     * flip [mqttUseTls] for an SSL socket on the usual 8883.
+     */
+    val mqttHost: String = "",
+    val mqttPort: Int = 1883,
+    /** Optional broker auth — username + password sent in the CONNECT packet.
+     *  Empty strings = anonymous (the broker decides whether to accept). */
+    val mqttUsername: String = "",
+    val mqttPassword: String = "",
+    /** When on, wrap the socket in the default SSLSocketFactory. No client cert
+     *  support — the HA REST mTLS plumbing isn't shared with MQTT yet. */
+    val mqttUseTls: Boolean = false,
+    /** Client id sent in CONNECT. Empty = auto-generated per publish (no
+     *  session continuity needed; we're publish-only QoS-0). */
+    val mqttClientId: String = "",
 )
 
 @Stable

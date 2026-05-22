@@ -308,6 +308,11 @@ fun DevMenuScreen(
             item { WebhookPanel(advanced, vm) }
             item { SectionDivider() }
 
+            // ── MQTT publish ────────────────────────────────────────────────
+            item { Section("MQTT") }
+            item { MqttPanel(advanced, vm) }
+            item { SectionDivider() }
+
             // ── Fire event ──────────────────────────────────────────────────────────
             if (haRepository != null) {
                 item { Section("FIRE EVENT") }
@@ -825,6 +830,167 @@ private fun WebhookPanel(
             text = "HA configuration.yaml: webhook → automation trigger 'webhook' with id '${advanced.webhookId}'. The action can target the URL printed in the persistent notification.",
             style = R1.labelMicro,
             color = R1.InkMuted,
+        )
+    }
+}
+
+/**
+ * MQTT publish controls. One-shot publish-only client: every fire opens a fresh
+ * TCP socket, CONNECTs with the configured auth, PUBLISHes the topic/payload at
+ * QoS 0, and DISCONNECTs. No long-lived client, no subscription support — the
+ * bare-bones surface in [com.github.itskenny0.r1ha.core.mqtt.MqttPublisher].
+ *
+ * Field changes persist to DataStore immediately; no separate save step.
+ */
+@Composable
+private fun MqttPanel(
+    advanced: com.github.itskenny0.r1ha.core.prefs.AdvancedSettings,
+    vm: com.github.itskenny0.r1ha.feature.settings.SettingsViewModel,
+) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var topic by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("r1/test") }
+    var payload by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("hello from r1") }
+    var retain by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var inFlight by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Text(
+            text = "Connect to an MQTT broker and publish a single message. The client is publish-only and one-shot — no subscriptions, no retained-session machinery. Useful for triggering automations on broker-side rules or pushing app state to a broker shared with HA.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "BROKER HOST", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.mqttHost,
+            onValueChange = { v -> vm.updateAdvanced { it.copy(mqttHost = v.trim()) } },
+            placeholder = "192.168.1.10",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "PORT", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.height(2.dp))
+                com.github.itskenny0.r1ha.ui.components.R1TextField(
+                    value = advanced.mqttPort.toString(),
+                    onValueChange = { v ->
+                        val n = v.toIntOrNull()?.coerceIn(1, 65535)
+                        if (n != null) vm.updateAdvanced { it.copy(mqttPort = n) }
+                    },
+                    placeholder = "1883",
+                    monospace = true,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(2f)) {
+                DevSwitchRow(
+                    label = "TLS",
+                    subtitle = "Wrap the socket in SSL. Use port 8883 for the standard mqtts:// endpoint.",
+                    checked = advanced.mqttUseTls,
+                    onChange = { v -> vm.updateAdvanced { it.copy(mqttUseTls = v) } },
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(text = "USERNAME (OPTIONAL)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.mqttUsername,
+            onValueChange = { v -> vm.updateAdvanced { it.copy(mqttUsername = v) } },
+            placeholder = "homeassistant",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "PASSWORD (OPTIONAL)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.mqttPassword,
+            onValueChange = { v -> vm.updateAdvanced { it.copy(mqttPassword = v) } },
+            placeholder = "",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "CLIENT ID (OPTIONAL)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.mqttClientId,
+            onValueChange = { v -> vm.updateAdvanced { it.copy(mqttClientId = v.trim()) } },
+            placeholder = "auto",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(text = "PUBLISH", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        Text(text = "TOPIC", style = R1.labelMicro, color = R1.InkMuted)
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = topic,
+            onValueChange = { topic = it.trim() },
+            placeholder = "r1/test",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(text = "PAYLOAD", style = R1.labelMicro, color = R1.InkMuted)
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = payload,
+            onValueChange = { payload = it },
+            placeholder = "hello",
+            monospace = true,
+            singleLine = false,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        DevSwitchRow(
+            label = "Retain",
+            subtitle = "Broker stores the message and replays it to future subscribers of this topic. Common for state topics.",
+            checked = retain,
+            onChange = { retain = it },
+        )
+        Spacer(Modifier.height(8.dp))
+        val canPublish = advanced.mqttHost.isNotBlank() && topic.isNotBlank() && !inFlight
+        com.github.itskenny0.r1ha.ui.components.R1Button(
+            text = if (inFlight) "PUBLISHING…" else "PUBLISH",
+            onClick = {
+                if (canPublish) {
+                    inFlight = true
+                    scope.launch {
+                        val cid = advanced.mqttClientId.ifBlank {
+                            "r1ha-${System.currentTimeMillis() and 0xFFFF}"
+                        }
+                        val result = com.github.itskenny0.r1ha.core.mqtt.MqttPublisher.publish(
+                            host = advanced.mqttHost,
+                            port = advanced.mqttPort,
+                            topic = topic,
+                            payload = payload.toByteArray(Charsets.UTF_8),
+                            clientId = cid,
+                            username = advanced.mqttUsername.ifBlank { null },
+                            password = advanced.mqttPassword.ifBlank { null },
+                            useTls = advanced.mqttUseTls,
+                            retain = retain,
+                        )
+                        result.fold(
+                            onSuccess = {
+                                com.github.itskenny0.r1ha.core.util.Toaster.show(
+                                    "MQTT published to $topic",
+                                )
+                            },
+                            onFailure = { t ->
+                                com.github.itskenny0.r1ha.core.util.Toaster.error(
+                                    "MQTT publish failed: ${t.message ?: t::class.java.simpleName}",
+                                )
+                            },
+                        )
+                        inFlight = false
+                    }
+                }
+            },
+            enabled = canPublish,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

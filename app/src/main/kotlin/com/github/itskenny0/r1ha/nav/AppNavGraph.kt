@@ -139,118 +139,73 @@ fun AppNavGraph(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(
+            SettingsRouteContent(
+                navController = navController,
                 settings = settings,
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
-                onOpenThemePicker = {
-                    navController.navigate(Routes.THEME_PICKER) { launchSingleTop = true }
-                },
-                onOpenAbout = {
-                    navController.navigate(Routes.ABOUT) { launchSingleTop = true }
-                },
-                onOpenAssist = {
-                    navController.navigate(Routes.ASSIST) { launchSingleTop = true }
-                },
-                onOpenScenes = {
-                    navController.navigate(Routes.SCENES) { launchSingleTop = true }
-                },
-                onOpenLogbook = {
-                    navController.navigate(Routes.LOGBOOK) { launchSingleTop = true }
-                },
-                onOpenTemplate = {
-                    navController.navigate(Routes.TEMPLATE) { launchSingleTop = true }
-                },
-                onOpenServiceCaller = {
-                    navController.navigate(Routes.SERVICE_CALLER) { launchSingleTop = true }
-                },
-                onOpenNotifications = {
-                    navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true }
-                },
-                onOpenCameras = {
-                    navController.navigate(Routes.CAMERAS) { launchSingleTop = true }
-                },
-                onOpenWeather = {
-                    navController.navigate(Routes.WEATHER) { launchSingleTop = true }
-                },
-                onOpenPersons = {
-                    navController.navigate(Routes.PERSONS) { launchSingleTop = true }
-                },
-                onOpenCalendars = {
-                    navController.navigate(Routes.CALENDARS) { launchSingleTop = true }
-                },
-                onOpenLongLivedToken = {
-                    navController.navigate(Routes.LONG_LIVED_TOKEN) { launchSingleTop = true }
-                },
-                onOpenSystemHealth = {
-                    navController.navigate(Routes.SYSTEM_HEALTH) { launchSingleTop = true }
-                },
-                onOpenDashboard = {
-                    navController.navigate(Routes.DASHBOARD) { launchSingleTop = true }
-                },
-                onOpenAreas = {
-                    navController.navigate(Routes.AREAS) { launchSingleTop = true }
-                },
-                onOpenLabels = {
-                    navController.navigate(Routes.LABELS) { launchSingleTop = true }
-                },
-                onOpenFloors = {
-                    navController.navigate(Routes.FLOORS) { launchSingleTop = true }
-                },
-                onOpenServices = {
-                    navController.navigate(Routes.SERVICES) { launchSingleTop = true }
-                },
-                onOpenSearch = {
-                    navController.navigate(Routes.SEARCH) { launchSingleTop = true }
-                },
-                onOpenAutomations = {
-                    navController.navigate(Routes.AUTOMATIONS) { launchSingleTop = true }
-                },
-                onOpenHelpers = {
-                    navController.navigate(Routes.HELPERS) { launchSingleTop = true }
-                },
-                onOpenTodo = {
-                    navController.navigate(Routes.TODO) { launchSingleTop = true }
-                },
-                onOpenUpdates = {
-                    navController.navigate(Routes.UPDATES) { launchSingleTop = true }
-                },
-                onOpenRepairs = {
-                    navController.navigate(Routes.REPAIRS) { launchSingleTop = true }
-                },
-                onOpenMediaBrowse = {
-                    navController.navigate(Routes.MEDIA_BROWSE) { launchSingleTop = true }
-                },
-                onOpenBackups = {
-                    navController.navigate(Routes.BACKUPS) { launchSingleTop = true }
-                },
-                onOpenZhaPairing = {
-                    navController.navigate(Routes.ZHA_PAIRING) { launchSingleTop = true }
-                },
-                onOpenEnergy = {
-                    navController.navigate(Routes.ENERGY) { launchSingleTop = true }
-                },
-                onOpenZones = {
-                    navController.navigate(Routes.ZONES) { launchSingleTop = true }
-                },
-                onOpenLovelace = {
-                    navController.navigate(Routes.LOVELACE) { launchSingleTop = true }
-                },
-                onOpenDevice = {
-                    navController.navigate(Routes.DEVICE) { launchSingleTop = true }
-                },
-                onOpenModifiedSettings = {
-                    navController.navigate(Routes.MODIFIED_SETTINGS) { launchSingleTop = true }
-                },
-                onSignedOut = {
-                    // Clear the whole back stack so a stale CardStack/Onboarding can't be
-                    // popped back to; then land fresh on Onboarding.
-                    navController.navigate(Routes.ONBOARDING) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onBack = { navController.popBackStack() },
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ROOT,
+            )
+        }
+        composable(Routes.SETTINGS_CONNECTION) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.CONNECTION,
+            )
+        }
+        composable(Routes.SETTINGS_APPEARANCE) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.APPEARANCE,
+            )
+        }
+        composable(Routes.SETTINGS_BEHAVIOUR) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BEHAVIOUR,
+            )
+        }
+        composable(Routes.SETTINGS_INTEGRATIONS) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.INTEGRATIONS,
+            )
+        }
+        composable(Routes.SETTINGS_ADVANCED) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ADVANCED,
+            )
+        }
+        composable(Routes.SETTINGS_BROWSE) {
+            SettingsRouteContent(
+                navController = navController,
+                settings = settings,
+                tokens = tokens,
+                haRepository = haRepository,
+                wheelInput = wheelInput,
+                category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BROWSE,
             )
         }
         composable(Routes.THEME_PICKER) {
@@ -616,4 +571,80 @@ fun AppNavGraph(
             )
         }
     }
+}
+
+/**
+ * Settings screen invocation shared by every settings/<category> route. Wires
+ * the 28-ish onOpenXXX callbacks once instead of duplicating them per route,
+ * and routes the new `onOpenCategory` to the matching SETTINGS_* sub-route so
+ * each subpage gets its own back-stack entry.
+ */
+@Composable
+private fun SettingsRouteContent(
+    navController: NavHostController,
+    settings: SettingsRepository,
+    tokens: TokenStore,
+    haRepository: HaRepository,
+    wheelInput: WheelInput,
+    category: com.github.itskenny0.r1ha.feature.settings.SettingsCategory,
+) {
+    com.github.itskenny0.r1ha.feature.settings.SettingsScreen(
+        settings = settings,
+        tokens = tokens,
+        haRepository = haRepository,
+        wheelInput = wheelInput,
+        currentCategory = category,
+        onOpenCategory = { target ->
+            val route = when (target) {
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ROOT -> Routes.SETTINGS
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.CONNECTION -> Routes.SETTINGS_CONNECTION
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.APPEARANCE -> Routes.SETTINGS_APPEARANCE
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BEHAVIOUR -> Routes.SETTINGS_BEHAVIOUR
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.INTEGRATIONS -> Routes.SETTINGS_INTEGRATIONS
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ADVANCED -> Routes.SETTINGS_ADVANCED
+                com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BROWSE -> Routes.SETTINGS_BROWSE
+            }
+            navController.navigate(route) { launchSingleTop = true }
+        },
+        onOpenThemePicker = { navController.navigate(Routes.THEME_PICKER) { launchSingleTop = true } },
+        onOpenAbout = { navController.navigate(Routes.ABOUT) { launchSingleTop = true } },
+        onOpenDevMenu = { navController.navigate(Routes.DEV_MENU) { launchSingleTop = true } },
+        onOpenAssist = { navController.navigate(Routes.ASSIST) { launchSingleTop = true } },
+        onOpenScenes = { navController.navigate(Routes.SCENES) { launchSingleTop = true } },
+        onOpenLogbook = { navController.navigate(Routes.LOGBOOK) { launchSingleTop = true } },
+        onOpenTemplate = { navController.navigate(Routes.TEMPLATE) { launchSingleTop = true } },
+        onOpenServiceCaller = { navController.navigate(Routes.SERVICE_CALLER) { launchSingleTop = true } },
+        onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) { launchSingleTop = true } },
+        onOpenCameras = { navController.navigate(Routes.CAMERAS) { launchSingleTop = true } },
+        onOpenWeather = { navController.navigate(Routes.WEATHER) { launchSingleTop = true } },
+        onOpenPersons = { navController.navigate(Routes.PERSONS) { launchSingleTop = true } },
+        onOpenCalendars = { navController.navigate(Routes.CALENDARS) { launchSingleTop = true } },
+        onOpenLongLivedToken = { navController.navigate(Routes.LONG_LIVED_TOKEN) { launchSingleTop = true } },
+        onOpenSystemHealth = { navController.navigate(Routes.SYSTEM_HEALTH) { launchSingleTop = true } },
+        onOpenDashboard = { navController.navigate(Routes.DASHBOARD) { launchSingleTop = true } },
+        onOpenAreas = { navController.navigate(Routes.AREAS) { launchSingleTop = true } },
+        onOpenLabels = { navController.navigate(Routes.LABELS) { launchSingleTop = true } },
+        onOpenFloors = { navController.navigate(Routes.FLOORS) { launchSingleTop = true } },
+        onOpenServices = { navController.navigate(Routes.SERVICES) { launchSingleTop = true } },
+        onOpenSearch = { navController.navigate(Routes.SEARCH) { launchSingleTop = true } },
+        onOpenAutomations = { navController.navigate(Routes.AUTOMATIONS) { launchSingleTop = true } },
+        onOpenHelpers = { navController.navigate(Routes.HELPERS) { launchSingleTop = true } },
+        onOpenTodo = { navController.navigate(Routes.TODO) { launchSingleTop = true } },
+        onOpenUpdates = { navController.navigate(Routes.UPDATES) { launchSingleTop = true } },
+        onOpenRepairs = { navController.navigate(Routes.REPAIRS) { launchSingleTop = true } },
+        onOpenMediaBrowse = { navController.navigate(Routes.MEDIA_BROWSE) { launchSingleTop = true } },
+        onOpenBackups = { navController.navigate(Routes.BACKUPS) { launchSingleTop = true } },
+        onOpenZhaPairing = { navController.navigate(Routes.ZHA_PAIRING) { launchSingleTop = true } },
+        onOpenEnergy = { navController.navigate(Routes.ENERGY) { launchSingleTop = true } },
+        onOpenZones = { navController.navigate(Routes.ZONES) { launchSingleTop = true } },
+        onOpenLovelace = { navController.navigate(Routes.LOVELACE) { launchSingleTop = true } },
+        onOpenDevice = { navController.navigate(Routes.DEVICE) { launchSingleTop = true } },
+        onOpenModifiedSettings = { navController.navigate(Routes.MODIFIED_SETTINGS) { launchSingleTop = true } },
+        onSignedOut = {
+            navController.navigate(Routes.ONBOARDING) {
+                popUpTo(0) { inclusive = true }
+            }
+        },
+        onBack = { navController.popBackStack() },
+    )
 }

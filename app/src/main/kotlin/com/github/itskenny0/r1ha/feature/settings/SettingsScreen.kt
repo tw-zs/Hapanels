@@ -48,14 +48,74 @@ import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
 
+/**
+ * Settings tree depth — which top-level category the screen is currently
+ * displaying. Settings opens at [ROOT], a short list of group cards
+ * (Connection / Appearance / Behaviour / Integrations / Advanced / About /
+ * Browse). Tapping a card navigates to one of the other category routes,
+ * which re-renders this same composable scoped to that category's sections.
+ *
+ * One composable drives every route because the existing section state
+ * (collapsible expansion, search results, modified-count badges, the
+ * SettingsViewModel) is densely shared. Splitting into one-screen-per-
+ * category would re-instantiate the vm on each subpage and either drop the
+ * search box or duplicate it across every screen.
+ */
+enum class SettingsCategory {
+    ROOT,
+    CONNECTION,
+    APPEARANCE,
+    BEHAVIOUR,
+    INTEGRATIONS,
+    ADVANCED,
+    BROWSE,
+}
+
+/** Map each existing section header to its parent category. Used to gate
+ *  section rendering per category in the LazyColumn body. */
+private val SECTION_CATEGORY: Map<String, SettingsCategory> = mapOf(
+    "SERVER" to SettingsCategory.CONNECTION,
+    "BACKUP & RESTORE" to SettingsCategory.CONNECTION,
+    "SECURITY" to SettingsCategory.CONNECTION,
+    "APPEARANCE" to SettingsCategory.APPEARANCE,
+    "CARD UI" to SettingsCategory.APPEARANCE,
+    "DASHBOARD" to SettingsCategory.APPEARANCE,
+    "SCROLL WHEEL" to SettingsCategory.BEHAVIOUR,
+    "BEHAVIOUR" to SettingsCategory.BEHAVIOUR,
+    "INTEGRATIONS" to SettingsCategory.INTEGRATIONS,
+    "TODAY" to SettingsCategory.BROWSE,
+    "TALK & FIRE" to SettingsCategory.BROWSE,
+    "STATUS VIEWS" to SettingsCategory.BROWSE,
+    "POWER TOOLS" to SettingsCategory.BROWSE,
+)
+
+private fun categoryTitle(category: SettingsCategory): String = when (category) {
+    SettingsCategory.ROOT -> "SETTINGS"
+    SettingsCategory.CONNECTION -> "CONNECTION"
+    SettingsCategory.APPEARANCE -> "APPEARANCE"
+    SettingsCategory.BEHAVIOUR -> "BEHAVIOUR"
+    SettingsCategory.INTEGRATIONS -> "INTEGRATIONS"
+    SettingsCategory.ADVANCED -> "ADVANCED"
+    SettingsCategory.BROWSE -> "BROWSE"
+}
+
 @Composable
 fun SettingsScreen(
     settings: SettingsRepository,
     tokens: TokenStore,
     haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository,
     wheelInput: WheelInput,
+    /** Which category subpage to display. [SettingsCategory.ROOT] shows the
+     *  group-cards landing page; other values scope rendering to only the
+     *  sections belonging to that category. */
+    currentCategory: SettingsCategory = SettingsCategory.ROOT,
+    /** Callback the ROOT view fires when the user taps a group card.
+     *  AppNavGraph wires this to `navController.navigate(Routes.SETTINGS_X)`
+     *  so each category gets its own back-stack entry. */
+    onOpenCategory: (SettingsCategory) -> Unit = {},
     onOpenThemePicker: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenDevMenu: () -> Unit = {},
     onOpenAssist: () -> Unit,
     onOpenScenes: () -> Unit,
     onOpenLogbook: () -> Unit,
@@ -239,7 +299,7 @@ fun SettingsScreen(
             // view — surrounding controls stay obscured.
             .imePadding(),
     ) {
-        R1TopBar(title = "SETTINGS", onBack = onBack)
+        R1TopBar(title = categoryTitle(currentCategory), onBack = onBack)
 
         com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -247,17 +307,21 @@ fun SettingsScreen(
             // ── Search bar + modified-settings entry ──────────────────────────
             // Sticky-feeling header at the top of the LazyColumn. The search
             // field live-filters against the SETTINGS_REGISTRY; the
-            // 'N modified' chip jumps to the dedicated subscreen.
-            item {
-                SettingsHeader(
-                    query = settingsQuery,
-                    onQueryChange = { settingsQuery = it },
-                    modifiedCount = modifiedCount,
-                    onOpenModified = onOpenModifiedSettings,
-                    anyExpanded = expandedSections.isNotEmpty(),
-                    onCollapseAll = { expandedSections = emptySet() },
-                    onExpandAll = { expandedSections = allSectionNames.toSet() },
-                )
+            // 'N modified' chip jumps to the dedicated subscreen. Only shown
+            // on the ROOT landing page so subpages don't double-decorate
+            // their content with the global search affordance.
+            if (currentCategory == SettingsCategory.ROOT) {
+                item {
+                    SettingsHeader(
+                        query = settingsQuery,
+                        onQueryChange = { settingsQuery = it },
+                        modifiedCount = modifiedCount,
+                        onOpenModified = onOpenModifiedSettings,
+                        anyExpanded = expandedSections.isNotEmpty(),
+                        onCollapseAll = { expandedSections = emptySet() },
+                        onExpandAll = { expandedSections = allSectionNames.toSet() },
+                    )
+                }
             }
 
             if (settingsQuery.isNotBlank()) {
@@ -316,7 +380,117 @@ fun SettingsScreen(
                 return@LazyColumn // Skip the normal sections while searching.
             }
 
+            // ── ROOT landing page — group cards ──────────────────────────────────
+            // Android-Settings-style top-level grouping. Each card opens its
+            // own subpage via the [onOpenCategory] callback (wired by
+            // AppNavGraph to a settings/<category> route). Browse is a special
+            // case that wraps the navigation rows (TODAY / TALK & FIRE /
+            // STATUS VIEWS / POWER TOOLS) so they stay reachable from
+            // Settings without polluting the config-only group list.
+            if (currentCategory == SettingsCategory.ROOT) {
+                // Sum each group's modified-badge so the user can tell at a
+                // glance which category they've tweaked.
+                fun groupBadge(vararg names: String): Int =
+                    names.sumOf { sectionModifiedCount[it] ?: 0 }
+                item {
+                    GroupCard(
+                        title = "Connection",
+                        subtitle = "Server, security, backup & restore",
+                        modifiedCount = groupBadge("SERVER", "BACKUP & RESTORE", "SECURITY"),
+                        onClick = { onOpenCategory(SettingsCategory.CONNECTION) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "Appearance",
+                        subtitle = "Theme, card UI, dashboard",
+                        modifiedCount = groupBadge("APPEARANCE", "CARD UI", "DASHBOARD"),
+                        onClick = { onOpenCategory(SettingsCategory.APPEARANCE) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "Behaviour",
+                        subtitle = "Wheel, touch, haptics, quick tiles",
+                        modifiedCount = groupBadge("SCROLL WHEEL", "BEHAVIOUR"),
+                        onClick = { onOpenCategory(SettingsCategory.BEHAVIOUR) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "Integrations",
+                        subtitle = "HA refresh tuning, cameras, defaults",
+                        modifiedCount = groupBadge("INTEGRATIONS"),
+                        onClick = { onOpenCategory(SettingsCategory.INTEGRATIONS) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "Advanced",
+                        subtitle = "Dev menu, modified settings, reset",
+                        modifiedCount = 0,
+                        onClick = { onOpenCategory(SettingsCategory.ADVANCED) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "Browse",
+                        subtitle = "Open Dashboard, Assist, Scenes, etc.",
+                        modifiedCount = 0,
+                        onClick = { onOpenCategory(SettingsCategory.BROWSE) },
+                    )
+                }
+                item {
+                    GroupCard(
+                        title = "About",
+                        subtitle = "Version, source, file a bug",
+                        modifiedCount = 0,
+                        onClick = onOpenAbout,
+                    )
+                }
+                item { Spacer(Modifier.height(48.dp)) }
+                return@LazyColumn
+            }
+
+            // Subpage rendering: only the sections matching [currentCategory]
+            // render. Each Section block below is wrapped with a guard;
+            // SECTION_CATEGORY maps "SERVER" → CONNECTION, etc.
+            fun shouldShow(name: String): Boolean =
+                SECTION_CATEGORY[name] == currentCategory
+
+            // ADVANCED subpage doesn't have a 1:1 mapping to an existing
+            // section: it's a curated list of power-user entry points. Render
+            // it inline before the section loop so the section guards below
+            // can stay simple. Dev menu lives in AboutScreen too, but
+            // surfacing it here makes Settings → Advanced feel like the
+            // canonical landing for power users.
+            if (currentCategory == SettingsCategory.ADVANCED) {
+                item {
+                    NavRow(
+                        label = "Dev menu",
+                        value = "Live logs, fire-event, integrations panel",
+                        onClick = onOpenDevMenu,
+                    )
+                }
+                item {
+                    NavRow(
+                        label = "Modified settings",
+                        value = if (modifiedCount > 0) "$modifiedCount changed" else "All at defaults",
+                        onClick = onOpenModifiedSettings,
+                    )
+                }
+                item {
+                    NavRow(
+                        label = "System health",
+                        value = "Server config, ping, error log",
+                        onClick = onOpenSystemHealth,
+                    )
+                }
+                item { SectionDivider() }
+            }
+
             // ── Server ─────────────────────────────────────────────────────────────
+            if (shouldShow("SERVER")) {
             item { Section("SERVER", expanded = "SERVER" in expandedSections, onToggle = { toggleSection("SERVER") }, modifiedCount = sectionModifiedCount["SERVER"] ?: 0) }
             if ("SERVER" in expandedSections) {
             item {
@@ -460,7 +634,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("SCROLL WHEEL")) {
             // ── Scroll wheel ───────────────────────────────────────────────────────
             item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }, modifiedCount = sectionModifiedCount["SCROLL WHEEL"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT) }) }
             if ("SCROLL WHEEL" in expandedSections) {
@@ -526,7 +702,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("CARD UI")) {
             // ── Card UI ────────────────────────────────────────────────────────────
             item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }, modifiedCount = sectionModifiedCount["CARD UI"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI) }) }
             if ("CARD UI" in expandedSections) {
@@ -662,7 +840,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("BEHAVIOUR")) {
             // ── Behaviour ──────────────────────────────────────────────────────────
             item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR) }) }
             if ("BEHAVIOUR" in expandedSections) {
@@ -856,7 +1036,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("BACKUP & RESTORE")) {
             // ── Backup & restore ───────────────────────────────────────────────────
             item { Section("BACKUP & RESTORE", expanded = "BACKUP & RESTORE" in expandedSections, onToggle = { toggleSection("BACKUP & RESTORE") }, modifiedCount = sectionModifiedCount["BACKUP & RESTORE"] ?: 0) }
             if ("BACKUP & RESTORE" in expandedSections) {
@@ -943,6 +1125,7 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
             // ── Security ──────────────────────────────────────────────────────────
             // TLS certificate pinning. SharedPreferences-backed instead of
@@ -950,12 +1133,15 @@ fun SettingsScreen(
             // builds at process start and reads the pin list sync. Changes
             // here take effect on the next app launch; the subtitle on each
             // affected row spells that out.
+            if (shouldShow("SECURITY")) {
             item { Section("SECURITY", expanded = "SECURITY" in expandedSections, onToggle = { toggleSection("SECURITY") }, modifiedCount = sectionModifiedCount["SECURITY"] ?: 0) }
             if ("SECURITY" in expandedSections) {
                 item { SecuritySection() }
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("DASHBOARD")) {
             // ── Dashboard layout — per-section visibility + thresholds ─────────
             item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }, modifiedCount = sectionModifiedCount["DASHBOARD"] ?: 0) }
             if ("DASHBOARD" in expandedSections) {
@@ -1135,7 +1321,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("INTEGRATIONS")) {
             // ── Integrations — per-surface refresh intervals + tuning ──────────
             item { Section("INTEGRATIONS", expanded = "INTEGRATIONS" in expandedSections, onToggle = { toggleSection("INTEGRATIONS") }, modifiedCount = sectionModifiedCount["INTEGRATIONS"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.INTEGRATIONS) }) }
             if ("INTEGRATIONS" in expandedSections) {
@@ -1252,7 +1440,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("APPEARANCE")) {
             // ── Appearance ─────────────────────────────────────────────────────────
             item { Section("APPEARANCE", expanded = "APPEARANCE" in expandedSections, onToggle = { toggleSection("APPEARANCE") }, modifiedCount = sectionModifiedCount["APPEARANCE"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE) }) }
             if ("APPEARANCE" in expandedSections) {
@@ -1319,7 +1509,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("TODAY")) {
             // ── Today — at-a-glance dashboard + quick search ──────────────
             item { Section("TODAY", expanded = "TODAY" in expandedSections, onToggle = { toggleSection("TODAY") }, modifiedCount = sectionModifiedCount["TODAY"] ?: 0) }
             if ("TODAY" in expandedSections) {
@@ -1332,7 +1524,9 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
+            }
 
+            if (shouldShow("TALK & FIRE")) {
             // ── Talk + Fire — high-frequency action surfaces ─────────────
             item { Section("TALK & FIRE", expanded = "TALK & FIRE" in expandedSections, onToggle = { toggleSection("TALK & FIRE") }, modifiedCount = sectionModifiedCount["TALK & FIRE"] ?: 0) }
             if ("TALK & FIRE" in expandedSections) {
@@ -1364,9 +1558,11 @@ fun SettingsScreen(
                 )
             }
 
+            if (shouldShow("STATUS VIEWS")) {
             // ── Status views — read-only at-a-glance HA state ────────────
             }
             item { SectionDivider() }
+            }
             item { Section("STATUS VIEWS", expanded = "STATUS VIEWS" in expandedSections, onToggle = { toggleSection("STATUS VIEWS") }, modifiedCount = sectionModifiedCount["STATUS VIEWS"] ?: 0) }
             if ("STATUS VIEWS" in expandedSections) {
             item {
@@ -1418,9 +1614,11 @@ fun SettingsScreen(
                 )
             }
 
+            if (shouldShow("POWER TOOLS")) {
             // ── Power tools — diagnostic / advanced surfaces ─────────────
             }
             item { SectionDivider() }
+            }
             item { Section("POWER TOOLS", expanded = "POWER TOOLS" in expandedSections, onToggle = { toggleSection("POWER TOOLS") }, modifiedCount = sectionModifiedCount["POWER TOOLS"] ?: 0) }
             if ("POWER TOOLS" in expandedSections) {
             item {
@@ -1545,10 +1743,12 @@ fun SettingsScreen(
 
             }
             item { SectionDivider() }
-
-            item {
-                NavRow(label = "About", onClick = onOpenAbout)
             }
+
+            // About is reachable from the ROOT view's group cards; the
+            // standalone bottom row was redundant after the restructure
+            // and would render on every subpage. Keep ROOT as the only
+            // path to About so back-button semantics stay obvious.
 
             item { Spacer(Modifier.height(48.dp)) }
         }
@@ -1590,6 +1790,51 @@ internal fun sectionNameForCategory(
 }
 
 // ── Building blocks ──────────────────────────────────────────────────────────────────────
+
+/**
+ * ROOT-view top-level group card. Big tap target with a title, subtitle, and
+ * the modified-count badge so the user can tell at a glance which group
+ * they've tweaked. Mirrors the visual shape of a Section header but doesn't
+ * collapse: tap navigates into the corresponding subpage.
+ */
+@Composable
+private fun GroupCard(
+    title: String,
+    subtitle: String,
+    modifiedCount: Int,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .r1Pressable(onClick = onClick, contentDescription = "Open $title")
+            .padding(horizontal = 22.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = R1.bodyEmph, color = R1.Ink)
+            Spacer(Modifier.height(2.dp))
+            Text(subtitle, style = R1.labelMicro, color = R1.InkSoft)
+        }
+        if (modifiedCount > 0) {
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeRound)
+                    .background(R1.AccentWarm)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = modifiedCount.toString(),
+                    style = R1.labelMicro,
+                    color = R1.Bg,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+        }
+        // Chevron-style trailing hint that this row navigates further.
+        Text(text = "›", style = R1.bodyEmph, color = R1.InkSoft)
+    }
+}
 
 @Composable
 private fun Section(

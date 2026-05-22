@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.feature.devmenu
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -301,6 +302,10 @@ fun DevMenuScreen(
             if (haRepository != null) {
                 item { Section("FIRE EVENT") }
                 item { FireEventPanel(haRepository) }
+                item { SectionDivider() }
+                // ── Live events tail ───────────────────────────────────────────
+                item { Section("LIVE EVENTS") }
+                item { LiveEventsPanel(haRepository) }
                 item { SectionDivider() }
             }
 
@@ -757,3 +762,132 @@ private fun IntStepperRow(
 
 private fun coerce(value: Int, low: Int, high: Int): Int =
     if (value < low) low else if (value > high) high else value
+
+/**
+ * Live events tail under DevMenu. Wraps [HaRepository.subscribeEvents] with a small
+ * fixed-size ring buffer + a START / STOP affordance. Useful when wiring up new
+ * HA automations: subscribe to "state_changed" to see exactly which entity_id's
+ * state HA published to the bus and when.
+ */
+@Composable
+private fun LiveEventsPanel(haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository) {
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var eventType by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf("state_changed")
+    }
+    var subscription by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<com.github.itskenny0.r1ha.core.ha.HaRepository.EventSubscription?>(null)
+    }
+    var entries by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<List<String>>(emptyList())
+    }
+    var error by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    val isOn = subscription != null
+    // Stop the subscription when the panel leaves composition so the screen
+    // doesn't leak the WS sub.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            scope.launch { subscription?.cancel() }
+        }
+    }
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Text(text = "EVENT TYPE (blank = all)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = eventType,
+            onValueChange = { eventType = it.lowercase().filter { c -> c.isLetterOrDigit() || c == '_' } },
+            placeholder = "state_changed",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(if (isOn) R1.AccentCool.copy(alpha = 0.18f) else R1.SurfaceMuted)
+                    .border(
+                        1.dp,
+                        if (isOn) R1.AccentCool.copy(alpha = 0.6f) else R1.Hairline,
+                        R1.ShapeS,
+                    )
+                    .r1Pressable(onClick = {
+                        if (isOn) {
+                            scope.launch {
+                                subscription?.cancel()
+                                subscription = null
+                            }
+                        } else {
+                            scope.launch {
+                                val typeOrNull = eventType.takeIf { it.isNotBlank() }
+                                haRepository.subscribeEvents(typeOrNull) { event ->
+                                    val time = java.time.Instant.now().toString().take(19)
+                                    val short = buildString {
+                                        append(time).append(" | ")
+                                        append((event["event_type"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: "?")
+                                        val data = event["data"] as? kotlinx.serialization.json.JsonObject
+                                        val eid = (data?.get("entity_id") as? kotlinx.serialization.json.JsonPrimitive)?.content
+                                        if (eid != null) append(" ").append(eid)
+                                    }
+                                    entries = (listOf(short) + entries).take(200)
+                                }.fold(
+                                    onSuccess = {
+                                        subscription = it
+                                        error = null
+                                    },
+                                    onFailure = { t -> error = t.message ?: t.toString() },
+                                )
+                            }
+                        }
+                    })
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = if (isOn) "STOP" else "START",
+                    style = R1.labelMicro,
+                    color = if (isOn) R1.StatusAmber else R1.AccentWarm,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .r1Pressable(onClick = { entries = emptyList() })
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            ) {
+                Text(text = "CLEAR", style = R1.labelMicro, color = R1.InkSoft)
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "${entries.size} captured",
+                style = R1.labelMicro,
+                color = R1.InkMuted,
+            )
+        }
+        if (error != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(text = error ?: "", style = R1.labelMicro, color = R1.StatusAmber)
+        }
+        if (entries.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            for (line in entries.take(30)) {
+                Text(
+                    text = line,
+                    style = R1.labelMicro.copy(fontFamily = FontFamily.Monospace),
+                    color = R1.Ink,
+                    maxLines = 2,
+                )
+            }
+            if (entries.size > 30) {
+                Text(
+                    text = "(${entries.size - 30} more not shown — clear to reset)",
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                )
+            }
+        }
+    }
+}

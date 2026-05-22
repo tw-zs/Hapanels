@@ -211,6 +211,14 @@ class VoiceSatelliteEngine(
                 val text = (out?.get("text") as? JsonPrimitive)?.content.orEmpty()
                 sttText = text
                 _state.value = State.Thinking(text)
+                // HA has the transcript; further mic audio is wasted bandwidth + battery.
+                // Tear down the recorder eagerly. The pipeline subscription stays open so
+                // the intent + TTS events still reach us.
+                recorderJob?.cancel()
+                recorderJob = null
+                runCatching { audioRecord?.stop() }
+                runCatching { audioRecord?.release() }
+                audioRecord = null
             }
             "intent-end" -> {
                 val intentOutput = data?.get("intent_output") as? JsonObject

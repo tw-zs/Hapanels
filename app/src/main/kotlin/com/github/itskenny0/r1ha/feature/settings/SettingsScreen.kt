@@ -218,7 +218,16 @@ fun SettingsScreen(
         if (pending != null && pending in allSectionNames) {
             expandedSections = setOf(pending)
             settingsQuery = ""
-            runCatching { listState.animateScrollToItem(0) }
+            // Route to the matching subpage if we're not already there;
+            // sections only render in their parent category after the
+            // restructure, so staying on ROOT would leave the user on a
+            // blank scroll position.
+            val target = SECTION_CATEGORY[pending]
+            if (target != null && target != currentCategory) {
+                onOpenCategory(target)
+            } else {
+                runCatching { listState.animateScrollToItem(0) }
+            }
         }
     }
 

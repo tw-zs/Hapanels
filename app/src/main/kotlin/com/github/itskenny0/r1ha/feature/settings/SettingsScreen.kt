@@ -2713,16 +2713,12 @@ private fun SecuritySection() {
             val fetchError = androidx.compose.runtime.remember {
                 androidx.compose.runtime.mutableStateOf<String?>(null)
             }
-            val app = (androidx.compose.ui.platform.LocalContext.current.applicationContext
-                as com.github.itskenny0.r1ha.App)
-            val serverUrl = app.graph.let { graph ->
-                graph.settings
-                run {
-                    val shadow = androidx.compose.ui.platform.LocalContext.current
-                        .getSharedPreferences("r1ha_shadow", android.content.Context.MODE_PRIVATE)
-                    shadow.getString("server.url", null)
-                }
-            }
+            // Read the server URL from the SharedPreferences shadow store directly —
+            // it's the source of truth across DataStore restarts and synchronous to
+            // read, which keeps this composable side-effect-free.
+            val shadow = androidx.compose.ui.platform.LocalContext.current
+                .getSharedPreferences("r1ha_shadow", android.content.Context.MODE_PRIVATE)
+            val serverUrl = shadow.getString("server.url", null)
             val coScope = androidx.compose.runtime.rememberCoroutineScope()
             Box(
                 modifier = Modifier

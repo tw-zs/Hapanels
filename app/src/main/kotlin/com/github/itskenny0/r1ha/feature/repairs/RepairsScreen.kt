@@ -143,15 +143,32 @@ fun RepairsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         item {
-                            val activeCount = ui.issues.count { !it.ignored }
-                            val ignoredCount = ui.issues.size - activeCount
+                            val active = ui.issues.filterNot { it.ignored }
+                            val critical = active.count { it.severity.equals("critical", ignoreCase = true) }
+                            val errors = active.count { it.severity.equals("error", ignoreCase = true) }
+                            val warnings = active.size - critical - errors
+                            val ignored = ui.issues.size - active.size
+                            // Compose a severity breakdown line — gives the user
+                            // a one-glance read on how alarming the list is
+                            // before they scroll through individual rows.
+                            val parts = buildList {
+                                if (critical > 0) add("$critical CRITICAL")
+                                if (errors > 0) add("$errors ERROR${if (errors == 1) "" else "S"}")
+                                if (warnings > 0) add("$warnings WARNING${if (warnings == 1) "" else "S"}")
+                                if (ignored > 0) add("$ignored IGNORED")
+                            }
+                            val summary = if (parts.isEmpty()) "${ui.issues.size} ITEMS"
+                            else parts.joinToString(" · ")
+                            val accent = when {
+                                critical > 0 -> R1.StatusRed
+                                errors > 0 -> R1.StatusAmber
+                                warnings > 0 -> R1.AccentWarm
+                                else -> R1.AccentCool
+                            }
                             Text(
-                                text = buildString {
-                                    append("$activeCount ACTIVE")
-                                    if (ignoredCount > 0) append(" · $ignoredCount IGNORED")
-                                },
+                                text = summary,
                                 style = R1.labelMicro,
-                                color = if (activeCount == 0) R1.AccentCool else R1.StatusAmber,
+                                color = accent,
                                 modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }

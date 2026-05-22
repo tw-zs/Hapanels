@@ -535,6 +535,20 @@ data class AdvancedSettings(
     val iBeaconMajor: Int = 1,
     /** uint16, 0..65535. Sub-differentiator under [iBeaconMajor]. */
     val iBeaconMinor: Int = 1,
+    /**
+     * Opt-in: run a small HTTP listener so HA can fire webhooks at the device.
+     * The listener binds to all interfaces on [webhookPort] and responds to
+     * POST `/webhook/<webhookId>`; the body is surfaced as an expandable toast.
+     * Off by default — opening a port + holding a foreground-service notification
+     * is the kind of thing the user should opt into knowing why.
+     */
+    val webhookEnabled: Boolean = false,
+    /** TCP port to listen on. 1024-65535 to stay in the unprivileged range. */
+    val webhookPort: Int = 8765,
+    /** Path id — HA's webhook automation fires at `/webhook/<this>`. Plain
+     *  ASCII (letters / digits / dash / underscore); shorter is friendlier in
+     *  the HA UI. */
+    val webhookId: String = "r1",
 )
 
 @Stable

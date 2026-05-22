@@ -303,6 +303,11 @@ fun DevMenuScreen(
             item { IBeaconPanel(advanced, vm) }
             item { SectionDivider() }
 
+            // ── Webhook receiver ────────────────────────────────────────────
+            item { Section("WEBHOOK") }
+            item { WebhookPanel(advanced, vm) }
+            item { SectionDivider() }
+
             // ── Fire event ──────────────────────────────────────────────────────────
             if (haRepository != null) {
                 item { Section("FIRE EVENT") }
@@ -767,6 +772,62 @@ private fun IntStepperRow(
 
 private fun coerce(value: Int, low: Int, high: Int): Int =
     if (value < low) low else if (value > high) high else value
+
+/**
+ * Webhook receiver controls. Toggling the switch on starts a foreground service
+ * with a tiny HTTP listener; the user can POST to `/webhook/<id>` from HA's
+ * webhook automation and see the body surface as a toast in the app.
+ *
+ * The port + id fields write through to DataStore immediately; the app-level
+ * observer restarts the service with new extras on the next emission, so the
+ * user doesn't have to toggle off-and-on to change the bind.
+ */
+@Composable
+private fun WebhookPanel(
+    advanced: com.github.itskenny0.r1ha.core.prefs.AdvancedSettings,
+    vm: com.github.itskenny0.r1ha.feature.settings.SettingsViewModel,
+) {
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        DevSwitchRow(
+            label = "Listen for HA webhooks",
+            subtitle = "Run a foreground HTTP server on the device. HA's webhook automation can POST at http://<device-ip>:<port>/webhook/<id>; the body shows up as an expandable toast. The service holds a persistent notification while active.",
+            checked = advanced.webhookEnabled,
+            onChange = { v -> vm.updateAdvanced { it.copy(webhookEnabled = v) } },
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "PORT", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.webhookPort.toString(),
+            onValueChange = { v ->
+                val n = v.toIntOrNull()?.coerceIn(1024, 65535)
+                if (n != null) vm.updateAdvanced { it.copy(webhookPort = n) }
+            },
+            placeholder = "8765",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "WEBHOOK ID (URL PATH)", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.webhookId,
+            onValueChange = { v ->
+                val cleaned = v.filter { c -> c.isLetterOrDigit() || c == '-' || c == '_' }
+                vm.updateAdvanced { it.copy(webhookId = cleaned) }
+            },
+            placeholder = "r1",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "HA configuration.yaml: webhook → automation trigger 'webhook' with id '${advanced.webhookId}'. The action can target the URL printed in the persistent notification.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+        )
+    }
+}
 
 /**
  * iBeacon advertiser controls. Surfaces the four backing fields (toggle +

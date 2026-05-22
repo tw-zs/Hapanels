@@ -195,6 +195,27 @@ class App : Application() {
                     }
                 }
         }
+        // Webhook listener — same observe-and-react pattern. The service holds
+        // a foreground notification; the start/stop calls are cheap so flipping
+        // port or webhook_id without toggling off-then-on is also safe because
+        // the service restarts with the new extras.
+        appScope.launch {
+            graph.settings.settings
+                .map {
+                    Triple(it.advanced.webhookEnabled, it.advanced.webhookPort, it.advanced.webhookId)
+                }
+                .distinctUntilChanged()
+                .collect { (enabled, port, id) ->
+                    if (enabled) {
+                        com.github.itskenny0.r1ha.core.webhook.WebhookListenerService.start(
+                            this@App, port, id,
+                        )
+                    } else {
+                        com.github.itskenny0.r1ha.core.webhook.WebhookListenerService.stop(this@App)
+                    }
+                }
+        }
+
         // iBeacon — observe the four backing fields (enabled + UUID + major +
         // minor) together so a UUID change while the toggle is on tears down
         // and re-starts with the new payload. Distinct on the full tuple so

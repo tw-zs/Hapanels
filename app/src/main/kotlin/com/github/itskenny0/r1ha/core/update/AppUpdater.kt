@@ -49,41 +49,75 @@ class AppUpdater(
      * malformed response) are caught and surfaced as null — the caller is the UI
      * layer and a missed check shouldn't crash the app.
      */
-    suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
-        runCatching {
-            val req = Request.Builder()
-                .url(releasesUrl)
-                .header("Accept", "application/vnd.github+json")
-                .header("User-Agent", "R1HA-self-update/${BuildConfig.VERSION_NAME}")
-                .build()
-            val body = http.newCall(req).execute().use { resp ->
+    /**
+     * Result of [checkForUpdate]. Splits "nothing to do" from "couldn't tell"
+     * so the UI surfaces real network / parse errors instead of silently
+     * showing UP TO DATE every time GitHub rate-limits us or DNS fails.
+     */
+    sealed interface CheckResult {
+        /** A strictly-newer release is available. */
+        data class Available(val info: UpdateInfo) : CheckResult
+        /** GitHub returned the latest release and it isn't newer than us. */
+        data object UpToDate : CheckResult
+        /** Anything that went wrong: HTTP non-2xx, network IOException, JSON
+         *  parse failure, malformed tag, no APK asset attached. [message] is
+         *  the user-visible explanation; [cause] is kept for diagnostic
+         *  logging by the caller. */
+        data class Failed(val message: String, val cause: Throwable? = null) : CheckResult
+    }
+
+    suspend fun checkForUpdate(): CheckResult = withContext(Dispatchers.IO) {
+        val req = Request.Builder()
+            .url(releasesUrl)
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "R1HA-self-update/${BuildConfig.VERSION_NAME}")
+            // Force a cold fetch in case some intermediate cache is holding
+            // the prior /releases/latest response. GitHub's own ETag caching
+            // still works at the server side (we just don't get the 304
+            // shortcut); the alternative was silent staleness on tag bumps.
+            .cacheControl(okhttp3.CacheControl.FORCE_NETWORK)
+            .build()
+        val body = runCatching {
+            http.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) {
-                    R1Log.w("Updater.check", "GitHub returned HTTP ${resp.code}")
-                    return@withContext null
+                    val msg = "GitHub returned HTTP ${resp.code}"
+                    R1Log.w("Updater.check", msg)
+                    return@withContext CheckResult.Failed(msg)
                 }
-                resp.body?.string() ?: return@withContext null
+                resp.body?.string() ?: return@withContext CheckResult.Failed("empty response body")
             }
-            val release = json.decodeFromString<GhRelease>(body)
-            // Strip the r1ha- prefix and parse the tag's date+time into minutes-
-            // since-2020-01-01-UTC, then add the 100M floor that the workflow
-            // applies. This must stay in lock-step with `.github/workflows/release.yml`.
-            val versionCode = versionCodeFromTag(release.tag_name) ?: return@withContext null
-            if (versionCode <= BuildConfig.VERSION_CODE) {
-                R1Log.i("Updater.check", "already on latest (${BuildConfig.VERSION_CODE} ≥ $versionCode)")
-                return@withContext null
+        }.getOrElse { t ->
+            val msg = t.message ?: t::class.java.simpleName
+            R1Log.w("Updater.check", "network failure: $msg")
+            return@withContext CheckResult.Failed("Network: $msg", t)
+        }
+        val release = runCatching { json.decodeFromString<GhRelease>(body) }
+            .getOrElse { t ->
+                R1Log.w("Updater.check", "JSON parse failure: ${t.message}")
+                return@withContext CheckResult.Failed("Bad release JSON", t)
             }
-            // Each release now ships two APKs: the github-flavour one (with the
-            // self-updater enabled — that's what we want here) named
-            //   r1ha-YYYY.MM.DD.HHmm.apk
-            // and the fdroid-flavour one (no self-updater, fewer permissions) named
-            //   r1ha-fdroid-YYYY.MM.DD.HHmm.apk
-            // The in-app updater MUST pick the github asset, otherwise an updating
-            // user would land on the fdroid build and lose the self-updater on their
-            // next install. Filter `-fdroid-` out explicitly rather than relying on
-            // alphabetical order in the assets array.
-            val apkAsset = release.assets.firstOrNull {
-                it.name.endsWith(".apk") && !it.name.contains("-fdroid-")
-            } ?: return@withContext null
+        // Strip the r1ha- prefix and parse the tag's date+time into minutes-
+        // since-2020-01-01-UTC, then add the 100M floor that the workflow
+        // applies. This must stay in lock-step with `.github/workflows/release.yml`.
+        val versionCode = versionCodeFromTag(release.tag_name)
+            ?: return@withContext CheckResult.Failed("Malformed tag: ${release.tag_name}")
+        if (versionCode <= BuildConfig.VERSION_CODE) {
+            R1Log.i("Updater.check", "already on latest (${BuildConfig.VERSION_CODE} ≥ $versionCode)")
+            return@withContext CheckResult.UpToDate
+        }
+        // Each release now ships two APKs: the github-flavour one (with the
+        // self-updater enabled — that's what we want here) named
+        //   r1ha-YYYY.MM.DD.HHmm.apk
+        // and the fdroid-flavour one (no self-updater, fewer permissions) named
+        //   r1ha-fdroid-YYYY.MM.DD.HHmm.apk
+        // The in-app updater MUST pick the github asset, otherwise an updating
+        // user would land on the fdroid build and lose the self-updater on their
+        // next install. Filter `-fdroid-` out explicitly rather than relying on
+        // alphabetical order in the assets array.
+        val apkAsset = release.assets.firstOrNull {
+            it.name.endsWith(".apk") && !it.name.contains("-fdroid-")
+        } ?: return@withContext CheckResult.Failed("No github-flavour APK attached to ${release.tag_name}")
+        CheckResult.Available(
             UpdateInfo(
                 versionCode = versionCode,
                 versionName = release.name ?: release.tag_name,
@@ -92,11 +126,8 @@ class AppUpdater(
                 apkUrl = apkAsset.browser_download_url,
                 apkSizeBytes = apkAsset.size,
                 apkName = apkAsset.name,
-            )
-        }.getOrElse { t ->
-            R1Log.w("Updater.check", "check failed: ${t.message}")
-            null
-        }
+            ),
+        )
     }
 
     /**

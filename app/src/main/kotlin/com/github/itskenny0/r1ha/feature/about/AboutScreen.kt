@@ -543,7 +543,10 @@ private fun UpdaterRow() {
                 is UpdaterState.UpToDate -> "UP TO DATE"
                 is UpdaterState.Available -> "v${s.info.versionName} AVAILABLE"
                 is UpdaterState.Downloading -> "DOWNLOADING ${(s.fraction * 100).toInt()}%"
-                is UpdaterState.Error -> "ERROR"
+                // Truncate so a 200-char IOException doesn't overflow the chip;
+                // expanding the row would shift the layout. Tap-to-retry still
+                // works because the click handler treats Error like Idle.
+                is UpdaterState.Error -> "ERROR · ${s.message.take(40)}"
             }
             val pillColor = when (state.value) {
                 is UpdaterState.Available, is UpdaterState.Downloading -> R1.AccentWarm
@@ -586,9 +589,11 @@ private fun UpdaterRow() {
                                 else -> {
                                     state.value = UpdaterState.Checking
                                     scope.launch {
-                                        val info = updater.checkForUpdate()
-                                        state.value = if (info != null) UpdaterState.Available(info)
-                                            else UpdaterState.UpToDate
+                                        state.value = when (val r = updater.checkForUpdate()) {
+                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Available -> UpdaterState.Available(r.info)
+                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.UpToDate -> UpdaterState.UpToDate
+                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Failed -> UpdaterState.Error(r.message)
+                                        }
                                     }
                                 }
                             }

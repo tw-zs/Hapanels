@@ -2758,6 +2758,65 @@ class DefaultHaRepository(
         }
     }
 
+    override suspend fun listAreas(): Result<List<AreaInfo>> = withContext(Dispatchers.IO) {
+        callWsExpectingPayload("config/area_registry/list").mapCatching { payload ->
+            val arr = payload as? kotlinx.serialization.json.JsonArray ?: return@mapCatching emptyList()
+            arr.mapNotNull { el ->
+                val o = el as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                val id = (o["area_id"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                val name = (o["name"] as? JsonPrimitive)?.content ?: id
+                AreaInfo(areaId = id, name = name)
+            }.sortedBy { it.name.lowercase() }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.area", "list failed: ${t.message}")
+        }
+    }
+
+    override suspend fun createArea(name: String): Result<AreaInfo> = withContext(Dispatchers.IO) {
+        val extras = kotlinx.serialization.json.buildJsonObject {
+            put("name", JsonPrimitive(name))
+        }
+        callWsExpectingPayload("config/area_registry/create", extras).mapCatching { payload ->
+            val o = payload as? kotlinx.serialization.json.JsonObject
+                ?: error("create_area returned non-object payload")
+            val id = (o["area_id"] as? JsonPrimitive)?.content
+                ?: error("create_area returned no area_id")
+            val resolvedName = (o["name"] as? JsonPrimitive)?.content ?: name
+            AreaInfo(areaId = id, name = resolvedName)
+        }.onFailure { t ->
+            R1Log.w("HaRepo.area", "create '$name' failed: ${t.message}")
+        }
+    }
+
+    override suspend fun updateEntityRegistry(
+        entityId: String,
+        name: String?,
+        areaId: String?,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val extras = kotlinx.serialization.json.buildJsonObject {
+            put("entity_id", JsonPrimitive(entityId))
+            // HA distinguishes "set the name to empty string" (revert to integration-
+            // supplied original_name) from "leave the name untouched" (omit the
+            // field). We follow that contract: null caller means omit; an empty
+            // string caller means revert.
+            if (name != null) put("name", JsonPrimitive(name.ifBlank { "" }))
+            // Same shape for area_id: pass null to omit, empty string to clear
+            // the area assignment.
+            if (areaId != null) {
+                if (areaId.isBlank()) {
+                    // HA's update endpoint expects an explicit `null` JSON value
+                    // to clear an area assignment; an empty string is rejected.
+                    put("area_id", kotlinx.serialization.json.JsonNull)
+                } else {
+                    put("area_id", JsonPrimitive(areaId))
+                }
+            }
+        }
+        callWsExpectingPayload("config/entity_registry/update", extras).map { }.onFailure { t ->
+            R1Log.w("HaRepo.entityRegistry", "update $entityId failed: ${t.message}")
+        }
+    }
+
     /** Decode one [MediaBrowseEntry] from a HA browse_media payload object. */
     private fun parseMediaEntry(obj: kotlinx.serialization.json.JsonObject): MediaBrowseEntry? {
         fun str(key: String): String? = (obj[key] as? JsonPrimitive)?.content

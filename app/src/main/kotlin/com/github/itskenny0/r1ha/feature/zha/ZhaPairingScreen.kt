@@ -23,6 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +54,8 @@ fun ZhaPairingScreen(
     val vm: ZhaPairingViewModel = viewModel(factory = ZhaPairingViewModel.factory(haRepository))
     val ui by vm.ui.collectAsState()
     LaunchedEffect(Unit) { vm.detect() }
+    // Configure-entity sheet state — opens when the user taps a new entity row.
+    var configuringEntityId by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -69,9 +74,26 @@ fun ZhaPairingScreen(
                     )
                 }
                 ui.available.isEmpty() -> NoBackendsEmpty(ui.error)
-                else -> Body(ui, vm)
+                else -> Body(ui, vm, onConfigure = { configuringEntityId = it })
             }
         }
+    }
+
+    // Configure-entity sheet — opens when the user taps a NEW ENTITIES row to
+    // rename + assign area server-side. Uses the shared composable so the same
+    // flow can be reused from Search and Favourites Picker in a future cycle.
+    val target = configuringEntityId
+    if (target != null) {
+        com.github.itskenny0.r1ha.feature.entityconfig.ConfigureEntitySheet(
+            haRepository = haRepository,
+            entityId = target,
+            // We don't have a fresh friendly_name for newly-discovered entities
+            // until the next /api/states tick lands; leave the input empty so
+            // the user picks the name they want without a confusing pre-fill
+            // (the integration-supplied default is rarely what they want).
+            initialName = "",
+            onDismiss = { configuringEntityId = null },
+        )
     }
 }
 
@@ -96,7 +118,11 @@ private fun NoBackendsEmpty(error: String?) {
 }
 
 @Composable
-private fun Body(ui: ZhaPairingViewModel.UiState, vm: ZhaPairingViewModel) {
+private fun Body(
+    ui: ZhaPairingViewModel.UiState,
+    vm: ZhaPairingViewModel,
+    onConfigure: (String) -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
         // Backend chips — render when more than one is detected so the user
         // can pick which network to open. Single-backend installs default to
@@ -212,7 +238,7 @@ private fun Body(ui: ZhaPairingViewModel.UiState, vm: ZhaPairingViewModel) {
         when {
             ui.newEntityIds.isNotEmpty() -> {
                 Text(
-                    text = "${ui.newEntityIds.size} new since pairing window opened. Tap an entity in Search later to rename or pin.",
+                    text = "${ui.newEntityIds.size} new since pairing window opened. Tap a row to rename + assign area.",
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                 )
@@ -222,20 +248,25 @@ private fun Body(ui: ZhaPairingViewModel.UiState, vm: ZhaPairingViewModel) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     items(ui.newEntityIds, key = { it }) { id ->
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(R1.ShapeS)
                                 .background(R1.SurfaceMuted)
                                 .border(1.dp, R1.Hairline, R1.ShapeS)
+                                .r1Pressable(onClick = { onConfigure(id) })
                                 .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = id,
                                 style = R1.body.copy(fontFamily = FontFamily.Monospace),
                                 color = R1.Ink,
                                 maxLines = 1,
+                                modifier = Modifier.weight(1f),
                             )
+                            Spacer(Modifier.width(8.dp))
+                            Text(text = "CONFIGURE", style = R1.labelMicro, color = R1.AccentWarm)
                         }
                     }
                 }

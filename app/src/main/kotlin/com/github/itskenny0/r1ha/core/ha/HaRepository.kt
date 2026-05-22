@@ -261,6 +261,35 @@ interface HaRepository {
      */
     suspend fun listBackups(): Result<List<BackupInfo>>
 
+    /**
+     * List every area HA knows about via `config/area_registry/list`. Used to
+     * populate the area picker on the entity-configuration sheet, since HA's
+     * area registry is the source of truth for "kitchen / bedroom / garage".
+     */
+    suspend fun listAreas(): Result<List<AreaInfo>>
+
+    /**
+     * Create a fresh area via `config/area_registry/create`. Returns the
+     * server-assigned area_id so the caller can immediately assign an entity
+     * to the new area without a second round-trip to refresh the list.
+     */
+    suspend fun createArea(name: String): Result<AreaInfo>
+
+    /**
+     * Update one entity's registry entry — rename it (the `name` field
+     * overrides the integration-supplied `original_name`) and/or assign it
+     * to an area. Pass `null` for either field to leave it untouched;
+     * pass an empty string for [name] to clear the override (HA reverts to
+     * the original name) or for [areaId] to remove the area assignment.
+     *
+     * Fires `config/entity_registry/update` over the WebSocket.
+     */
+    suspend fun updateEntityRegistry(
+        entityId: String,
+        name: String? = null,
+        areaId: String? = null,
+    ): Result<Unit>
+
     /** Handle for a live template subscription. [cancel] tears down both the
      *  server-side subscription and the local collector. Safe to call twice. */
     interface TemplateSubscription {

@@ -364,13 +364,24 @@ fun SettingsScreen(
                                 entry = entry,
                                 current = s,
                                 onClick = {
-                                    // Clear the query so the section grid returns,
-                                    // and expand ONLY this result's section so the
-                                    // user lands directly on the relevant block.
-                                    expandedSections = setOf(sectionNameForCategory(entry.category))
+                                    // Drill into the right subpage rather than
+                                    // expanding the section in place — sections
+                                    // only render in their parent category's
+                                    // subpage now, so the old in-place expansion
+                                    // would land on an empty body. Set the
+                                    // section as the only expanded one before
+                                    // navigating so the user sees the relevant
+                                    // block as the first thing on the subpage.
+                                    val sectionName = sectionNameForCategory(entry.category)
+                                    expandedSections = setOf(sectionName)
                                     settingsQuery = ""
-                                    coroutineScope.launch {
-                                        listState.animateScrollToItem(0)
+                                    val target = SECTION_CATEGORY[sectionName]
+                                    if (target != null && target != currentCategory) {
+                                        onOpenCategory(target)
+                                    } else {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(0)
+                                        }
                                     }
                                 },
                             )

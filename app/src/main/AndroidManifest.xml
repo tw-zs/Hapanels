@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
@@ -9,6 +10,20 @@
          and tablets that don't ship with an NFC controller. -->
     <uses-permission android:name="android.permission.NFC"/>
     <uses-feature android:name="android.hardware.nfc" android:required="false"/>
+
+    <!-- BLE peripheral advertising (iBeacon). BLUETOOTH_ADVERTISE is the
+         Android-12+ runtime permission; the legacy BLUETOOTH permission
+         is needed for older API levels. neverForLocation tells the OS we
+         only advertise, never scan, so we don't need fine-location too. -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADVERTISE"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="31"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30"/>
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false"/>
     <!-- Required for Android 13+ to post the HA persistent-notification mirror.
          Users opt in via the toggle under Advanced; we only request the runtime
          permission when they enable the mirror, so installs that don't use the

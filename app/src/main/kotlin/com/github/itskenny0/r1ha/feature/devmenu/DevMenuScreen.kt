@@ -298,6 +298,11 @@ fun DevMenuScreen(
             }
             item { SectionDivider() }
 
+            // ── iBeacon advertiser ──────────────────────────────────────────
+            item { Section("IBEACON") }
+            item { IBeaconPanel(advanced, vm) }
+            item { SectionDivider() }
+
             // ── Fire event ──────────────────────────────────────────────────────────
             if (haRepository != null) {
                 item { Section("FIRE EVENT") }
@@ -762,6 +767,103 @@ private fun IntStepperRow(
 
 private fun coerce(value: Int, low: Int, high: Int): Int =
     if (value < low) low else if (value > high) high else value
+
+/**
+ * iBeacon advertiser controls. Surfaces the four backing fields (toggle +
+ * UUID + major + minor) and routes the toggle through Android 12+'s runtime
+ * permission flow when the user flips it on for the first time. The actual
+ * advertise lifecycle lives in [com.github.itskenny0.r1ha.core.ibeacon.IBeaconAdvertiser]
+ * driven by [com.github.itskenny0.r1ha.App]'s settings observer, so this
+ * panel only owns the UI + permission prompt; the advertiser sees the new
+ * values the moment they hit DataStore.
+ */
+@Composable
+private fun IBeaconPanel(
+    advanced: com.github.itskenny0.r1ha.core.prefs.AdvancedSettings,
+    vm: com.github.itskenny0.r1ha.feature.settings.SettingsViewModel,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            vm.updateAdvanced { it.copy(iBeaconEnabled = true) }
+        } else {
+            com.github.itskenny0.r1ha.core.util.Toaster.error(
+                "BLUETOOTH_ADVERTISE denied; iBeacon stays off",
+            )
+        }
+    }
+    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+        DevSwitchRow(
+            label = "Advertise iBeacon",
+            subtitle = "Broadcast an iBeacon advertisement so HA's iBeacon integration picks the device up as a device_tracker. Asks for BLUETOOTH_ADVERTISE on Android 12+. Off by default.",
+            checked = advanced.iBeaconEnabled,
+            onChange = { v ->
+                if (v) {
+                    // Android 12+ requires runtime permission. Hand the launcher
+                    // a request; the result branch flips the toggle on success.
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+                        !com.github.itskenny0.r1ha.core.ibeacon.IBeaconAdvertiser.hasPermission(context)
+                    ) {
+                        permissionLauncher.launch(android.Manifest.permission.BLUETOOTH_ADVERTISE)
+                    } else {
+                        vm.updateAdvanced { it.copy(iBeaconEnabled = true) }
+                    }
+                } else {
+                    vm.updateAdvanced { it.copy(iBeaconEnabled = false) }
+                }
+            },
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(text = "UUID", style = R1.labelMicro, color = R1.InkSoft)
+        Spacer(Modifier.height(2.dp))
+        com.github.itskenny0.r1ha.ui.components.R1TextField(
+            value = advanced.iBeaconUuid,
+            onValueChange = { v -> vm.updateAdvanced { it.copy(iBeaconUuid = v.trim()) } },
+            placeholder = "12345678-1234-1234-1234-123456789abc",
+            monospace = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        // Major + minor side by side; both are uint16 (0..65535).
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "MAJOR", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.height(2.dp))
+                com.github.itskenny0.r1ha.ui.components.R1TextField(
+                    value = advanced.iBeaconMajor.toString(),
+                    onValueChange = { v ->
+                        val n = v.toIntOrNull()?.coerceIn(0, 65535)
+                        if (n != null) vm.updateAdvanced { it.copy(iBeaconMajor = n) }
+                    },
+                    placeholder = "1",
+                    monospace = true,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "MINOR", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.height(2.dp))
+                com.github.itskenny0.r1ha.ui.components.R1TextField(
+                    value = advanced.iBeaconMinor.toString(),
+                    onValueChange = { v ->
+                        val n = v.toIntOrNull()?.coerceIn(0, 65535) ?: return@R1TextField
+                        vm.updateAdvanced { it.copy(iBeaconMinor = n) }
+                    },
+                    placeholder = "1",
+                    monospace = true,
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "HA → Settings → Devices & services → Add integration → iBeacon Tracker, then add this UUID/major/minor combination to make the device show up as a device_tracker.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+        )
+    }
+}
 
 /**
  * Live events tail under DevMenu. Wraps [HaRepository.subscribeEvents] with a small

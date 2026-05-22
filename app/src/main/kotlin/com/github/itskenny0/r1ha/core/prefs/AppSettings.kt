@@ -513,6 +513,28 @@ data class AdvancedSettings(
      * "choose which app" prompt on every tag tap.
      */
     val nfcTagScannerEnabled: Boolean = false,
+    /**
+     * Opt-in: broadcast an iBeacon advertisement so HA's iBeacon integration
+     * picks the device up as a device_tracker for presence / proximity
+     * automations. The advertised UUID + major + minor identify the device
+     * to HA; you'll typically use the same UUID across an HA install and
+     * differentiate devices by major/minor.
+     *
+     * Off by default — advertising consumes a bit of battery (low-latency
+     * mode at high TX power) and requests the BLUETOOTH_ADVERTISE runtime
+     * permission on Android 12+ the first time it's enabled.
+     */
+    val iBeaconEnabled: Boolean = false,
+    /** 128-bit beacon UUID, formatted per RFC 4122. The HA iBeacon
+     *  integration expects this verbatim; any random UUID works as long as
+     *  HA's configured filter matches. Default is a benign placeholder; the
+     *  user is expected to override. */
+    val iBeaconUuid: String = "12345678-1234-1234-1234-123456789abc",
+    /** uint16, 0..65535. Differentiates beacons sharing a UUID (e.g. one R1
+     *  per room). */
+    val iBeaconMajor: Int = 1,
+    /** uint16, 0..65535. Sub-differentiator under [iBeaconMajor]. */
+    val iBeaconMinor: Int = 1,
 )
 
 @Stable

@@ -195,5 +195,35 @@ class App : Application() {
                     }
                 }
         }
+        // iBeacon — observe the four backing fields (enabled + UUID + major +
+        // minor) together so a UUID change while the toggle is on tears down
+        // and re-starts with the new payload. Distinct on the full tuple so
+        // unrelated settings emissions don't re-arm the advertiser.
+        appScope.launch {
+            graph.settings.settings
+                .map { s ->
+                    Quad(
+                        s.advanced.iBeaconEnabled,
+                        s.advanced.iBeaconUuid,
+                        s.advanced.iBeaconMajor,
+                        s.advanced.iBeaconMinor,
+                    )
+                }
+                .distinctUntilChanged()
+                .collect { (enabled, uuid, major, minor) ->
+                    if (enabled) {
+                        com.github.itskenny0.r1ha.core.ibeacon.IBeaconAdvertiser.start(
+                            this@App, uuid, major, minor,
+                        )
+                    } else {
+                        com.github.itskenny0.r1ha.core.ibeacon.IBeaconAdvertiser.stop()
+                    }
+                }
+        }
     }
+
+    /** Local 4-tuple. Kotlin's stdlib only has Pair / Triple; this carries
+     *  the iBeacon enabled flag + the three identity fields so the settings
+     *  observer can react to any combination changing. */
+    private data class Quad<A, B, C, D>(val a: A, val b: B, val c: C, val d: D)
 }

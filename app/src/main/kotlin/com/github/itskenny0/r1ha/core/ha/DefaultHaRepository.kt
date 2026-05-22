@@ -102,6 +102,35 @@ class DefaultHaRepository(
      * care about the payload) doesn't pay for an extra alloc on every gesture.
      */
     private val pendingPayloads = ConcurrentHashMap<Int, CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>>()
+
+    /**
+     * Active live subscriptions (render_template, subscribe_events). HA's WS protocol
+     * resets the request-id space on each new connection, so a subscription that
+     * survived a reconnect would never receive events keyed to its old id. We track
+     * each live subscription here so the WS Connected observer can re-issue the
+     * subscribe frame with a fresh id and update the collector's filter atomically.
+     *
+     * Keyed by a stable local subscription handle id (not the WS request id) so the
+     * caller's cancel() can find its entry even after the request id mutated.
+     */
+    private val liveSubs = ConcurrentHashMap<Int, ActiveLiveSub>()
+
+    /** Next-available local handle id; independent of [ws.nextRequestId]. */
+    private val nextLiveSubHandle = java.util.concurrent.atomic.AtomicInteger(1)
+
+    /**
+     * One live subscription's state. [requestId] is the WS-protocol id we're currently
+     * filtered on — gets rotated on reconnect via [HaWebSocketClient.nextRequestId].
+     * [frameType] + [frameExtras] are what we re-send to resubscribe.
+     */
+    private class ActiveLiveSub(
+        val frameType: String,
+        val frameExtras: kotlinx.serialization.json.JsonObject,
+        val requestId: java.util.concurrent.atomic.AtomicInteger,
+        val onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+        /** Mutable so registerLiveSubscription can fill it after launch. */
+        var collectorJob: Job? = null,
+    )
     private var supervisorJob: Job? = null
     // Volatile because the WS listener thread (OkHttp dispatch) reads it from the
     // AuthRequired handler while the repo coroutine writes it from connectFromSettings
@@ -317,6 +346,7 @@ class DefaultHaRepository(
                         // start() while a backoff was pending.
                         _reconnectAt.value = null
                         resubscribe()
+                        resubscribeLive()
                         // Don't block the state observer on the REST seed (can take a few
                         // seconds with retries) — if a Disconnect happens mid-seed, the
                         // observer needs to be free to react to it, otherwise the conflated
@@ -451,6 +481,11 @@ class DefaultHaRepository(
                             it.complete(Result.failure(IllegalStateException("Signed out")))
                         }
                         pendingPayloads.clear()
+                        // Drop live subscriptions on sign-out too: the next sign-in
+                        // is to a different server and those subscriptions belong
+                        // to entities/templates on the old one.
+                        liveSubs.values.forEach { it.collectorJob?.cancel() }
+                        liveSubs.clear()
                         ws.disconnect()
                         return@onEach
                     }
@@ -516,6 +551,14 @@ class DefaultHaRepository(
                 it.complete(Result.failure(IllegalStateException("Repository stopped")))
             }
             pendingPayloads.clear()
+        }
+        // Tear down every active live subscription's collector job. Without this
+        // a subscription's collectorJob would survive repository teardown via the
+        // scope hierarchy until the SupervisorJob root cancels — relying on that
+        // is fragile and forces extra work on every stale event during shutdown.
+        if (liveSubs.isNotEmpty()) {
+            liveSubs.values.forEach { it.collectorJob?.cancel() }
+            liveSubs.clear()
         }
         latestAccessToken = null
         subscriptionId = null
@@ -2238,6 +2281,32 @@ class DefaultHaRepository(
                 ?: kotlinx.serialization.json.JsonObject(emptyMap())
     }
 
+    /**
+     * Re-issue every live subscription with a fresh WS request id after a reconnect.
+     * Updates each subscription's atomic id in place so the live collectors (running
+     * in subscribeTemplate / subscribeEvents below) start filtering on the new id
+     * the moment HA confirms the subscribe. Called from the WS Connected observer.
+     */
+    private fun resubscribeLive() {
+        if (liveSubs.isEmpty()) return
+        scope.launch {
+            // Snapshot entries to avoid ConcurrentModificationException — callers
+            // might cancel mid-iteration.
+            val snapshot = liveSubs.values.toList()
+            for (sub in snapshot) {
+                val newId = ws.nextRequestId()
+                sub.requestId.set(newId)
+                val frame = kotlinx.serialization.json.buildJsonObject {
+                    put("id", JsonPrimitive(newId))
+                    put("type", JsonPrimitive(sub.frameType))
+                    sub.frameExtras.forEach { (k, v) -> put(k, v) }
+                }
+                ws.sendRawText(frame.toString())
+                R1Log.i("HaRepo.liveSubs", "resubscribed ${sub.frameType} id=$newId")
+            }
+        }
+    }
+
     private fun resubscribe() {
         scope.launch {
             val favs = settings.settings.first().favorites
@@ -2516,56 +2585,21 @@ class DefaultHaRepository(
         onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
     ): Result<HaRepository.EventSubscription> = withContext(Dispatchers.IO) {
         runCatching {
-            if (ws.state.value !is ConnectionState.Connected) {
-                error("WS not connected (state=${ws.state.value::class.simpleName})")
-            }
-            val id = ws.nextRequestId()
-            val resultDeferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
-            pendingPayloads[id] = resultDeferred
-            val frame = kotlinx.serialization.json.buildJsonObject {
-                put("id", JsonPrimitive(id))
-                put("type", JsonPrimitive("subscribe_events"))
+            val extras = kotlinx.serialization.json.buildJsonObject {
                 if (eventType != null) put("event_type", JsonPrimitive(eventType))
             }
-            if (!ws.sendRawText(frame.toString())) {
-                pendingPayloads.remove(id)
-                error("WS refused subscribe_events")
-            }
-            val initial = kotlinx.coroutines.withTimeout(15_000) { resultDeferred.await() }
-            initial.getOrThrow()
-
-            val collectorJob = scope.launch {
-                ws.inboundRawText.collect { raw ->
-                    val obj = runCatching {
-                        kotlinx.serialization.json.Json.parseToJsonElement(raw)
-                            as? kotlinx.serialization.json.JsonObject
-                    }.getOrNull() ?: return@collect
-                    val frameId = (obj["id"] as? JsonPrimitive)?.content?.toIntOrNull()
-                    if (frameId != id) return@collect
-                    val type = (obj["type"] as? JsonPrimitive)?.content
-                    if (type != "event") return@collect
-                    val event = obj["event"] as? kotlinx.serialization.json.JsonObject
-                        ?: return@collect
-                    onEvent(event)
-                }
-            }
-
-            object : HaRepository.EventSubscription {
-                override suspend fun cancel() {
-                    runCatching {
-                        val unsubId = ws.nextRequestId()
-                        val unsub = kotlinx.serialization.json.buildJsonObject {
-                            put("id", JsonPrimitive(unsubId))
-                            put("type", JsonPrimitive("unsubscribe_events"))
-                            put("subscription", JsonPrimitive(id))
-                        }
-                        ws.sendRawText(unsub.toString())
-                    }
-                    collectorJob.cancel()
-                }
-            }
+            registerLiveSubscription(
+                frameType = "subscribe_events",
+                frameExtras = extras,
+                onEvent = onEvent,
+                logTag = "HaRepo.events",
+            )
         }.onFailure { t ->
             R1Log.w("HaRepo.events", "subscribe failed: ${t.message}")
+        }.map { handle ->
+            object : HaRepository.EventSubscription {
+                override suspend fun cancel() = cancelLiveSubscription(handle)
+            }
         }
     }
 
@@ -2574,76 +2608,114 @@ class DefaultHaRepository(
         onResult: (String) -> Unit,
     ): Result<HaRepository.TemplateSubscription> = withContext(Dispatchers.IO) {
         runCatching {
-            if (ws.state.value !is ConnectionState.Connected) {
-                error("WS not connected (state=${ws.state.value::class.simpleName})")
-            }
-            val id = ws.nextRequestId()
-            // Wait for the initial Result frame so we can surface server-side
-            // Jinja errors before returning a "successful" subscription handle.
-            // Both pendingPayloads (for the initial Result) and the inboundRawText
-            // listener (for the streaming Event frames) participate.
-            val resultDeferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
-            pendingPayloads[id] = resultDeferred
-            val frame = kotlinx.serialization.json.buildJsonObject {
-                put("id", JsonPrimitive(id))
-                put("type", JsonPrimitive("render_template"))
+            val extras = kotlinx.serialization.json.buildJsonObject {
                 put("template", JsonPrimitive(template))
-                // Report errors via the event channel so we don't trigger a Result
-                // frame on every Jinja failure; the user sees the error inline.
+                // Report errors via the event channel so a single Jinja
+                // syntax error doesn't tank the whole subscription.
                 put("report_errors", JsonPrimitive(true))
             }
-            if (!ws.sendRawText(frame.toString())) {
-                pendingPayloads.remove(id)
-                error("WS refused render_template subscribe")
-            }
-            // First Result frame confirms the subscription registered. Failure
-            // here means the template didn't compile; bail before wiring the
-            // streaming collector.
-            val initial = kotlinx.coroutines.withTimeout(15_000) { resultDeferred.await() }
-            initial.getOrThrow()
-
-            // Collect inbound text frames, match by id, decode the result, and
-            // hand it to the caller. We do this on the repo's scope so a screen
-            // teardown doesn't abruptly cancel the collector — the
-            // cancel-by-handle path below is the authoritative shutdown.
-            val collectorJob = scope.launch {
-                ws.inboundRawText.collect { raw ->
-                    val obj = runCatching {
-                        kotlinx.serialization.json.Json.parseToJsonElement(raw)
-                            as? kotlinx.serialization.json.JsonObject
-                    }.getOrNull() ?: return@collect
-                    val frameId = (obj["id"] as? JsonPrimitive)?.content?.toIntOrNull()
-                    if (frameId != id) return@collect
-                    val type = (obj["type"] as? JsonPrimitive)?.content
-                    if (type != "event") return@collect
-                    val event = obj["event"] as? kotlinx.serialization.json.JsonObject
-                    val rendered = (event?.get("result") as? JsonPrimitive)?.content
-                        ?: (event?.get("error") as? JsonPrimitive)?.content
-                        ?: return@collect
-                    onResult(rendered)
-                }
-            }
-
-            object : HaRepository.TemplateSubscription {
-                override suspend fun cancel() {
-                    runCatching {
-                        // Unsubscribe server-side via the standard unsubscribe_events
-                        // frame; HA's render_template subscriptions live in the same
-                        // id space as event subscriptions for cleanup purposes.
-                        val unsubId = ws.nextRequestId()
-                        val unsub = kotlinx.serialization.json.buildJsonObject {
-                            put("id", JsonPrimitive(unsubId))
-                            put("type", JsonPrimitive("unsubscribe_events"))
-                            put("subscription", JsonPrimitive(id))
-                        }
-                        ws.sendRawText(unsub.toString())
-                    }
-                    collectorJob.cancel()
-                }
-            }
+            registerLiveSubscription(
+                frameType = "render_template",
+                frameExtras = extras,
+                onEvent = { event ->
+                    val rendered = (event["result"] as? JsonPrimitive)?.content
+                        ?: (event["error"] as? JsonPrimitive)?.content
+                    if (rendered != null) onResult(rendered)
+                },
+                logTag = "HaRepo.template.live",
+            )
         }.onFailure { t ->
             R1Log.w("HaRepo.template.live", "subscribe failed: ${t.message}")
+        }.map { handle ->
+            object : HaRepository.TemplateSubscription {
+                override suspend fun cancel() = cancelLiveSubscription(handle)
+            }
         }
+    }
+
+    /**
+     * Shared subscribe logic for [subscribeTemplate] / [subscribeEvents]. Sends the
+     * subscribe frame, awaits the initial Result confirmation, registers the
+     * subscription so [resubscribeLive] can replay it on reconnect, and starts a
+     * collector that filters inboundRawText by the subscription's current id
+     * (mutated atomically on reconnect).
+     *
+     * Returns a stable local handle id that the caller hands back via
+     * [cancelLiveSubscription] when the screen tears down or the user toggles off.
+     */
+    private suspend fun registerLiveSubscription(
+        frameType: String,
+        frameExtras: kotlinx.serialization.json.JsonObject,
+        onEvent: (kotlinx.serialization.json.JsonObject) -> Unit,
+        logTag: String,
+    ): Int {
+        if (ws.state.value !is ConnectionState.Connected) {
+            error("WS not connected (state=${ws.state.value::class.simpleName})")
+        }
+        val handle = nextLiveSubHandle.getAndIncrement()
+        val wsId = ws.nextRequestId()
+        val currentIdRef = java.util.concurrent.atomic.AtomicInteger(wsId)
+        val resultDeferred = CompletableDeferred<Result<kotlinx.serialization.json.JsonElement?>>()
+        pendingPayloads[wsId] = resultDeferred
+        val frame = kotlinx.serialization.json.buildJsonObject {
+            put("id", JsonPrimitive(wsId))
+            put("type", JsonPrimitive(frameType))
+            frameExtras.forEach { (k, v) -> put(k, v) }
+        }
+        if (!ws.sendRawText(frame.toString())) {
+            pendingPayloads.remove(wsId)
+            error("WS refused $frameType subscribe")
+        }
+        val initial = kotlinx.coroutines.withTimeout(15_000) { resultDeferred.await() }
+        initial.getOrThrow()
+
+        val active = ActiveLiveSub(
+            frameType = frameType,
+            frameExtras = frameExtras,
+            requestId = currentIdRef,
+            onEvent = onEvent,
+        )
+        liveSubs[handle] = active
+
+        // Collector — keyed off the ATOMIC reference so resubscribe can mutate
+        // the id without restarting this job. The job lives on the repo scope
+        // (not the caller's), so a transient screen teardown doesn't kill it.
+        // Stored on the ActiveLiveSub so cancelLiveSubscription can cancel it.
+        active.collectorJob = scope.launch {
+            ws.inboundRawText.collect { raw ->
+                val obj = runCatching {
+                    kotlinx.serialization.json.Json.parseToJsonElement(raw)
+                        as? kotlinx.serialization.json.JsonObject
+                }.getOrNull() ?: return@collect
+                val frameId = (obj["id"] as? JsonPrimitive)?.content?.toIntOrNull()
+                if (frameId != currentIdRef.get()) return@collect
+                if ((obj["type"] as? JsonPrimitive)?.content != "event") return@collect
+                val event = obj["event"] as? kotlinx.serialization.json.JsonObject
+                    ?: return@collect
+                onEvent(event)
+            }
+        }
+        R1Log.i(logTag, "live subscription registered handle=$handle ws=$wsId")
+        return handle
+    }
+
+    /**
+     * Cancel a previously-registered live subscription. Removes it from [liveSubs]
+     * (so [resubscribeLive] won't replay it after a future reconnect) and sends a
+     * best-effort unsubscribe_events frame so HA stops pushing.
+     */
+    private suspend fun cancelLiveSubscription(handle: Int) {
+        val active = liveSubs.remove(handle) ?: return
+        runCatching {
+            val unsubId = ws.nextRequestId()
+            val unsub = kotlinx.serialization.json.buildJsonObject {
+                put("id", JsonPrimitive(unsubId))
+                put("type", JsonPrimitive("unsubscribe_events"))
+                put("subscription", JsonPrimitive(active.requestId.get()))
+            }
+            ws.sendRawText(unsub.toString())
+        }
+        active.collectorJob?.cancel()
     }
 
     override suspend fun listBackups(): Result<List<BackupInfo>> = withContext(Dispatchers.IO) {

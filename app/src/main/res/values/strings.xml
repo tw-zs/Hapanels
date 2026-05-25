@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">R1HA</string>
+    <string name="app_name" translatable="false">Hapanels</string>
 
     <!-- ────────────────────────────────────────────────────────────────
          Translation policy
@@ -46,8 +46,8 @@
     <!-- Home-screen widget labels. description is surfaced when the user
          long-presses on the widget catalog entry; button_label sits inside
          the rendered widget. -->
-    <string name="widget_description">Quick-launch R1HA</string>
-    <string name="widget_button_label">R1HA</string>
+    <string name="widget_description">Quick-launch Hapanels</string>
+    <string name="widget_button_label">Hapanels</string>
 
     <!-- ── Dialog buttons ─────────────────────────────────────────── -->
     <string name="dialog_cancel">CANCEL</string>

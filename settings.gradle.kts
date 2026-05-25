@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "rabbit-r1-ha"
+rootProject.name = "Hapanels"
 include(":app")

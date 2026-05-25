@@ -37,7 +37,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.github.itskenny0.r1ha"
+        applicationId = "com.github.twzs.hapanels"
         minSdk = 30
         targetSdk = 34
         // Versions are date-based to match the `r1ha-YYYYMMDD` release tag scheme.
@@ -46,7 +46,7 @@ android {
         versionName = System.getenv("APP_VERSION_NAME") ?: defaultVersionName()
 
         // BuildConfig fields surfaced in the About screen
-        buildConfigField("String", "SOURCE_URL", "\"https://github.com/itskenny0/Rabbit-R1-HA\"")
+        buildConfigField("String", "SOURCE_URL", "\"https://github.com/tw-zs/Hapanels\"")
         buildConfigField("String", "GIT_SHA", "\"${gitSha()}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

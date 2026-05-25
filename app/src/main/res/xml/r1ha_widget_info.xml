@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  AppWidget metadata for the R1HA quick-launch widget. Targets a single-cell
+  AppWidget metadata for the Hapanels quick-launch widget. Targets a single-cell
   square so the user can tuck it into any home-screen gap; resizable to a
   wider rectangle for users who prefer a more legible label. updatePeriodMillis
   is 0 because Android clamps below 30 min anyway and we only need to repaint

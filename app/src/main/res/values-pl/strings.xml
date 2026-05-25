@@ -14,8 +14,8 @@
     <string name="quick_tile_label_c">Przełącznik HA 3</string>
     <string name="quick_tile_label_d">Przełącznik HA 4</string>
 
-    <string name="widget_description">Szybkie uruchamianie R1HA</string>
-    <string name="widget_button_label">R1HA</string>
+    <string name="widget_description">Szybkie uruchamianie Hapanels</string>
+    <string name="widget_button_label">Hapanels</string>
 
     <string name="dialog_cancel">ANULUJ</string>
     <string name="dialog_ok">OK</string>

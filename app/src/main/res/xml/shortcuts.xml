@@ -21,7 +21,7 @@
         android:shortcutLongLabel="@string/shortcut_search_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.github.itskenny0.r1ha"
+            android:targetPackage="com.github.twzs.hapanels"
             android:targetClass="com.github.itskenny0.r1ha.MainActivity">
             <extra android:name="initial_route" android:value="search" />
         </intent>
@@ -35,7 +35,7 @@
         android:shortcutLongLabel="@string/shortcut_assist_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.github.itskenny0.r1ha"
+            android:targetPackage="com.github.twzs.hapanels"
             android:targetClass="com.github.itskenny0.r1ha.MainActivity">
             <extra android:name="initial_route" android:value="assist" />
         </intent>
@@ -49,7 +49,7 @@
         android:shortcutLongLabel="@string/shortcut_today_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.github.itskenny0.r1ha"
+            android:targetPackage="com.github.twzs.hapanels"
             android:targetClass="com.github.itskenny0.r1ha.MainActivity">
             <extra android:name="initial_route" android:value="dashboard" />
         </intent>
@@ -63,7 +63,7 @@
         android:shortcutLongLabel="@string/shortcut_automations_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.github.itskenny0.r1ha"
+            android:targetPackage="com.github.twzs.hapanels"
             android:targetClass="com.github.itskenny0.r1ha.MainActivity">
             <extra android:name="initial_route" android:value="automations" />
         </intent>

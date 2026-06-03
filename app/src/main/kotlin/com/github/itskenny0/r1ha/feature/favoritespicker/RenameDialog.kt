@@ -293,18 +293,14 @@ fun RenameDialog(
                 onSelect = { override = override.copy(tapToToggle = it) },
             )
 
-            // ── WHEEL (per-card override) ────────────────────────────────────────────
-            // Whether the scroll wheel drives this specific card. INHERIT picks the
-            // per-domain default — select / input_select default OFF (cycling
-            // options on every detent was too easy to trigger by accident, and the
-            // CHOOSE button is the deliberate path); everything else defaults ON
-            // (brightness / volume / setpoint dialled with the wheel is the
-            // whole point of having one). Per-card ON / OFF overrides that.
-            SectionHeader("WHEEL")
+            // ── DIRECT INPUT (per-card override) ─────────────────────────────────────
+            // Whether direct hardware input drives this specific card. INHERIT picks
+            // the per-domain default. Per-card ON / OFF overrides that.
+            SectionHeader("DIRECT INPUT")
             Text(
-                text = "Whether the wheel acts on this card. INHERIT follows the per-domain " +
-                    "default (selects default OFF, everything else ON). ON forces the wheel " +
-                    "active; OFF disables it so a casual spin can't change the entity.",
+                text = "Whether direct hardware input acts on this card. INHERIT follows " +
+                    "the per-domain default. ON forces direct input active; OFF disables " +
+                    "it so an accidental gesture can't change the entity.",
                 style = R1.body,
                 color = R1.InkMuted,
             )
@@ -759,4 +755,3 @@ private fun DecimalSegmentedRow(
         }
     }
 }
-

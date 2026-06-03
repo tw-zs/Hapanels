@@ -36,10 +36,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.input.WheelInput
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
+import com.github.itskenny0.r1ha.core.hardware.PanelButtonPressType
+import com.github.itskenny0.r1ha.core.prefs.AdvancedSettings
+import com.github.itskenny0.r1ha.core.prefs.HardwareButtonActionKind
+import com.github.itskenny0.r1ha.core.prefs.HardwareButtonActionMapping
+import com.github.itskenny0.r1ha.core.prefs.HardwareButtonTriggerPhase
+import com.github.itskenny0.r1ha.core.prefs.HardwareProviderMode
 import com.github.itskenny0.r1ha.core.prefs.DisplayMode
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
-import com.github.itskenny0.r1ha.core.prefs.WheelKeySource
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1Switch
 import com.github.itskenny0.r1ha.ui.components.R1TextField
@@ -80,7 +86,6 @@ private val SECTION_CATEGORY: Map<String, SettingsCategory> = mapOf(
     "APPEARANCE" to SettingsCategory.APPEARANCE,
     "CARD UI" to SettingsCategory.APPEARANCE,
     "DASHBOARD" to SettingsCategory.APPEARANCE,
-    "SCROLL WHEEL" to SettingsCategory.BEHAVIOUR,
     "BEHAVIOUR" to SettingsCategory.BEHAVIOUR,
     "INTEGRATIONS" to SettingsCategory.INTEGRATIONS,
     "TODAY" to SettingsCategory.BROWSE,
@@ -99,12 +104,18 @@ private fun categoryTitle(category: SettingsCategory): String = when (category) 
     SettingsCategory.BROWSE -> "BROWSE"
 }
 
+private fun panelHardwareRowValue(running: Boolean, modeLabel: String, providerLabel: String): String {
+    val state = if (running) "active" else "stopped"
+    return "$modeLabel · $providerLabel · $state"
+}
+
 @Composable
 fun SettingsScreen(
     settings: SettingsRepository,
     tokens: TokenStore,
     haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository,
     wheelInput: WheelInput,
+    panelHardware: PanelHardware,
     /** Which category subpage to display. [SettingsCategory.ROOT] shows the
      *  group-cards landing page; other values scope rendering to only the
      *  sections belonging to that category. */
@@ -128,6 +139,7 @@ fun SettingsScreen(
     onOpenCalendars: () -> Unit,
     onOpenLongLivedToken: () -> Unit,
     onOpenSystemHealth: () -> Unit,
+    onOpenPanelDiagnostics: () -> Unit,
     onOpenDashboard: () -> Unit,
     onOpenAreas: () -> Unit,
     onOpenLabels: () -> Unit,
@@ -191,7 +203,7 @@ fun SettingsScreen(
     // re-expand on screen re-entry, which keeps the discoverability of the full
     // settings tree as the entry point.
     val allSectionNames = listOf(
-        "SERVER", "SCROLL WHEEL", "CARD UI", "BEHAVIOUR",
+        "SERVER", "CARD UI", "BEHAVIOUR",
         "BACKUP & RESTORE", "SECURITY", "DASHBOARD", "INTEGRATIONS", "APPEARANCE",
         "TODAY", "TALK & FIRE", "STATUS VIEWS", "POWER TOOLS",
     )
@@ -431,8 +443,8 @@ fun SettingsScreen(
                 item {
                     GroupCard(
                         title = "Behaviour",
-                        subtitle = "Wheel, touch, haptics, quick tiles",
-                        modifiedCount = groupBadge("SCROLL WHEEL", "BEHAVIOUR"),
+                        subtitle = "Touch, haptics, quick tiles",
+                        modifiedCount = groupBadge("BEHAVIOUR"),
                         onClick = { onOpenCategory(SettingsCategory.BEHAVIOUR) },
                     )
                 }
@@ -504,6 +516,28 @@ fun SettingsScreen(
                         label = "System health",
                         value = "Server config, ping, error log",
                         onClick = onOpenSystemHealth,
+                    )
+                }
+                item {
+                    val status by panelHardware.status.collectAsStateWithLifecycle()
+                    NavRow(
+                        label = "Panel hardware",
+                        value = panelHardwareRowValue(status.running, status.modeLabel, status.providerLabel),
+                        onClick = onOpenPanelDiagnostics,
+                    )
+                }
+                item { Section("MQTT") }
+                item {
+                    AdvancedMqttSettings(
+                        advanced = s.advanced,
+                        onUpdate = vm::updateAdvanced,
+                    )
+                }
+                item { Section("BUTTON ACTIONS") }
+                item {
+                    AdvancedButtonActionSettings(
+                        advanced = s.advanced,
+                        onUpdate = vm::updateAdvanced,
                     )
                 }
                 item { SectionDivider() }
@@ -656,74 +690,6 @@ fun SettingsScreen(
             item { SectionDivider() }
             }
 
-            if (shouldShow("SCROLL WHEEL")) {
-            // ── Scroll wheel ───────────────────────────────────────────────────────
-            item { Section("SCROLL WHEEL", expanded = "SCROLL WHEEL" in expandedSections, onToggle = { toggleSection("SCROLL WHEEL") }, modifiedCount = sectionModifiedCount["SCROLL WHEEL"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT) }) }
-            if ("SCROLL WHEEL" in expandedSections) {
-            item {
-                LabeledControl(label = "Step size") {
-                    SegmentedIntPicker(
-                        options = listOf(1, 2, 5, 10),
-                        selected = s.wheel.stepPercent,
-                        label = { "$it%" },
-                        onSelect = { vm.setWheelStep(it) },
-                    )
-                }
-            }
-            item {
-                SwitchRow(
-                    label = "Acceleration",
-                    subtitle = "Spin faster to jump further",
-                    checked = s.wheel.acceleration,
-                    onCheckedChange = { vm.setWheelAcceleration(it) },
-                )
-            }
-            if (s.wheel.acceleration) {
-                item {
-                    LabeledControl(label = "Acceleration curve") {
-                        SegmentedEnumPicker(
-                            options = com.github.itskenny0.r1ha.core.prefs.AccelerationCurve.entries,
-                            selected = s.wheel.accelerationCurve,
-                            label = {
-                                when (it) {
-                                    com.github.itskenny0.r1ha.core.prefs.AccelerationCurve.SUBTLE -> "SUBTLE"
-                                    com.github.itskenny0.r1ha.core.prefs.AccelerationCurve.MEDIUM -> "MEDIUM"
-                                    com.github.itskenny0.r1ha.core.prefs.AccelerationCurve.AGGRESSIVE -> "AGGRESSIVE"
-                                }
-                            },
-                            onSelect = { vm.setAccelerationCurve(it) },
-                        )
-                    }
-                }
-            }
-            item {
-                SwitchRow(
-                    label = "Invert direction",
-                    checked = s.wheel.invertDirection,
-                    onCheckedChange = { vm.setWheelInvert(it) },
-                )
-            }
-            item {
-                LabeledControl(label = "Key source") {
-                    SegmentedEnumPicker(
-                        options = WheelKeySource.entries,
-                        selected = s.wheel.keySource,
-                        label = {
-                            when (it) {
-                                WheelKeySource.AUTO -> "AUTO"
-                                WheelKeySource.DPAD -> "D-PAD"
-                                WheelKeySource.VOLUME -> "VOL"
-                            }
-                        },
-                        onSelect = { vm.setWheelKeySource(it) },
-                    )
-                }
-            }
-
-            }
-            item { SectionDivider() }
-            }
-
             if (shouldShow("CARD UI")) {
             // ── Card UI ────────────────────────────────────────────────────────────
             item { Section("CARD UI", expanded = "CARD UI" in expandedSections, onToggle = { toggleSection("CARD UI") }, modifiedCount = sectionModifiedCount["CARD UI"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI) }) }
@@ -776,7 +742,7 @@ fun SettingsScreen(
             item {
                 SwitchRow(
                     label = "Infinite scroll",
-                    subtitle = "Wheel past the last card wraps to the first",
+                    subtitle = "Scrolling past the last card wraps to the first",
                     checked = s.ui.infiniteScroll,
                     onCheckedChange = { vm.setInfiniteScroll(it) },
                 )
@@ -907,7 +873,7 @@ fun SettingsScreen(
                     SwitchRow(
                         label = "↳ Show battery indicator",
                         subtitle = "Tiny percent pill on the right of the chrome row " +
-                            "(polled every 30 s). Useful so a low R1 battery doesn't catch you off-guard.",
+                            "(polled every 30 s). Useful so a low panel battery doesn't catch you off-guard.",
                         checked = s.behavior.showBatteryWhenStatusBarHidden,
                         onCheckedChange = { vm.setShowBatteryWhenStatusBarHidden(it) },
                     )
@@ -917,20 +883,32 @@ fun SettingsScreen(
                 SwitchRow(
                     label = "Start on Dashboard",
                     subtitle = "Open the app on the TODAY dashboard instead of the card stack. " +
-                        "Useful for wall-mounted / kiosk R1s. Takes effect on next app launch.",
+                        "Useful for wall-mounted / kiosk panels. Takes effect on next app launch.",
                     checked = s.behavior.startOnDashboard,
                     onCheckedChange = { vm.setStartOnDashboard(it) },
                 )
             }
             item {
-                SwitchRow(
-                    label = "Wheel toggles switches",
-                    subtitle = "On (default): wheel-up turns locks, covers, vacuums, plain " +
-                        "switches on; wheel-down turns them off. Off: wheel does nothing on " +
-                        "those cards; useful if a casual brush is accidentally relocking your door.",
-                    checked = s.behavior.wheelTogglesSwitches,
-                    onCheckedChange = { vm.setWheelTogglesSwitches(it) },
-                )
+                LabeledControl(label = "Panel hardware provider") {
+                    Text(
+                        text = "Auto selects Shelly on known Shelly builds, otherwise generic tablet. Shelly mode is currently a safe stub until the native port lands.",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    SegmentedEnumPicker(
+                        options = HardwareProviderMode.entries,
+                        selected = s.behavior.hardwareProviderMode,
+                        label = { mode ->
+                            when (mode) {
+                                HardwareProviderMode.AUTO -> "AUTO"
+                                HardwareProviderMode.ANDROID_TABLET -> "TABLET"
+                                HardwareProviderMode.SHELLY_WALL_DISPLAY -> "SHELLY"
+                            }
+                        },
+                        onSelect = { vm.setHardwareProviderMode(it) },
+                    )
+                }
             }
             item {
                 SwitchRow(
@@ -1084,7 +1062,7 @@ fun SettingsScreen(
                                     "yyyyMMdd-HHmm",
                                     java.util.Locale.US,
                                 ).format(java.util.Date())
-                                exportLauncher.launch("r1ha-backup-$stamp.json")
+                                exportLauncher.launch("hapanels-backup-$stamp.json")
                             }
                         },
                         modifier = Modifier.weight(1f),
@@ -1135,7 +1113,7 @@ fun SettingsScreen(
                     if (armed.value) {
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Drops every override, theme, wheel + UI + behaviour preference. Keeps your account, favourites, and pages.",
+                            text = "Drops every override, theme, UI, and behaviour preference. Keeps your account, favourites, and pages.",
                             style = R1.labelMicro,
                             color = R1.InkMuted,
                         )
@@ -1312,7 +1290,7 @@ fun SettingsScreen(
             item { SubGroupLabel("TILE ORDER") }
             item {
                 Text(
-                    text = "Drag-style reorder isn't on the R1's small screen yet. Use the arrows to nudge each tile up or down.",
+                    text = "Drag-style reorder isn't available on the panel UI yet. Use the arrows to nudge each tile up or down.",
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                     modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
@@ -1689,6 +1667,14 @@ fun SettingsScreen(
                 NavRow(label = "System Health", value = "HA version + error log", onClick = onOpenSystemHealth)
             }
             item {
+                val status by panelHardware.status.collectAsStateWithLifecycle()
+                NavRow(
+                    label = "Panel Hardware",
+                    value = panelHardwareRowValue(status.running, status.modeLabel, status.providerLabel),
+                    onClick = onOpenPanelDiagnostics,
+                )
+            }
+            item {
                 NavRow(
                     label = "Lovelace (WebView)",
                     value = "Open HA's frontend in-app",
@@ -1801,7 +1787,7 @@ internal fun sectionNameForCategory(
     category: com.github.itskenny0.r1ha.core.prefs.SettingCategory,
 ): String = when (category) {
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.SERVER -> "SERVER"
-    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "SCROLL WHEEL"
+    com.github.itskenny0.r1ha.core.prefs.SettingCategory.INPUT -> "INPUT"
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.CARD_UI -> "CARD UI"
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR -> "BEHAVIOUR"
     com.github.itskenny0.r1ha.core.prefs.SettingCategory.APPEARANCE -> "APPEARANCE"
@@ -1998,7 +1984,7 @@ private fun ToastLogLevelRow(
         Text(
             text = "Off (default): no diagnostic toasts. Warn: surface failures and " +
                 "decoder drops as tappable expanding toasts. Useful for 'where's my " +
-                "entity?' on devices without adb. Debug: everything R1Log emits.",
+                "entity?' on devices without adb. Debug: everything the app log emits.",
             style = R1.body,
             color = R1.InkMuted,
             modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
@@ -2044,7 +2030,7 @@ private fun OrientationModeRow(
         Text(
             text = "Follow device (default): rotates with the sensor. " +
                 "Portrait only: locks to portrait regardless of rotation. " +
-                "Right choice for R1 and one-handed phone use.",
+                "Right choice for narrow panels and one-handed phone use.",
             style = R1.body,
             color = R1.InkMuted,
             modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
@@ -2411,6 +2397,290 @@ private fun SwitchRow(
         )
     }
 }
+
+@Composable
+private fun AdvancedMqttSettings(
+    advanced: AdvancedSettings,
+    onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Broker used by the panel MQTT bridge. Empty host disables MQTT; changes persist immediately.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+        )
+        LabeledControl(label = "Broker host") {
+            R1TextField(
+                value = advanced.mqttHost,
+                onValueChange = { v -> onUpdate { it.copy(mqttHost = v.trim()) } },
+                placeholder = "192.168.1.10",
+                monospace = true,
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 2.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Port", style = R1.bodyEmph, color = R1.Ink)
+                Spacer(Modifier.height(8.dp))
+                R1TextField(
+                    value = advanced.mqttPort.toString(),
+                    onValueChange = { v ->
+                        val port = v.toIntOrNull()?.coerceIn(1, 65535)
+                        if (port != null) onUpdate { it.copy(mqttPort = port) }
+                    },
+                    placeholder = "1883",
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    ),
+                    monospace = true,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(R1.ShapeS)
+                    .r1Pressable(
+                        onClick = { onUpdate { it.copy(mqttUseTls = !advanced.mqttUseTls) } },
+                        hapticOnClick = false,
+                    )
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("TLS", style = R1.bodyEmph, color = R1.Ink)
+                    Spacer(Modifier.height(2.dp))
+                    Text("SSL / 8883", style = R1.body, color = R1.InkMuted)
+                }
+                R1Switch(
+                    checked = advanced.mqttUseTls,
+                    onCheckedChange = { v -> onUpdate { it.copy(mqttUseTls = v) } },
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        LabeledControl(label = "Username") {
+            R1TextField(
+                value = advanced.mqttUsername,
+                onValueChange = { v -> onUpdate { it.copy(mqttUsername = v) } },
+                placeholder = "homeassistant",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "Password") {
+            R1TextField(
+                value = advanced.mqttPassword,
+                onValueChange = { v -> onUpdate { it.copy(mqttPassword = v) } },
+                placeholder = "optional",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "Client ID") {
+            R1TextField(
+                value = advanced.mqttClientId,
+                onValueChange = { v -> onUpdate { it.copy(mqttClientId = v.trim()) } },
+                placeholder = "auto",
+                monospace = true,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdvancedButtonActionSettings(
+    advanced: AdvancedSettings,
+    onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
+) {
+    var expandedButtons by remember { mutableStateOf(setOf(1)) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Shelly hardware buttons. Press/release actions fire immediately. Short click is best for normal automations; it stays instant unless double or triple click is configured for the same button.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+        )
+        (1..5).forEach { buttonId ->
+            ButtonActionGroup(
+                buttonId = buttonId,
+                expanded = buttonId in expandedButtons,
+                advanced = advanced,
+                onToggleExpanded = {
+                    expandedButtons = if (buttonId in expandedButtons) {
+                        expandedButtons - buttonId
+                    } else {
+                        expandedButtons + buttonId
+                    }
+                },
+                onUpdate = onUpdate,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ButtonActionGroup(
+    buttonId: Int,
+    expanded: Boolean,
+    advanced: AdvancedSettings,
+    onToggleExpanded: () -> Unit,
+    onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
+) {
+    val activeCount = buttonActionRows(buttonId).count { row ->
+        currentButtonAction(
+            advanced = advanced,
+            buttonId = buttonId,
+            triggerPhase = row.triggerPhase,
+            pressType = row.pressType.name,
+            defaultAction = row.defaultAction,
+        ) != HardwareButtonActionKind.NONE
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .clip(R1.ShapeM)
+            .border(1.dp, R1.Hairline, R1.ShapeM)
+            .background(R1.SurfaceMuted.copy(alpha = 0.42f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .r1Pressable(onClick = onToggleExpanded)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Przycisk $buttonId", style = R1.bodyEmph, color = R1.Ink)
+                val activeSummary = when (activeCount) {
+                    0 -> "Brak akcji"
+                    1 -> "1 aktywna akcja"
+                    else -> "$activeCount aktywne akcje"
+                }
+                Text(
+                    text = activeSummary,
+                    style = R1.labelMicro,
+                    color = R1.InkMuted,
+                )
+            }
+            Text(
+                text = if (expanded) "−" else "+",
+                style = R1.bodyEmph,
+                color = R1.InkSoft,
+            )
+        }
+        if (expanded) {
+            buttonActionRows(buttonId).forEach { row ->
+                ButtonActionMappingRow(
+                    label = row.label,
+                    buttonId = buttonId,
+                    triggerPhase = row.triggerPhase,
+                    pressType = row.pressType.name,
+                    advanced = advanced,
+                    defaultAction = row.defaultAction,
+                    onUpdate = onUpdate,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ButtonActionMappingRow(
+    label: String,
+    buttonId: Int,
+    triggerPhase: HardwareButtonTriggerPhase,
+    advanced: AdvancedSettings,
+    defaultAction: HardwareButtonActionKind,
+    onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
+    pressType: String = "SHORT",
+) {
+    val current = currentButtonAction(advanced, buttonId, triggerPhase, pressType, defaultAction)
+    LabeledControl(label = label) {
+        SegmentedEnumPicker(
+            options = HardwareButtonActionKind.entries,
+            selected = current,
+            label = { action ->
+                when (action) {
+                    HardwareButtonActionKind.NONE -> "NONE"
+                    HardwareButtonActionKind.TOGGLE_RELAY -> "TOGGLE"
+                    HardwareButtonActionKind.RELAY_ON -> "ON"
+                    HardwareButtonActionKind.RELAY_OFF -> "OFF"
+                }
+            },
+            onSelect = { action ->
+                onUpdate { settings ->
+                    val withoutCurrent = settings.hardwareButtonActions.filterNot {
+                        it.buttonId == buttonId &&
+                            it.triggerPhase == triggerPhase &&
+                            it.pressType == pressType
+                    }
+                    val next = HardwareButtonActionMapping(
+                        buttonId = buttonId,
+                        triggerPhase = triggerPhase,
+                        pressType = pressType,
+                        action = action,
+                        relayId = 1,
+                    )
+                    settings.copy(hardwareButtonActions = withoutCurrent + next)
+                }
+            },
+        )
+    }
+}
+
+private data class ButtonActionRow(
+    val label: String,
+    val triggerPhase: HardwareButtonTriggerPhase,
+    val pressType: PanelButtonPressType = PanelButtonPressType.SHORT,
+    val defaultAction: HardwareButtonActionKind = HardwareButtonActionKind.NONE,
+)
+
+private fun buttonActionRows(buttonId: Int): List<ButtonActionRow> = listOf(
+    ButtonActionRow(
+        label = "On press",
+        triggerPhase = HardwareButtonTriggerPhase.DOWN,
+    ),
+    ButtonActionRow(
+        label = "On release",
+        triggerPhase = HardwareButtonTriggerPhase.UP,
+    ),
+    ButtonActionRow(
+        label = "Short click",
+        triggerPhase = HardwareButtonTriggerPhase.CLICK,
+        pressType = PanelButtonPressType.SHORT,
+        defaultAction = if (buttonId == 1) HardwareButtonActionKind.TOGGLE_RELAY else HardwareButtonActionKind.NONE,
+    ),
+    ButtonActionRow(
+        label = "Long press",
+        triggerPhase = HardwareButtonTriggerPhase.CLICK,
+        pressType = PanelButtonPressType.LONG,
+    ),
+    ButtonActionRow(
+        label = "Double click",
+        triggerPhase = HardwareButtonTriggerPhase.CLICK,
+        pressType = PanelButtonPressType.DOUBLE,
+    ),
+    ButtonActionRow(
+        label = "Triple click",
+        triggerPhase = HardwareButtonTriggerPhase.CLICK,
+        pressType = PanelButtonPressType.TRIPLE,
+    ),
+)
+
+private fun currentButtonAction(
+    advanced: AdvancedSettings,
+    buttonId: Int,
+    triggerPhase: HardwareButtonTriggerPhase,
+    pressType: String,
+    defaultAction: HardwareButtonActionKind,
+): HardwareButtonActionKind = advanced.hardwareButtonActions
+    .firstOrNull {
+        it.buttonId == buttonId &&
+            it.triggerPhase == triggerPhase &&
+            it.pressType == pressType
+    }
+    ?.action
+    ?: defaultAction
 
 /**
  * NumberStepperRow — label + subtitle + −/+ pills around the current
@@ -3341,4 +3611,3 @@ private fun TileOrderEditor(
         }
     }
 }
-

@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
@@ -95,8 +97,8 @@ class MainActivity : ComponentActivity() {
             // Lock the start destination to the FIRST loaded value so theme changes, server
             // changes, etc. don't re-graph the NavHost mid-session. Two paths:
             //   - server == null         → ONBOARDING
-            //   - server + startOnDashboard → DASHBOARD (wall-mounted / kiosk R1 path)
-            //   - server + default        → CARD_STACK (handheld R1 path)
+            //   - server + startOnDashboard → DASHBOARD (wall-mounted / kiosk panel path)
+            //   - server + default        → CARD_STACK (manual control path)
             val startDestination = remember(initial) {
                 when {
                     initial.server == null -> Routes.ONBOARDING
@@ -204,9 +206,17 @@ class MainActivity : ComponentActivity() {
                 }
             }
             R1ThemeHost(themeId = themeNow) {
+                val baseDensity = LocalDensity.current
+                val panelDensity = remember(baseDensity) {
+                    Density(
+                        density = baseDensity.density * PANEL_UI_SCALE,
+                        fontScale = baseDensity.fontScale,
+                    )
+                }
                 CompositionLocalProvider(
                     LocalUiOptions provides settings.ui,
                     com.github.itskenny0.r1ha.core.theme.LocalHaBearerToken provides bearerToken,
+                    LocalDensity provides panelDensity,
                 ) {
                     // Wrap the nav graph in a Box so the in-app ToastHost can
                     // overlay every navigated screen. The toast bus is process-
@@ -236,6 +246,7 @@ class MainActivity : ComponentActivity() {
                                 settings = graph.settings,
                                 tokens = graph.tokens,
                                 wheelInput = graph.wheelInput,
+                                panelHardware = graph.panelHardware,
                             )
                         }
                         // Toast host sits OUTSIDE the responsive column so
@@ -396,6 +407,8 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val PANEL_UI_SCALE = 1.25f
+
         /** Minimum gap between successive wheel emits when a VOLUME
          *  button is held. ~130 ms ≈ 7.7 Hz — the same cadence a
          *  practised thumb on the R1's physical wheel can manage, so

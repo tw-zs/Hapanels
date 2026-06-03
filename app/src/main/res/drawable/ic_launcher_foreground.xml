@@ -1,35 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Bold WHITE rabbit silhouette on the orange background. Every element thicker and
-  shorter than the previous (blue-on-orange) draft so the mark survives even the most
-  aggressive launcher mask:
-    * Head: r=24 circle at (54, 64) — bigger than before, fills more of the safe zone.
-    * Ears: 14-wide pills (was 10), shorter (top at y=24 not y=22), so they tuck within
-      a 30-radius circle around centre rather than poking right at the safe-zone edge.
-    * Eye accent: a single small orange disc inside the head reads as "rabbit face"
-      even when the launcher rendering blurs the silhouette down to a few dozen pixels.
-  Everything fits within a radius-32 circle around centre (54, 54) so any mask shape
-  (square, rounded square, circle, squircle) keeps the silhouette legible.
--->
+<!-- Hapanels launcher foreground based on hapanels_icon_no_text.svg. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1200"
+    android:viewportHeight="1200">
 
-    <!-- Head: r=24 white disc at (54, 64). Cubic beziers approximating the circle. -->
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M54,40 C67.25,40 78,50.75 78,64 C78,77.25 67.25,88 54,88 C40.75,88 30,77.25 30,64 C30,50.75 40.75,40 54,40 Z"/>
+    <group
+        android:pivotX="600"
+        android:pivotY="600"
+        android:scaleX="1.12"
+        android:scaleY="1.12"
+        android:translateY="72">
 
-    <!-- Left ear: thick rounded pill from (36, 24) to (50, 56). Width 14, height 32. -->
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M36,31 C36,27 39,24 43,24 C47,24 50,27 50,31 L50,56 L36,56 Z"/>
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#1F2937"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M365,717 V452 C365,433 374,416 389,405 L557,270 C582,250 618,250 643,270 L811,405 C826,416 835,433 835,452 V717" />
 
-    <!-- Right ear: mirror of the left at x=58..72. -->
-    <path android:fillColor="#FFFFFF"
-        android:pathData="M58,31 C58,27 61,24 65,24 C69,24 72,27 72,31 L72,56 L58,56 Z"/>
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#1F2937"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:pathData="M365,717 V693" />
 
-    <!-- Single orange eye disc inside the head — placed slightly above centre + right of
-         vertical axis so the silhouette reads as "rabbit face" rather than "white blob"
-         when launchers blur the icon down. r=5 at (60, 60). -->
-    <path android:fillColor="#F36F21"
-        android:pathData="M60,55 C62.76,55 65,57.24 65,60 C65,62.76 62.76,65 60,65 C57.24,65 55,62.76 55,60 C55,57.24 57.24,55 60,55 Z"/>
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#1F2937"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:pathData="M835,717 V693" />
+
+        <path
+            android:fillColor="#1E90FF"
+            android:pathData="M445,476 C445,461.64 456.64,450 471,450 H574 C588.36,450 600,461.64 600,476 V724 C600,738.36 588.36,750 574,750 H471 C456.64,750 445,738.36 445,724 Z" />
+
+        <path
+            android:fillColor="#1E90FF"
+            android:pathData="M630,476 C630,461.64 641.64,450 656,450 H759 C773.36,450 785,461.64 785,476 V554 C785,568.36 773.36,580 759,580 H656 C641.64,580 630,568.36 630,554 Z" />
+
+        <path
+            android:fillColor="#1E90FF"
+            android:pathData="M630,641 C630,626.64 641.64,615 656,615 H759 C773.36,615 785,626.64 785,641 V724 C785,738.36 773.36,750 759,750 H656 C641.64,750 630,738.36 630,724 Z" />
+    </group>
 </vector>

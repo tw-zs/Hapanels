@@ -27,7 +27,7 @@ import com.github.itskenny0.r1ha.core.util.Toaster
  *  - flipping it false → stop the service (which tears down the socket)
  *
  * The persistent notification is required by the platform; we keep its copy
- * informational ("R1HA webhook listener · port 8765") so the user understands
+ * informational ("Hapanels webhook listener · port 8765") so the user understands
  * why they see an icon in their notification shade.
  */
 class WebhookListenerService : Service() {
@@ -80,7 +80,7 @@ class WebhookListenerService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_round)
-            .setContentTitle("R1HA webhook listener")
+            .setContentTitle("Hapanels webhook listener")
             .setContentText("Listening on :$port /webhook/$id")
             .setOngoing(true)
             .setSilent(true)

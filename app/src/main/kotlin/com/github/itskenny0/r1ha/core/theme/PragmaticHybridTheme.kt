@@ -2,12 +2,14 @@ package com.github.itskenny0.r1ha.core.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -159,7 +161,7 @@ object PragmaticHybridTheme : R1Theme {
                 // empty. Tapping a mode button switches the wheel target immediately;
                 // tapping EFFECTS opens the effect picker overlay (rendered at screen
                 // scope from CardStackScreen — see LightControlsRow's implementation).
-                if (model.lightAvailableModes.size > 1 || model.lightEffectListSize > 0) {
+                if (model.domainGlyph == CardRenderModel.Glyph.LIGHT) {
                     Spacer(Modifier.height(8.dp))
                     LightControlsRow(
                         entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
@@ -170,6 +172,8 @@ object PragmaticHybridTheme : R1Theme {
                         effectList = model.lightEffectList,
                         accent = accent,
                         hidden = model.lightButtonsHidden,
+                        isOn = model.isOn,
+                        onTapToggle = onTapToggle,
                     )
                 }
                 // Brightness preset chips on light cards. Three tap targets for
@@ -291,18 +295,27 @@ object PragmaticHybridTheme : R1Theme {
                 if (ui.showOnOffPill) OnOffPill(isOn = model.isOn, accent = accent)
             }
 
-            // ── Vertical tape meter — inset from the right edge, ~200 dp tall ───────
+            // ── Vertical control — tape meter generally, visual shutter for covers ──
             Spacer(Modifier.width(20.dp))
-            VerticalTapeMeter(
-                entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
-                percent = model.percent,
-                accent = accent,
-                tickLabels = model.meterLabels,
-                // Rainbow fill when the wheel is in HUE mode — the bar then doubles as
-                // a colour reference so the user can see what the wheel is selecting
-                // (top: red, scrolling through to violet/red again at the bottom).
-                rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
-            )
+            val modelEntityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText)
+            if (model.domainGlyph == CardRenderModel.Glyph.COVER) {
+                CoverPositionSlider(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                )
+            } else {
+                VerticalTapeMeter(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                    tickLabels = model.meterLabels,
+                    // Rainbow fill when the wheel is in HUE mode — the bar then doubles as
+                    // a colour reference so the user can see what the wheel is selecting
+                    // (top: red, scrolling through to violet/red again at the bottom).
+                    rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
+                )
+            }
         }
     }
 }
@@ -407,6 +420,213 @@ internal fun BigReadout(
                 color = accent,
                 modifier = Modifier.padding(bottom = 14.dp),
             )
+        }
+    }
+}
+
+@Composable
+internal fun CoverPositionSlider(
+    entityId: com.github.itskenny0.r1ha.core.ha.EntityId,
+    percent: Int,
+    accent: Color,
+) {
+    val fraction = rememberSliderFraction(percent).coerceIn(0f, 1f)
+    val onSetPercent = LocalOnSetEntityPercent.current
+    val interactive = onSetPercent != null
+    val trackHeightPx = remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    val dragModifier = if (interactive) {
+        Modifier
+            .onSizeChanged { trackHeightPx.floatValue = it.height.coerceAtLeast(1).toFloat() }
+            .pointerInput(entityId) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    fun positionToPercent(y: Float): Int =
+                        ((1f - y / trackHeightPx.floatValue).coerceIn(0f, 1f) * 100f)
+                            .toInt()
+                            .coerceIn(0, 100)
+
+                    onSetPercent?.invoke(entityId, positionToPercent(down.position.y))
+                    down.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) break
+                        if (change.position != change.previousPosition) {
+                            onSetPercent?.invoke(entityId, positionToPercent(change.position.y))
+                        }
+                        change.consume()
+                    }
+                }
+            }
+    } else Modifier
+
+    Row(
+        modifier = Modifier.fillMaxHeight(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(300.dp),
+        ) {
+            val windowShape = RoundedCornerShape(2.dp)
+            val railShape = RoundedCornerShape(2.dp)
+            val blindHeight = (1f - fraction).coerceIn(0.06f, 1f)
+            val rightInset = 22.dp
+            val windowWidth = 190.dp
+            val railWidth = 210.dp
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxHeight(0.78f)
+                    .width(windowWidth)
+                    .align(Alignment.CenterEnd)
+                    .offset(x = -rightInset)
+                    .then(dragModifier),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(windowShape)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.18f), Color.Black.copy(alpha = 0.08f)),
+                            ),
+                        )
+                        .border(2.dp, Color.White.copy(alpha = 0.72f), windowShape),
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight(blindHeight)
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFFFFE9DE).copy(alpha = 0.96f),
+                                    Color(0xFFF2A8B9).copy(alpha = 0.9f),
+                                    Color(0xFFD06B96).copy(alpha = 0.9f),
+                                ),
+                            ),
+                        ),
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val pitch = 8.dp.toPx()
+                        val highlight = Color.White.copy(alpha = 0.46f)
+                        val shadow = Color(0xFF8D3B55).copy(alpha = 0.24f)
+                        var y = 6.dp.toPx()
+                        while (y < size.height) {
+                            drawLine(
+                                color = highlight,
+                                start = androidx.compose.ui.geometry.Offset(0f, y),
+                                end = androidx.compose.ui.geometry.Offset(size.width, y),
+                                strokeWidth = 1.dp.toPx(),
+                            )
+                            drawLine(
+                                color = shadow,
+                                start = androidx.compose.ui.geometry.Offset(0f, y + 3.dp.toPx()),
+                                end = androidx.compose.ui.geometry.Offset(size.width, y + 3.dp.toPx()),
+                                strokeWidth = 1.dp.toPx(),
+                            )
+                            y += pitch
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .width(34.dp)
+                        .height(8.dp)
+                        .align(Alignment.TopCenter)
+                        .offset(y = (maxHeight * blindHeight - 4.dp).coerceAtLeast(10.dp))
+                        .clip(R1.ShapeRound)
+                        .background(Color.White.copy(alpha = 0.78f)),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(railWidth)
+                    .height(24.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = -(rightInset - 10.dp))
+                    .offset(y = 22.dp)
+                    .clip(railShape)
+                    .background(Color(0xFFFFE3D6).copy(alpha = 0.96f))
+                    .border(1.dp, Color.White.copy(alpha = 0.65f), railShape),
+            )
+            Box(
+                modifier = Modifier
+                    .width(railWidth)
+                    .height(10.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = -(rightInset - 10.dp))
+                    .offset(y = (-32).dp)
+                    .clip(windowShape)
+                    .background(Color(0xFFFFE3D6).copy(alpha = 0.92f))
+                    .border(1.dp, Color.White.copy(alpha = 0.48f), railShape),
+            )
+            Text(
+                text = "TAP ON WINDOW TO ADJUST",
+                style = R1.labelMicro,
+                color = accent.copy(alpha = 0.72f),
+                modifier = Modifier
+                    .width(230.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = -(rightInset - 20.dp))
+                    .clip(R1.ShapeS)
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .border(1.dp, accent.copy(alpha = 0.28f), R1.ShapeS)
+                    .padding(horizontal = 26.dp, vertical = 7.dp),
+            )
+        }
+        Spacer(Modifier.width(18.dp))
+        CoverPositionScale(accent = accent)
+    }
+}
+
+@Composable
+private fun CoverPositionScale(accent: Color) {
+    val labels = listOf("100", "75", "50", "25", "0")
+    Row(
+        modifier = Modifier.fillMaxHeight(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight(0.74f)
+                .width(18.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .align(Alignment.CenterStart)
+                    .background(accent.copy(alpha = 0.5f))
+            )
+            Column(
+                modifier = Modifier.fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                repeat(labels.size) {
+                    Box(
+                        modifier = Modifier
+                            .width(9.dp)
+                            .height(1.dp)
+                            .background(accent.copy(alpha = 0.5f)),
+                    )
+                }
+            }
+        }
+        Column(
+            modifier = Modifier.fillMaxHeight(0.79f),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            labels.forEach { label ->
+                Text(
+                    text = label,
+                    style = R1.labelMicro,
+                    color = accent.copy(alpha = 0.9f),
+                )
+            }
         }
     }
 }
@@ -636,6 +856,8 @@ internal fun LightControlsRow(
     currentEffect: String?,
     effectList: List<String>,
     accent: Color,
+    isOn: Boolean,
+    onTapToggle: () -> Unit,
     /** Per-card hidden-button set from [EntityOverride.lightButtonsHidden]. Buttons in
      *  this set are filtered out before render — used to declutter cards the user
      *  rarely tweaks beyond brightness. Empty = show everything available. */
@@ -661,6 +883,21 @@ internal fun LightControlsRow(
     // FX button collided into the right-side meter. Stacking them gives each button
     // the full card width and stays comfortable even when the user picks long labels.
     Column(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(R1.ShapeS)
+                .background(if (isOn) accent else R1.SurfaceMuted)
+                .r1Pressable(onClick = onTapToggle)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = if (isOn) "ON" else "OFF",
+                style = R1.labelMicro,
+                color = if (isOn) R1.Bg else R1.InkSoft,
+            )
+        }
+        if (visibleModes.size > 1 || effectList.isNotEmpty()) Spacer(Modifier.height(4.dp))
         if (visibleModes.size > 1) {
             visibleModes.forEachIndexed { idx, mode ->
                 val active = mode == currentMode
@@ -938,7 +1175,7 @@ internal fun EffectPickerSheet(
                     onPick(null)
                 }
                 effects.forEach { name ->
-                    EffectRow(label = name, isActive = name == current, accent = accent) {
+                    EffectRow(label = displayEffectName(name), isActive = name == current, accent = accent) {
                         onPick(name)
                     }
                 }
@@ -1006,6 +1243,18 @@ internal fun SelectPickerSheet(
             }
         }
     }
+}
+
+private fun displayEffectName(raw: String): String = when (raw.trim().lowercase()) {
+    "blink" -> "Blink"
+    "breathe" -> "Breathe"
+    "okay" -> "Okay"
+    "channel_change" -> "Channel change"
+    "finish_effect" -> "Finish effect"
+    "stop_effect" -> "Stop effect"
+    "colorloop" -> "Color loop"
+    "stop_colorloop" -> "Stop color loop"
+    else -> raw.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() }
 }
 
 @Composable

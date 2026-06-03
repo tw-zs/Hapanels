@@ -78,6 +78,7 @@ class DefaultHaRepository(
      * accidentally read a developer's snapshot from /tmp.
      */
     private val persister: EntityStateCachePersister? = null,
+    private val authThrottle: AuthThrottle? = null,
 ) : HaRepository {
 
     override val connection: StateFlow<ConnectionState> = ws.state
@@ -462,6 +463,7 @@ class DefaultHaRepository(
                     // inheriting accumulated failures from the previous server.
                     reconnectAttempt = 0
                     authLostRefreshAttempt = 0
+                    authThrottle?.reset()
                     if (url == null) {
                         // Drop any cached entity states from the previous server so the next
                         // sign-in starts fresh: otherwise stale data from server A could be
@@ -638,6 +640,7 @@ class DefaultHaRepository(
         // Reset the consecutive-failure counter so the *next* backoff (if this attempt also
         // fails) starts from scratch — the user has signalled they want a fresh start.
         reconnectAttempt = 0
+        authThrottle?.reset()
         R1Log.i("HaRepo.reconnectNow", "forcing immediate reconnect (was $current)")
         scope.launch { connectFromSettings() }
     }
@@ -650,7 +653,10 @@ class DefaultHaRepository(
         val idStr = raw.entityId ?: ev.event.variables.trigger.entityId
         val prefix = idStr.substringBefore('.', missingDelimiterValue = "")
         if (!Domain.isSupportedPrefix(prefix)) return
-        val id = EntityId(idStr)
+        // The prefix may be supported while the id shape itself is malformed
+        // (for example "sensor."). Do not let one bad live event cancel the
+        // whole inbound message-processing flow for the session.
+        val id = runCatching { EntityId(idStr) }.getOrNull() ?: return
         // State-string → isOn mapping, branched by domain. Each domain has its own state
         // vocabulary in HA: lights/switches/input_boolean/automation/humidifier use
         // "on"/"off", media_players use "playing"/"paused"/"idle", covers use "open"/
@@ -2882,4 +2888,3 @@ class DefaultHaRepository(
         )
     }
 }
-

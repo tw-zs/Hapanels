@@ -874,57 +874,6 @@ fun CardStackScreen(
         // overlay's scope isolates the subscription.
         WheelHintOverlay(state = wheelHintAt)
 
-        // First-launch tutorial sticker. Fresh installs land on the card stack
-        // with no obvious indication that the wheel is the primary input; this
-        // small bottom-aligned hint dismisses on the first wheel event (handled
-        // in the collect block above via the wheelTutorialSeen flag flip) OR
-        // on tap. Only shows when there's actually content to interact with.
-        if (!appSettings.behavior.wheelTutorialSeen && cards.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 18.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(R1.ShapeS)
-                        .background(R1.AccentWarm.copy(alpha = 0.18f))
-                        .border(1.dp, R1.AccentWarm.copy(alpha = 0.55f), R1.ShapeS)
-                        .r1Pressable(
-                            onClick = {
-                                scope.launch {
-                                    settings.update { s ->
-                                        s.copy(behavior = s.behavior.copy(wheelTutorialSeen = true))
-                                    }
-                                }
-                            },
-                            contentDescription = "Dismiss wheel tutorial hint",
-                        )
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
-                ) {
-                    // Two-line hint: primary affordance on top, phone fallback
-                    // (volume rocker maps to the same wheel keycodes via
-                    // KEYCODE_VOLUME_UP/DOWN) on the secondary line so users
-                    // running the app on a regular Android phone aren't left
-                    // wondering which physical input drives the cards.
-                    androidx.compose.foundation.layout.Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = "↻ SPIN WHEEL TO ADJUST",
-                            style = R1.labelMicro,
-                            color = R1.AccentWarm,
-                        )
-                        Text(
-                            text = "OR USE VOLUME UP / DOWN",
-                            style = R1.labelMicro,
-                            color = R1.AccentWarm.copy(alpha = 0.75f),
-                        )
-                    }
-                }
-            }
-        }
-
         } // end card-content island (max 600 dp on wide screens)
 
         // ── Overlays — rendered at the outer full-screen Box level so they cover the
@@ -1468,7 +1417,7 @@ private fun PageDeck(
  * [EmptyState] (with onboarding copy) or [VerticalCardPager] (with the
  * user's deck) as appropriate.
  *
- * Tag-style 'R1 · HA' uses the same uppercase letterspaced numeral the rest
+ * Tag-style 'HAPANELS' uses the same uppercase letterspaced treatment the rest
  * of the dashboard uses for section headers, so the splash reads as part of
  * the design language rather than a generic loader.
  */
@@ -1480,7 +1429,7 @@ private fun StartupSplash() {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "R1 · HA",
+            text = "HAPANELS",
             style = R1.sectionHeader,
             color = R1.AccentWarm,
         )
@@ -1561,7 +1510,7 @@ private fun EmptyState(
             text = if (loading) {
                 "Connecting to $favouritesCount favourite${if (favouritesCount == 1) "" else "s"}…"
             } else {
-                "Pick the lights, fans, covers, and media players you want\non the wheel."
+                "Pick the lights, fans, covers, and media players you want\non this panel."
             },
             style = R1.body,
             color = R1.InkMuted,
@@ -2862,7 +2811,7 @@ private fun BoxScope.WheelHintOverlay(state: androidx.compose.runtime.MutableLon
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             Text(
-                text = "WHEEL DOES NOTHING HERE · SWIPE OR TAP THE PIP",
+                text = "NO CONTROL HERE · SWIPE OR TAP THE PIP",
                 style = R1.labelMicro,
                 color = R1.InkSoft,
             )
@@ -2926,7 +2875,7 @@ private fun JumpToCardSheet(
                 }
             }
             Text(
-                text = "TAP JUMP · LONG-PRESS DRAG · '…' MENU · WHEEL SCROLLS",
+                text = "TAP JUMP · LONG-PRESS DRAG · '…' MENU · SCROLL LIST",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
                 modifier = Modifier.padding(top = 4.dp, bottom = 6.dp),
@@ -3129,4 +3078,3 @@ private fun VerticalPagePip(count: Int, current: Int, onClick: (() -> Unit)? = n
         )
     }
 }
-

@@ -1,5 +1,9 @@
 # Hapanels
 
+<p align="center">
+  <img src="docs/assets/hapanels_icon_no_text.svg" alt="Hapanels logo" width="260">
+</p>
+
 Hapanels is a native Android Home Assistant wall-panel app for Shelly Wall Display devices and larger Android tablets.
 
 The project starts from the native HA client foundation in [R1HA](https://github.com/itskenny0/R1HA) and is intended to absorb the useful hardware layer ideas from [ShellyElevate](https://github.com/RapierXbox/ShellyElevate) without using ShellyElevate's Home Assistant WebView dashboard as the primary interface.

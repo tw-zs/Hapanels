@@ -1,10 +1,14 @@
 package com.github.itskenny0.r1ha
 
 import android.content.Context
+import com.github.itskenny0.r1ha.core.ha.AuthThrottle
+import com.github.itskenny0.r1ha.core.ha.AuthThrottleInterceptor
 import com.github.itskenny0.r1ha.core.ha.DefaultHaRepository
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.ha.HaWebSocketClient
 import com.github.itskenny0.r1ha.core.ha.TokenRefresher
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
+import com.github.itskenny0.r1ha.core.hardware.PanelHardwareController
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
@@ -34,6 +38,8 @@ class AppGraph(context: Context) {
      *  surfaces to the user. */
     val securityPolicy: SecurityPolicyStore by lazy { SecurityPolicyStore(appContext) }
 
+    val authThrottle: AuthThrottle by lazy { AuthThrottle() }
+
     val okHttp: OkHttpClient by lazy {
         val builder = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
@@ -44,6 +50,7 @@ class AppGraph(context: Context) {
             // OkHttp surfaces a missing PONG as onFailure, which our state machine treats as
             // a Disconnected and schedules a backoff reconnect.
             .pingInterval(30, TimeUnit.SECONDS)
+        builder.addInterceptor(AuthThrottleInterceptor(authThrottle))
         attachCertificatePinner(builder)
         attachMtlsKeystore(builder)
         builder.build()
@@ -185,11 +192,18 @@ class AppGraph(context: Context) {
             tokens = tokens,
             refresher = tokenRefresher,
             persister = entityCachePersister,
+            authThrottle = authThrottle,
         )
     }
 
     val wheelInput: WheelInput by lazy {
         WheelInput()
+    }
+
+    val panelHardware: PanelHardware by lazy { PanelHardwareController(appContext, settings) }
+
+    val panelMqttBridge: com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge by lazy {
+        com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge(settings, panelHardware)
     }
 
     /**

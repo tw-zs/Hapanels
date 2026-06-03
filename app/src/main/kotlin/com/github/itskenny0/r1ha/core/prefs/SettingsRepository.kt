@@ -133,6 +133,7 @@ class SettingsRepository private constructor(
         val behaviorHideStatus = booleanPreferencesKey("behavior.hide_status_bar")
         val behaviorShowBatteryWhenHidden = booleanPreferencesKey("behavior.show_battery_when_status_bar_hidden")
         val behaviorStartOnDashboard = booleanPreferencesKey("behavior.start_on_dashboard")
+        val behaviorHardwareProviderMode = stringPreferencesKey("behavior.hardware_provider_mode")
         val behaviorWheelTogglesSwitches = booleanPreferencesKey("behavior.wheel_toggles_switches")
         val behaviorWheelTutorialSeen = booleanPreferencesKey("behavior.wheel_tutorial_seen")
         val behaviorToastLogLevel = stringPreferencesKey("behavior.toast_log_level")
@@ -253,7 +254,10 @@ class SettingsRepository private constructor(
                     tapToToggle = p[K.behaviorTapToggle] ?: false,
                     hideStatusBar = p[K.behaviorHideStatus] ?: false,
                     showBatteryWhenStatusBarHidden = p[K.behaviorShowBatteryWhenHidden] ?: false,
-                    startOnDashboard = p[K.behaviorStartOnDashboard] ?: false,
+                    startOnDashboard = p[K.behaviorStartOnDashboard] ?: true,
+                    hardwareProviderMode = p[K.behaviorHardwareProviderMode]
+                        ?.let { runCatching { HardwareProviderMode.valueOf(it) }.getOrNull() }
+                        ?: HardwareProviderMode.AUTO,
                     wheelTogglesSwitches = p[K.behaviorWheelTogglesSwitches] ?: true,
                     wheelTutorialSeen = p[K.behaviorWheelTutorialSeen] ?: false,
                     toastLogLevel = p[K.behaviorToastLogLevel]
@@ -386,6 +390,7 @@ class SettingsRepository private constructor(
                 p[K.behaviorHideStatus] = next.behavior.hideStatusBar
                 p[K.behaviorShowBatteryWhenHidden] = next.behavior.showBatteryWhenStatusBarHidden
                 p[K.behaviorStartOnDashboard] = next.behavior.startOnDashboard
+                p[K.behaviorHardwareProviderMode] = next.behavior.hardwareProviderMode.name
                 p[K.behaviorWheelTogglesSwitches] = next.behavior.wheelTogglesSwitches
                 p[K.behaviorWheelTutorialSeen] = next.behavior.wheelTutorialSeen
                 p[K.behaviorToastLogLevel] = next.behavior.toastLogLevel.name

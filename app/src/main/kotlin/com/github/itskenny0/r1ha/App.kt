@@ -49,11 +49,11 @@ class App : Application() {
                 }
                 lastSeen = now
             }
-        }, "r1ha-anr-watchdog").apply { isDaemon = true }.start()
+        }, "hapanels-anr-watchdog").apply { isDaemon = true }.start()
     }
 
     override fun onCreate() {
-        androidx.tracing.Trace.beginSection("R1HA.App.onCreate")
+        androidx.tracing.Trace.beginSection("Hapanels.App.onCreate")
         super.onCreate()
         // Debug-only StrictMode: catches main-thread disk + network I/O and common
         // VM-policy leaks (closeable not closed, untagged sockets, etc.). Release
@@ -109,7 +109,7 @@ class App : Application() {
                 // Write the crash trace + recent log buffer to a file in
                 // filesDir so the dev menu's 'LAST CRASH' button can surface
                 // it after restart. Without this every crash is a black box
-                // on the R1: logcat isn't accessible to most users.
+                // on a wall panel: logcat isn't accessible to most users.
                 //
                 // Two-phase write so an OOM at the buildString step doesn't lose
                 // the actual stack trace. Phase 1 writes the bare minimum
@@ -119,7 +119,7 @@ class App : Application() {
                 val crashFile = java.io.File(filesDir, "last_crash.txt")
                 runCatching {
                     val essential = StringBuilder(4096).apply {
-                        append("R1HA crash · ").append(java.time.Instant.now().toString()).append('\n')
+                        append("Hapanels crash · ").append(java.time.Instant.now().toString()).append('\n')
                         append("App ").append(BuildConfig.VERSION_NAME).append(" (")
                             .append(BuildConfig.VERSION_CODE).append(")\n")
                         append("Thread: ").append(thread.name).append('\n')
@@ -147,7 +147,7 @@ class App : Application() {
         }
         R1Log.i("App.onCreate", "application starting")
         appScope.launch {
-            androidx.tracing.Trace.beginSection("R1HA.haRepository.start")
+            androidx.tracing.Trace.beginSection("Hapanels.haRepository.start")
             try {
                 graph.haRepository.start()
             } finally {
@@ -155,6 +155,10 @@ class App : Application() {
             }
             R1Log.i("App.onCreate", "haRepository.start() returned")
         }
+        appScope.launch {
+            graph.panelHardware.start()
+        }
+        graph.panelMqttBridge.start()
         androidx.tracing.Trace.endSection()
         // Mirror the latest WheelKeySource into a volatile field so MainActivity's
         // dispatchKeyEvent (which runs on the UI thread and can't suspend) can honour the

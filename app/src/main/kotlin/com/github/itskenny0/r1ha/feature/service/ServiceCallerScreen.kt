@@ -308,7 +308,7 @@ private fun ExampleChips(onPick: (String, String, String) -> Unit) {
             "HA notify",
             "persistent_notification",
             "create",
-            data = """{"title":"From R1","message":"hello"}""",
+            data = """{"title":"From Hapanels","message":"hello"}""",
         ),
     )
     // Fade-edge gradient hints at horizontal overflow. The chip row is wider than

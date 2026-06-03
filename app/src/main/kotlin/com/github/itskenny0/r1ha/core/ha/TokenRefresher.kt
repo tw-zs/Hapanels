@@ -29,7 +29,7 @@ class TokenRefresher(
     private val http: OkHttpClient,
     private val settings: SettingsRepository,
     private val tokens: TokenStore,
-    private val clientId: String = "https://itskenny0.github.io/Rabbit-R1-HA/",
+    private val clientId: String = "https://tw-zs.github.io/Hapanels/",
 ) {
     @Serializable
     private data class RefreshResponse(

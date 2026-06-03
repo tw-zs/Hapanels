@@ -146,7 +146,7 @@ object ColorfulCardsTheme : R1Theme {
                         lightWheelMode = model.lightWheelMode,
                     )
                 }
-                if (model.lightAvailableModes.size > 1 || model.lightEffectListSize > 0) {
+                if (model.domainGlyph == CardRenderModel.Glyph.LIGHT) {
                     Spacer(Modifier.height(8.dp))
                     LightControlsRow(
                         entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
@@ -157,6 +157,8 @@ object ColorfulCardsTheme : R1Theme {
                         effectList = model.lightEffectList,
                         accent = accent,
                         hidden = model.lightButtonsHidden,
+                        isOn = model.isOn,
+                        onTapToggle = onTapToggle,
                     )
                 }
                 if (model.domainGlyph == CardRenderModel.Glyph.MEDIA_PLAYER) {
@@ -236,21 +238,30 @@ object ColorfulCardsTheme : R1Theme {
                 }
             }
             Spacer(Modifier.width(20.dp))
-            // Shared meter — touch-drag + clickable ticks. The accent passed here is
-            // white, which reads cleanly against the gradient backdrop. Climate /
-            // number cards still show their domain-native range via meterLabels; light
-            // HUE mode still renders the rainbow track.
-            VerticalTapeMeter(
-                entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
-                percent = model.percent,
-                accent = accent,
-                tickLabels = model.meterLabels,
-                rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
-                // Default tick colour (R1.InkMuted) is invisible against the
-                // colourful gradient; force a soft-white that reads on every
-                // palette in the theme.
-                tickLabelColor = Color.White.copy(alpha = 0.78f),
-            )
+            val modelEntityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText)
+            if (model.domainGlyph == CardRenderModel.Glyph.COVER) {
+                CoverPositionSlider(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                )
+            } else {
+                // Shared meter — touch-drag + clickable ticks. The accent passed here is
+                // white, which reads cleanly against the gradient backdrop. Climate /
+                // number cards still show their domain-native range via meterLabels; light
+                // HUE mode still renders the rainbow track.
+                VerticalTapeMeter(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                    tickLabels = model.meterLabels,
+                    rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
+                    // Default tick colour (R1.InkMuted) is invisible against the
+                    // colourful gradient; force a soft-white that reads on every
+                    // palette in the theme.
+                    tickLabelColor = Color.White.copy(alpha = 0.78f),
+                )
+            }
         }
     }
 }

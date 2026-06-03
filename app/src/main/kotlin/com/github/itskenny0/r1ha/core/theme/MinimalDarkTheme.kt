@@ -136,7 +136,7 @@ object MinimalDarkTheme : R1Theme {
                 // Light controls (BRIGHT / WHITE / HUE / FX) and Media controls — same
                 // shared building blocks as PragmaticHybridTheme. Surface only when
                 // the entity supports them; otherwise hidden.
-                if (model.lightAvailableModes.size > 1 || model.lightEffectListSize > 0) {
+                if (model.domainGlyph == CardRenderModel.Glyph.LIGHT) {
                     Spacer(Modifier.height(8.dp))
                     LightControlsRow(
                         entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
@@ -147,6 +147,8 @@ object MinimalDarkTheme : R1Theme {
                         effectList = model.lightEffectList,
                         accent = accent,
                         hidden = model.lightButtonsHidden,
+                        isOn = model.isOn,
+                        onTapToggle = onTapToggle,
                     )
                 }
                 if (model.domainGlyph == CardRenderModel.Glyph.MEDIA_PLAYER) {
@@ -223,16 +225,25 @@ object MinimalDarkTheme : R1Theme {
                 }
             }
             Spacer(Modifier.width(20.dp))
-            // Shared meter — gives this theme the same touch-drag + clickable-tick
-            // affordances as the default. Tick labels stay readable on black via R1.
-            // InkMuted; rainbow mode renders correctly for light HUE.
-            VerticalTapeMeter(
-                entityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText),
-                percent = model.percent,
-                accent = accent,
-                tickLabels = model.meterLabels,
-                rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
-            )
+            val modelEntityId = com.github.itskenny0.r1ha.core.ha.EntityId(model.entityIdText)
+            if (model.domainGlyph == CardRenderModel.Glyph.COVER) {
+                CoverPositionSlider(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                )
+            } else {
+                // Shared meter — gives this theme the same touch-drag + clickable-tick
+                // affordances as the default. Tick labels stay readable on black via R1.
+                // InkMuted; rainbow mode renders correctly for light HUE.
+                VerticalTapeMeter(
+                    entityId = modelEntityId,
+                    percent = model.percent,
+                    accent = accent,
+                    tickLabels = model.meterLabels,
+                    rainbow = model.lightWheelMode == com.github.itskenny0.r1ha.core.ha.LightWheelMode.HUE,
+                )
+            }
         }
     }
 }

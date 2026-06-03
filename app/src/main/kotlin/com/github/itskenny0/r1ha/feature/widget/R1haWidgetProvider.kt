@@ -11,7 +11,7 @@ import com.github.itskenny0.r1ha.MainActivity
 import com.github.itskenny0.r1ha.R
 
 /**
- * Home-screen widget — a single-tile quick-launch tile that opens R1HA's
+ * Home-screen widget — a single-tile quick-launch tile that opens Hapanels'
  * main activity. Doesn't bind to an HA entity because (a) RemoteViews
  * have a constrained drawing surface that doesn't match the in-app card
  * idiom and (b) live data would require a periodic poll that fights with

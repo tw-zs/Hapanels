@@ -233,10 +233,12 @@ fun LongLivedTokenScreen(
                                         .normalizeServerUrl(url)
                                 require(normalisedUrl.isNotBlank()) { "Empty URL" }
                                 val newServer = ServerConfig(url = normalisedUrl, haVersion = null)
+                                val cleanedToken = token.filterNot { it.isWhitespace() }
+                                require(cleanedToken.isNotBlank()) { "Empty token" }
                                 settings.update { it.copy(server = newServer) }
                                 tokens.save(
                                     Tokens(
-                                        accessToken = token.trim(),
+                                        accessToken = cleanedToken,
                                         refreshToken = "",
                                         // Far-future expiry so ensureFresh's
                                         // skew check is always satisfied — the

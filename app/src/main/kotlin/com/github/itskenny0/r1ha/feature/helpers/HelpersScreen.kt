@@ -378,10 +378,10 @@ private fun HelperRow(
                 modifier = Modifier.weight(1f),
             )
             if (isWheelActive) {
-                // Visual confirmation of the wheel hand-off. Disappears the
+                // Visual confirmation of the temporary input hand-off. Disappears the
                 // moment focus leaves the row (timeout or tap-elsewhere).
                 Text(
-                    text = "WHEEL",
+                    text = "ADJUST",
                     style = R1.labelMicro,
                     color = R1.AccentWarm,
                 )
@@ -486,10 +486,10 @@ private fun NumberControl(
         Spacer(Modifier.width(8.dp))
         // Live value display — formatted as integer when the step is
         // whole, otherwise as a one-decimal float so 0.5° helpers
-        // don't get rounded to an unhelpful integer. Tap toggles wheel
-        // stepping for this row so the user can dial a value with the
-        // R1 wheel instead of repeatedly hitting +/−. Visual accent
-        // matches the row's WHEEL chip / border highlight.
+            // don't get rounded to an unhelpful integer. Tap enables direct
+            // stepping for this row so the user can dial a value instead of
+            // repeatedly hitting +/−. Visual accent matches the row's active
+            // chip / border highlight.
         val formatted = when {
             value == null -> entry.state
             step % 1.0 == 0.0 -> "${value.toInt()}"
@@ -505,7 +505,7 @@ private fun NumberControl(
                 .r1Pressable(
                     onClick = onToggleWheel,
                     contentDescription = if (isWheelActive)
-                        "Stop wheel stepping" else "Use wheel to step this value",
+                        "Stop direct stepping" else "Use direct stepping for this value",
                 )
                 .padding(vertical = 4.dp),
         )

@@ -348,7 +348,7 @@ private fun ShareDebugBundleRow() {
                     // any installed text-receiving app (email, GitHub Mobile, Slack,
                     // even Notes); avoids forcing a specific share target.
                     val sb = StringBuilder(8192)
-                    sb.append("R1HA debug bundle · ")
+                    sb.append("Hapanels debug bundle · ")
                         .append(java.time.Instant.now().toString()).append('\n')
                     sb.append("App ").append(com.github.itskenny0.r1ha.BuildConfig.VERSION_NAME)
                         .append(" (").append(com.github.itskenny0.r1ha.BuildConfig.VERSION_CODE)
@@ -367,7 +367,7 @@ private fun ShareDebugBundleRow() {
                     }
                     val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_SUBJECT, "R1HA debug bundle")
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Hapanels debug bundle")
                         putExtra(android.content.Intent.EXTRA_TEXT, sb.toString())
                     }
                     runCatching {

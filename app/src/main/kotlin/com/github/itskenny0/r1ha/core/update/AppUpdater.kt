@@ -32,14 +32,14 @@ import java.io.File
  * leak partial downloads.
  *
  * versionCode parsing assumes the release's published asset URL contains the
- * canonical `r1ha-YYYY.MM.DD.HHmm.apk` name; we derive a versionCode from the
+ * canonical `hapanels-YYYY.MM.DD.HHmm.apk` name; we derive a versionCode from the
  * tag-name (the workflow already does this) by mirroring the workflow's math:
  * `100_000_000 + minutes-since-2020-01-01-UTC`. That keeps the check
  * deterministic without needing to fetch + parse the APK itself.
  */
 class AppUpdater(
     private val http: OkHttpClient,
-    private val releasesUrl: String = "https://api.github.com/repos/itskenny0/Rabbit-R1-HA/releases/latest",
+    private val releasesUrl: String = "https://api.github.com/repos/tw-zs/Hapanels/releases/latest",
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -70,7 +70,7 @@ class AppUpdater(
         val req = Request.Builder()
             .url(releasesUrl)
             .header("Accept", "application/vnd.github+json")
-            .header("User-Agent", "R1HA-self-update/${BuildConfig.VERSION_NAME}")
+            .header("User-Agent", "Hapanels-self-update/${BuildConfig.VERSION_NAME}")
             // Force a cold fetch in case some intermediate cache is holding
             // the prior /releases/latest response. GitHub's own ETag caching
             // still works at the server side (we just don't get the 304
@@ -96,7 +96,7 @@ class AppUpdater(
                 R1Log.w("Updater.check", "JSON parse failure: ${t.message}")
                 return@withContext CheckResult.Failed("Bad release JSON", t)
             }
-        // Strip the r1ha- prefix and parse the tag's date+time into minutes-
+        // Strip the app prefix and parse the tag's date+time into minutes-
         // since-2020-01-01-UTC, then add the 100M floor that the workflow
         // applies. This must stay in lock-step with `.github/workflows/release.yml`.
         val versionCode = versionCodeFromTag(release.tag_name)
@@ -107,9 +107,9 @@ class AppUpdater(
         }
         // Each release now ships two APKs: the github-flavour one (with the
         // self-updater enabled — that's what we want here) named
-        //   r1ha-YYYY.MM.DD.HHmm.apk
+        //   hapanels-YYYY.MM.DD.HHmm.apk
         // and the fdroid-flavour one (no self-updater, fewer permissions) named
-        //   r1ha-fdroid-YYYY.MM.DD.HHmm.apk
+        //   hapanels-fdroid-YYYY.MM.DD.HHmm.apk
         // The in-app updater MUST pick the github asset, otherwise an updating
         // user would land on the fdroid build and lose the self-updater on their
         // next install. Filter `-fdroid-` out explicitly rather than relying on
@@ -203,14 +203,20 @@ class AppUpdater(
     companion object {
         /**
          * Convert a release tag to its derived versionCode. Tag forms accepted:
-         *  - `r1ha-YYYYMMDD` (legacy date-only) → minutes-since-2020-01-01 at 00:00 UTC
-         *  - `r1ha-YYYYMMDD-HHmm` (current scheme) → minutes-since-2020-01-01 at HH:mm UTC
+         *  - `hapanels-YYYYMMDD` (date-only) → minutes-since-2020-01-01 at 00:00 UTC
+         *  - `hapanels-YYYYMMDD-HHmm` (current scheme) → minutes-since-2020-01-01 at HH:mm UTC
+         * Legacy `r1ha-...` tags are still accepted for locally installed builds
+         * that predate the release workflow rename.
          * Both go through the same 100M floor as the workflow + defaultVersionCode().
          * Returns null on a malformed tag — the caller treats that as "no update
          * info" so a typo in a release name doesn't crash the updater.
          */
         internal fun versionCodeFromTag(tag: String): Long? {
-            val rest = tag.removePrefix("r1ha-")
+            val rest = when {
+                tag.startsWith("hapanels-") -> tag.removePrefix("hapanels-")
+                tag.startsWith("r1ha-") -> tag.removePrefix("r1ha-")
+                else -> return null
+            }
             if (rest.length < 8) return null
             val yyyymmdd = rest.substring(0, 8)
             val hhmm = if (rest.length >= 13 && rest[8] == '-') rest.substring(9, 13) else "0000"

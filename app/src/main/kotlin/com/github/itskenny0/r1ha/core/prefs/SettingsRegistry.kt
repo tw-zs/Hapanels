@@ -31,7 +31,7 @@ package com.github.itskenny0.r1ha.core.prefs
  */
 enum class SettingCategory(val label: String) {
     SERVER("Server"),
-    INPUT("Scroll wheel"),
+    INPUT("Input"),
     CARD_UI("Card UI"),
     BEHAVIOUR("Behaviour"),
     APPEARANCE("Appearance"),
@@ -121,20 +121,20 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         currentDisplay = { "${it.nightStartHour}:00 → ${it.nightEndHour}:00" },
     ),
 
-    // ── Scroll wheel ────────────────────────────────────────────────────
+    // ── Input tuning ────────────────────────────────────────────────────
     SettingEntry(
         id = "wheel.stepPercent",
         category = SettingCategory.INPUT,
-        label = "Wheel step",
-        description = "Percent change per detent (1, 2, 5, or 10)",
+        label = "Input step",
+        description = "Percent change per input step (1, 2, 5, or 10)",
         isDefault = { it.wheel.stepPercent == defaults.wheel.stepPercent },
         currentDisplay = { "${it.wheel.stepPercent} %" },
     ),
     SettingEntry(
         id = "wheel.acceleration",
         category = SettingCategory.INPUT,
-        label = "Wheel acceleration",
-        description = "Boost the step on fast spins",
+        label = "Input acceleration",
+        description = "Boost the step on fast input",
         isDefault = { it.wheel.acceleration == defaults.wheel.acceleration },
         currentDisplay = { if (it.wheel.acceleration) "ON" else "OFF" },
     ),
@@ -149,7 +149,7 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
     SettingEntry(
         id = "wheel.invertDirection",
         category = SettingCategory.INPUT,
-        label = "Invert wheel direction",
+        label = "Invert input direction",
         description = "Up = decrease, down = increase",
         isDefault = { it.wheel.invertDirection == defaults.wheel.invertDirection },
         currentDisplay = { if (it.wheel.invertDirection) "ON" else "OFF" },
@@ -157,8 +157,8 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
     SettingEntry(
         id = "wheel.keySource",
         category = SettingCategory.INPUT,
-        label = "Wheel key source",
-        description = "Which Android keycode the wheel sends (auto / DPAD / volume)",
+        label = "Input key source",
+        description = "Which Android keycode direct input sends (auto / DPAD / volume)",
         isDefault = { it.wheel.keySource == defaults.wheel.keySource },
         currentDisplay = { it.wheel.keySource.name },
     ),
@@ -208,7 +208,7 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         id = "ui.infiniteScroll",
         category = SettingCategory.CARD_UI,
         label = "Infinite scroll",
-        description = "Wheel past the last card wraps to the first",
+        description = "Scrolling past the last card wraps to the first",
         isDefault = { it.ui.infiniteScroll == defaults.ui.infiniteScroll },
         currentDisplay = { if (it.ui.infiniteScroll) "ON" else "OFF" },
     ),
@@ -280,7 +280,7 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         id = "behavior.haptics",
         category = SettingCategory.BEHAVIOUR,
         label = "Haptics",
-        description = "Vibration on wheel detents and taps",
+        description = "Vibration on input steps and taps",
         isDefault = { it.behavior.haptics == defaults.behavior.haptics },
         currentDisplay = { if (it.behavior.haptics) "ON" else "OFF" },
     ),
@@ -330,8 +330,8 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
     SettingEntry(
         id = "behavior.wheelTogglesSwitches",
         category = SettingCategory.BEHAVIOUR,
-        label = "Wheel toggles switches",
-        description = "Wheel up/down flips non-scalar cards (locks, plain switches)",
+        label = "Direct input toggles switches",
+        description = "Direct input flips non-scalar cards (locks, plain switches)",
         isDefault = {
             it.behavior.wheelTogglesSwitches == defaults.behavior.wheelTogglesSwitches
         },

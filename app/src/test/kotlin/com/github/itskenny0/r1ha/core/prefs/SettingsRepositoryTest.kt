@@ -47,6 +47,39 @@ class SettingsRepositoryTest {
         }
     }
 
+    @Test fun hardwareProviderModePersists() = runTest {
+        val repo = newRepo()
+        repo.update {
+            it.copy(
+                behavior = it.behavior.copy(
+                    hardwareProviderMode = HardwareProviderMode.SHELLY_WALL_DISPLAY,
+                ),
+            )
+        }
+        repo.settings.test {
+            assertThat(awaitItem().behavior.hardwareProviderMode)
+                .isEqualTo(HardwareProviderMode.SHELLY_WALL_DISPLAY)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test fun hardwareButtonActionMappingsPersist() = runTest {
+        val repo = newRepo()
+        val mappings = listOf(
+            HardwareButtonActionMapping(
+                buttonId = 2,
+                triggerPhase = HardwareButtonTriggerPhase.DOWN,
+                action = HardwareButtonActionKind.RELAY_ON,
+                relayId = 1,
+            ),
+        )
+        repo.update { it.copy(advanced = it.advanced.copy(hardwareButtonActions = mappings)) }
+        repo.settings.test {
+            assertThat(awaitItem().advanced.hardwareButtonActions).isEqualTo(mappings)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
     /**
      * Sign-in then sign-out: confirms the shadow's "no server" state takes priority over a
      * lingering DataStore value. Regression test for the production bug where signing out

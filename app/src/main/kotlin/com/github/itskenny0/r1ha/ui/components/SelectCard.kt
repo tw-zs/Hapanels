@@ -52,7 +52,7 @@ fun SelectCard(
     /**
      * When the resolved per-card [EntityOverride.wheelEnabled] is false (either explicit
      * per-card or via the per-domain default for select / input_select), the
-     * "WHEEL CYCLES OPTIONS" hint is suppressed so it doesn't lie about an affordance
+     * direct-input hint is suppressed so it doesn't lie about an affordance
      * the user has turned off.
      */
     wheelEnabled: Boolean = true,
@@ -128,19 +128,6 @@ fun SelectCard(
                     text = "CHOOSE OPTION",
                     style = R1.labelMicro,
                     color = R1.InkSoft,
-                )
-            }
-            if (wheelEnabled) {
-                Spacer(Modifier.height(6.dp))
-                // Hint about the wheel — first-time users won't know the wheel cycles
-                // options unless we tell them. Subtle InkMuted so it doesn't dominate.
-                // Suppressed when wheel-cycling is off for this card (per-card override
-                // or per-domain default) so the hint never claims an affordance that
-                // doesn't work.
-                Text(
-                    text = "WHEEL CYCLES OPTIONS",
-                    style = R1.labelMicro,
-                    color = R1.InkMuted,
                 )
             }
         }

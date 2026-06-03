@@ -98,7 +98,7 @@ fun DevMenuScreen(
             }
             item {
                 IntStepperRow(
-                    label = "Wheel rate window (ms)",
+                    label = "Input rate window (ms)",
                     subtitle = "Sliding window used to compute events/sec for the acceleration ramp.",
                     value = advanced.wheelRateWindowMs,
                     step = 25,
@@ -109,7 +109,7 @@ fun DevMenuScreen(
             item {
                 IntStepperRow(
                     label = "Nav step cap",
-                    subtitle = "Max cards per detent during a fast wheel spin.",
+                    subtitle = "Max cards per step during fast direct input.",
                     value = advanced.navAccelCap,
                     step = 1,
                     range = 1..20,
@@ -171,7 +171,7 @@ fun DevMenuScreen(
             item {
                 DevSwitchRow(
                     label = "Keep log buffer",
-                    subtitle = "Append R1Log entries to a 500-row ring for the viewer below.",
+                    subtitle = "Append app log entries to a 500-row ring for the viewer below.",
                     checked = advanced.keepLogBuffer,
                     onChange = { v -> vm.updateAdvanced { it.copy(keepLogBuffer = v) } },
                 )
@@ -227,7 +227,7 @@ fun DevMenuScreen(
             item {
                 DevSwitchRow(
                     label = "Verbose service calls",
-                    subtitle = "Log every HA service call payload via R1Log.i (surface in toast if level high enough).",
+                    subtitle = "Log every HA service call payload through the app log (surface in toast if level high enough).",
                     checked = advanced.verboseServiceCalls,
                     onChange = { v -> vm.updateAdvanced { it.copy(verboseServiceCalls = v) } },
                 )
@@ -523,7 +523,7 @@ private fun LogViewer() {
                     .r1Pressable(onClick = {
                         val now = R1LogBuffer.snapshot()
                         val blob = buildString {
-                            append("R1HA log export · ")
+                            append("Hapanels log export · ")
                             append(java.time.Instant.now().toString())
                             append('\n')
                             append("App ${com.github.itskenny0.r1ha.BuildConfig.VERSION_NAME} (${com.github.itskenny0.r1ha.BuildConfig.VERSION_CODE})\n")
@@ -546,7 +546,7 @@ private fun LogViewer() {
                             "yyyyMMdd-HHmm",
                             java.util.Locale.US,
                         ).format(java.util.Date())
-                        exportLauncher.launch("r1ha-logs-$stamp.txt")
+                        exportLauncher.launch("hapanels-logs-$stamp.txt")
                     })
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {

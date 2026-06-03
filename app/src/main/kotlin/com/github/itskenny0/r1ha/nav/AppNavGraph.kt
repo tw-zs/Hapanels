@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
@@ -23,6 +24,7 @@ fun AppNavGraph(
     settings: SettingsRepository,
     tokens: TokenStore,
     wheelInput: WheelInput,
+    panelHardware: PanelHardware,
 ) {
     // App-shortcut deep-link consumer — MainActivity emits a route on
     // ShortcutBus whenever a launcher long-press shortcut delivers an
@@ -145,6 +147,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ROOT,
             )
         }
@@ -155,6 +158,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.CONNECTION,
             )
         }
@@ -165,6 +169,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.APPEARANCE,
             )
         }
@@ -175,6 +180,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BEHAVIOUR,
             )
         }
@@ -185,6 +191,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.INTEGRATIONS,
             )
         }
@@ -195,6 +202,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ADVANCED,
             )
         }
@@ -205,6 +213,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BROWSE,
             )
         }
@@ -361,6 +370,12 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.PANEL_DIAGNOSTICS) {
+            com.github.itskenny0.r1ha.feature.paneldiagnostics.PanelDiagnosticsScreen(
+                hardware = panelHardware,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -586,6 +601,7 @@ private fun SettingsRouteContent(
     tokens: TokenStore,
     haRepository: HaRepository,
     wheelInput: WheelInput,
+    panelHardware: PanelHardware,
     category: com.github.itskenny0.r1ha.feature.settings.SettingsCategory,
 ) {
     com.github.itskenny0.r1ha.feature.settings.SettingsScreen(
@@ -593,6 +609,7 @@ private fun SettingsRouteContent(
         tokens = tokens,
         haRepository = haRepository,
         wheelInput = wheelInput,
+        panelHardware = panelHardware,
         currentCategory = category,
         onOpenCategory = { target ->
             val route = when (target) {
@@ -621,6 +638,7 @@ private fun SettingsRouteContent(
         onOpenCalendars = { navController.navigate(Routes.CALENDARS) { launchSingleTop = true } },
         onOpenLongLivedToken = { navController.navigate(Routes.LONG_LIVED_TOKEN) { launchSingleTop = true } },
         onOpenSystemHealth = { navController.navigate(Routes.SYSTEM_HEALTH) { launchSingleTop = true } },
+        onOpenPanelDiagnostics = { navController.navigate(Routes.PANEL_DIAGNOSTICS) { launchSingleTop = true } },
         onOpenDashboard = { navController.navigate(Routes.DASHBOARD) { launchSingleTop = true } },
         onOpenAreas = { navController.navigate(Routes.AREAS) { launchSingleTop = true } },
         onOpenLabels = { navController.navigate(Routes.LABELS) { launchSingleTop = true } },

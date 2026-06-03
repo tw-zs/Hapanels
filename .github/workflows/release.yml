@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      # Accept either the legacy date-only form (r1ha-YYYYMMDD) or the new
-      # date + UTC time-of-day form (r1ha-YYYYMMDD-HHmm) so same-day reships
+      # Accept either the date-only form (hapanels-YYYYMMDD) or the
+      # date + UTC time-of-day form (hapanels-YYYYMMDD-HHmm) so same-day reships
       # produce strictly distinct versionNames / versionCodes.
-      - 'r1ha-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
-      - 'r1ha-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
+      - 'hapanels-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'hapanels-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
 
 jobs:
   release:
@@ -23,14 +23,14 @@ jobs:
       - name: Parse version from tag
         id: version
         run: |
-          # Tag forms: r1ha-YYYYMMDD or r1ha-YYYYMMDD-HHmm. We always parse a
+          # Tag forms: hapanels-YYYYMMDD or hapanels-YYYYMMDD-HHmm. We always parse a
           # date AND a time; the legacy date-only form defaults to 0000 UTC so
           # the resulting versionName / versionCode are stable across the
           # one-tag-per-day historical regime. The versionCode is minutes-since-
           # 2020-01-01-UTC — strictly monotonic with wall-clock time so any
           # reship within the same day produces a higher code than the previous.
           TAG="${GITHUB_REF_NAME}"
-          REST="${TAG#r1ha-}"
+          REST="${TAG#hapanels-}"
           YYYYMMDD="${REST:0:8}"
           if [ "${#REST}" -ge 13 ] && [ "${REST:8:1}" = "-" ]; then
             HHMM="${REST:9:4}"
@@ -94,14 +94,14 @@ jobs:
       - name: Rename APKs
         run: |
           mv app/build/outputs/apk/github/release/app-github-release.apk \
-             "r1ha-${{ steps.version.outputs.version_name }}.apk"
-          mv app/build/outputs/apk/fdroid/release/app-fdroid-release.apk \
-             "r1ha-fdroid-${{ steps.version.outputs.version_name }}.apk"
+             "hapanels-${{ steps.version.outputs.version_name }}.apk"
+           mv app/build/outputs/apk/fdroid/release/app-fdroid-release.apk \
+             "hapanels-fdroid-${{ steps.version.outputs.version_name }}.apk"
 
       - name: Generate release notes
         id: notes
         run: |
-          PREV_TAG=$(git tag --sort=-creatordate | grep '^r1ha-' | sed -n '2p')
+          PREV_TAG=$(git tag --sort=-creatordate | grep '^hapanels-' | sed -n '2p')
           if [ -n "$PREV_TAG" ]; then
             NOTES=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s")
           else
@@ -120,5 +120,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            r1ha-${{ steps.version.outputs.version_name }}.apk
-            r1ha-fdroid-${{ steps.version.outputs.version_name }}.apk
+            hapanels-${{ steps.version.outputs.version_name }}.apk
+            hapanels-fdroid-${{ steps.version.outputs.version_name }}.apk

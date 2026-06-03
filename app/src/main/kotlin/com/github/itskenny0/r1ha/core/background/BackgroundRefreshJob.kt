@@ -71,8 +71,8 @@ class BackgroundRefreshJob : JobService() {
     }
 
     companion object {
-        // Arbitrary fixed id — only needs to be stable across schedule/cancel calls. The
-        // 0x71BA prefix is the closest valid-hex spelling of "R1HA" for greppability.
+        // Arbitrary fixed id — only needs to be stable across schedule/cancel calls.
+        // Keep the inherited value so existing scheduled jobs are replaced cleanly.
         const val JOB_ID = 0x71BA0001
         /** 15 minutes is the minimum Android allows for periodic jobs on modern API levels;
          *  shorter is clamped to 15 min by the platform anyway. */

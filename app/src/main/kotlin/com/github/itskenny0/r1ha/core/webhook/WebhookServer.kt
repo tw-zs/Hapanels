@@ -1,9 +1,7 @@
 package com.github.itskenny0.r1ha.core.webhook
 
 import com.github.itskenny0.r1ha.core.util.R1Log
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStreamReader
+import java.io.InputStream
 import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.Socket
@@ -16,11 +14,12 @@ import kotlin.concurrent.thread
  * ServerSocket so we don't add a runtime dependency (NanoHTTPD, OkHttp's MockWebServer,
  * etc.) just to listen for the occasional automation ping from HA.
  *
- * Accepts `POST /webhook/<id>` where <id> matches [webhookId]. Body is parsed as text
- * (no length cap — caller is responsible for bounding what HA sends; HA's webhook
- * trigger body is typically a JSON payload < 1 KB). Headers are walked just enough
- * to find `Content-Length`; we don't honour Transfer-Encoding: chunked because HA's
- * outbound webhook client never uses it.
+ * Accepts `POST /webhook/<id>` where <id> matches [webhookId]. The request line and
+ * headers are read as line-based ASCII; the body is then read as exactly
+ * Content-Length BYTES off the raw stream and decoded as UTF-8. Body length is capped
+ * at [MAX_BODY_BYTES]. Headers are walked just enough to find `Content-Length`; we
+ * don't honour Transfer-Encoding: chunked because HA's outbound webhook client never
+ * uses it.
  *
  * Errors and dropped sockets are logged at debug and don't kill the listen loop.
  * Server stops cleanly on [stop]: closes the socket, joins the accept thread.
@@ -71,8 +70,9 @@ class WebhookServer(
         client.use { sock ->
             val remote = sock.inetAddress?.hostAddress ?: "?"
             runCatching {
-                val reader = BufferedReader(InputStreamReader(sock.getInputStream(), Charsets.UTF_8))
-                val statusLine = reader.readLine() ?: return@use
+                sock.soTimeout = CLIENT_READ_TIMEOUT_MS
+                val input = sock.getInputStream()
+                val statusLine = readHeaderLine(input) ?: return@use
                 val parts = statusLine.split(' ')
                 if (parts.size < 2) {
                     sendStatus(sock, 400, "Bad Request")
@@ -83,14 +83,14 @@ class WebhookServer(
                 // Drain headers, pull Content-Length so we know how much body to read.
                 var contentLength = 0
                 while (true) {
-                    val line = reader.readLine() ?: break
+                    val line = readHeaderLine(input) ?: break
                     if (line.isEmpty()) break
                     val colon = line.indexOf(':')
                     if (colon <= 0) continue
                     val name = line.substring(0, colon).trim().lowercase()
                     val value = line.substring(colon + 1).trim()
                     if (name == "content-length") {
-                        contentLength = value.toIntOrNull()?.coerceIn(0, 1_000_000) ?: 0
+                        contentLength = value.toIntOrNull()?.coerceIn(0, MAX_BODY_BYTES) ?: 0
                     }
                 }
                 if (method != "POST") {
@@ -102,22 +102,45 @@ class WebhookServer(
                     sendStatus(sock, 404, "Not Found")
                     return@use
                 }
-                val body = if (contentLength > 0) {
-                    val buf = CharArray(contentLength)
-                    var read = 0
-                    while (read < contentLength) {
-                        val n = reader.read(buf, read, contentLength - read)
-                        if (n <= 0) break
-                        read += n
-                    }
-                    String(buf, 0, read)
-                } else ""
-                R1Log.i("Webhook", "POST $path from $remote (${body.length} B)")
+                val body = readBody(input, contentLength)
+                R1Log.i("Webhook", "POST $path from $remote (${body.length} chars)")
                 onWebhook(body, remote)
                 sendStatus(sock, 200, "OK")
             }.onFailure { t ->
                 R1Log.d("Webhook", "client $remote: ${t.message}")
             }
+        }
+    }
+
+    companion object {
+        private const val CLIENT_READ_TIMEOUT_MS = 10_000
+        internal const val MAX_BODY_BYTES = 1_000_000
+
+        internal fun readHeaderLine(input: InputStream): String? {
+            val sb = StringBuilder()
+            var sawAny = false
+            while (true) {
+                val b = input.read()
+                if (b == -1) return if (sawAny) sb.toString() else null
+                sawAny = true
+                when (b) {
+                    '\n'.code -> return sb.toString()
+                    '\r'.code -> Unit
+                    else -> sb.append(b.toChar())
+                }
+            }
+        }
+
+        internal fun readBody(input: InputStream, contentLength: Int): String {
+            if (contentLength <= 0) return ""
+            val buf = ByteArray(contentLength)
+            var read = 0
+            while (read < contentLength) {
+                val n = input.read(buf, read, contentLength - read)
+                if (n <= 0) break
+                read += n
+            }
+            return String(buf, 0, read, Charsets.UTF_8)
         }
     }
 

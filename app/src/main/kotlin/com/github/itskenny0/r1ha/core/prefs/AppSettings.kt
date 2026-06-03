@@ -27,6 +27,24 @@ enum class TemperatureUnit { AUTO, CELSIUS, FAHRENHEIT }
 /** What the wheel keycodes actually arrive as on this device. */
 enum class WheelKeySource { AUTO, DPAD, VOLUME }
 
+enum class HardwareProviderMode { AUTO, ANDROID_TABLET, SHELLY_WALL_DISPLAY }
+
+@kotlinx.serialization.Serializable
+enum class HardwareButtonActionKind { NONE, TOGGLE_RELAY, RELAY_ON, RELAY_OFF }
+
+@kotlinx.serialization.Serializable
+enum class HardwareButtonTriggerPhase { DOWN, UP, CLICK }
+
+@Stable
+@kotlinx.serialization.Serializable
+data class HardwareButtonActionMapping(
+    val buttonId: Int,
+    val triggerPhase: HardwareButtonTriggerPhase = HardwareButtonTriggerPhase.CLICK,
+    val pressType: String = "SHORT",
+    val action: HardwareButtonActionKind = HardwareButtonActionKind.NONE,
+    val relayId: Int = 1,
+)
+
 /**
  * Shape of the acceleration curve when `wheel.acceleration` is on. The wheel rate (in
  * events/sec) gets folded through the matching slope to produce a step multiplier;
@@ -168,13 +186,13 @@ data class Behavior(
     val showBatteryWhenStatusBarHidden: Boolean = false,
     /**
      * When on, the app opens on the TODAY dashboard rather than the
-     * card stack. Useful for wall-mounted / kiosk R1 setups where the
+     * card stack. Useful for wall-mounted / kiosk panel setups where the
      * device's primary purpose is information radiation (weather,
-     * who's home, calendar) rather than active control. Defaults to
-     * off because the card stack is the more-frequent use case for
-     * handheld R1s.
+     * who's home, calendar) rather than active control. Defaults to on
+     * for the tablet-first Hapanels shell.
      */
-    val startOnDashboard: Boolean = false,
+    val startOnDashboard: Boolean = true,
+    val hardwareProviderMode: HardwareProviderMode = HardwareProviderMode.AUTO,
     /**
      * When on (the default), scrolling the wheel on a non-scalar card (lock,
      * cover-without-position, vacuum, plain switch) flips it on/off — wheel-up =
@@ -568,6 +586,16 @@ data class AdvancedSettings(
     /** Client id sent in CONNECT. Empty = auto-generated per publish (no
      *  session continuity needed; we're publish-only QoS-0). */
     val mqttClientId: String = "",
+    /** Shelly hardware button action mapping. Defaults mirror the hardcoded
+     *  pre-settings behaviour: short press on button 1 toggles relay 1. */
+    val hardwareButtonActions: List<HardwareButtonActionMapping> = listOf(
+        HardwareButtonActionMapping(
+            buttonId = 1,
+            pressType = "SHORT",
+            action = HardwareButtonActionKind.TOGGLE_RELAY,
+            relayId = 1,
+        ),
+    ),
 )
 
 @Stable

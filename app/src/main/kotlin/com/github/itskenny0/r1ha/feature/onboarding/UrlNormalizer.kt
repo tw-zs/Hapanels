@@ -1,5 +1,7 @@
 package com.github.itskenny0.r1ha.feature.onboarding
 
+import java.util.Locale
+
 /**
  * Normalise whatever the user typed into the Onboarding URL field into a usable HA
  * server base URL. The logic is small but worth its own file so it can be unit-tested
@@ -78,7 +80,7 @@ private fun autoAddDefaultPort(url: String): String {
  */
 private fun looksLikePublicHost(host: String): Boolean {
     if (host.isBlank()) return false
-    val lower = host.lowercase()
+    val lower = host.lowercase(Locale.ROOT)
     if (lower == "localhost") return false
     if (lower.endsWith(".local")) return false // mDNS / Bonjour
     if (isPrivateIpv4(lower)) return false

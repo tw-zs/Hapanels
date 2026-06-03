@@ -1,21 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Themed-icons silhouette — same rabbit head + ears as the foreground but solid black,
-  so Android's adaptive-icon theming layer can recolour it cleanly on devices that use
-  the monochrome layer (Material You themed icons on Android 13+). Eye dot omitted —
-  themed icons render as a single tint, and a same-tint eye would just disappear.
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1200"
+    android:viewportHeight="1200">
 
-    <!-- Head — same geometry as foreground, fillColor=black for monochrome theming. -->
-    <path android:fillColor="#000000"
-        android:pathData="M54,40 C67.25,40 78,50.75 78,64 C78,77.25 67.25,88 54,88 C40.75,88 30,77.25 30,64 C30,50.75 40.75,40 54,40 Z"/>
+    <group
+        android:pivotX="600"
+        android:pivotY="600"
+        android:scaleX="1.12"
+        android:scaleY="1.12"
+        android:translateY="72">
 
-    <path android:fillColor="#000000"
-        android:pathData="M36,31 C36,27 39,24 43,24 C47,24 50,27 50,31 L50,56 L36,56 Z"/>
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#000000"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M365,717 V452 C365,433 374,416 389,405 L557,270 C582,250 618,250 643,270 L811,405 C826,416 835,433 835,452 V717" />
 
-    <path android:fillColor="#000000"
-        android:pathData="M58,31 C58,27 61,24 65,24 C69,24 72,27 72,31 L72,56 L58,56 Z"/>
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#000000"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:pathData="M365,717 V693" />
+
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#000000"
+            android:strokeWidth="36"
+            android:strokeLineCap="round"
+            android:pathData="M835,717 V693" />
+
+        <path
+            android:fillColor="#000000"
+            android:pathData="M445,476 C445,461.64 456.64,450 471,450 H574 C588.36,450 600,461.64 600,476 V724 C600,738.36 588.36,750 574,750 H471 C456.64,750 445,738.36 445,724 Z" />
+
+        <path
+            android:fillColor="#000000"
+            android:pathData="M630,476 C630,461.64 641.64,450 656,450 H759 C773.36,450 785,461.64 785,476 V554 C785,568.36 773.36,580 759,580 H656 C641.64,580 630,568.36 630,554 Z" />
+
+        <path
+            android:fillColor="#000000"
+            android:pathData="M630,641 C630,626.64 641.64,615 656,615 H759 C773.36,615 785,626.64 785,641 V724 C785,738.36 773.36,750 759,750 H656 C641.64,750 630,738.36 630,724 Z" />
+    </group>
 </vector>

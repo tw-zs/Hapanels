@@ -25,7 +25,7 @@ import java.time.format.DateTimeFormatter
  * downscale pipeline.
  *
  * Layout (top to bottom):
- *  - "R1HA · ENERGY" header + ISO-8601 timestamp
+ *  - "HAPANELS · ENERGY" header + ISO-8601 timestamp
  *  - DRAW + PRODUCTION numbers paired on one row
  *  - TODAY kWh on its own line
  *  - TOP CONSUMERS table (entity + watts), up to 6 rows
@@ -63,7 +63,7 @@ internal object EnergyShareSnapshot {
         }
 
         var y = PADDING + 56f
-        canvas.drawText("R1HA · ENERGY", PADDING, y, titlePaint)
+        canvas.drawText("HAPANELS · ENERGY", PADDING, y, titlePaint)
         y += 44f
         canvas.drawText(
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
@@ -118,7 +118,7 @@ internal object EnergyShareSnapshot {
 
         // Footer — app + timestamp again at the bottom so even a tight crop
         // keeps a "what is this" attribution visible.
-        val footer = "rabbit r1 · home assistant client"
+        val footer = "hapanels · home assistant panel"
         canvas.drawText(footer, PADDING, SIZE - PADDING + 8f, rowMutedPaint)
 
         return bmp
@@ -128,7 +128,7 @@ internal object EnergyShareSnapshot {
      *  send-intent so the user can drop it into any app. Returns the URI
      *  for diagnostic purposes; the share sheet is what the user actually
      *  interacts with. */
-    fun shareAsPng(context: Context, bitmap: Bitmap, stem: String = "r1ha-energy"): android.net.Uri? {
+    fun shareAsPng(context: Context, bitmap: Bitmap, stem: String = "hapanels-energy"): android.net.Uri? {
         val cache = context.cacheDir.resolve("share")
         if (!cache.exists()) cache.mkdirs()
         val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
@@ -143,7 +143,7 @@ internal object EnergyShareSnapshot {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TITLE, "R1HA energy snapshot")
+                putExtra(Intent.EXTRA_TITLE, "Hapanels energy snapshot")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             val chooser = Intent.createChooser(intent, "Share energy snapshot").apply {

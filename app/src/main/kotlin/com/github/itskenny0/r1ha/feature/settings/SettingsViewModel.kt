@@ -92,6 +92,8 @@ class SettingsViewModel(
     fun setStartOnDashboard(enabled: Boolean) = update {
         it.copy(behavior = it.behavior.copy(startOnDashboard = enabled))
     }
+    fun setHardwareProviderMode(mode: com.github.itskenny0.r1ha.core.prefs.HardwareProviderMode) =
+        update { it.copy(behavior = it.behavior.copy(hardwareProviderMode = mode)) }
     fun setWheelTogglesSwitches(enabled: Boolean) =
         update { it.copy(behavior = it.behavior.copy(wheelTogglesSwitches = enabled)) }
 

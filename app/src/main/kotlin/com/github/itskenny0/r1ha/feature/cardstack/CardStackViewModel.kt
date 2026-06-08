@@ -920,7 +920,7 @@ class CardStackViewModel(
     /** Move the page at [pageId] one slot to the left, if possible. No-op when
      *  the page is already leftmost. Used by the manage modal's MOVE LEFT
      *  button — quicker than implementing drag-reorder on the tab strip itself,
-     *  and ergonomic on the R1's small touch targets. */
+     *  and ergonomic on small touch targets. */
     fun movePageLeft(pageId: String) {
         viewModelScope.launch {
             val s = settings.settings.first()

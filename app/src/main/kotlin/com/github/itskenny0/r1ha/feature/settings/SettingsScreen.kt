@@ -252,7 +252,7 @@ fun SettingsScreen(
 
     // SAF launchers for backup export / import. Using CreateDocument / OpenDocument
     // routes through the Android system file picker, so the user can save to the
-    // R1's local storage, a USB stick, or any cloud-storage app they have wired
+    // Hapanels local storage, a USB stick, or any cloud-storage app they have wired
     // up (Drive, Nextcloud, etc.) without us shipping permissions for direct FS
     // access. CreateDocument keeps the chosen MIME type as the file's display
     // type so a downstream viewer can open it; we use application/json so
@@ -2687,7 +2687,7 @@ private fun currentButtonAction(
  * value. Used for the new dashboard / integrations settings where
  * thresholds (battery low %, power amber/red watts) and intervals
  * (refresh cadence, polling intervals) need granular tuning without
- * a slider's tap-imprecision penalty on the R1's small screen.
+ * a slider's tap-imprecision penalty on compact screens.
  *
  * Tap a pill = ±step. Long-press a pill = ±step×10 (fast-step for
  * wide ranges like power thresholds 50…10 000 W). Pills disable

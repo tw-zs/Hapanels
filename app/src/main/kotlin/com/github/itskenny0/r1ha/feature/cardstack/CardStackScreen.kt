@@ -309,7 +309,7 @@ fun CardStackScreen(
             // wheel scrolling a focused list. Direction inversion is applied via
             // [sign] above so the user's wheel-direction preference still wins.
             if (jumpPickerOpen.value) {
-                // 60 px per detent ≈ one row on the R1's default density; lets a
+                // 60 px per detent is roughly one row on compact panel density; lets a
                 // couple-second sustained spin scan a long favourites list end to
                 // end. Sign convention: wheel-down ⇒ user wants to see further-
                 // down items ⇒ animateScrollBy(positive pixels). [sign] is +1 for
@@ -506,7 +506,7 @@ fun CardStackScreen(
     // overlay sheet renders above all card chrome listing the bulb's effects. Lifted
     // here (rather than inside each card) so the picker can use the full screen rather
     // than being clipped to the card body — a Nanoleaf can ship 30+ effects and a
-    // card-bound picker would be cramped on the R1's 320 px tall display.
+    // card-bound picker would be cramped on compact 320 px tall displays.
     val effectPickerFor = androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<com.github.itskenny0.r1ha.core.ha.EntityId?>(null)
     }
@@ -728,7 +728,7 @@ fun CardStackScreen(
                     // neighbours never receive wheel events, so paying the per-detent re-map
                     // cost on them just churns recompositions of cards the user isn't even
                     // touching. Gating saves N-cards re-allocation × 2 peek neighbours per
-                    // wheel detent during sustained spins (R1's perf-critical path).
+                    // wheel detent during sustained spins on slower panel hardware.
                     val pageCards = androidx.compose.runtime.remember(
                         pageCardsRaw, if (isActive) state.optimisticPercents else null,
                     ) {
@@ -1287,7 +1287,7 @@ private fun PageDeck(
         // ChromeRow consumes the status-bar inset via systemBarsPadding,
         // so the actual chrome+tabstrip height on screen is
         //     statusBarHeight + chromeContent (~44 dp) + tabStripHeight (~36 dp).
-        // The previous build hard-coded 100 dp which assumed the R1's
+        // The previous build hard-coded 100 dp which assumed a tiny
         // ~20 dp status bar; on phones with taller bars (notches,
         // pinhole cameras, Pixel-7-class hardware) the card overlapped
         // the tab strip by 10+ dp and the right-edge VerticalTapeMeter
@@ -1418,7 +1418,7 @@ private fun PageDeck(
  * Cold-start splash shown until [CardStackUiState.settingsLoaded] flips true.
  * Wordmark over a throbber so the user knows the app is loading (a bare
  * spinner during the brief DataStore read window could look like the device
- * froze; on the R1's slow boot path the splash can sit visible for a couple
+ * froze; on slow panel boot paths the splash can sit visible for a couple
  * of hundred ms). Once settings arrive the screen routes into either
  * [EmptyState] (with onboarding copy) or [VerticalCardPager] (with the
  * user's deck) as appropriate.
@@ -1980,7 +1980,7 @@ private fun TabManageDialog(
             // MOVE LEFT / MOVE RIGHT — shifts the page one slot in either
             // direction in the tab strip. Hidden buttons (canMoveLeft/Right =
             // false) on the leftmost/rightmost page rather than disabled, so
-            // the row size adjusts and the dialog stays tidy on the R1's
+            // the row size adjusts and the dialog stays tidy on compact
             // narrow display. The arrow glyphs avoid any text-wrapping at the
             // labelMicro size.
             if (!isAdd && page != null && (canMoveLeft || canMoveRight)) {
@@ -2062,7 +2062,7 @@ private fun TabManageDialog(
                 }
             }
             // Icon row — curated set of Unicode glyphs that read cleanly on
-            // the R1's mono-style display. Tap to apply; '—' clears the
+            // compact mono-style displays. Tap to apply; '—' clears the
             // override (no icon prepended to the chip). Edit mode only,
             // mirroring the accent row's gating.
             if (!isAdd && page != null) {
@@ -2397,7 +2397,7 @@ private fun QuickActionsSheet(
             // These doubles as the HA-Companion-style 'drawer'
             // navigation: every major surface is reachable from one
             // long-press on the chrome hamburger. Two rows of four so
-            // they fit on a single screen of the R1's portrait display.
+            // they fit on a single compact portrait panel screen.
             Text(text = "BROWSE", style = R1.labelMicro, color = R1.InkSoft)
             Spacer(Modifier.height(6.dp))
             Row(
@@ -3032,7 +3032,7 @@ private fun VerticalPagePip(count: Int, current: Int, onClick: (() -> Unit)? = n
     // ~-0.05 during settle — and the displayed fraction is fed into
     // .padding(top = travel * animatedFrac), which Compose hard-throws
     // on with IllegalArgumentException('Padding must be non-negative').
-    // Confirmed by a user crash trace at r1ha-2026.05.14.1741. Pair with
+    // Confirmed by a user crash trace in a legacy 2026.05.14 build. Pair with
     // a defensive .coerceIn at the use site so any future change to the
     // animation spec can't reintroduce the bug.
     val animatedFrac by androidx.compose.animation.core.animateFloatAsState(

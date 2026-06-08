@@ -128,7 +128,7 @@ fun SensorCard(
             val value = formatSensorValue(state.rawState, maxDecimals = maxDecimals)
             val (bodyStyle, suffixStyle) = sensorReadoutStyle(value, textSizeSp)
             // Row when there's a unit suffix (it sits inline with the bottom of the
-            // value, R1's "21 °C" idiom); for unitless long-text sensors we drop the
+            // value, compact "21 °C" idiom); for unitless long-text sensors we drop the
             // Row entirely so the wrapping Text gets the full container width without
             // any horizontal-row layout overhead.
             if (!state.unit.isNullOrBlank()) {
@@ -309,7 +309,7 @@ private fun friendlyBinaryWord(state: EntityState): String {
         "connectivity" -> if (on) "ONLINE" else "OFFLINE"
         // Temperature-class binary sensors trip when their threshold is crossed.
         // HA's contract: `cold` = too cold, `heat` = too hot. CRITICAL is the
-        // shorter all-caps word that scans on the R1's narrow card.
+        // shorter all-caps word that scans on narrow cards.
         "cold" -> if (on) "COLD" else "OK"
         "heat" -> if (on) "HOT" else "OK"
         // Photoresistor / light-detected sensors.
@@ -327,4 +327,3 @@ private fun friendlyBinaryWord(state: EntityState): String {
         else -> if (on) "ON" else "OFF"
     }
 }
-

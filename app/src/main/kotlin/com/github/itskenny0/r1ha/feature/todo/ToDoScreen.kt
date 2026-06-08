@@ -252,7 +252,7 @@ private fun ItemList(
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(8.dp))
-                // Remove "✕" — 32-by-32 hit area with R1's standard
+                // Remove "✕" — 32-by-32 hit area with compact panel
                 // accessibility expansion via r1Pressable.
                 Box(
                     modifier = Modifier

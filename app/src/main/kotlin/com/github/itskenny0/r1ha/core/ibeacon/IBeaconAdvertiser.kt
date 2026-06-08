@@ -56,7 +56,7 @@ object IBeaconAdvertiser {
     }
 
     /** Hardware probe — false on phones without a BLE peripheral chip (rare in 2026
-     *  but a real consideration for some budget tablets + the R1's own modem). */
+     *  but a real consideration for some budget tablets and embedded modems). */
     fun supportsAdvertising(context: Context): Boolean {
         if (!context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) return false
         val mgr = context.getSystemService(BluetoothManager::class.java) ?: return false

@@ -786,7 +786,7 @@ private fun Greeting() {
     )
     val timeLine = now.format(
         // FormatStyle.SHORT is locale-aware: 12-hour with AM/PM in
-        // en-US, 24-hour in en-GB / de-DE / most of EU. The R1's
+        // en-US, 24-hour in en-GB / de-DE / most of EU. The panel's
         // system locale drives the result.
         java.time.format.DateTimeFormatter.ofLocalizedTime(
             java.time.format.FormatStyle.SHORT,

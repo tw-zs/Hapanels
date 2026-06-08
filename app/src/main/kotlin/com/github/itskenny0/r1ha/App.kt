@@ -80,7 +80,7 @@ class App : Application() {
         Toaster.init(this)
         // Wire the album-art cache to the app's cache dir so HA media_player
         // entity_pictures persist across launches. Disk hit ≈ 0 ms vs the ~300
-        // ms LAN round-trip every fresh fetch costs on the R1's slow stack.
+        // ms LAN round-trip every fresh fetch costs on slower panel hardware.
         com.github.itskenny0.r1ha.ui.components.AsyncBitmapCache.init(this)
         // Debug-only ANR watchdog: posts a sentinel to the main looper every 5 s
         // and a paired check-completion ping; if the ping doesn't fire within the

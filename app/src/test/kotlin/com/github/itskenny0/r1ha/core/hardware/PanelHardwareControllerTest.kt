@@ -77,6 +77,35 @@ class PanelHardwareControllerTest {
         assertThat(shelly.startCount).isEqualTo(1)
     }
 
+    @Test fun stopCancelsSettingsCollection() = runTest {
+        val repo = newRepo()
+        val tablet = FakePanelHardware(PanelHardwareProvider.ANDROID_TABLET)
+        val shelly = FakePanelHardware(PanelHardwareProvider.SHELLY_WALL_DISPLAY)
+        val controller = controller(repo, tablet, shelly, shellyDetected = false)
+
+        controller.start()
+        waitUntil { controller.provider == PanelHardwareProvider.ANDROID_TABLET }
+        controller.stop()
+        repo.update { it.copy(behavior = it.behavior.copy(hardwareProviderMode = HardwareProviderMode.SHELLY_WALL_DISPLAY)) }
+        delay(100)
+
+        assertThat(controller.status.value.running).isFalse()
+        assertThat(shelly.startCount).isEqualTo(0)
+    }
+
+    @Test fun forwardsCapabilityUpdatesFromActiveProvider() = runTest {
+        val repo = newRepo()
+        val tablet = FakePanelHardware(PanelHardwareProvider.ANDROID_TABLET)
+        val shelly = FakePanelHardware(PanelHardwareProvider.SHELLY_WALL_DISPLAY)
+        val controller = controller(repo, tablet, shelly, shellyDetected = false)
+
+        controller.start()
+        waitUntil { controller.provider == PanelHardwareProvider.ANDROID_TABLET }
+        tablet.capabilities.value = tablet.capabilities.value.copy(relayCount = 2)
+
+        waitUntil { controller.capabilities.value.relayCount == 2 }
+    }
+
     private fun TestScope.controller(
         repo: SettingsRepository,
         tablet: FakePanelHardware,

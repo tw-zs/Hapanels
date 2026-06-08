@@ -19,7 +19,7 @@ import android.app.Application
  *    and progress chatter ("Backup restored", "Loaded N entities"). Only surfaces
  *    when the user has opted into the diagnostic feed at INFO or DEBUG in Settings.
  *
- * **Why no Android Toast.** The R1's 240×320 display truncates the OS Toast at ~28
+ * **Why no Android Toast.** Tiny 240×320 displays truncate the OS Toast at ~28
  * chars mid-sentence — failure messages like "Validation error: Entity
  * media_player.foo doesn't support media_next_track" were getting clipped before the
  * user could read what went wrong. Every Toaster call routes through R1Toast which

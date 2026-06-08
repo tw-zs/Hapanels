@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
- * Process-scoped in-app toast bus — replaces the OS Toast that R1's tiny 240×320
+ * Process-scoped in-app toast bus — replaces the OS Toast that tiny 240×320
  * display truncated mid-sentence for any non-trivial message. Each pushed event
  * carries the full text; the rendering layer (see `ToastHost` in feature/cardstack
  * or wherever it's mounted) shows a short version by default and expands to the

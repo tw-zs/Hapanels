@@ -39,7 +39,7 @@ import java.io.File
  * [ImageBitmap]s (so swiping back to a previously-seen card paints instantly,
  * no re-decode) plus an OkHttp disk cache shared by every fetch (so re-opening
  * the app pulls the cover from disk instead of refetching over WLAN). On the
- * R1's slow boot path the difference is the album cover appearing in the same
+ * slow panel boot paths the difference is the album cover appearing in the same
  * frame as the rest of the card rather than ~300 ms later.
  *
  * Handles three URL shapes coming from HA's `entity_picture` attribute:
@@ -188,7 +188,7 @@ private const val TARGET_PX = 256
  *
  * Memory LRU sized for **16 entries**: each decoded ARGB_8888 album cover at
  * the typical 240×240 R1 size is ~225 KB, so the upper bound is ~3.6 MB — well
- * inside the R1's working set without crowding out the rest of the app.
+ * inside compact panel working sets without crowding out the rest of the app.
  *
  * Disk cache **10 MB** in the app's cache directory. Honoured by OkHttp's
  * CacheControl machinery + HA's standard image-proxy ETags so a 304 short-
@@ -209,7 +209,7 @@ internal object AsyncBitmapCache {
         if (sharedClient != null) return
         synchronized(this) {
             if (sharedClient != null) return
-            val cacheDir = File(context.cacheDir, "r1ha-images")
+            val cacheDir = File(context.cacheDir, "hapanels-images")
             sharedClient = OkHttpClient.Builder()
                 .cache(Cache(cacheDir, DISK_CACHE_BYTES))
                 .build()

@@ -40,7 +40,7 @@ android {
         applicationId = "com.github.twzs.hapanels"
         minSdk = 30
         targetSdk = 34
-        // Versions are date-based to match the `r1ha-YYYYMMDD` release tag scheme.
+        // Versions are date-based to match the `hapanels-YYYYMMDD` release tag scheme.
         // CI passes APP_VERSION_CODE / APP_VERSION_NAME on tag builds; local builds fall back to today's date.
         versionCode = (System.getenv("APP_VERSION_CODE") ?: defaultVersionCode()).toInt()
         versionName = System.getenv("APP_VERSION_NAME") ?: defaultVersionName()

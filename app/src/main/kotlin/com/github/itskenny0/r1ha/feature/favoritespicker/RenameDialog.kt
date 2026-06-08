@@ -684,7 +684,7 @@ private fun TextSizeRow(
     selected: Int?,
     onSelect: (Int?) -> Unit,
 ) {
-    // Fifteen sp chips + a DEFAULT chip don't fit across the R1's 240 px width as a
+    // Fifteen sp chips + a DEFAULT chip don't fit across compact panel width as a
     // segmented row, so this is a horizontal-scroll variant. Each chip is its own
     // clickable card with the absolute sp label; the selected chip fills accent.
     // Matches the COLOUR row's swatch styling for visual consistency.

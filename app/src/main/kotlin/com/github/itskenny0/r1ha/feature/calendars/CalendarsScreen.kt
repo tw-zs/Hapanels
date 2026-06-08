@@ -47,7 +47,7 @@ import com.github.itskenny0.r1ha.ui.components.r1Pressable
  * Doesn't drill into the full event list — that's a follow-up using
  * the dedicated `/api/calendars/<id>?start=...&end=...` endpoint.
  * This surface is the at-a-glance "what's next?" view that fits the
- * R1's small display.
+ * small displays.
  */
 @Composable
 fun CalendarsScreen(

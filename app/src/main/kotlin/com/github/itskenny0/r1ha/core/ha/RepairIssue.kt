@@ -9,7 +9,7 @@ package com.github.itskenny0.r1ha.core.ha
  *
  * The full payload includes a [data] JsonObject with integration-specific fields the
  * fix flow consumes (which dialog to show next, what config-entry id to operate on,
- * etc.). The R1HA client doesn't reimplement the multi-step fix flow — that lives in
+ * etc.). Hapanels doesn't reimplement the multi-step fix flow — that lives in
  * HA's own frontend — but it surfaces the issue list so a user can see at a glance
  * what's broken and ignore or open-in-browser as needed.
  */
@@ -29,7 +29,7 @@ data class RepairIssue(
     /**
      * When set, points to a translation key in HA's strings.json — the title the
      * user would see in HA's frontend. Bare key shape (e.g. "issue_homeassistant_yaml_deprecated").
-     * The R1HA client doesn't currently translate these; we render them verbatim
+     * Hapanels doesn't currently translate these; we render them verbatim
      * as a fallback when no friendlier title is present.
      */
     val translationKey: String?,

@@ -334,7 +334,7 @@ class MainActivity : ComponentActivity() {
     /** Wall-clock of the last VOLUME-driven wheel emit, per direction.
      *  Lets us throttle the framework's ~30 Hz auto-repeat down to a
      *  more sensible cadence while still letting a held button drive
-     *  continuous motion on phones / tablets (the R1's physical wheel
+     *  continuous motion on phones / tablets (legacy physical wheel
      *  emits each detent as a discrete ACTION_DOWN so this only kicks
      *  in for VOLUME keycodes). */
     private var lastVolumeRepeatUp: Long = 0L
@@ -356,7 +356,7 @@ class MainActivity : ComponentActivity() {
         // compromise: emit on every initial press (repeatCount == 0) AND throttle the
         // auto-repeat stream to ~8 Hz so a held button gives smooth, controllable motion.
         //
-        // The R1's physical wheel maps to DPAD keycodes and emits each detent as a separate
+        // Legacy physical wheels map to DPAD keycodes and emit each detent as a separate
         // ACTION_DOWN with repeatCount=0 — those bypass the throttle entirely so a fast spin
         // never loses an event.
         return when (event.keyCode) {
@@ -411,7 +411,7 @@ class MainActivity : ComponentActivity() {
 
         /** Minimum gap between successive wheel emits when a VOLUME
          *  button is held. ~130 ms ≈ 7.7 Hz — the same cadence a
-         *  practised thumb on the R1's physical wheel can manage, so
+         *  practised thumb on a physical wheel can manage, so
          *  the held-volume-button feel matches a manual spin. */
         private const val VOLUME_REPEAT_MIN_MS = 130L
 

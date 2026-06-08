@@ -26,7 +26,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
  * ON. Thumb is a square (1dp soften), positioned by `Modifier.offset` so a spring overshoot
  * can't crash padding (same lesson as the switch card).
  *
- * Intentionally smaller than Material's switch (32×14dp track vs ~52×32dp) — R1's 240px-wide
+ * Intentionally smaller than Material's switch (32×14dp track vs ~52×32dp) — compact
  * display can't spare the room, and the visual mass already pulls focus away from the row
  * label, which is what the user is actually reading.
  */

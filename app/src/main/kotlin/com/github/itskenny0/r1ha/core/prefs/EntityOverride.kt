@@ -144,7 +144,7 @@ data class EntityOverride(
          * hasn't set a per-card override. Selects default OFF — cycling
          * through options on every detent was too easy to trigger
          * accidentally and the tap-to-open picker is the deliberate path.
-         * Every other domain defaults ON because the wheel is the R1's
+         * Every other domain defaults ON because the wheel is the compact panel's
          * primary input and a brightness / volume / setpoint dial is the
          * whole reason for the wheel.
          */

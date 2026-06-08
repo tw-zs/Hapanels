@@ -678,7 +678,7 @@ private fun MoveChevron(
  * Material 3's stock Checkbox. Empty hairline-bordered square when unselected, accent-filled
  * square with a tick when selected. Uses a proper [border] modifier (rather than the previous
  * two-tone background trick) so the unselected state reads as a crisp 1dp outline on the
- * R1's tiny display rather than a near-invisible darker square.
+ * tiny displays rather than a near-invisible darker square.
  */
 @Composable
 private fun SelectBox(selected: Boolean, onClick: () -> Unit, accent: Color) {

@@ -88,7 +88,7 @@ fun LogbookScreen(
         androidx.compose.runtime.LaunchedEffect(Unit) { vm.refresh() }
     }
     // Long-press → open the entity's history in HA's web UI via the
-    // system browser. The R1's stock browser is rough but works; users on
+    // system browser. Stock embedded browsers can be rough but work; users on
     // a tablet next to the device are the more likely audience for this
     // drill-down. Server URL comes from the active settings snapshot.
     fun openInHa(entry: LogbookEntry) {

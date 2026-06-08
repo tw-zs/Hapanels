@@ -103,7 +103,7 @@ fun <T : Any> DragReorderColumn(
                         // Look up the dragged row's pixel height for the swap
                         // threshold. Falls back to 56 px when the row is briefly
                         // off-screen (drag carrying it past the viewport edge);
-                        // 56 dp ≈ 56 px on the R1's 1:1 density baseline so this
+                        // 56 dp is roughly 56 px on a compact 1:1 density baseline so this
                         // approximation is close enough not to feel jumpy.
                         val rowInfo = listState.layoutInfo.visibleItemsInfo
                             .firstOrNull { it.key == draggedKey }

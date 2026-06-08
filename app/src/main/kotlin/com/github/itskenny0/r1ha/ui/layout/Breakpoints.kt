@@ -13,9 +13,9 @@ import androidx.compose.ui.unit.dp
 /**
  * Width-based responsive tier the current composition is rendering in.
  *
- * The R1's native screen reports ~320–340 dp wide depending on the active
- * `wm density`, so anything ≤ 360 dp is treated as **R1** and rendered
- * exactly as before (no regressions on the R1's small portrait display).
+ * Compact panel screens report ~320-340 dp wide depending on the active
+ * `wm density`, so anything <= 360 dp is treated as the smallest tier and
+ * rendered exactly as before (no regressions on small portrait displays).
  *
  * `PHONE` covers most modern phones (typically 360–500 dp portrait); the
  * layout stays single-column but gets a small breathing-room cap so a
@@ -25,18 +25,18 @@ import androidx.compose.ui.unit.dp
  * across 1200 dp.
  *
  * Thresholds match the Material 3 window-size-class breakpoints loosely
- * — but we keep the lower one at 360 dp so the R1 sits squarely in the
- * smallest bucket regardless of LineageOS GSI density tweaks.
+ * — but we keep the lower one at 360 dp so compact panels sit squarely in
+ * the smallest bucket regardless of LineageOS GSI density tweaks.
  */
 enum class WidthTier {
-    /** ≤ 360 dp — R1 native portrait. Layout is rendered exactly as
+    /** <= 360 dp — compact native portrait. Layout is rendered exactly as
      *  written; no max-width clamp, no extra padding. */
     R1,
     /** 361–599 dp — most phones in portrait. Single column with a
      *  light max-width cap so a held landscape phone doesn't get
      *  overstretched rows. */
     PHONE,
-    /** ≥ 600 dp — tablets, foldables, large landscape phones. Content
+    /** >= 600 dp — tablets, foldables, large landscape phones. Content
      *  is centred with a tighter max-width cap. Some screens (Cameras
      *  GRID, Dashboard tile row) can also opt into a wider grid. */
     TABLET,
@@ -56,7 +56,7 @@ fun currentWidthTier(): WidthTier {
     }
 }
 
-/** Convenience — `true` when the host is bigger than an R1. Use sparingly;
+/** Convenience — `true` when the host is bigger than the smallest panel tier. Use sparingly;
  *  most screens should route through [currentWidthTier] for the actual
  *  layout decision. */
 @Composable

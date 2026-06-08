@@ -33,6 +33,8 @@ class PanelHardwareController(
     )
     private var activeHardware: PanelHardware? = null
     private var activeMode: HardwareProviderMode? = null
+    private var settingsJob: Job? = null
+    private var capabilitiesForwardJob: Job? = null
     private var eventForwardJob: Job? = null
     private var runtimeForwardJob: Job? = null
 
@@ -53,7 +55,8 @@ class PanelHardwareController(
     override val events: Flow<PanelHardwareEvent> = eventBus
 
     override suspend fun start() {
-        scope.launch {
+        if (settingsJob?.isActive == true) return
+        settingsJob = scope.launch {
             settings.settings
                 .map { it.behavior.hardwareProviderMode }
                 .distinctUntilChanged()
@@ -62,9 +65,13 @@ class PanelHardwareController(
     }
 
     override suspend fun stop() {
+        settingsJob?.cancel()
         activeHardware?.stop()
+        capabilitiesForwardJob?.cancel()
         eventForwardJob?.cancel()
         runtimeForwardJob?.cancel()
+        settingsJob = null
+        capabilitiesForwardJob = null
         eventForwardJob = null
         runtimeForwardJob = null
         activeHardware = null
@@ -111,11 +118,15 @@ class PanelHardwareController(
         }
         if (providerChanged) {
             previous?.stop()
+            capabilitiesForwardJob?.cancel()
             eventForwardJob?.cancel()
             runtimeForwardJob?.cancel()
             activeHardware = next
             capabilities.value = next.capabilities.value
             runtimeState.value = next.runtimeState.value
+            capabilitiesForwardJob = scope.launch {
+                next.capabilities.collect { capabilities.value = it }
+            }
             eventForwardJob = scope.launch {
                 next.events.collect { eventBus.emit(it) }
             }

@@ -231,8 +231,8 @@ private fun ZoneMap(zones: List<ZonesViewModel.Zone>) {
                 // box span (in metres) → canvas span (in pixels) ratio.
                 // Caps are relative to canvas size so a tablet's larger
                 // viewport doesn't render the same metric radii as visually
-                // smaller circles than the R1's portrait display does. The
-                // previous absolute (8f, 48f) was tuned for the R1's 240px
+                // smaller circles than compact portrait displays do. The
+                // previous absolute (8f, 48f) was tuned for a 240px
                 // canvas; on a 720px tablet that made every zone read as a
                 // sub-thumbnail dot.
                 val radiusM = zone.radiusMeters ?: 100.0

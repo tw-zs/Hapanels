@@ -312,7 +312,7 @@ private fun ExampleChips(onPick: (String, String, String) -> Unit) {
         ),
     )
     // Fade-edge gradient hints at horizontal overflow. The chip row is wider than
-    // the screen on the R1's 240px viewport; without an edge fade the trailing
+    // the screen on compact panel viewports; without an edge fade the trailing
     // chips look truncated rather than scrollable. drawWithContent + compositingStrategy
     // lets the fade only mask the foreground content while leaving the surrounding
     // surface untouched.

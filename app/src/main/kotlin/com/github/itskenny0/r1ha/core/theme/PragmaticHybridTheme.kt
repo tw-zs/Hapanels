@@ -693,7 +693,7 @@ internal fun VerticalTapeMeter(
                         .clip(R1.ShapeS)
                         .r1Pressable(onClick = { onSetPercent?.invoke(entityId, targetPct) })
                         // Generous padding both makes the tap target finger-friendly on
-                        // the R1's narrow display and visually keeps the label in the
+                        // narrow panel displays and visually keeps the label in the
                         // same place — we trim the padding so the column's even
                         // distribution still feels honest.
                         .padding(horizontal = 4.dp, vertical = 1.dp)
@@ -1017,7 +1017,7 @@ internal fun MediaControlsRow(
         (supportedFeatures and com.github.itskenny0.r1ha.core.ha.EntityState.MediaPlayerFeature.VOLUME_MUTE) != 0
 
     // Glyph-only row — ⏮ / ⏯ / ⏭ / speaker. Previous version paired each glyph
-    // with a 4-char text label, but on the R1's narrow card area each button's
+    // with a 4-char text label, but on narrow card areas each button's
     // slot is ~50 px wide and the labels wrapped mid-word (BAC/K, PAU/SE,
     // NEX/T, MUT/E). The music-control glyphs are universal and read better
     // without the text. Vol± buttons were dropped earlier since the slider
@@ -1118,7 +1118,7 @@ private fun MediaButton(
  * entry at the top that clears the effect. The active effect is highlighted in accent.
  * Tapping any row applies it via [LocalOnSetLightEffect] and dismisses. A CLOSE row at
  * the bottom and a backdrop-tap also dismiss. Scrolls vertically so bulbs with long
- * effect lists (Nanoleaf can ship 30+) are usable on the R1's 320 px tall display.
+ * effect lists (Nanoleaf can ship 30+) are usable on compact panel displays.
  */
 @Composable
 internal fun EffectPickerSheet(

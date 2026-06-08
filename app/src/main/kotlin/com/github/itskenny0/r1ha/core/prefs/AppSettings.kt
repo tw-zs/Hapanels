@@ -448,7 +448,7 @@ data class AdvancedSettings(
     val restTimeoutSec: Int = 30,
     /** When on, R1Log entries also append to a process-scope ring buffer that's
      *  surfaced in the dev menu's log viewer. Always on currently — flip to off if
-     *  the buffer's GC pressure ever becomes a concern on the R1's tight heap. */
+     *  the buffer's GC pressure ever becomes a concern on tight panel heaps. */
     val keepLogBuffer: Boolean = true,
     /** When on, the picker drops rows that fail to construct an EntityState rather
      *  than logging at WARN and continuing. Off (the lenient default) is friendlier

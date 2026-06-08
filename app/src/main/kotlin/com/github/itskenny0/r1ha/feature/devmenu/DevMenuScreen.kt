@@ -960,7 +960,7 @@ private fun MqttPanel(
                     inFlight = true
                     scope.launch {
                         val cid = advanced.mqttClientId.ifBlank {
-                            "r1ha-${System.currentTimeMillis() and 0xFFFF}"
+                            "hapanels-${System.currentTimeMillis() and 0xFFFF}"
                         }
                         val result = com.github.itskenny0.r1ha.core.mqtt.MqttPublisher.publish(
                             host = advanced.mqttHost,

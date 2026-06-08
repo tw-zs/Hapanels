@@ -34,7 +34,7 @@ import com.github.itskenny0.r1ha.core.theme.R1
  *    [R1.StatusRed] when [isError] — animated so the focus transition reads as deliberate
  *    rather than a Material binary flip.
  *  * Monospace text by default (the field is almost always pointed at a URL or a token, so
- *    fixed-width digits help legibility on the R1's tiny display).
+ *    fixed-width digits help legibility on tiny displays).
  *  * Cursor in the accent colour, not Material's primary.
  *
  * No floating label — the screen's section header serves that role; a Material label on top

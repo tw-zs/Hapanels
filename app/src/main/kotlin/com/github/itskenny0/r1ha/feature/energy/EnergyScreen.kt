@@ -39,7 +39,7 @@ import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 
 /**
  * Energy summary surface — a four-tile readout of the most useful
- * Energy-panel numbers, sized down to fit the R1's portrait display:
+ * Energy-panel numbers, sized down to fit compact portrait displays:
  *  - DRAW (current W) + PRODUCTION (W) side-by-side at the top
  *  - TODAY (kWh since midnight) as its own line below
  *  - TOP CONSUMERS list (descending by current W)

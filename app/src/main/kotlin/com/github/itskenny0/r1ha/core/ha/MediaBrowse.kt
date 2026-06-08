@@ -9,7 +9,7 @@ package com.github.itskenny0.r1ha.core.ha
  * the bound player.
  *
  * HA's payload includes more fields (thumbnail URL, child types, etc.) that
- * we don't surface in the R1's narrow viewport — the title + a play/folder
+ * we don't surface in narrow panel viewports — the title + a play/folder
  * affordance is the at-a-glance shape the screen needs.
  */
 data class MediaBrowseEntry(

@@ -222,7 +222,7 @@ class DefaultHaRepository(
         }
         outcome.onFailure { t ->
             // R1Log gets the full picture (entity_id + service + message); the toast
-            // is short enough to render legibly on the R1's 240×320 display. HA's
+            // is short enough to render legibly on compact panel displays. HA's
             // error strings can be paragraph-length ("Failed to call service light/turn_on:
             // Unable to find referenced entities…") and Android's Toast widget hard-
             // truncates anything past ~2 short lines, so a multi-line message gets cut

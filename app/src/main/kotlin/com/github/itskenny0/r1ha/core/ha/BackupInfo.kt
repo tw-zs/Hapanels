@@ -6,7 +6,7 @@ package com.github.itskenny0.r1ha.core.ha
  * installs, with extra fields surfacing only when the supervisor is present.
  *
  * The full payload includes more (mainfest_id, location addons, paths, encryption
- * details). This data class captures what the R1's narrow viewport needs: a label,
+ * details). This data class captures what narrow panel viewports need: a label,
  * a timestamp, a size, and an indicator of whether the backup is protected by a
  * passphrase. The full blob stays in the repository response so a future detail
  * surface can crack it open further.

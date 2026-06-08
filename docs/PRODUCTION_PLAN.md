@@ -4,11 +4,11 @@
 
 Hapanels is a single native Android app for Home Assistant wall panels. The primary target is Shelly Wall Display hardware, with regular Android tablets supported as a hardware-light fallback.
 
-The app should not use ShellyElevate's Home Assistant WebView as the main experience. R1HA's native Home Assistant client remains the foundation, while ShellyElevate is used as the reference for hardware access and panel appliance behavior.
+The app should not use ShellyElevate's Home Assistant WebView as the main experience. Hapanels keeps a native Home Assistant client foundation, while ShellyElevate is used as the reference for hardware access and panel appliance behavior.
 
 ## Non-Negotiables
 
-- One application, not R1HA plus a separate ShellyElevate sidecar.
+- One application, not Hapanels plus a separate ShellyElevate sidecar.
 - Native Home Assistant UI first.
 - Shelly Wall Display hardware support first-class.
 - Regular Android tablet mode must still work when Shelly-specific hardware is unavailable.
@@ -20,7 +20,7 @@ The app should not use ShellyElevate's Home Assistant WebView as the main experi
 
 ### App Shell
 
-- Keep R1HA's Home Assistant auth, token storage, REST, WebSocket, and service call infrastructure.
+- Keep Hapanels' Home Assistant auth, token storage, REST, WebSocket, and service call infrastructure.
 - Rework launch flow toward tablet/wall-panel dashboards instead of small-screen card stack first.
 - Keep card stack and quick surfaces only where they remain useful on larger screens.
 
@@ -73,7 +73,7 @@ Deliverables:
 
 - Public GitHub repository.
 - Hapanels application name and application ID.
-- R1HA base builds as Hapanels.
+- Native Android app builds as Hapanels.
 - Production plan and notices added.
 
 Verification:
@@ -83,7 +83,7 @@ Verification:
 
 ### Milestone 1: Tablet/Wall-Panel Product Shell
 
-Goal: make the app feel like a wall panel, not a Rabbit R1 client.
+Goal: make the app feel like a wall panel, not a small-screen card-stack client.
 
 Tasks:
 
@@ -92,12 +92,12 @@ Tasks:
 - Add panel mode settings: wall panel, tablet, development.
 - Add layout density options for 7-10 inch screens.
 - Add persistent navigation suitable for landscape and portrait tablets.
-- De-emphasize R1 wheel-specific wording in settings and README.
+- De-emphasize legacy wheel-specific wording in settings and README.
 
 Verification:
 
 - Launches on a normal Android tablet.
-- Default screen is useful without R1-style card-stack interaction.
+- Default screen is useful without card-stack-first interaction.
 - Existing HA login and entity/service functionality still works.
 
 ### Milestone 2: Hardware Abstraction Layer
@@ -243,11 +243,11 @@ Verification:
 ## Major Risks
 
 - Shelly hardware code may depend on root or device-specific file paths.
-- R1HA's current UI is small-screen/card-stack oriented and needs real tablet UX work.
+- The inherited card-stack UI is small-screen oriented and needs real tablet UX work.
 - MQTT discovery must avoid duplicate device/entity IDs across multiple panels.
-- Target SDK differences between R1HA and ShellyElevate may affect permissions and hardware access.
+- Target SDK differences between Hapanels and ShellyElevate may affect permissions and hardware access.
 - Physical button testing requires real Shelly Wall Display hardware.
 
 ## First Implementation Recommendation
 
-Start with Milestone 2 and 3 before rewriting large UI surfaces. Physical buttons are the highest-value differentiator and will validate whether Shelly native input can live inside the R1HA-derived app cleanly.
+Start with Milestone 2 and 3 before rewriting large UI surfaces. Physical buttons are the highest-value differentiator and will validate whether Shelly native input can live inside Hapanels cleanly.

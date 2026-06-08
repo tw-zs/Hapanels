@@ -159,7 +159,7 @@ interface HaRepository {
      * GET `/api/error_log` — HA's recent log output. Plain text body, up
      * to a few hundred KB depending on log level. We deliberately cap
      * the returned size client-side rather than streaming because the
-     * R1's renderer wants the whole thing in memory anyway.
+     * Hapanels' renderer wants the whole thing in memory anyway.
      */
     suspend fun fetchErrorLog(): Result<String>
 

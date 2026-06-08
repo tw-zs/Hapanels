@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
  * version we care about, so `registerReceiver(null, filter)` returns
  * the most recently-broadcast intent without us having to manage
  * unregister-on-dispose lifecycle paperwork. We re-poll every 30 s
- * which is fine — the R1's battery doesn't change measurably faster
+ * which is fine — panel batteries don't change measurably faster
  * than that, and the alternative (a real BroadcastReceiver) wakes the
  * app on every percentage change which is wasteful.
  *

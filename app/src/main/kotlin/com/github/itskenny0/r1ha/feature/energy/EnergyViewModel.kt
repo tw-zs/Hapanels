@@ -23,7 +23,7 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * HA's full Energy dashboard has per-hour bar charts, source breakdown
  * (grid / solar / battery), gas + water meters, and per-device
- * consumption. Re-implementing that on the R1's small screen would
+ * consumption. Re-implementing that on a small panel screen would
  * trade legibility for completeness, so this surface picks the four
  * numbers a user actually wants at a glance:
  *

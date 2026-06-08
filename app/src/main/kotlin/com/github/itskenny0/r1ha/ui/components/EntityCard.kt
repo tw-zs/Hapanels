@@ -91,7 +91,7 @@ fun EntityCard(
         Domain.SWITCH, Domain.INPUT_BOOLEAN, Domain.AUTOMATION -> CardRenderModel.AccentRole.WARM
         Domain.LOCK -> CardRenderModel.AccentRole.NEUTRAL
         Domain.HUMIDIFIER -> CardRenderModel.AccentRole.COOL
-        // Thermostats run hot most of the time on a Rabbit — warm reads right for "this
+        // Thermostats run hot most of the time on a wall panel — warm reads right for "this
         // controls temperature". Cooler accents can come back if/when a heat/cool sub-mode
         // colour pass lands alongside scalar target-temperature support.
         Domain.CLIMATE -> CardRenderModel.AccentRole.WARM
@@ -351,7 +351,7 @@ fun EntityCard(
         // for the per-card long-press action (e.g. long-press the kitchen
         // light to trigger scene.dinner) — without this affordance the
         // feature is invisible until the user accidentally happens upon it.
-        // Restored in r1ha-20260514-17xx after the PagerState stale-closure
+        // Restored after the PagerState stale-closure
         // fix made the scroll-up crash go away.
         if (onLongPress != null && state.isAvailable) {
             Text(

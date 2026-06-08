@@ -142,7 +142,7 @@ fun NotificationsScreen(
             ) {
                 // Skeleton rows teach the eye where notifications will land
                 // instead of leaving a void with a tiny centred spinner.
-                // Three rows roughly cover the R1's portrait viewport.
+                // Three rows roughly cover a compact portrait viewport.
                 repeat(3) {
                     com.github.itskenny0.r1ha.ui.components.SkeletonRow()
                 }

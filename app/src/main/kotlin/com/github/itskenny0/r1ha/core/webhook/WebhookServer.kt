@@ -35,7 +35,7 @@ class WebhookServer(
 
     fun start() {
         if (!running.compareAndSet(false, true)) return
-        acceptThread = thread(name = "r1ha-webhook-${port}", isDaemon = true) {
+        acceptThread = thread(name = "hapanels-webhook-${port}", isDaemon = true) {
             runCatching {
                 ServerSocket(port).also { socket = it }.use { server ->
                     R1Log.i("Webhook", "listening on :$port path=/webhook/$webhookId")

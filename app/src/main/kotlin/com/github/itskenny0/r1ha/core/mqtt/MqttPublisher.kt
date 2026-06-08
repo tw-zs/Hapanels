@@ -33,7 +33,7 @@ object MqttPublisher {
         port: Int,
         topic: String,
         payload: ByteArray,
-        clientId: String = "r1ha-${System.currentTimeMillis() and 0xFFFF}",
+        clientId: String = "hapanels-${System.currentTimeMillis() and 0xFFFF}",
         username: String? = null,
         password: String? = null,
         useTls: Boolean = false,

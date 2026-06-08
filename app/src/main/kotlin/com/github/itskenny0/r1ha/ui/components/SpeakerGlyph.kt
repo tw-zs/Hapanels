@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 /**
  * Canvas-drawn speaker glyph used by the media-player card's mute button. Built
  * from primitives (lines + a small trapezoidal cone) rather than a Unicode emoji
- * so it renders identically across the R1's font situations and stays in the
+ * so it renders identically across panel font situations and stays in the
  * sharp monochrome dashboard idiom instead of dropping a coloured emoji in.
  *
  * When [isMuted] is true the speaker is drawn with a diagonal slash from upper-
@@ -72,7 +72,7 @@ fun SpeakerGlyph(
             )
         } else {
             // Two emission arcs to the right of the cone — drawn as short lines
-            // at the wave-tip locations for crispness on the R1's small display
+            // at the wave-tip locations for crispness on small displays
             // (a real arc curve at this size looks like a smudge). Close arc =
             // mid-volume wave, far arc = peak wave, both nudged outward from
             // the cone tip.

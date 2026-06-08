@@ -1,14 +1,18 @@
 package com.github.itskenny0.r1ha.core.hardware
 
 import android.os.Build
-import com.github.itskenny0.r1ha.core.mqtt.MqttPublisher
+import com.github.itskenny0.r1ha.core.mqtt.MqttSession
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class PanelMqttBridge(
@@ -19,8 +23,24 @@ class PanelMqttBridge(
     private val objectId = "hapanels_${Build.DEVICE.ifBlank { "panel" }.safeId()}"
     private val baseTopic = "hapanels/${Build.DEVICE.ifBlank { "panel" }.safeId()}"
     private var discoverySignature: Pair<Int, Int>? = null
+    private var session: MqttSession? = null
+    private var settingsJob: Job? = null
+    private var sessionJob: Job? = null
 
     fun start() {
+        settingsJob?.cancel()
+        settingsJob = scope.launch {
+            settings.settings
+                .map { resolveMqtt(it) }
+                .distinctUntilChanged()
+                .collect { mqtt ->
+                    sessionJob?.cancel()
+                    disconnectSession(publishOffline = true)
+                    if (mqtt != null) {
+                        sessionJob = scope.launch { maintainSession(mqtt) }
+                    }
+                }
+        }
         scope.launch {
             hardware.capabilities
                 .collect { capabilities ->
@@ -28,6 +48,7 @@ class PanelMqttBridge(
                     if (signature != discoverySignature) {
                         discoverySignature = signature
                         publishDiscovery(capabilities)
+                        subscribeCommands()
                         publishAvailability(true)
                     }
                 }
@@ -59,6 +80,14 @@ class PanelMqttBridge(
                 }
             }
         }
+    }
+
+    fun stop() {
+        settingsJob?.cancel()
+        settingsJob = null
+        sessionJob?.cancel()
+        sessionJob = null
+        scope.launch { disconnectSession(publishOffline = true) }
     }
 
     private suspend fun publishDiscovery(capabilities: PanelCapabilities) {
@@ -141,19 +170,61 @@ class PanelMqttBridge(
     }
 
     private suspend fun publish(topic: String, payload: String, retain: Boolean) {
-        val mqtt = resolveMqtt(settings.settings.first()) ?: return
-        MqttPublisher.publish(
-            host = mqtt.host,
-            port = mqtt.port,
+        (session ?: return).publish(
             topic = topic,
             payload = payload.toByteArray(Charsets.UTF_8),
-            clientId = mqtt.clientId,
-            username = mqtt.username,
-            password = mqtt.password,
-            useTls = mqtt.useTls,
             retain = retain,
         ).onFailure { t ->
             R1Log.w("PanelMqttBridge", "publish failed topic=$topic: ${t.message}")
+        }
+    }
+
+    private suspend fun maintainSession(mqtt: MqttConfig) {
+        while (scope.isActive) {
+            val next = MqttSession(
+                host = mqtt.host,
+                port = mqtt.port,
+                clientId = mqtt.clientId,
+                username = mqtt.username,
+                password = mqtt.password,
+                useTls = mqtt.useTls,
+                onMessage = ::handleCommand,
+            )
+            if (next.connect().isSuccess) {
+                session = next
+                subscribeCommands()
+                publishDiscovery(hardware.capabilities.value)
+                publishAvailability(true)
+                hardware.runtimeState.value.relayStates.forEach { (id, on) ->
+                    if (on != null) publish("$baseTopic/relay/$id/state", if (on) "ON" else "OFF", retain = true)
+                }
+                while (scope.isActive && session == next && next.isConnected) delay(1_000)
+                if (session == next) session = null
+            }
+            delay(15_000)
+        }
+    }
+
+    private suspend fun disconnectSession(publishOffline: Boolean) {
+        val current = session ?: return
+        if (publishOffline) publishAvailability(false)
+        current.disconnect()
+        session = null
+    }
+
+    private suspend fun subscribeCommands() {
+        val relayCount = hardware.capabilities.value.relayCount
+        for (relayId in 1..relayCount) {
+            session?.subscribe("$baseTopic/relay/$relayId/set")
+        }
+        session?.subscribe("$baseTopic/screen/brightness/set")
+    }
+
+    private suspend fun handleCommand(topic: String, payload: ByteArray) {
+        when (val command = PanelMqttCommand.parse(baseTopic, topic, payload.toString(Charsets.UTF_8))) {
+            is PanelMqttCommand.SetRelay -> hardware.setRelay(command.relayId, command.on)
+            is PanelMqttCommand.SetBrightness -> hardware.setScreenBrightness(command.percent)
+            null -> R1Log.w("PanelMqttBridge", "ignored command topic=$topic payload=${payload.toString(Charsets.UTF_8).trim()}")
         }
     }
 
@@ -188,6 +259,31 @@ class PanelMqttBridge(
         val useTls: Boolean,
         val clientId: String,
     )
+}
+
+internal sealed interface PanelMqttCommand {
+    data class SetRelay(val relayId: Int, val on: Boolean) : PanelMqttCommand
+    data class SetBrightness(val percent: Int) : PanelMqttCommand
+
+    companion object {
+        fun parse(baseTopic: String, topic: String, payload: String): PanelMqttCommand? {
+            val text = payload.trim()
+            val relayMatch = Regex("^${Regex.escape(baseTopic)}/relay/(\\d+)/set$").matchEntire(topic)
+            if (relayMatch != null) {
+                val relayId = relayMatch.groupValues[1].toIntOrNull() ?: return null
+                val on = when (text.uppercase()) {
+                    "ON", "1", "TRUE" -> true
+                    "OFF", "0", "FALSE" -> false
+                    else -> return null
+                }
+                return SetRelay(relayId, on)
+            }
+            if (topic == "$baseTopic/screen/brightness/set") {
+                return SetBrightness(text.toIntOrNull()?.coerceIn(0, 100) ?: return null)
+            }
+            return null
+        }
+    }
 }
 
 private fun String.safeId(): String = lowercase()

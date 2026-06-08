@@ -140,7 +140,7 @@ fun CamerasScreen(
             ) {
                 // Skeleton rows give the eye a hint of "list of cameras
                 // incoming" instead of a context-free centred spinner. Three
-                // rows fit the R1's portrait viewport without scrolling.
+                // rows fit compact portrait viewports without scrolling.
                 repeat(3) {
                     com.github.itskenny0.r1ha.ui.components.SkeletonRow()
                 }

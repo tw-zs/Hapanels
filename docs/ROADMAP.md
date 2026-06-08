@@ -2,29 +2,31 @@
 
 ## Current Baseline
 
-Hapanels is currently a rebranded R1HA-based native Home Assistant Android app with Hapanels branding, a public GitHub repo, a white splash screen, and a panel-oriented hardware diagnostics foundation.
+Hapanels is currently a native Home Assistant Android panel app with Hapanels branding, a public GitHub repo, a white splash screen, panel-oriented hardware diagnostics, and a native tablet dashboard mockup.
 
 ## Milestone 1: Product Shell
 
-Goal: make the app feel like a wall panel/tablet app instead of an R1-first client.
+Goal: make the app feel like a wall panel/tablet app instead of a small-screen card-stack client.
 
-Status: mostly done for runtime product shell.
+Status: done for runtime product shell.
 
 Done:
 - Branding, icon, README, and panel diagnostics entry points.
 - Tablet-first dashboard default for fresh installs.
 - Panel hardware/provider mode settings.
-- Visible runtime R1/R1HA wording replaced with Hapanels/panel copy on primary surfaces.
+- Visible runtime legacy wording replaced with Hapanels/panel copy on primary surfaces.
+- Landscape/portrait shell tuning through responsive breakpoints and tablet dashboard layouts.
+- Release/update naming uses Hapanels tags, assets, client ids, cache names, and runtime identifiers.
+- Non-runtime comments were swept so product-shell documentation describes Hapanels as a panel app.
 
 Next:
-- Landscape/portrait wall-panel layout tuning.
-- Sweep non-runtime comments and inherited release/update naming when the package/release pipeline is renamed.
+- Optional future cleanup: migrate inherited package/internal type names if the cost is justified.
 
 ## Milestone 2: Hardware Abstraction Layer
 
 Goal: introduce a clean hardware boundary that can run on normal Android tablets and Shelly Wall Display.
 
-Status: in progress.
+Status: done for the HAL foundation.
 
 Done:
 - `PanelHardware` interface.
@@ -34,9 +36,13 @@ Done:
 - Runtime status in Settings and `PANEL HARDWARE` diagnostics.
 - Live Android sensor reads for ambient light, proximity, and screen brightness where the OS exposes them.
 - Tests around provider mode persistence and controller provider switching.
+- Controller lifecycle is idempotent and `stop()` cancels settings/provider forwarding.
+- Active provider capability and runtime-state updates are forwarded through the controller.
+- Shelly-native button and relay runtime state now flows through the same HAL boundary.
 
 Next:
-- Keep runtime state populated by Shelly-native buttons, relays, and sensors once native access lands.
+- Optional polish: localize all remaining hardware diagnostics labels.
+- Optional polish: add richer diagnostics around provider start/stop failures.
 
 ## Milestone 3: Shelly Physical Buttons
 
@@ -83,12 +89,24 @@ Next:
 
 Goal: Home Assistant discovers the panel as a device with relays, buttons, sensors, and availability.
 
+Status: mostly done; needs real broker/device smoke validation.
+
+Done:
+- MQTT settings for host, port, TLS, username, password, and client id.
+- Lightweight MQTT v3.1.1 session with publish, subscribe, ping, and disconnect.
+- Discovery config publisher for relays, button pressed state, button click event sensors, and screen brightness.
+- Availability publishing on the panel status topic.
+- Relay state publishing.
+- Button pressed state and button event publishing.
+- Ambient light, proximity, and screen brightness state publishing where runtime state provides values.
+- Relay command subscriptions via `hapanels/<device>/relay/<id>/set`.
+- Screen brightness command subscription via `hapanels/<device>/screen/brightness/set`.
+- Unit coverage for MQTT command parsing.
+
 Next:
-- MQTT connection manager.
-- Discovery config publisher.
-- Availability publishing.
-- Relay command subscriptions.
-- Button event publishing.
+- Smoke-test discovery and command topics against the user's Home Assistant MQTT broker.
+- Add richer MQTT diagnostics for connection status and last publish/subscribe error.
+- Add Home Assistant device metadata refinements if HA UI naming needs polish.
 
 ## Milestone 6: Proximity, Brightness, Screensaver
 
@@ -110,7 +128,7 @@ Next:
 - Floating return-to-app button when Hapanels is backgrounded or hidden.
 - Diagnostics export.
 - Hardware compatibility matrix.
-- Release workflow cleanup from inherited R1HA naming.
+- Release workflow hardening and signed APK handling.
 
 ## Milestone 8: Native Panel Dashboard And HA Config Sync
 

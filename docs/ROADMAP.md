@@ -42,7 +42,7 @@ Next:
 
 Goal: physical Shelly buttons produce reliable button events and can trigger local or HA actions.
 
-Status: in progress.
+Status: mostly done for local relay actions; HA/MQTT action targets still pending.
 
 Done:
 - Shared button event model.
@@ -51,10 +51,19 @@ Done:
 - `InputMonitor` / `shellyinput.cpp` JNI wiring.
 - Low-level Shelly input key mapping to `PanelHardwareEvent.Button` events.
 - Live `pressedButtonIds` updates in `PanelHardwareRuntimeState`.
-- Button action mapping settings for press, release, and short-click local relay actions.
+- Button action mapping settings for buttons 1-5.
+- Button action rows for press, release, short click, long press, double click, and triple click.
+- Local relay actions for configured button mappings: none, toggle relay, relay on, and relay off.
+- Button 1 short click defaults to relay 1 toggle when relay 1 exists.
+- Short click fires immediately when the same button has no configured double/triple click mapping.
+- Long press does not delay short-click relay behavior.
+- `PanelMqttBridge` publishes button pressed state and click event topics for HA discovery/state surfaces.
 
 Next:
-- Extend button action mapping to long/double/triple and HA/MQTT actions.
+- Add non-local action targets for button mappings, especially HA service calls and MQTT publish actions.
+- Let button action rows choose relay id once more than one relay is supported.
+- Validate physical timing on Shelly Wall Display hardware across all five buttons.
+- Add or expand tests for configured long/double/triple mappings and immediate-short behavior.
 
 ## Milestone 4: Shelly Relays And Sensors
 
@@ -103,6 +112,26 @@ Next:
 - Hardware compatibility matrix.
 - Release workflow cleanup from inherited R1HA naming.
 
+## Milestone 8: Native Panel Dashboard And HA Config Sync
+
+Goal: let Home Assistant manage Hapanels dashboard configuration while Hapanels renders a polished native Compose wall-panel dashboard.
+
+Status: started.
+
+Done:
+- Native dark panel-grid mockup route in Compose.
+- Tablet-oriented grid with clock, people, action tiles, large room tiles, and compact status tiles.
+- Local Nunito font resources for the new panel dashboard.
+- Dashboard config model with tile/person/layout types and sample JSON.
+- Local dashboard config source that seeds and caches `hapanels_dashboard_config.json`.
+- Entry points from the card stack, dashboard screen, and app navigation.
+
+Next:
+- Add an explicit import/edit/override path for the JSON config.
+- Add retained MQTT config topic support with config revision metadata.
+- Add local edit patches with `base_revision` conflict handling.
+- Build a HACS custom integration so HA can expose dashboard management/config UI.
+- Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
+
 Maybe later:
-- Native Lovelace/dashboard renderers, ported selectively from upstream R1HA after the panel/Shelly core is stable.
 - ESPHome Bluetooth proxy support for nearby BLE devices.

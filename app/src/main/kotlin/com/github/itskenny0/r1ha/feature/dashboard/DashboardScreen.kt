@@ -70,6 +70,7 @@ fun DashboardScreen(
      *  path where the back button has no card stack on the back
      *  stack to pop to. */
     onOpenCardStack: () -> Unit = {},
+    onOpenPanelGridMockup: () -> Unit = {},
     /** Settings icon — same rationale: when Dashboard is the start
      *  destination, the only way to reach Settings is via this
      *  explicit affordance. */
@@ -122,6 +123,7 @@ fun DashboardScreen(
             onBack = onBack,
             canGoBack = canGoBack,
             onOpenCardStack = onOpenCardStack,
+            onOpenPanelGridMockup = onOpenPanelGridMockup,
             onOpenSettings = onOpenSettings,
             onOpenAssist = onOpenAssist,
             // Mirror the card-stack chrome — when the user has hidden
@@ -493,6 +495,7 @@ private fun DashboardTopBar(
     onBack: () -> Unit,
     canGoBack: Boolean,
     onOpenCardStack: () -> Unit,
+    onOpenPanelGridMockup: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAssist: () -> Unit,
     showBatteryIndicator: Boolean = false,
@@ -569,6 +572,17 @@ private fun DashboardTopBar(
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
                 Text(text = "CARDS", style = R1.labelMicro, color = R1.InkSoft)
+            }
+            Spacer(Modifier.width(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(R1.ShapeS)
+                    .background(R1.SurfaceMuted)
+                    .r1Pressable(onClick = onOpenPanelGridMockup),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = "▦", style = R1.body, color = R1.InkSoft)
             }
             Spacer(Modifier.width(6.dp))
             // SETTINGS gear — wireframe drawn glyph (same as the

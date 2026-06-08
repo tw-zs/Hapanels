@@ -13,6 +13,7 @@ import com.github.itskenny0.r1ha.feature.about.AboutScreen
 import com.github.itskenny0.r1ha.feature.cardstack.CardStackScreen
 import com.github.itskenny0.r1ha.feature.favoritespicker.FavoritesPickerScreen
 import com.github.itskenny0.r1ha.feature.onboarding.OnboardingScreen
+import com.github.itskenny0.r1ha.feature.panelgrid.PanelGridMockupScreen
 import com.github.itskenny0.r1ha.feature.settings.SettingsScreen
 import com.github.itskenny0.r1ha.feature.themepicker.ThemePickerScreen
 
@@ -106,6 +107,9 @@ fun AppNavGraph(
                 onOpenDashboard = {
                     navController.navigate(Routes.DASHBOARD) { launchSingleTop = true }
                 },
+                onOpenPanelGridMockup = {
+                    navController.navigate(Routes.PANEL_GRID_MOCKUP) { launchSingleTop = true }
+                },
                 onOpenSearch = {
                     navController.navigate(Routes.SEARCH) { launchSingleTop = true }
                 },
@@ -137,6 +141,11 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.PANEL_GRID_MOCKUP) {
+            PanelGridMockupScreen(
                 onBack = { navController.popBackStack() },
             )
         }
@@ -573,6 +582,9 @@ fun AppNavGraph(
                     // launchSingleTop keeps a rapid double-tap from
                     // stacking copies.
                     navController.navigate(Routes.CARD_STACK) { launchSingleTop = true }
+                },
+                onOpenPanelGridMockup = {
+                    navController.navigate(Routes.PANEL_GRID_MOCKUP) { launchSingleTop = true }
                 },
                 onOpenSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }

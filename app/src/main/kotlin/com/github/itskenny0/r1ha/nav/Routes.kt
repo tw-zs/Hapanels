@@ -34,6 +34,7 @@ object Routes {
     const val SYSTEM_HEALTH = "system_health"
     const val PANEL_DIAGNOSTICS = "panel_diagnostics"
     const val DASHBOARD = "dashboard"
+    const val PANEL_GRID_MOCKUP = "panel_grid_mockup"
     const val AREAS = "areas"
     const val LABELS = "labels"
     const val FLOORS = "floors"

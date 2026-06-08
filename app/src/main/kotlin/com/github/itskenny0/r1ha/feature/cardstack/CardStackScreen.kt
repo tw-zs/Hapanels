@@ -103,6 +103,7 @@ fun CardStackScreen(
     onOpenNotifications: () -> Unit = {},
     onOpenZones: () -> Unit = {},
     onOpenDevice: () -> Unit = {},
+    onOpenPanelGridMockup: () -> Unit = {},
 ) {
     val vm: CardStackViewModel = viewModel(
         factory = CardStackViewModel.factory(
@@ -810,6 +811,7 @@ fun CardStackScreen(
                 onLongPressHamburger = { quickActionsOpen.value = true },
                 onLongPressGear = onOpenSearch,
                 onOpenAssist = onOpenAssist,
+                onOpenPanelGridMockup = onOpenPanelGridMockup,
                 solidBackdrop = appSettings.ui.hideCardTailAbove,
                 // Battery indicator surfaces only when the system status bar is hidden
                 // AND the user explicitly opted in — otherwise the system bar already
@@ -1125,6 +1127,10 @@ fun CardStackScreen(
                 onOpenDevice = {
                     quickActionsOpen.value = false
                     onOpenDevice()
+                },
+                onOpenPanelGridMockup = {
+                    quickActionsOpen.value = false
+                    onOpenPanelGridMockup()
                 },
                 onAllOn = {
                     vm.turnOnActivePage()
@@ -2337,6 +2343,7 @@ private fun QuickActionsSheet(
     onOpenNotifications: () -> Unit,
     onOpenZones: () -> Unit,
     onOpenDevice: () -> Unit,
+    onOpenPanelGridMockup: () -> Unit,
     onAllOn: () -> Unit,
     onAllOff: () -> Unit,
     onPauseMedia: () -> Unit,
@@ -2425,7 +2432,8 @@ private fun QuickActionsSheet(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "!", label = "ALERTS", onClick = onOpenNotifications)
-                Spacer(Modifier.weight(3f))
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▦", label = "GRID", onClick = onOpenPanelGridMockup)
+                Spacer(Modifier.weight(2f))
             }
             Spacer(Modifier.height(14.dp))
             // 'Turn all on' — one-tap fire. Lights/switches/fans coming on
@@ -2517,6 +2525,7 @@ private fun ChromeRow(
      *  in the chrome rather than buried in Settings so 'ask HA' is
      *  a single-tap action from anywhere on the card stack. */
     onOpenAssist: () -> Unit = {},
+    onOpenPanelGridMockup: () -> Unit = {},
     solidBackdrop: Boolean = true,
     /** Render a tiny BATTERY% pill in the right cluster — used only when
      *  the system status bar is hidden AND the user opted into the
@@ -2622,6 +2631,16 @@ private fun ChromeRow(
         // can't be turned off, guaranteeing the dot always has a host. If the user
         // moves GEAR mid-cluster, the dot follows.
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .r1Pressable(onOpenPanelGridMockup),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = "▦", style = R1.body, color = R1.Ink.copy(alpha = 0.85f))
+            }
+            Spacer(Modifier.width(2.dp))
             val visibleButtons = chromeButtons.filter { cfg ->
                 when (cfg.ref) {
                     // BATTERY needs all three gates: the user's flag in this list, the

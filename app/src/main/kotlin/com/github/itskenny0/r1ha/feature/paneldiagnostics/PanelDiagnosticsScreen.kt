@@ -27,6 +27,8 @@ import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.hardware.PanelHardwareEvent
 import com.github.itskenny0.r1ha.core.hardware.PanelHardwareRuntimeState
 import com.github.itskenny0.r1ha.core.hardware.PanelHardwareStatus
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenManager
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenState
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.i18n.Text
@@ -35,11 +37,13 @@ import java.time.Instant
 @Composable
 fun PanelDiagnosticsScreen(
     hardware: PanelHardware,
+    screenManager: PanelScreenManager,
     onBack: () -> Unit,
 ) {
     val capabilities by hardware.capabilities.collectAsState()
     val status by hardware.status.collectAsState()
     val runtime by hardware.runtimeState.collectAsState()
+    val screenState by screenManager.state.collectAsState()
     val recentEvents = remember { mutableStateListOf<PanelHardwareEvent>() }
     LaunchedEffect(hardware) {
         hardware.events.collect { event ->
@@ -66,6 +70,8 @@ fun PanelDiagnosticsScreen(
             CapabilityPanel(capabilities, status)
             Text(text = "LIVE STATE", style = R1.labelMicro, color = R1.InkSoft)
             RuntimePanel(runtime)
+            Text(text = "SCREEN MANAGER", style = R1.labelMicro, color = R1.InkSoft)
+            ScreenManagerPanel(screenState)
             Text(text = "RECENT EVENTS", style = R1.labelMicro, color = R1.InkSoft)
             if (recentEvents.isEmpty()) {
                 Text(
@@ -78,6 +84,27 @@ fun PanelDiagnosticsScreen(
             }
             Spacer(Modifier.size(24.dp))
         }
+    }
+}
+
+@Composable
+private fun ScreenManagerPanel(state: PanelScreenState) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(R1.ShapeS)
+            .background(R1.SurfaceMuted)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Pair("Mode", state.mode.name.lowercase()).render()
+        Pair("Target brightness", state.targetBrightnessPercent?.let { "$it%" } ?: "system default").render()
+        Pair("Applied brightness", state.appliedBrightnessPercent?.let { "$it%" } ?: "system default").render()
+        Pair("Last wake reason", state.lastWakeReason?.name?.lowercase() ?: "none").render()
+        Pair("Last sleep reason", state.lastSleepReason?.name?.lowercase() ?: "none").render()
+        Pair("Last wake", state.lastWakeAtMillis?.let { Instant.ofEpochMilli(it).toString() } ?: "never").render()
+        Pair("Last sleep", state.lastSleepAtMillis?.let { Instant.ofEpochMilli(it).toString() } ?: "never").render()
     }
 }
 

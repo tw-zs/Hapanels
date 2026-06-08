@@ -596,6 +596,17 @@ data class AdvancedSettings(
             relayId = 1,
         ),
     ),
+    /** Wake the panel from dim/screensaver when the proximity sensor reports a near target. */
+    val proximityWakeEnabled: Boolean = true,
+    /** Distance at or below this value is treated as a nearby person. */
+    val proximityNearThresholdCm: Float = 5f,
+    /** Map ambient lux to per-window screen brightness. Uses no WRITE_SETTINGS permission. */
+    val autoBrightnessEnabled: Boolean = false,
+    val autoBrightnessMinPercent: Int = 10,
+    val autoBrightnessMaxPercent: Int = 100,
+    /** Native Compose dim/clock overlay after an idle timeout. */
+    val screensaverEnabled: Boolean = false,
+    val screensaverTimeoutSec: Int = 300,
 )
 
 @Stable

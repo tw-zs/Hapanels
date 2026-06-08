@@ -3,6 +3,7 @@ package com.github.itskenny0.r1ha
 import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -10,19 +11,25 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import com.github.itskenny0.r1ha.ui.components.ToastHost
+import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.flow.first
 import com.github.itskenny0.r1ha.core.input.WheelEvent
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenMode
+import com.github.itskenny0.r1ha.core.hardware.WakeReason
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.WheelKeySource
 import com.github.itskenny0.r1ha.core.theme.LocalUiOptions
@@ -70,6 +77,10 @@ class MainActivity : ComponentActivity() {
             val settings by graph.settings.settings.collectAsStateWithLifecycle(
                 initialValue = initialSettings ?: AppSettings(),
             )
+            DisposableEffect(Unit) {
+                graph.panelScreenManager.attachWindow(window)
+                onDispose { graph.panelScreenManager.detachWindow(window) }
+            }
 
             val initial = initialSettings
             if (initial == null) {
@@ -247,8 +258,16 @@ class MainActivity : ComponentActivity() {
                                 tokens = graph.tokens,
                                 wheelInput = graph.wheelInput,
                                 panelHardware = graph.panelHardware,
+                                panelScreenManager = graph.panelScreenManager,
                             )
                         }
+                        PanelScreensaverOverlay(
+                            mode = graph.panelScreenManager.state
+                                .collectAsStateWithLifecycle()
+                                .value
+                                .mode,
+                            onWake = { graph.panelScreenManager.reportUserActivity(WakeReason.USER) },
+                        )
                         // Toast host sits OUTSIDE the responsive column so
                         // toasts always pop at the device's true screen
                         // edges, not the centred column's edges.
@@ -317,6 +336,13 @@ class MainActivity : ComponentActivity() {
         com.github.itskenny0.r1ha.feature.nfc.NfcReader.unbind(this)
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (::graph.isInitialized && ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            graph.panelScreenManager.reportUserActivity(WakeReason.USER)
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun handleOAuthCallback(intent: Intent?) {
         val data = intent?.data ?: return
         if (data.scheme != "r1ha" || data.host != "auth-callback") return
@@ -341,6 +367,9 @@ class MainActivity : ComponentActivity() {
     private var lastVolumeRepeatDown: Long = 0L
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (::graph.isInitialized && event.action == KeyEvent.ACTION_DOWN) {
+            graph.panelScreenManager.reportUserActivity(WakeReason.USER)
+        }
         // Honour the user's "Key source" setting (AUTO = both, DPAD = only D-pad keys, VOLUME =
         // only volume keys). Filtered-out keycodes fall through to super so the system can act
         // on them normally (e.g. volume keys actually change media volume when the user has
@@ -421,5 +450,33 @@ class MainActivity : ComponentActivity() {
          *  bare route name (e.g. "search", "assist") that AppNavGraph
          *  resolves via Routes constants. */
         const val EXTRA_INITIAL_ROUTE = "initial_route"
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun PanelScreensaverOverlay(
+    mode: PanelScreenMode,
+    onWake: () -> Unit,
+) {
+    if (mode != PanelScreenMode.SCREENSAVER) return
+    val now by produceState(initialValue = java.time.LocalTime.now()) {
+        while (true) {
+            value = java.time.LocalTime.now()
+            kotlinx.coroutines.delay(1_000L)
+        }
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black)
+            .r1Pressable(onWake),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        com.github.itskenny0.r1ha.ui.i18n.Text(
+            text = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+            style = com.github.itskenny0.r1ha.core.theme.R1.numeralXl.copy(letterSpacing = 0.sp),
+            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.82f),
+            modifier = Modifier.padding(24.dp),
+        )
     }
 }

@@ -158,6 +158,7 @@ class App : Application() {
         appScope.launch {
             graph.panelHardware.start()
         }
+        graph.panelScreenManager.start()
         graph.panelMqttBridge.start()
         androidx.tracing.Trace.endSection()
         // Mirror the latest WheelKeySource into a volatile field so MainActivity's

@@ -212,6 +212,7 @@ class AppGraph(context: Context) {
             settings,
             panelHardware,
             com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource(appContext),
+            panelScreenManager,
         )
     }
 

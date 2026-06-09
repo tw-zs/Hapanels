@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.roundToInt
 
@@ -76,6 +77,7 @@ class PanelScreenEngine(
 ) {
     private var settings = initialSettings
     private var lastProximityWakeAtMillis = -PROXIMITY_WAKE_COOLDOWN_MS
+    private var lastBrightnessTargetAtMillis = initialNowMillis - BRIGHTNESS_HYSTERESIS_MS
     var state: PanelScreenState = PanelScreenState(
         targetBrightnessPercent = brightnessFor(null, initialSettings),
         lastUserActivityAtMillis = initialNowMillis,
@@ -99,7 +101,7 @@ class PanelScreenEngine(
     }
 
     fun onRuntimeState(runtime: PanelHardwareRuntimeState, nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
-        val brightness = brightnessFor(runtime.ambientLightLux, settings)
+        val brightness = throttledBrightness(brightnessFor(runtime.ambientLightLux, settings), nowMillis)
         val isNear = runtime.proximityDistanceCm?.let { it <= settings.proximityNearThresholdCm } == true
         val next = if (settings.proximityWakeEnabled && isNear && nowMillis - lastProximityWakeAtMillis >= PROXIMITY_WAKE_COOLDOWN_MS) {
             lastProximityWakeAtMillis = nowMillis
@@ -151,8 +153,21 @@ class PanelScreenEngine(
             null
         }
 
+    private fun throttledBrightness(desired: Int?, nowMillis: Long): Int? {
+        if (desired == null) return null
+        val current = state.targetBrightnessPercent ?: return desired.also {
+            lastBrightnessTargetAtMillis = nowMillis
+        }
+        if (abs(desired - current) < BRIGHTNESS_MIN_STEP_PERCENT) return current
+        if (nowMillis - lastBrightnessTargetAtMillis < BRIGHTNESS_HYSTERESIS_MS) return current
+        lastBrightnessTargetAtMillis = nowMillis
+        return desired
+    }
+
     companion object {
         const val PROXIMITY_WAKE_COOLDOWN_MS: Long = 2_000L
+        const val BRIGHTNESS_HYSTERESIS_MS: Long = 3_000L
+        const val BRIGHTNESS_MIN_STEP_PERCENT: Int = 3
     }
 }
 

@@ -63,7 +63,7 @@ class ShellyWallDisplayHardware(
             relayCount = if (ShellyRelayStateStore.defaultRelayFile.exists()) 1 else 0,
             physicalButtonCount = 5,
             hasAmbientLightSensor = lightSensor != null,
-            hasProximitySensor = proximitySensor != null,
+            hasProximitySensor = false,
             supportsScreenBrightness = screenBrightnessFile != null,
             supportsWake = false,
         ),
@@ -98,17 +98,17 @@ class ShellyWallDisplayHardware(
             }
         }
         val lightRegistered = registerSensor(lightSensor)
-        val proximityRegistered = registerSensor(proximitySensor)
+        registerSensor(proximitySensor)
         capabilitiesState.value = capabilitiesState.value.copy(
             hasAmbientLightSensor = lightRegistered,
-            hasProximitySensor = proximityRegistered,
+            hasProximitySensor = false,
         )
         updateRuntime {
             it.copy(
                 relayStates = initialRelayStates(),
                 screenBrightnessPercent = readScreenBrightnessPercent(),
                 ambientLightLux = it.ambientLightLux.takeIf { lightRegistered },
-                proximityDistanceCm = it.proximityDistanceCm.takeIf { proximityRegistered },
+                proximityDistanceCm = null,
             )
         }
         val inputStarted = inputMonitor.start(object : ShellyInputMonitor.KeyCallback {
@@ -222,7 +222,6 @@ class ShellyWallDisplayHardware(
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.type) {
             Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = sanitizePanelSensorReading(event.values.firstOrNull())) }
-            Sensor.TYPE_PROXIMITY -> updateRuntime { it.copy(proximityDistanceCm = sanitizePanelSensorReading(event.values.firstOrNull())) }
         }
     }
 

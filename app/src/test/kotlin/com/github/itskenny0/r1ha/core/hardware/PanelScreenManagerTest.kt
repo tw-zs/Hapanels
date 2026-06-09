@@ -78,7 +78,31 @@ class PanelScreenManagerTest {
         val state = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 0f), 1_000L)
         assertThat(state.targetBrightnessPercent).isEqualTo(20)
 
-        val bright = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 1_000f), 2_000L)
+        val bright = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 1_000f), 4_000L)
         assertThat(bright.targetBrightnessPercent).isEqualTo(90)
+    }
+
+    @Test
+    fun ambientLuxChangesUseHysteresisAndMinimumStep() {
+        val engine = PanelScreenEngine(
+            initialNowMillis = 0L,
+            initialSettings = PanelScreenSettings(
+                autoBrightnessEnabled = true,
+                minBrightnessPercent = 10,
+                maxBrightnessPercent = 100,
+            ),
+        )
+
+        val low = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 0f), 100L)
+        assertThat(low.targetBrightnessPercent).isEqualTo(10)
+
+        val heldByHysteresis = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 1_000f), 1_000L)
+        assertThat(heldByHysteresis.targetBrightnessPercent).isEqualTo(10)
+
+        val appliedAfterHysteresis = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 1_000f), 3_100L)
+        assertThat(appliedAfterHysteresis.targetBrightnessPercent).isEqualTo(100)
+
+        val heldBySmallStep = engine.onRuntimeState(PanelHardwareRuntimeState(ambientLightLux = 950f), 6_500L)
+        assertThat(heldBySmallStep.targetBrightnessPercent).isEqualTo(100)
     }
 }

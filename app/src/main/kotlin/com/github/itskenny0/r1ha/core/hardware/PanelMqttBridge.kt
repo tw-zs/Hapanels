@@ -23,6 +23,7 @@ class PanelMqttBridge(
     private val settings: SettingsRepository,
     private val hardware: PanelHardware,
     private val dashboardConfigSource: HapanelsDashboardConfigSource,
+    private val screenManager: PanelScreenManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val objectId = "hapanels_${Build.DEVICE.ifBlank { "panel" }.safeId()}"
@@ -69,9 +70,13 @@ class PanelMqttBridge(
                     publish("$baseTopic/button/$id/state", if (id in runtime.pressedButtonIds) "ON" else "OFF", retain = false)
                 }
                 runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/brightness/state", it.toString(), retain = true) }
+                runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/applied_brightness/state", it.toString(), retain = true) }
                 runtime.ambientLightLux?.let { publish("$baseTopic/sensor/ambient_light/state", it.toString(), retain = true) }
                 runtime.proximityDistanceCm?.let { publish("$baseTopic/sensor/proximity/state", it.toString(), retain = true) }
             }
+        }
+        scope.launch {
+            screenManager.state.collect { screen -> publishScreenDiagnostics(screen) }
         }
         scope.launch {
             hardware.events.collect { event ->
@@ -266,6 +271,52 @@ class PanelMqttBridge(
                   "availability_topic":"$baseTopic/status",
                   "device":${deviceJson()}
                 }
+                """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "screen_mode",
+            payload = """
+                {
+                  "name":"Screen mode",
+                  "unique_id":"${objectId}_screen_mode",
+                  "state_topic":"$baseTopic/screen/mode/state",
+                  "icon":"mdi:monitor-eye",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "screen_target_brightness",
+            payload = """
+                {
+                  "name":"Screen target brightness",
+                  "unique_id":"${objectId}_screen_target_brightness",
+                  "state_topic":"$baseTopic/screen/target_brightness/state",
+                  "state_class":"measurement",
+                  "unit_of_measurement":"%",
+                  "icon":"mdi:brightness-auto",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "screen_applied_brightness",
+            payload = """
+                {
+                  "name":"Screen applied brightness",
+                  "unique_id":"${objectId}_screen_applied_brightness",
+                  "state_topic":"$baseTopic/screen/applied_brightness/state",
+                  "state_class":"measurement",
+                  "unit_of_measurement":"%",
+                  "icon":"mdi:brightness-percent",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
             """.compactJson(),
         )
         if (capabilities.hasAmbientLightSensor) {
@@ -323,6 +374,13 @@ class PanelMqttBridge(
         publish("$baseTopic/hardware/provider/state", capabilities.providerLabel, retain = true)
     }
 
+    private suspend fun publishScreenDiagnostics(screen: PanelScreenState) {
+        val appliedBrightness = screen.appliedBrightnessPercent ?: hardware.runtimeState.value.screenBrightnessPercent
+        publish("$baseTopic/screen/mode/state", screen.mode.name.lowercase(), retain = true)
+        publish("$baseTopic/screen/target_brightness/state", screen.targetBrightnessPercent?.toString() ?: "unknown", retain = true)
+        publish("$baseTopic/screen/applied_brightness/state", appliedBrightness?.toString() ?: "unknown", retain = true)
+    }
+
     private suspend fun publishAvailability(online: Boolean) {
         publish("$baseTopic/status", if (online) "online" else "offline", retain = true)
     }
@@ -353,6 +411,7 @@ class PanelMqttBridge(
                 subscribeCommands()
                 publishDiscovery(hardware.capabilities.value)
                 publishPanelDiagnostics(hardware.capabilities.value)
+                publishScreenDiagnostics(screenManager.state.value)
                 publishDashboardConfig()
                 publishAvailability(true)
                 hardware.runtimeState.value.relayStates.forEach { (id, on) ->

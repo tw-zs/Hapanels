@@ -5,6 +5,9 @@ import com.github.itskenny0.r1ha.core.mqtt.MqttSession
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.util.R1Log
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -18,6 +21,7 @@ import kotlinx.coroutines.launch
 class PanelMqttBridge(
     private val settings: SettingsRepository,
     private val hardware: PanelHardware,
+    private val dashboardConfigSource: HapanelsDashboardConfigSource,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val objectId = "hapanels_${Build.DEVICE.ifBlank { "panel" }.safeId()}"
@@ -49,6 +53,7 @@ class PanelMqttBridge(
                         discoverySignature = signature
                         publishDiscovery(capabilities)
                         subscribeCommands()
+                        publishDashboardConfig()
                         publishAvailability(true)
                     }
                 }
@@ -140,6 +145,22 @@ class PanelMqttBridge(
                     }
                 """.compactJson(),
             )
+            PanelButtonPressType.entries.forEach { pressType ->
+                discovery(
+                    component = "device_automation",
+                    entityId = "button_${buttonId}_${pressType.name.lowercase()}",
+                    payload = """
+                        {
+                          "automation_type":"trigger",
+                          "topic":"$baseTopic/button/$buttonId/event",
+                          "payload":"${pressType.name.lowercase()}",
+                          "type":"action",
+                          "subtype":"button_${buttonId}_${pressType.name.lowercase()}",
+                          "device":${deviceJson()}
+                        }
+                    """.compactJson(),
+                )
+            }
         }
         discovery(
             component = "number",
@@ -194,6 +215,7 @@ class PanelMqttBridge(
                 session = next
                 subscribeCommands()
                 publishDiscovery(hardware.capabilities.value)
+                publishDashboardConfig()
                 publishAvailability(true)
                 hardware.runtimeState.value.relayStates.forEach { (id, on) ->
                     if (on != null) publish("$baseTopic/relay/$id/state", if (on) "ON" else "OFF", retain = true)
@@ -218,14 +240,58 @@ class PanelMqttBridge(
             session?.subscribe("$baseTopic/relay/$relayId/set")
         }
         session?.subscribe("$baseTopic/screen/brightness/set")
+        session?.subscribe("$baseTopic/dashboard/config/set")
+        session?.subscribe("$baseTopic/dashboard/config/patch/set")
     }
 
     private suspend fun handleCommand(topic: String, payload: ByteArray) {
         when (val command = PanelMqttCommand.parse(baseTopic, topic, payload.toString(Charsets.UTF_8))) {
             is PanelMqttCommand.SetRelay -> hardware.setRelay(command.relayId, command.on)
             is PanelMqttCommand.SetBrightness -> hardware.setScreenBrightness(command.percent)
+            is PanelMqttCommand.SetDashboardConfig -> importDashboardConfig(command.rawJson)
+            is PanelMqttCommand.PatchDashboardConfig -> patchDashboardConfig(command.rawJson)
             null -> R1Log.w("PanelMqttBridge", "ignored command topic=$topic payload=${payload.toString(Charsets.UTF_8).trim()}")
         }
+    }
+
+    private suspend fun publishDashboardConfig() {
+        runCatching {
+            val config = dashboardConfigSource.loadOrSeed()
+            val raw = dashboardConfigSource.exportRaw()
+            publish("$baseTopic/dashboard/config/state", raw, retain = true)
+            publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+        }.onFailure { t ->
+            R1Log.w("PanelMqttBridge", "dashboard config publish failed: ${t.message}")
+        }
+    }
+
+    private suspend fun importDashboardConfig(rawJson: String) {
+        runCatching { dashboardConfigSource.importRaw(rawJson) }
+            .onSuccess { config ->
+                publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
+                publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+            }
+            .onFailure { t ->
+                R1Log.w("PanelMqttBridge", "dashboard config import failed: ${t.message}")
+            }
+    }
+
+    private suspend fun patchDashboardConfig(rawJson: String) {
+        runCatching { dashboardConfigSource.applyPatchRaw(rawJson) }
+            .onSuccess { result ->
+                when (result) {
+                    is HapanelsDashboardPatchResult.Applied -> {
+                        publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
+                        publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
+                    }
+                    is HapanelsDashboardPatchResult.Conflict -> {
+                        publish("$baseTopic/dashboard/config/conflict", result.conflictJson(), retain = false)
+                    }
+                }
+            }
+            .onFailure { t ->
+                R1Log.w("PanelMqttBridge", "dashboard config patch failed: ${t.message}")
+            }
     }
 
     private fun resolveMqtt(settings: AppSettings): MqttConfig? {
@@ -264,6 +330,8 @@ class PanelMqttBridge(
 internal sealed interface PanelMqttCommand {
     data class SetRelay(val relayId: Int, val on: Boolean) : PanelMqttCommand
     data class SetBrightness(val percent: Int) : PanelMqttCommand
+    data class SetDashboardConfig(val rawJson: String) : PanelMqttCommand
+    data class PatchDashboardConfig(val rawJson: String) : PanelMqttCommand
 
     companion object {
         fun parse(baseTopic: String, topic: String, payload: String): PanelMqttCommand? {
@@ -281,7 +349,45 @@ internal sealed interface PanelMqttCommand {
             if (topic == "$baseTopic/screen/brightness/set") {
                 return SetBrightness(text.toIntOrNull()?.coerceIn(0, 100) ?: return null)
             }
+            if (topic == "$baseTopic/dashboard/config/set") {
+                return SetDashboardConfig(payload.trim())
+            }
+            if (topic == "$baseTopic/dashboard/config/patch/set") {
+                return PatchDashboardConfig(payload.trim())
+            }
             return null
+        }
+    }
+}
+
+private fun HapanelsDashboardConfig.dashboardMetaJson(): String = """
+    {
+      "version":$version,
+      "dashboard_id":"${dashboardId.escapeJson()}",
+      "revision":$revision,
+      "updated_by":"${updatedBy.escapeJson()}"
+    }
+""".compactJson()
+
+private fun HapanelsDashboardPatchResult.Conflict.conflictJson(): String = """
+    {
+      "current_revision":$currentRevision,
+      "attempted_base_revision":$attemptedBaseRevision,
+      "dashboard_id":"${currentConfig.dashboardId.escapeJson()}"
+    }
+""".compactJson()
+
+private fun String.escapeJson(): String = buildString(length) {
+    for (char in this@escapeJson) {
+        when (char) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\b' -> append("\\b")
+            '\u000C' -> append("\\f")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else -> append(char)
         }
     }
 }

@@ -35,6 +35,22 @@ class PanelMqttCommandTest {
     }
 
     @Test
+    fun `parses dashboard config command`() {
+        val raw = """{"revision":43}"""
+
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/dashboard/config/set", raw))
+            .isEqualTo(PanelMqttCommand.SetDashboardConfig(raw))
+    }
+
+    @Test
+    fun `parses dashboard patch command`() {
+        val raw = """{"base_revision":42,"tile_updates":[]}"""
+
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/dashboard/config/patch/set", raw))
+            .isEqualTo(PanelMqttCommand.PatchDashboardConfig(raw))
+    }
+
+    @Test
     fun `rejects unknown command payloads and topics`() {
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/relay/1/set", "toggle"))
             .isNull()

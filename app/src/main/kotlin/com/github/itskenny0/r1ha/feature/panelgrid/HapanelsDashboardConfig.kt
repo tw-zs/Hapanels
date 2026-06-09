@@ -54,6 +54,33 @@ data class HapanelsTileConfig(
 )
 
 @Serializable
+data class HapanelsDashboardPatch(
+    @SerialName("base_revision") val baseRevision: Int,
+    @SerialName("updated_by") val updatedBy: String,
+    @SerialName("tile_updates") val tileUpdates: List<HapanelsTilePatch> = emptyList(),
+)
+
+@Serializable
+data class HapanelsTilePatch(
+    val id: String,
+    val label: String? = null,
+    @SerialName("short_label") val shortLabel: String? = null,
+    @SerialName("entity_id") val entityId: String? = null,
+    val icon: HapanelsPanelIcon? = null,
+    val accent: HapanelsTileAccent? = null,
+    val order: Int? = null,
+)
+
+sealed interface HapanelsDashboardPatchResult {
+    data class Applied(val config: HapanelsDashboardConfig) : HapanelsDashboardPatchResult
+    data class Conflict(
+        val currentRevision: Int,
+        val attemptedBaseRevision: Int,
+        val currentConfig: HapanelsDashboardConfig,
+    ) : HapanelsDashboardPatchResult
+}
+
+@Serializable
 enum class HapanelsTileKind {
     @SerialName("category") CATEGORY,
     @SerialName("action") ACTION,

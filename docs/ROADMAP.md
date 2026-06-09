@@ -142,12 +142,13 @@ Done:
 - Local Nunito font resources for the new panel dashboard.
 - Dashboard config model with tile/person/layout types and sample JSON.
 - Local dashboard config source that seeds and caches `hapanels_dashboard_config.json`.
+- Explicit local dashboard JSON export/import/reset controls in Appearance settings.
+- Live entity binding for supported dashboard tile `entity_id` values via `HaRepository.observe`.
+- Retained MQTT dashboard config state/meta topics plus inbound `dashboard/config/set` import support.
+- Local dashboard edit patches with `base_revision` conflict detection and MQTT `dashboard/config/patch/set` support.
 - Entry points from the card stack, dashboard screen, and app navigation.
 
 Next:
-- Add an explicit import/edit/override path for the JSON config.
-- Add retained MQTT config topic support with config revision metadata.
-- Add local edit patches with `base_revision` conflict handling.
 - Build a HACS custom integration so HA can expose dashboard management/config UI.
 - Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
 

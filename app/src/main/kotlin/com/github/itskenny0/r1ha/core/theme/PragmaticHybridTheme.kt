@@ -666,7 +666,10 @@ internal fun VerticalTapeMeter(
     // no-ops; we skip wrapping the modifier so non-interactive consumers don't pick up
     // a useless pointerInput.
     val onSetPercent = com.github.itskenny0.r1ha.core.theme.LocalOnSetEntityPercent.current
+    val onPreviewPercent = com.github.itskenny0.r1ha.core.theme.LocalOnPreviewEntityPercent.current
     val interactive = onSetPercent != null
+    val commitOnRelease = entityId.domain == com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE ||
+        entityId.domain == com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER
     // Tick row labels — at fixed Y positions, monospace tiny text on the inside edge.
     Row(
         modifier = Modifier.fillMaxHeight(),
@@ -728,21 +731,31 @@ internal fun VerticalTapeMeter(
                     // so the surrounding card-tap doesn't also fire.
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        val initial = (1f - down.position.y / trackHeightPx.floatValue)
-                            .coerceIn(0f, 1f)
-                        onSetPercent?.invoke(entityId, (initial * 100f).toInt().coerceIn(0, 100))
+                        fun positionToPercent(y: Float): Int = ((1f - y / trackHeightPx.floatValue)
+                            .coerceIn(0f, 1f) * 100f).toInt().coerceIn(0, 100)
+
+                        var latestPct = positionToPercent(down.position.y)
+                        if (commitOnRelease) {
+                            onPreviewPercent?.invoke(entityId, latestPct)
+                        } else {
+                            onSetPercent?.invoke(entityId, latestPct)
+                        }
                         down.consume()
                         while (true) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id }
                             if (change == null || !change.pressed) break
                             if (change.position != change.previousPosition) {
-                                val frac = (1f - change.position.y / trackHeightPx.floatValue)
-                                    .coerceIn(0f, 1f)
-                                onSetPercent?.invoke(entityId, (frac * 100f).toInt().coerceIn(0, 100))
+                                latestPct = positionToPercent(change.position.y)
+                                if (commitOnRelease) {
+                                    onPreviewPercent?.invoke(entityId, latestPct)
+                                } else {
+                                    onSetPercent?.invoke(entityId, latestPct)
+                                }
                             }
                             change.consume()
                         }
+                        if (commitOnRelease) onSetPercent?.invoke(entityId, latestPct)
                     }
                 }
         } else Modifier

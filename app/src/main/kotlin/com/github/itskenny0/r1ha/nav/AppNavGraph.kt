@@ -146,6 +146,7 @@ fun AppNavGraph(
         }
         composable(Routes.PANEL_GRID_MOCKUP) {
             PanelGridMockupScreen(
+                haRepository = haRepository,
                 onBack = { navController.popBackStack() },
             )
         }

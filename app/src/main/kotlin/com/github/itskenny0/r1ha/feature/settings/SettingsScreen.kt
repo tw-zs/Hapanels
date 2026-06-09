@@ -306,6 +306,67 @@ fun SettingsScreen(
             },
         )
     }
+    val dashboardConfigSource = remember(context) {
+        com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource(context.applicationContext)
+    }
+    val pendingDashboardConfigBlob = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<String?>(null)
+    }
+    val dashboardExportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri: android.net.Uri? ->
+        val blob = pendingDashboardConfigBlob.value
+        pendingDashboardConfigBlob.value = null
+        if (uri == null || blob == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                out.write(blob.toByteArray(Charsets.UTF_8))
+            } ?: error("couldn't open output stream")
+            com.github.itskenny0.r1ha.core.util.Toaster.show("Panel dashboard config exported")
+        }.onFailure { t ->
+            com.github.itskenny0.r1ha.core.util.R1Log.w(
+                "Settings.dashboardConfigExport", "write failed: ${t.message}",
+            )
+            com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                shortText = "Dashboard export failed",
+                fullText = "Couldn't write the dashboard config file.\n\n${t.message ?: t.toString()}",
+            )
+        }
+    }
+    val dashboardImportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri: android.net.Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                stream.readBytes().toString(Charsets.UTF_8)
+            } ?: error("couldn't open input stream")
+        }.onSuccess { raw ->
+            coroutineScope.launch {
+                runCatching { dashboardConfigSource.importRaw(raw) }
+                    .onSuccess {
+                        com.github.itskenny0.r1ha.core.util.Toaster.show("Panel dashboard config imported")
+                    }
+                    .onFailure { t ->
+                        com.github.itskenny0.r1ha.core.util.R1Log.w(
+                            "Settings.dashboardConfigImport", "import failed: ${t.message}",
+                        )
+                        com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                            shortText = "Dashboard import failed",
+                            fullText = "Invalid or unreadable Hapanels dashboard JSON.\n\n${t.message ?: t.toString()}",
+                        )
+                    }
+            }
+        }.onFailure { t ->
+            com.github.itskenny0.r1ha.core.util.R1Log.w(
+                "Settings.dashboardConfigImport", "read failed: ${t.message}",
+            )
+            com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                shortText = "Dashboard read failed",
+                fullText = "Couldn't read the dashboard config file.\n\n${t.message ?: t.toString()}",
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -1143,6 +1204,43 @@ fun SettingsScreen(
             // ── Dashboard layout — per-section visibility + thresholds ─────────
             item { Section("DASHBOARD", expanded = "DASHBOARD" in expandedSections, onToggle = { toggleSection("DASHBOARD") }, modifiedCount = sectionModifiedCount["DASHBOARD"] ?: 0) }
             if ("DASHBOARD" in expandedSections) {
+            item { SubGroupLabel("HAPANELS PANEL GRID") }
+            item {
+                PanelDashboardConfigMenu(
+                    onExport = {
+                        coroutineScope.launch {
+                            runCatching { dashboardConfigSource.exportRaw() }
+                                .onSuccess { blob ->
+                                    pendingDashboardConfigBlob.value = blob
+                                    val stamp = java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                                    dashboardExportLauncher.launch("hapanels-dashboard-$stamp.json")
+                                }
+                                .onFailure { t ->
+                                    com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                                        shortText = "Dashboard export failed",
+                                        fullText = "Couldn't prepare the dashboard config.\n\n${t.message ?: t.toString()}",
+                                    )
+                                }
+                        }
+                    },
+                    onImport = { dashboardImportLauncher.launch(arrayOf("application/json", "text/*", "*/*")) },
+                    onReset = {
+                        coroutineScope.launch {
+                            runCatching { dashboardConfigSource.resetToSample() }
+                                .onSuccess {
+                                    com.github.itskenny0.r1ha.core.util.Toaster.show("Panel dashboard config reset")
+                                }
+                                .onFailure { t ->
+                                    com.github.itskenny0.r1ha.core.util.Toaster.errorExpandable(
+                                        shortText = "Dashboard reset failed",
+                                        fullText = "Couldn't reset the dashboard config.\n\n${t.message ?: t.toString()}",
+                                    )
+                                }
+                        }
+                    },
+                )
+            }
             item { SubGroupLabel("VISIBLE CARDS") }
             item {
                 SwitchRow(
@@ -3609,5 +3707,54 @@ private fun TileOrderEditor(
         ) {
             Text(text = "RESET ORDER", style = R1.labelMicro, color = R1.AccentWarm)
         }
+    }
+}
+
+@Composable
+private fun PanelDashboardConfigMenu(
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onReset: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 22.dp, vertical = 8.dp)
+            .clip(R1.ShapeM)
+            .background(R1.SurfaceMuted.copy(alpha = 0.5f))
+            .border(1.dp, R1.Hairline, R1.ShapeM)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = "Native panel dashboard config",
+            style = R1.bodyEmph,
+            color = R1.Ink,
+        )
+        Text(
+            text = "Import, export, or reset the JSON used by the new Hapanels panel-grid dashboard.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PanelConfigActionButton("EXPORT", onExport, Modifier.weight(1f))
+            PanelConfigActionButton("IMPORT", onImport, Modifier.weight(1f))
+            PanelConfigActionButton("RESET", onReset, Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun PanelConfigActionButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(R1.ShapeS)
+            .background(R1.Surface)
+            .border(1.dp, R1.Hairline, R1.ShapeS)
+            .r1Pressable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = label, style = R1.labelMicro, color = R1.AccentWarm, textAlign = TextAlign.Center)
     }
 }

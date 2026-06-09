@@ -151,6 +151,17 @@ val LocalOnSetEntityPercent = staticCompositionLocalOf<
 > { null }
 
 /**
+ * Optimistic-only scalar update for drag previews. The screen layer wires this
+ * to the same state override as [LocalOnSetEntityPercent], but without sending
+ * a Home Assistant service call until the gesture commits through the regular
+ * setter. Used for noisy devices like climate cards that beep on every setpoint
+ * service call.
+ */
+val LocalOnPreviewEntityPercent = staticCompositionLocalOf<
+    ((com.github.itskenny0.r1ha.core.ha.EntityId, Int) -> Unit)?
+> { null }
+
+/**
  * Generic service-call dispatch from inside a card panel. Dedicated panels
  * (VacuumPanel, ClimatePanel, LockPanel, ValvePanel, WaterHeaterPanel,
  * LawnMowerPanel, MediaExtrasPanel) build a [com.github.itskenny0.r1ha.core.ha.ServiceCall]

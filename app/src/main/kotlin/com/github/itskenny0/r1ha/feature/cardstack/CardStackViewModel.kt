@@ -614,16 +614,21 @@ class CardStackViewModel(
      * that mapping.
      */
     fun setEntityPercent(entityId: EntityId, pct: Int) {
-        val card = _state.value.cardsById[entityId] ?: return
-        if (!card.isAvailable) return
-        if (card.id.domain.isAction || card.id.domain.isSensor) return
-        if (!card.supportsScalar) return
-        val clamped = pct.coerceIn(0, 100)
+        val clamped = previewEntityPercent(entityId, pct) ?: return
         R1Log.d("CardStack.setPercent", "$entityId → $clamped (touch)")
+        viewModelScope.launch { debounced.submit(entityId, clamped) }
+    }
+
+    fun previewEntityPercent(entityId: EntityId, pct: Int): Int? {
+        val card = _state.value.cardsById[entityId] ?: return null
+        if (!card.isAvailable) return null
+        if (card.id.domain.isAction || card.id.domain.isSensor) return null
+        if (!card.supportsScalar) return null
+        val clamped = pct.coerceIn(0, 100)
         _state.value = _state.value.copy(
             optimisticPercents = _state.value.optimisticPercents + (entityId to clamped),
         )
-        viewModelScope.launch { debounced.submit(entityId, clamped) }
+        return clamped
     }
 
     /**

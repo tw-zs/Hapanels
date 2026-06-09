@@ -203,7 +203,11 @@ class AppGraph(context: Context) {
     val panelHardware: PanelHardware by lazy { PanelHardwareController(appContext, settings) }
 
     val panelMqttBridge: com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge by lazy {
-        com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge(settings, panelHardware)
+        com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge(
+            settings,
+            panelHardware,
+            com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource(appContext),
+        )
     }
 
     /**

@@ -24,9 +24,10 @@ private val configJson = Json {
  */
 class HapanelsDashboardConfigSource(
     private val context: Context,
+    private val cacheFileName: String = DASHBOARD_CACHE_FILE,
 ) {
     suspend fun loadOrSeed(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
-        val file = File(context.filesDir, DASHBOARD_CACHE_FILE)
+        val file = dashboardFile()
         val raw = if (file.exists()) {
             file.readText()
         } else {
@@ -40,4 +41,58 @@ class HapanelsDashboardConfigSource(
                 fallback
             }
     }
+
+    suspend fun exportRaw(): String = withContext(Dispatchers.IO) {
+        val config = loadOrSeed()
+        configJson.encodeToString(config)
+    }
+
+    suspend fun importRaw(raw: String): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
+        val config = configJson.decodeFromString<HapanelsDashboardConfig>(raw)
+        dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+        config
+    }
+
+    suspend fun applyPatch(patch: HapanelsDashboardPatch): HapanelsDashboardPatchResult = withContext(Dispatchers.IO) {
+        val current = loadOrSeed()
+        if (current.revision != patch.baseRevision) {
+            return@withContext HapanelsDashboardPatchResult.Conflict(
+                currentRevision = current.revision,
+                attemptedBaseRevision = patch.baseRevision,
+                currentConfig = current,
+            )
+        }
+        val updatesById = patch.tileUpdates.associateBy { it.id }
+        val next = current.copy(
+            revision = current.revision + 1,
+            updatedBy = patch.updatedBy,
+            tiles = current.tiles.map { tile ->
+                updatesById[tile.id]?.let(tile::applyPatch) ?: tile
+            },
+        )
+        dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
+        HapanelsDashboardPatchResult.Applied(next)
+    }
+
+    suspend fun applyPatchRaw(raw: String): HapanelsDashboardPatchResult {
+        val patch = configJson.decodeFromString<HapanelsDashboardPatch>(raw)
+        return applyPatch(patch)
+    }
+
+    suspend fun resetToSample(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
+        val config = sampleHapanelsDashboardConfig()
+        dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+        config
+    }
+
+    private fun dashboardFile(): File = File(context.filesDir, cacheFileName)
 }
+
+private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTileConfig = copy(
+    label = patch.label ?: label,
+    shortLabel = patch.shortLabel ?: shortLabel,
+    entityId = patch.entityId ?: entityId,
+    icon = patch.icon ?: icon,
+    accent = patch.accent ?: accent,
+    order = patch.order ?: order,
+)

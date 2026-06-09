@@ -973,6 +973,83 @@ fun SettingsScreen(
             }
             item {
                 SwitchRow(
+                    label = "Proximity wake",
+                    subtitle = "Wake the panel from the screensaver when the proximity sensor reports near presence.",
+                    checked = s.advanced.proximityWakeEnabled,
+                    onCheckedChange = { enabled ->
+                        vm.updateAdvanced { it.copy(proximityWakeEnabled = enabled) }
+                    },
+                )
+            }
+            item {
+                LabeledControl(label = "Proximity near distance") {
+                    SegmentedIntPicker(
+                        options = listOf(2, 5, 10),
+                        selected = s.advanced.proximityNearThresholdCm.toInt().coerceIn(2, 10),
+                        label = { "${it}cm" },
+                        onSelect = { cm ->
+                            vm.updateAdvanced { it.copy(proximityNearThresholdCm = cm.toFloat()) }
+                        },
+                    )
+                }
+            }
+            item {
+                SwitchRow(
+                    label = "Auto brightness",
+                    subtitle = "Maps ambient light sensor lux to per-window screen brightness.",
+                    checked = s.advanced.autoBrightnessEnabled,
+                    onCheckedChange = { enabled ->
+                        vm.updateAdvanced { it.copy(autoBrightnessEnabled = enabled) }
+                    },
+                )
+            }
+            item {
+                LabeledControl(label = "Auto brightness range") {
+                    Text(text = "Minimum", style = R1.labelMicro, color = R1.InkMuted)
+                    SegmentedIntPicker(
+                        options = listOf(5, 10, 20, 30),
+                        selected = s.advanced.autoBrightnessMinPercent.coerceIn(5, 30),
+                        label = { "$it%" },
+                        onSelect = { percent ->
+                            vm.updateAdvanced { it.copy(autoBrightnessMinPercent = percent) }
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = "Maximum", style = R1.labelMicro, color = R1.InkMuted)
+                    SegmentedIntPicker(
+                        options = listOf(60, 80, 100),
+                        selected = s.advanced.autoBrightnessMaxPercent.coerceIn(60, 100),
+                        label = { "$it%" },
+                        onSelect = { percent ->
+                            vm.updateAdvanced { it.copy(autoBrightnessMaxPercent = percent) }
+                        },
+                    )
+                }
+            }
+            item {
+                SwitchRow(
+                    label = "Screensaver",
+                    subtitle = "Show a native dim clock overlay after the panel is idle.",
+                    checked = s.advanced.screensaverEnabled,
+                    onCheckedChange = { enabled ->
+                        vm.updateAdvanced { it.copy(screensaverEnabled = enabled) }
+                    },
+                )
+            }
+            item {
+                LabeledControl(label = "Screensaver timeout") {
+                    SegmentedIntPicker(
+                        options = listOf(30, 60, 300, 900),
+                        selected = s.advanced.screensaverTimeoutSec.coerceIn(30, 900),
+                        label = { sec -> if (sec < 60) "${sec}s" else "${sec / 60}m" },
+                        onSelect = { seconds ->
+                            vm.updateAdvanced { it.copy(screensaverTimeoutSec = seconds) }
+                        },
+                    )
+                }
+            }
+            item {
+                SwitchRow(
                     label = "Assist · open keyboard on entry",
                     subtitle = "Off (default): tapping into Assist shows the screen but " +
                         "leaves the keyboard closed; useful on phones where the IME " +

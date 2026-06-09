@@ -25,6 +25,14 @@ class PanelHardwareControllerTest {
             datastoreName = "panel_hardware_${System.nanoTime()}",
         )
 
+    @Test fun sanitizePanelSensorReadingDropsInvalidValues() {
+        assertThat(sanitizePanelSensorReading(null)).isNull()
+        assertThat(sanitizePanelSensorReading(Float.NaN)).isNull()
+        assertThat(sanitizePanelSensorReading(Float.POSITIVE_INFINITY)).isNull()
+        assertThat(sanitizePanelSensorReading(-1f)).isNull()
+        assertThat(sanitizePanelSensorReading(42.5f)).isEqualTo(42.5f)
+    }
+
     @Test fun autoToManualTabletUpdatesModeWithoutRestartingSameProvider() = runTest {
         val repo = newRepo()
         val tablet = FakePanelHardware(PanelHardwareProvider.ANDROID_TABLET)

@@ -51,6 +51,9 @@ data class PanelHardwareRuntimeState(
     val updatedAtMillis: Long = System.currentTimeMillis(),
 )
 
+internal fun sanitizePanelSensorReading(value: Float?): Float? =
+    value?.takeIf { it.isFinite() && it >= 0f }
+
 enum class PanelButtonPressType { DOWN, UP, SHORT, LONG, DOUBLE, TRIPLE }
 
 sealed interface PanelHardwareEvent {

@@ -9,6 +9,7 @@ import com.github.itskenny0.r1ha.core.ha.HaWebSocketClient
 import com.github.itskenny0.r1ha.core.ha.TokenRefresher
 import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.hardware.PanelHardwareController
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenManager
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
@@ -201,6 +202,10 @@ class AppGraph(context: Context) {
     }
 
     val panelHardware: PanelHardware by lazy { PanelHardwareController(appContext, settings) }
+
+    val panelScreenManager: PanelScreenManager by lazy {
+        PanelScreenManager(settings, panelHardware)
+    }
 
     val panelMqttBridge: com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge by lazy {
         com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge(

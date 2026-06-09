@@ -34,6 +34,7 @@ class ShellyWallDisplayHardware(
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
     private val proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+    private val screenBrightnessFile = SHELLY_SCREEN_BRIGHTNESS_FILES.firstOrNull { it.exists() }
     private val inputMonitor = ShellyInputMonitor()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var settingsJob: Job? = null
@@ -63,7 +64,7 @@ class ShellyWallDisplayHardware(
             physicalButtonCount = 5,
             hasAmbientLightSensor = lightSensor != null,
             hasProximitySensor = proximitySensor != null,
-            supportsScreenBrightness = true,
+            supportsScreenBrightness = screenBrightnessFile != null,
             supportsWake = false,
         ),
     )
@@ -96,12 +97,18 @@ class ShellyWallDisplayHardware(
                     .collect { buttonActionMappings = it }
             }
         }
-        lightSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        proximitySensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        val lightRegistered = registerSensor(lightSensor)
+        val proximityRegistered = registerSensor(proximitySensor)
+        capabilitiesState.value = capabilitiesState.value.copy(
+            hasAmbientLightSensor = lightRegistered,
+            hasProximitySensor = proximityRegistered,
+        )
         updateRuntime {
             it.copy(
                 relayStates = initialRelayStates(),
                 screenBrightnessPercent = readScreenBrightnessPercent(),
+                ambientLightLux = it.ambientLightLux.takeIf { lightRegistered },
+                proximityDistanceCm = it.proximityDistanceCm.takeIf { proximityRegistered },
             )
         }
         val inputStarted = inputMonitor.start(object : ShellyInputMonitor.KeyCallback {
@@ -168,12 +175,39 @@ class ShellyWallDisplayHardware(
     }
 
     override suspend fun setScreenBrightness(percent: Int) {
-        eventBus.emit(
-            PanelHardwareEvent.UnsupportedAction(
-                action = "setScreenBrightness($percent)",
-                detail = "Shelly brightness control will land with the panel screen manager.",
-            ),
-        )
+        val targetFile = screenBrightnessFile
+        if (targetFile == null) {
+            eventBus.emit(
+                PanelHardwareEvent.UnsupportedAction(
+                    action = "setScreenBrightness($percent)",
+                    detail = "No Shelly backlight sysfs node found.",
+                ),
+            )
+            return
+        }
+        val safePercent = percent.coerceIn(0, 100)
+        val raw = ((safePercent / 100f) * 255).toInt().coerceIn(0, 255)
+        runCatching {
+            if (Settings.System.canWrite(appContext)) {
+                Settings.System.putInt(
+                    appContext.contentResolver,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
+                )
+            }
+            targetFile.writeText(raw.toString())
+        }.onSuccess {
+            updateRuntime { it.copy(screenBrightnessPercent = safePercent) }
+            R1Log.i("ShellyWallDisplayHardware", "screen brightness set to $safePercent% ($raw)")
+        }.onFailure { t ->
+            eventBus.emit(
+                PanelHardwareEvent.UnsupportedAction(
+                    action = "setScreenBrightness($percent)",
+                    detail = "Brightness write failed: ${t.message ?: t::class.java.simpleName}",
+                ),
+            )
+            R1Log.w("ShellyWallDisplayHardware", "screen brightness write failed: ${t.message}", t)
+        }
     }
 
     override suspend fun wakeScreen(reason: WakeReason) {
@@ -187,19 +221,24 @@ class ShellyWallDisplayHardware(
 
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.type) {
-            Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = event.values.firstOrNull()) }
-            Sensor.TYPE_PROXIMITY -> updateRuntime { it.copy(proximityDistanceCm = event.values.firstOrNull()) }
+            Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = sanitizePanelSensorReading(event.values.firstOrNull())) }
+            Sensor.TYPE_PROXIMITY -> updateRuntime { it.copy(proximityDistanceCm = sanitizePanelSensorReading(event.values.firstOrNull())) }
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+
+    private fun registerSensor(sensor: Sensor?): Boolean = sensor?.let {
+        sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, Handler(Looper.getMainLooper())) == true
+    } ?: false
 
     private fun updateRuntime(transform: (PanelHardwareRuntimeState) -> PanelHardwareRuntimeState) {
         runtimeStateState.value = transform(runtimeStateState.value).copy(updatedAtMillis = System.currentTimeMillis())
     }
 
     private fun readScreenBrightnessPercent(): Int? = runCatching {
-        val raw = Settings.System.getInt(appContext.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
+        val raw = screenBrightnessFile?.readText()?.trim()?.toIntOrNull()
+            ?: Settings.System.getInt(appContext.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
         ((raw.coerceIn(0, 255) / 255f) * 100).toInt().coerceIn(0, 100)
     }.getOrNull()
 
@@ -281,6 +320,12 @@ class ShellyWallDisplayHardware(
         const val BUTTON_MULTI_CLICK_TIMEOUT_MS = 400L
     }
 }
+
+private val SHELLY_SCREEN_BRIGHTNESS_FILES = listOf(
+    File("/sys/devices/platform/leds-mt65xx/leds/lcd-backlight/brightness"),
+    File("/sys/devices/platform/sprd_backlight/backlight/sprd_backlight/brightness"),
+    File("/sys/devices/platform/backlight/backlight/backlight/brightness"),
+)
 
 internal object ShellyRelayStateStore {
     val defaultRelayFile = File("/sys/class/strelay/relay1")

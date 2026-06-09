@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.core.hardware
 
 import android.os.Build
+import com.github.itskenny0.r1ha.BuildConfig
 import com.github.itskenny0.r1ha.core.mqtt.MqttSession
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
@@ -53,6 +54,7 @@ class PanelMqttBridge(
                         discoverySignature = signature
                         publishDiscovery(capabilities)
                         subscribeCommands()
+                        publishPanelDiagnostics(capabilities)
                         publishDashboardConfig()
                         publishAvailability(true)
                     }
@@ -97,6 +99,92 @@ class PanelMqttBridge(
 
     private suspend fun publishDiscovery(capabilities: PanelCapabilities) {
         publish("$baseTopic/status", "online", retain = true)
+        discovery(
+            component = "binary_sensor",
+            entityId = "app_online",
+            payload = """
+                {
+                  "name":"App online",
+                  "unique_id":"${objectId}_app_online",
+                  "state_topic":"$baseTopic/status",
+                  "payload_on":"online",
+                  "payload_off":"offline",
+                  "device_class":"connectivity",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "app_version",
+            payload = """
+                {
+                  "name":"App version",
+                  "unique_id":"${objectId}_app_version",
+                  "state_topic":"$baseTopic/app/version/state",
+                  "icon":"mdi:cellphone-cog",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "hardware_provider",
+            payload = """
+                {
+                  "name":"Hardware provider",
+                  "unique_id":"${objectId}_hardware_provider",
+                  "state_topic":"$baseTopic/hardware/provider/state",
+                  "icon":"mdi:chip",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "dashboard_revision",
+            payload = """
+                {
+                  "name":"Dashboard revision",
+                  "unique_id":"${objectId}_dashboard_revision",
+                  "state_topic":"$baseTopic/dashboard/revision/state",
+                  "state_class":"measurement",
+                  "icon":"mdi:counter",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "dashboard_id",
+            payload = """
+                {
+                  "name":"Dashboard id",
+                  "unique_id":"${objectId}_dashboard_id",
+                  "state_topic":"$baseTopic/dashboard/id/state",
+                  "icon":"mdi:view-dashboard",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "dashboard_updated_by",
+            payload = """
+                {
+                  "name":"Dashboard updated by",
+                  "unique_id":"${objectId}_dashboard_updated_by",
+                  "state_topic":"$baseTopic/dashboard/updated_by/state",
+                  "icon":"mdi:account-edit",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
         for (relayId in 1..capabilities.relayCount) {
             discovery(
                 component = "switch",
@@ -180,10 +268,59 @@ class PanelMqttBridge(
                 }
             """.compactJson(),
         )
+        if (capabilities.hasAmbientLightSensor) {
+            discovery(
+                component = "sensor",
+                entityId = "ambient_light",
+                payload = """
+                    {
+                      "name":"Ambient light",
+                      "unique_id":"${objectId}_ambient_light",
+                      "state_topic":"$baseTopic/sensor/ambient_light/state",
+                      "device_class":"illuminance",
+                      "state_class":"measurement",
+                      "unit_of_measurement":"lx",
+                      "availability_topic":"$baseTopic/status",
+                      "device":${deviceJson()}
+                    }
+                """.compactJson(),
+            )
+        } else {
+            clearDiscovery(component = "sensor", entityId = "ambient_light")
+        }
+        if (capabilities.hasProximitySensor) {
+            discovery(
+                component = "sensor",
+                entityId = "proximity_distance",
+                payload = """
+                    {
+                      "name":"Proximity distance",
+                      "unique_id":"${objectId}_proximity_distance",
+                      "state_topic":"$baseTopic/sensor/proximity/state",
+                      "state_class":"measurement",
+                      "unit_of_measurement":"cm",
+                      "icon":"mdi:arrow-expand-horizontal",
+                      "availability_topic":"$baseTopic/status",
+                      "device":${deviceJson()}
+                    }
+                """.compactJson(),
+            )
+        } else {
+            clearDiscovery(component = "sensor", entityId = "proximity_distance")
+        }
     }
 
     private suspend fun discovery(component: String, entityId: String, payload: String) {
         publish("homeassistant/$component/$objectId/$entityId/config", payload, retain = true)
+    }
+
+    private suspend fun clearDiscovery(component: String, entityId: String) {
+        publish("homeassistant/$component/$objectId/$entityId/config", "", retain = true)
+    }
+
+    private suspend fun publishPanelDiagnostics(capabilities: PanelCapabilities) {
+        publish("$baseTopic/app/version/state", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", retain = true)
+        publish("$baseTopic/hardware/provider/state", capabilities.providerLabel, retain = true)
     }
 
     private suspend fun publishAvailability(online: Boolean) {
@@ -215,6 +352,7 @@ class PanelMqttBridge(
                 session = next
                 subscribeCommands()
                 publishDiscovery(hardware.capabilities.value)
+                publishPanelDiagnostics(hardware.capabilities.value)
                 publishDashboardConfig()
                 publishAvailability(true)
                 hardware.runtimeState.value.relayStates.forEach { (id, on) ->
@@ -260,6 +398,7 @@ class PanelMqttBridge(
             val raw = dashboardConfigSource.exportRaw()
             publish("$baseTopic/dashboard/config/state", raw, retain = true)
             publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+            publishDashboardMetadata(config)
         }.onFailure { t ->
             R1Log.w("PanelMqttBridge", "dashboard config publish failed: ${t.message}")
         }
@@ -270,6 +409,7 @@ class PanelMqttBridge(
             .onSuccess { config ->
                 publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                 publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+                publishDashboardMetadata(config)
             }
             .onFailure { t ->
                 R1Log.w("PanelMqttBridge", "dashboard config import failed: ${t.message}")
@@ -283,6 +423,7 @@ class PanelMqttBridge(
                     is HapanelsDashboardPatchResult.Applied -> {
                         publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                         publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
+                        publishDashboardMetadata(result.config)
                     }
                     is HapanelsDashboardPatchResult.Conflict -> {
                         publish("$baseTopic/dashboard/config/conflict", result.conflictJson(), retain = false)
@@ -292,6 +433,12 @@ class PanelMqttBridge(
             .onFailure { t ->
                 R1Log.w("PanelMqttBridge", "dashboard config patch failed: ${t.message}")
             }
+    }
+
+    private suspend fun publishDashboardMetadata(config: HapanelsDashboardConfig) {
+        publish("$baseTopic/dashboard/revision/state", config.revision.toString(), retain = true)
+        publish("$baseTopic/dashboard/id/state", config.dashboardId, retain = true)
+        publish("$baseTopic/dashboard/updated_by/state", config.updatedBy, retain = true)
     }
 
     private fun resolveMqtt(settings: AppSettings): MqttConfig? {

@@ -6,6 +6,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,6 +20,7 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
     private val proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+    private val sensorHandler = Handler(Looper.getMainLooper())
     private val eventBus = MutableSharedFlow<PanelHardwareEvent>(
         replay = 32,
         extraBufferCapacity = 16,
@@ -46,8 +49,12 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
     override val events = eventBus.asSharedFlow()
 
     override suspend fun start() {
-        lightSensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
-        proximitySensor?.let { sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        val lightRegistered = registerSensor(lightSensor)
+        val proximityRegistered = registerSensor(proximitySensor)
+        capabilitiesState.value = capabilitiesState.value.copy(
+            hasAmbientLightSensor = lightRegistered,
+            hasProximitySensor = proximityRegistered,
+        )
         updateRuntime { it.copy(screenBrightnessPercent = readScreenBrightnessPercent()) }
         statusState.value = statusState.value.copy(
             running = true,
@@ -80,7 +87,7 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
         eventBus.emit(
             PanelHardwareEvent.UnsupportedAction(
                 action = "setScreenBrightness($percent)",
-                detail = "Brightness control is not wired until the panel screen manager lands.",
+                detail = "Generic Android brightness uses per-window fallback from the panel screen manager.",
             ),
         )
     }
@@ -103,15 +110,19 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
                 .ifBlank { Build.DEVICE },
             hasAmbientLightSensor = lightSensor != null,
             hasProximitySensor = proximitySensor != null,
-            supportsScreenBrightness = true,
+            supportsScreenBrightness = false,
             supportsWake = false,
         )
     }
 
+    private fun registerSensor(sensor: Sensor?): Boolean = sensor?.let {
+        sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, sensorHandler) == true
+    } ?: false
+
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.type) {
-            Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = event.values.firstOrNull()) }
-            Sensor.TYPE_PROXIMITY -> updateRuntime { it.copy(proximityDistanceCm = event.values.firstOrNull()) }
+            Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = sanitizePanelSensorReading(event.values.firstOrNull())) }
+            Sensor.TYPE_PROXIMITY -> updateRuntime { it.copy(proximityDistanceCm = sanitizePanelSensorReading(event.values.firstOrNull())) }
         }
     }
 

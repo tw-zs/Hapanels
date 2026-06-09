@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.hardware.PanelHardware
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenManager
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
@@ -26,6 +27,7 @@ fun AppNavGraph(
     tokens: TokenStore,
     wheelInput: WheelInput,
     panelHardware: PanelHardware,
+    panelScreenManager: PanelScreenManager,
 ) {
     // App-shortcut deep-link consumer — MainActivity emits a route on
     // ShortcutBus whenever a launcher long-press shortcut delivers an
@@ -386,6 +388,7 @@ fun AppNavGraph(
         composable(Routes.PANEL_DIAGNOSTICS) {
             com.github.itskenny0.r1ha.feature.paneldiagnostics.PanelDiagnosticsScreen(
                 hardware = panelHardware,
+                screenManager = panelScreenManager,
                 onBack = { navController.popBackStack() },
             )
         }

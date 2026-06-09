@@ -80,10 +80,14 @@ Status: started.
 Done:
 - Relay 1 sysfs state read/write helper with unit coverage.
 - `ShellyWallDisplayHardware` keeps relay 1 state in `PanelHardwareRuntimeState` after local writes.
+- Ambient light and proximity runtime readings are sanitized so invalid sensor values are treated as missing.
+- MQTT discovery now exposes ambient light and proximity distance only when the provider reports those sensors.
+- Temperature/humidity are intentionally not exposed until the hardware provides reliable readings.
 
 Next:
 - Validate relay read/write on real Shelly Wall Display hardware.
-- Promote temperature/humidity/light/proximity into dashboard cards.
+- Promote available light/proximity readings into dashboard cards.
+- Add temperature/humidity only when a reliable hardware or integration source exists.
 
 ## Milestone 5: MQTT Discovery
 
@@ -99,6 +103,7 @@ Done:
 - Relay state publishing.
 - Button pressed state and button event publishing.
 - Ambient light, proximity, and screen brightness state publishing where runtime state provides values.
+- Ambient light and proximity discovery configs when the active provider exposes those sensors.
 - Relay command subscriptions via `hapanels/<device>/relay/<id>/set`.
 - Screen brightness command subscription via `hapanels/<device>/screen/brightness/set`.
 - Unit coverage for MQTT command parsing.

@@ -1,5 +1,7 @@
 # Hapanels
 
+[![CI](https://github.com/tw-zs/Hapanels/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tw-zs/Hapanels/actions/workflows/ci.yml)
+
 <p align="center">
   <img src="docs/assets/hapanels_icon_no_text.svg" alt="Hapanels logo" width="260">
 </p>
@@ -25,6 +27,8 @@ This repository is currently the initial Hapanels seed:
 - Application identity changed to `Hapanels` / `com.github.twzs.hapanels`.
 - Polish localization work from the R1HA experiment is included.
 - Shelly hardware integration is planned but not yet ported.
+
+GitHub Actions runs the debug APK build and unit tests on pushes to `main` and pull requests targeting `main`.
 
 See `docs/PRODUCTION_PLAN.md` for the implementation roadmap.
 

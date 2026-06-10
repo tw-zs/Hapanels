@@ -19,7 +19,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +30,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
 import com.github.itskenny0.r1ha.BuildConfig
 import com.github.itskenny0.r1ha.core.ha.ConnectionState
@@ -521,13 +527,59 @@ private fun FdroidUpdateHint() {
 private fun UpdaterRow() {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
     val state = androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<UpdaterState>(UpdaterState.Idle)
     }
+    val refreshTick = remember { mutableIntStateOf(0) }
     val updater = androidx.compose.runtime.remember {
         com.github.itskenny0.r1ha.core.update.AppUpdater(
             http = okhttp3.OkHttpClient(),
         )
+    }
+    fun requestCheck() {
+        state.value = UpdaterState.Checking
+        scope.launch {
+            state.value = when (val r = updater.checkForUpdate()) {
+                is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Available -> UpdaterState.Available(r.info)
+                is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.UpToDate -> UpdaterState.UpToDate
+                is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Failed -> UpdaterState.Error(r.message)
+            }
+        }
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTick.intValue++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        requestCheck()
+    }
+    androidx.compose.runtime.LaunchedEffect(refreshTick.intValue) {
+        if (refreshTick.intValue > 0) {
+            requestCheck()
+        }
+    }
+
+    fun releaseStatusLine(): String = when (val s = state.value) {
+        UpdaterState.Idle -> "Checks GitHub Releases automatically on open"
+        UpdaterState.Checking -> "Checking GitHub Releases…"
+        UpdaterState.UpToDate -> "Current GitHub release is installed"
+        is UpdaterState.Available -> "Update ready from ${s.info.tagName}"
+        is UpdaterState.Downloading -> "Downloading ${s.info.tagName} ${(s.fraction * 100).toInt()}%"
+        is UpdaterState.Error -> "Release check failed: ${s.message.take(48)}"
+    }
+
+    fun releaseDetailLine(): String = when (val s = state.value) {
+        UpdaterState.UpToDate -> "Installed: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+        is UpdaterState.Available -> "Installed: ${BuildConfig.VERSION_NAME} · Latest: ${s.info.versionName}"
+        is UpdaterState.Downloading -> "Staging ${s.info.apkName} to cache/updates/"
+        is UpdaterState.Error -> "Tap again to retry the release check"
+        else -> "Installed: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) · GitHub"
     }
     Column(
         modifier = Modifier
@@ -538,15 +590,15 @@ private fun UpdaterRow() {
             Text("Updates", style = R1.bodyEmph, color = R1.Ink)
             Spacer(Modifier.weight(1f))
             val pillText = when (val s = state.value) {
-                UpdaterState.Idle -> "TAP TO CHECK"
-                UpdaterState.Checking -> "CHECKING…"
-                is UpdaterState.UpToDate -> "UP TO DATE"
-                is UpdaterState.Available -> "v${s.info.versionName} AVAILABLE"
-                is UpdaterState.Downloading -> "DOWNLOADING ${(s.fraction * 100).toInt()}%"
+                UpdaterState.Idle -> "CHECK FOR UPDATES"
+                UpdaterState.Checking -> "CHECKING GITHUB…"
+                is UpdaterState.UpToDate -> "CURRENT RELEASE"
+                is UpdaterState.Available -> "UPDATE READY"
+                is UpdaterState.Downloading -> "INSTALLING ${(s.fraction * 100).toInt()}%"
                 // Truncate so a 200-char IOException doesn't overflow the chip;
                 // expanding the row would shift the layout. Tap-to-retry still
                 // works because the click handler treats Error like Idle.
-                is UpdaterState.Error -> "ERROR · ${s.message.take(40)}"
+                is UpdaterState.Error -> "CHECK FAILED"
             }
             val pillColor = when (state.value) {
                 is UpdaterState.Available, is UpdaterState.Downloading -> R1.AccentWarm
@@ -587,14 +639,7 @@ private fun UpdaterRow() {
                                     }
                                 }
                                 else -> {
-                                    state.value = UpdaterState.Checking
-                                    scope.launch {
-                                        state.value = when (val r = updater.checkForUpdate()) {
-                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Available -> UpdaterState.Available(r.info)
-                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.UpToDate -> UpdaterState.UpToDate
-                                            is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Failed -> UpdaterState.Error(r.message)
-                                        }
-                                    }
+                                    requestCheck()
                                 }
                             }
                         })
@@ -622,6 +667,17 @@ private fun UpdaterRow() {
                 }
             }
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = releaseStatusLine(),
+            style = R1.labelMicro,
+            color = R1.InkSoft,
+        )
+        Text(
+            text = releaseDetailLine(),
+            style = R1.body,
+            color = R1.InkMuted,
+        )
         // Error / release-notes detail. Available + Error reveal additional text
         // under the row. Notes are truncated to ~6 lines so the about screen
         // doesn't grow unreasonably for a long changelog.

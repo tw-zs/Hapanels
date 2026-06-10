@@ -122,6 +122,7 @@ Next:
 - Auto-brightness curve.
 - Screensaver modes.
 - Wake/sleep reason tracking.
+- AOD/screensaver research: evaluate which ideas from `j-a-n/lovelace-wallpanel` can map to native Hapanels, especially idle timeout, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlaying selected HA cards or status widgets. Reuse concepts/config shape where useful, but do not make Hapanels depend on Lovelace/WebView for the AOD renderer.
 
 ## Milestone 7: Production Hardening
 

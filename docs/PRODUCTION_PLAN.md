@@ -211,6 +211,7 @@ Tasks:
 - Add auto-brightness from light sensor.
 - Add brightness curve settings: min, max, smoothing, night mode.
 - Add inactivity timeout and wake reasons.
+- Evaluate `j-a-n/lovelace-wallpanel` before finalizing AOD/screensaver UX. Check which concepts should be ported as native Hapanels behavior: idle timer, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlay cards/status widgets. Treat it as design/config inspiration, not as a Lovelace/WebView dependency.
 
 Verification:
 

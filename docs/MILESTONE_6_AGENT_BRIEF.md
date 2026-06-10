@@ -127,18 +127,18 @@ Runtime/diagnostics:
 
 ## Verification Commands
 
-Use JDK 17. The local known-good JDK path on the main development machine is `/home/tomek/Pobrane/jdk17`.
+Use JDK 17. Set `JAVA_HOME` to a JDK 17 installation if the default Java on the machine is not JDK 17.
 
 ```bash
-JAVA_HOME="/home/tomek/Pobrane/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:compileGithubDebugKotlin
-JAVA_HOME="/home/tomek/Pobrane/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:testGithubDebugUnitTest
-JAVA_HOME="/home/tomek/Pobrane/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:assembleGithubDebug
+JAVA_HOME="/path/to/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:compileGithubDebugKotlin
+JAVA_HOME="/path/to/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:testGithubDebugUnitTest
+JAVA_HOME="/path/to/jdk17" ./gradlew --no-daemon -Dkotlin.compiler.execution.strategy=in-process :app:assembleGithubDebug
 ```
 
 If Gradle gets stuck or a daemon/cache issue appears, stop daemons and retry:
 
 ```bash
-JAVA_HOME="/home/tomek/Pobrane/jdk17" ./gradlew --stop
+JAVA_HOME="/path/to/jdk17" ./gradlew --stop
 ```
 
 Optional device smoke test:

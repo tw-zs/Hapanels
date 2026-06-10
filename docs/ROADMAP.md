@@ -75,17 +75,18 @@ Next:
 
 Goal: Shelly relay and sensor state works locally and appears in Hapanels diagnostics/UI.
 
-Status: started.
+Status: mostly done for relay 1 and real ambient-light exposure; additional sensors stay gated on reliable hardware data.
 
 Done:
 - Relay 1 sysfs state read/write helper with unit coverage.
 - `ShellyWallDisplayHardware` keeps relay 1 state in `PanelHardwareRuntimeState` after local writes.
 - Ambient light and proximity runtime readings are sanitized so invalid sensor values are treated as missing.
-- MQTT discovery now exposes ambient light and proximity distance only when the provider reports those sensors.
+- MQTT discovery exposes ambient light only when the provider reports a reliable sensor; proximity is intentionally not exposed on Shelly until Android delivers usable events.
 - Temperature/humidity are intentionally not exposed until the hardware provides reliable readings.
+- Relay 1 read/write was smoke-tested on real Shelly Wall Display hardware through Home Assistant MQTT.
+- Shelly screen brightness writes use the real sysfs backlight path while HA/MQTT keeps a stable 0-100% contract.
 
 Next:
-- Validate relay read/write on real Shelly Wall Display hardware.
 - Promote available light/proximity readings into dashboard cards.
 - Add temperature/humidity only when a reliable hardware or integration source exists.
 
@@ -93,7 +94,7 @@ Next:
 
 Goal: Home Assistant discovers the panel as a device with relays, buttons, sensors, and availability.
 
-Status: mostly done; needs real broker/device smoke validation.
+Status: mostly done and smoke-tested against the user's Home Assistant MQTT broker.
 
 Done:
 - MQTT settings for host, port, TLS, username, password, and client id.
@@ -106,10 +107,14 @@ Done:
 - Ambient light and proximity discovery configs when the active provider exposes those sensors.
 - Relay command subscriptions via `hapanels/<device>/relay/<id>/set`.
 - Screen brightness command subscription via `hapanels/<device>/screen/brightness/set`.
+- Screen auto-brightness switch discovery and command subscription via `hapanels/<device>/screen/auto_brightness/set`.
+- Dashboard config retained state/meta topics plus config import and patch command topics.
+- App online, app version, hardware provider, dashboard metadata, screen mode, target brightness, and applied brightness diagnostics.
+- Home Assistant device triggers for physical button events.
 - Unit coverage for MQTT command parsing.
+- Real Home Assistant smoke tests for relay 1, brightness, auto-brightness, availability, diagnostics, and dashboard metadata.
 
 Next:
-- Smoke-test discovery and command topics against the user's Home Assistant MQTT broker.
 - Add richer MQTT diagnostics for connection status and last publish/subscribe error.
 - Add Home Assistant device metadata refinements if HA UI naming needs polish.
 
@@ -117,9 +122,18 @@ Next:
 
 Goal: make Hapanels useful as an always-mounted wall panel.
 
+Status: foundation started; brightness and screen diagnostics are usable, full AOD/screensaver UX remains pending.
+
+Done:
+- `PanelScreenManager` lifecycle is wired from app startup.
+- Manual screen brightness control works through HA/MQTT and Shelly sysfs, with diagnostics for applied brightness.
+- Auto-brightness settings, smoothing, hysteresis, and HA/MQTT switch control are in place.
+- Screen mode, target brightness, and applied brightness are published as MQTT diagnostics.
+- `WRITE_SETTINGS` is requested/allowed for Shelly so Android does not override hardware brightness writes.
+- AOD configuration placeholder exists in the dashboard config model as `always_on_display`.
+
 Next:
 - Proximity wake.
-- Auto-brightness curve.
 - Screensaver modes.
 - Wake/sleep reason tracking.
 - AOD/screensaver research: evaluate which ideas from `j-a-n/lovelace-wallpanel` can map to native Hapanels, especially idle timeout, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlaying selected HA cards or status widgets. Reuse concepts/config shape where useful, but do not make Hapanels depend on Lovelace/WebView for the AOD renderer.

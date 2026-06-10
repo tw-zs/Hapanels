@@ -85,6 +85,8 @@ Verification:
 
 Goal: make the app feel like a wall panel, not a small-screen card-stack client.
 
+Status: done for runtime product shell.
+
 Tasks:
 
 - Create a tablet-first home dashboard route.
@@ -99,10 +101,13 @@ Verification:
 - Launches on a normal Android tablet.
 - Default screen is useful without card-stack-first interaction.
 - Existing HA login and entity/service functionality still works.
+- Release/update naming uses Hapanels tags and assets.
 
 ### Milestone 2: Hardware Abstraction Layer
 
 Goal: introduce a clean boundary before Shelly-specific code lands.
+
+Status: done for the HAL foundation.
 
 Tasks:
 
@@ -117,10 +122,13 @@ Verification:
 - Generic tablet build runs with no Shelly native library present.
 - Diagnostics show fallback hardware provider.
 - Hardware event stream is testable with fake provider.
+- Shelly and Android-tablet providers are selected through `PanelHardwareController` and surfaced in Settings/Diagnostics.
 
 ### Milestone 3: Shelly Physical Buttons
 
 Goal: physical Shelly buttons work inside Hapanels.
+
+Status: mostly done for local actions and MQTT/HA event exposure; HA service-call action targets still pending.
 
 Tasks:
 
@@ -151,10 +159,13 @@ Verification:
 - Test on real Shelly Wall Display.
 - Confirm short/long/double/triple press detection.
 - Confirm no crash when native input is unavailable.
+- Real Shelly button press and event topics have been smoke-tested through Home Assistant MQTT discovery.
 
 ### Milestone 4: Local Relays And Sensors
 
 Goal: Shelly hardware appears as first-class local panel state.
+
+Status: mostly done for relay 1, ambient light, and screen brightness; temp/humidity/proximity remain gated on reliable hardware data.
 
 Tasks:
 
@@ -169,10 +180,14 @@ Verification:
 - Relay can be toggled locally from UI and physical buttons.
 - Sensors update in diagnostics and dashboard.
 - App remains usable without HA connection for local hardware functions.
+- Relay 1 and screen brightness were smoke-tested on real Shelly Wall Display hardware.
+- Ambient light is exposed when reliable; proximity, temperature, and humidity are not exposed as fake sensors.
 
 ### Milestone 5: MQTT Discovery
 
 Goal: Home Assistant can discover and control panel hardware.
+
+Status: mostly done and smoke-tested against the user's Home Assistant MQTT broker.
 
 Tasks:
 
@@ -195,10 +210,15 @@ Verification:
 - HA receives button events.
 - HA receives sensor updates.
 - Availability changes on app start/stop/network loss.
+- HA can control screen brightness and the auto-brightness switch through MQTT.
+- HA receives app/version, hardware-provider, dashboard, screen-mode, target-brightness, and applied-brightness diagnostics.
+- Hapanels publishes retained dashboard config state/meta and accepts dashboard config import/patch commands.
 
 ### Milestone 6: Proximity, Brightness, Screensaver
 
 Goal: panel appliance behavior suitable for wall mounting.
+
+Status: foundation started; brightness/screen manager diagnostics are usable, full screensaver/AOD renderer remains pending.
 
 Tasks:
 
@@ -219,6 +239,8 @@ Verification:
 - Screensaver engages after timeout.
 - Brightness changes smoothly with ambient light.
 - Regular tablets without proximity still work with timeout/touch wake.
+- Manual and auto-brightness MQTT controls have been smoke-tested on the Shelly Wall Display.
+- AOD has a dashboard-config placeholder (`always_on_display`) for the future native renderer.
 
 ### Milestone 7: Production Hardening
 
@@ -240,6 +262,28 @@ Verification:
 - Upgrade preserves settings.
 - Reboot autostarts when enabled.
 - Debug bundle gives enough data to troubleshoot hardware/MQTT/HA issues.
+
+### Milestone 8: Native Panel Dashboard And HA Config Sync
+
+Goal: let Home Assistant manage Hapanels dashboard configuration while Hapanels renders a polished native Compose wall-panel dashboard.
+
+Status: started.
+
+Tasks:
+
+- Define a native dashboard config model for sections, tiles, people, layout, and AOD settings.
+- Seed and cache local dashboard JSON on the panel.
+- Render a native dark dashboard with live entity bindings.
+- Publish retained dashboard config and metadata over MQTT.
+- Accept full config import and revision-checked patch commands over MQTT.
+- Build a HACS custom integration so HA can expose dashboard management/config UI.
+
+Verification:
+
+- Native dashboard route renders on the panel.
+- Dashboard config survives app restart through local cache.
+- HA/MQTT sees dashboard id, revision, and updated-by diagnostics.
+- Patch commands reject stale `base_revision` values instead of overwriting newer panel config.
 
 ## Major Risks
 

@@ -49,4 +49,17 @@ class AppUpdaterTest {
         val anyTag = AppUpdater.versionCodeFromTag("hapanels-20200101")!!
         assertThat(anyTag).isEqualTo(100_000_000L)
     }
+
+    @Test fun `github updater prefers canonical workflow apk over manually attached debug apk`() {
+        val selected = AppUpdater.selectGithubApkAssetName(
+            tag = "hapanels-20260610-1522",
+            assetNames = listOf(
+                "app-github-debug.apk",
+                "hapanels-2026.06.10.1522.apk",
+                "hapanels-fdroid-2026.06.10.1522.apk",
+            ),
+        )
+
+        assertThat(selected).isEqualTo("hapanels-2026.06.10.1522.apk")
+    }
 }

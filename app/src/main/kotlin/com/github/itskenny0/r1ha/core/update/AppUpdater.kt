@@ -114,9 +114,11 @@ class AppUpdater(
         // user would land on the fdroid build and lose the self-updater on their
         // next install. Filter `-fdroid-` out explicitly rather than relying on
         // alphabetical order in the assets array.
-        val apkAsset = release.assets.firstOrNull {
-            it.name.endsWith(".apk") && !it.name.contains("-fdroid-")
-        } ?: return@withContext CheckResult.Failed("No github-flavour APK attached to ${release.tag_name}")
+        val apkAssetName = selectGithubApkAssetName(
+            assetNames = release.assets.map { it.name },
+            tag = release.tag_name,
+        ) ?: return@withContext CheckResult.Failed("No github-flavour APK attached to ${release.tag_name}")
+        val apkAsset = release.assets.first { it.name == apkAssetName }
         CheckResult.Available(
             UpdateInfo(
                 versionCode = versionCode,
@@ -231,6 +233,21 @@ class AppUpdater(
                 val minutesSince = java.time.Duration.between(epoch, tagMoment).toMinutes()
                 100_000_000L + minutesSince
             }.getOrNull()
+        }
+
+        internal fun selectGithubApkAssetName(assetNames: List<String>, tag: String): String? {
+            val githubApks = assetNames.filter { it.endsWith(".apk") && !it.contains("-fdroid-") }
+            val canonicalName = canonicalGithubApkNameFromTag(tag)
+            return githubApks.firstOrNull { it == canonicalName } ?: githubApks.firstOrNull()
+        }
+
+        private fun canonicalGithubApkNameFromTag(tag: String): String? {
+            if (!tag.startsWith("hapanels-")) return null
+            val rest = tag.removePrefix("hapanels-")
+            if (rest.length < 13 || rest[8] != '-') return null
+            val yyyymmdd = rest.substring(0, 8)
+            val hhmm = rest.substring(9, 13)
+            return "hapanels-${yyyymmdd.substring(0, 4)}.${yyyymmdd.substring(4, 6)}.${yyyymmdd.substring(6, 8)}.$hhmm.apk"
         }
     }
 }

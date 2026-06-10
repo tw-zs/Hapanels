@@ -12,6 +12,7 @@ data class HapanelsDashboardConfig(
     @SerialName("updated_by") val updatedBy: String,
     val title: String,
     val layout: HapanelsDashboardLayout,
+    @SerialName("always_on_display") val alwaysOnDisplay: HapanelsAlwaysOnDisplayConfig = HapanelsAlwaysOnDisplayConfig(),
     val people: List<HapanelsPersonConfig> = emptyList(),
     val tiles: List<HapanelsTileConfig> = emptyList(),
     @SerialName("camera_actions") val cameraActions: List<String> = emptyList(),
@@ -24,6 +25,19 @@ data class HapanelsDashboardLayout(
     @SerialName("columns_portrait") val columnsPortrait: Int,
     val gap: String = "medium",
 )
+
+@Serializable
+data class HapanelsAlwaysOnDisplayConfig(
+    val enabled: Boolean = false,
+    val layout: HapanelsAlwaysOnDisplayLayout = HapanelsAlwaysOnDisplayLayout.MINIMAL_CLOCK,
+    @SerialName("entity_ids") val entityIds: List<String> = emptyList(),
+)
+
+@Serializable
+enum class HapanelsAlwaysOnDisplayLayout {
+    @SerialName("minimal_clock") MINIMAL_CLOCK,
+    @SerialName("status_strip") STATUS_STRIP,
+}
 
 @Serializable
 data class HapanelsPersonConfig(
@@ -136,6 +150,11 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     "columns_landscape": 3,
     "columns_portrait": 2,
     "gap": "medium"
+  },
+  "always_on_display": {
+    "enabled": false,
+    "layout": "minimal_clock",
+    "entity_ids": []
   },
   "people": [
     { "id": "person.michal", "name": "Michał", "state": "poza domem", "status": "away" },

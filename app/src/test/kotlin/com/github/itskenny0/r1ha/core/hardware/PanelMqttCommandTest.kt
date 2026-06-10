@@ -35,6 +35,14 @@ class PanelMqttCommandTest {
     }
 
     @Test
+    fun `parses auto brightness switch payloads`() {
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/screen/auto_brightness/set", "ON"))
+            .isEqualTo(PanelMqttCommand.SetAutoBrightness(enabled = true))
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/screen/auto_brightness/set", "false"))
+            .isEqualTo(PanelMqttCommand.SetAutoBrightness(enabled = false))
+    }
+
+    @Test
     fun `parses dashboard config command`() {
         val raw = """{"revision":43}"""
 
@@ -55,6 +63,8 @@ class PanelMqttCommandTest {
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/relay/1/set", "toggle"))
             .isNull()
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/screen/brightness/set", "bright"))
+            .isNull()
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/screen/auto_brightness/set", "auto"))
             .isNull()
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/other/relay/1/set", "ON"))
             .isNull()

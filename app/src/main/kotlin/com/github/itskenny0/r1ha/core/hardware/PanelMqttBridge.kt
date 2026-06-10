@@ -15,6 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -77,6 +78,12 @@ class PanelMqttBridge(
         }
         scope.launch {
             screenManager.state.collect { screen -> publishScreenDiagnostics(screen) }
+        }
+        scope.launch {
+            settings.settings
+                .map { it.advanced.autoBrightnessEnabled }
+                .distinctUntilChanged()
+                .collect { enabled -> publishAutoBrightnessState(enabled) }
         }
         scope.launch {
             hardware.events.collect { event ->
@@ -274,6 +281,23 @@ class PanelMqttBridge(
                 """.compactJson(),
         )
         discovery(
+            component = "switch",
+            entityId = "screen_auto_brightness",
+            payload = """
+                {
+                  "name":"Screen auto brightness",
+                  "unique_id":"${objectId}_screen_auto_brightness",
+                  "state_topic":"$baseTopic/screen/auto_brightness/state",
+                  "command_topic":"$baseTopic/screen/auto_brightness/set",
+                  "payload_on":"ON",
+                  "payload_off":"OFF",
+                  "icon":"mdi:brightness-auto",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
             component = "sensor",
             entityId = "screen_mode",
             payload = """
@@ -381,6 +405,10 @@ class PanelMqttBridge(
         publish("$baseTopic/screen/applied_brightness/state", appliedBrightness?.toString() ?: "unknown", retain = true)
     }
 
+    private suspend fun publishAutoBrightnessState(enabled: Boolean) {
+        publish("$baseTopic/screen/auto_brightness/state", if (enabled) "ON" else "OFF", retain = true)
+    }
+
     private suspend fun publishAvailability(online: Boolean) {
         publish("$baseTopic/status", if (online) "online" else "offline", retain = true)
     }
@@ -412,6 +440,7 @@ class PanelMqttBridge(
                 publishDiscovery(hardware.capabilities.value)
                 publishPanelDiagnostics(hardware.capabilities.value)
                 publishScreenDiagnostics(screenManager.state.value)
+                publishAutoBrightnessState(settings.settings.first().advanced.autoBrightnessEnabled)
                 publishDashboardConfig()
                 publishAvailability(true)
                 hardware.runtimeState.value.relayStates.forEach { (id, on) ->
@@ -437,6 +466,7 @@ class PanelMqttBridge(
             session?.subscribe("$baseTopic/relay/$relayId/set")
         }
         session?.subscribe("$baseTopic/screen/brightness/set")
+        session?.subscribe("$baseTopic/screen/auto_brightness/set")
         session?.subscribe("$baseTopic/dashboard/config/set")
         session?.subscribe("$baseTopic/dashboard/config/patch/set")
     }
@@ -445,6 +475,7 @@ class PanelMqttBridge(
         when (val command = PanelMqttCommand.parse(baseTopic, topic, payload.toString(Charsets.UTF_8))) {
             is PanelMqttCommand.SetRelay -> hardware.setRelay(command.relayId, command.on)
             is PanelMqttCommand.SetBrightness -> hardware.setScreenBrightness(command.percent)
+            is PanelMqttCommand.SetAutoBrightness -> setAutoBrightness(command.enabled)
             is PanelMqttCommand.SetDashboardConfig -> importDashboardConfig(command.rawJson)
             is PanelMqttCommand.PatchDashboardConfig -> patchDashboardConfig(command.rawJson)
             null -> R1Log.w("PanelMqttBridge", "ignored command topic=$topic payload=${payload.toString(Charsets.UTF_8).trim()}")
@@ -461,6 +492,13 @@ class PanelMqttBridge(
         }.onFailure { t ->
             R1Log.w("PanelMqttBridge", "dashboard config publish failed: ${t.message}")
         }
+    }
+
+    private suspend fun setAutoBrightness(enabled: Boolean) {
+        settings.update { current ->
+            current.copy(advanced = current.advanced.copy(autoBrightnessEnabled = enabled))
+        }
+        publishAutoBrightnessState(enabled)
     }
 
     private suspend fun importDashboardConfig(rawJson: String) {
@@ -536,6 +574,7 @@ class PanelMqttBridge(
 internal sealed interface PanelMqttCommand {
     data class SetRelay(val relayId: Int, val on: Boolean) : PanelMqttCommand
     data class SetBrightness(val percent: Int) : PanelMqttCommand
+    data class SetAutoBrightness(val enabled: Boolean) : PanelMqttCommand
     data class SetDashboardConfig(val rawJson: String) : PanelMqttCommand
     data class PatchDashboardConfig(val rawJson: String) : PanelMqttCommand
 
@@ -554,6 +593,14 @@ internal sealed interface PanelMqttCommand {
             }
             if (topic == "$baseTopic/screen/brightness/set") {
                 return SetBrightness(text.toIntOrNull()?.coerceIn(0, 100) ?: return null)
+            }
+            if (topic == "$baseTopic/screen/auto_brightness/set") {
+                val enabled = when (text.uppercase()) {
+                    "ON", "1", "TRUE" -> true
+                    "OFF", "0", "FALSE" -> false
+                    else -> return null
+                }
+                return SetAutoBrightness(enabled)
             }
             if (topic == "$baseTopic/dashboard/config/set") {
                 return SetDashboardConfig(payload.trim())

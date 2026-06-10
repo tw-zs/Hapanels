@@ -47,10 +47,12 @@ class HapanelsDashboardConfigSource(
         configJson.encodeToString(config)
     }
 
-    suspend fun importRaw(raw: String): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
+    suspend fun importRaw(raw: String): HapanelsDashboardConfig {
         val config = configJson.decodeFromString<HapanelsDashboardConfig>(raw)
-        dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
-        config
+        return withContext(Dispatchers.IO) {
+            dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+            config
+        }
     }
 
     suspend fun applyPatch(patch: HapanelsDashboardPatch): HapanelsDashboardPatchResult = withContext(Dispatchers.IO) {

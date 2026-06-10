@@ -174,9 +174,19 @@ private fun WidePanel(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                PanelLargeTile(largeTiles[0], liveState = largeTiles[0].liveState(liveEntities), modifier = Modifier.weight(1f))
+                PanelLargeTileOrCamera(
+                    tile = largeTiles[0],
+                    liveState = largeTiles[0].liveState(liveEntities),
+                    cameraActions = config.cameraActions,
+                    modifier = Modifier.weight(1f),
+                )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PanelLargeTile(largeTiles[3], liveState = largeTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f))
+                    PanelLargeTileOrCamera(
+                        tile = largeTiles[3],
+                        liveState = largeTiles[3].liveState(liveEntities),
+                        cameraActions = config.cameraActions,
+                        modifier = Modifier.weight(1f),
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PanelTextAction(config.cameraActions.getOrElse(0) { "Wyłącz kamery" }, modifier = Modifier.weight(1f))
                         PanelTextAction(config.cameraActions.getOrElse(1) { "Włącz kamery" }, modifier = Modifier.weight(1f))
@@ -187,14 +197,29 @@ private fun WidePanel(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                PanelLargeTile(largeTiles[1], liveState = largeTiles[1].liveState(liveEntities), modifier = Modifier.weight(1f))
-                PanelLargeTile(largeTiles[4], liveState = largeTiles[4].liveState(liveEntities), modifier = Modifier.weight(1f))
+                PanelLargeTileOrCamera(
+                    tile = largeTiles[1],
+                    liveState = largeTiles[1].liveState(liveEntities),
+                    cameraActions = config.cameraActions,
+                    modifier = Modifier.weight(1f),
+                )
+                PanelLargeTileOrCamera(
+                    tile = largeTiles[4],
+                    liveState = largeTiles[4].liveState(liveEntities),
+                    cameraActions = config.cameraActions,
+                    modifier = Modifier.weight(1f),
+                )
             }
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                PanelLargeTile(largeTiles[2], liveState = largeTiles[2].liveState(liveEntities), modifier = Modifier.weight(1f))
+                PanelLargeTileOrCamera(
+                    tile = largeTiles[2],
+                    liveState = largeTiles[2].liveState(liveEntities),
+                    cameraActions = config.cameraActions,
+                    modifier = Modifier.weight(1f),
+                )
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -239,12 +264,24 @@ private fun CompactPanel(
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 largeTiles.take(3).forEach { tile ->
-                    PanelLargeTile(tile, liveState = tile.liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 60.dp)
+                    PanelLargeTileOrCamera(
+                        tile = tile,
+                        liveState = tile.liveState(liveEntities),
+                        cameraActions = config.cameraActions,
+                        modifier = Modifier.weight(1f),
+                        iconSize = 60.dp,
+                    )
                 }
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 largeTiles.drop(3).forEach { tile ->
-                    PanelLargeTile(tile, liveState = tile.liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 60.dp)
+                    PanelLargeTileOrCamera(
+                        tile = tile,
+                        liveState = tile.liveState(liveEntities),
+                        cameraActions = config.cameraActions,
+                        modifier = Modifier.weight(1f),
+                        iconSize = 60.dp,
+                    )
                 }
                 PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 48.dp)
             }
@@ -354,6 +391,94 @@ private fun PanelLargeTile(
             maxLines = 2,
         )
         PanelLiveStatus(tile = tile, liveState = liveState, compact = false)
+    }
+}
+
+@Composable
+private fun PanelLargeTileOrCamera(
+    tile: HapanelsTileConfig,
+    liveState: EntityState?,
+    cameraActions: List<String>,
+    modifier: Modifier,
+    iconSize: Dp = 92.dp,
+) {
+    if (tile.kind == HapanelsTileKind.CAMERA) {
+        PanelCameraTile(tile = tile, liveState = liveState, cameraActions = cameraActions, modifier = modifier, iconSize = iconSize)
+    } else {
+        PanelLargeTile(tile = tile, liveState = liveState, modifier = modifier, iconSize = iconSize)
+    }
+}
+
+@Composable
+private fun PanelCameraTile(
+    tile: HapanelsTileConfig,
+    liveState: EntityState?,
+    cameraActions: List<String>,
+    modifier: Modifier,
+    iconSize: Dp = 92.dp,
+) {
+    PanelTileShell(modifier = modifier, padding = 12.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PanelIcons.Icon(tile.icon, tint = tile.accent.color(), modifier = Modifier.size(iconSize))
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    tile.displayLabel(),
+                    color = Color.White,
+                    style = R1.body.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, fontFamily = NunitoPanelFont),
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                )
+                Text(
+                    text = "Podgląd na żywo",
+                    color = Color.White.copy(alpha = 0.72f),
+                    style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                )
+            }
+            val cameraState = when {
+                liveState == null -> "PODGLĄD"
+                !liveState.isAvailable -> "NIEDOSTĘPNA"
+                else -> liveState.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "PODGLĄD"
+            }
+            Text(
+                text = cameraState,
+                color = when {
+                    liveState == null -> Orange
+                    !liveState.isAvailable -> Red
+                    else -> Green
+                },
+                style = R1.labelMicro.copy(fontSize = 12.sp, fontFamily = NunitoPanelFont, fontWeight = FontWeight.Bold),
+                textAlign = TextAlign.End,
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(108.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Black.copy(alpha = 0.18f))
+                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                PanelIcons.Icon(HapanelsPanelIcon.CCTV, tint = Orange, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "LIVE SNAPSHOT",
+                    color = Color.White.copy(alpha = 0.84f),
+                    style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PanelTextAction(cameraActions.getOrElse(0) { "Lista kamer" }, modifier = Modifier.weight(1f))
+            PanelTextAction(cameraActions.getOrElse(1) { "Pełny ekran" }, modifier = Modifier.weight(1f))
+        }
     }
 }
 
@@ -505,6 +630,8 @@ private fun HapanelsTileConfig.liveLabel(liveState: EntityState?): String? {
         -> state.climateCurrentTemperature?.let { "${it.formatPanelNumber()}°" }
             ?: state.climateTargetTemperature?.let { "${it.formatPanelNumber()}°" }
             ?: state.climateHvacMode.orUnknown()
+        com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER,
+        -> state.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "nieznane"
         com.github.itskenny0.r1ha.core.ha.Domain.SENSOR,
         com.github.itskenny0.r1ha.core.ha.Domain.NUMBER,
         com.github.itskenny0.r1ha.core.ha.Domain.INPUT_NUMBER,

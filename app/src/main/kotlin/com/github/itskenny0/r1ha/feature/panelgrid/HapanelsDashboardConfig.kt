@@ -99,6 +99,7 @@ enum class HapanelsTileKind {
     @SerialName("category") CATEGORY,
     @SerialName("action") ACTION,
     @SerialName("entity") ENTITY,
+    @SerialName("camera") CAMERA,
 }
 
 @Serializable
@@ -168,13 +169,13 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     { "id": "lights", "kind": "category", "size": "large", "label": "Oświetlenie", "entity_id": "group.all_lights", "icon": "lightbulb", "order": 10 },
     { "id": "covers", "kind": "category", "size": "large", "label": "Rolety i żaluzje", "short_label": "Rolety", "entity_id": "cover.all_covers", "icon": "blinds", "order": 11 },
     { "id": "climate", "kind": "category", "size": "large", "label": "Klimat", "entity_id": "climate.home", "icon": "home_thermometer", "order": 12 },
-    { "id": "cameras", "kind": "category", "size": "large", "label": "Monitoring", "entity_id": "camera.front", "icon": "cctv", "order": 13 },
+    { "id": "cameras", "kind": "camera", "size": "large", "label": "Monitoring", "entity_id": "camera.front", "icon": "cctv", "order": 13 },
     { "id": "gate", "kind": "category", "size": "large", "label": "Brama", "entity_id": "cover.gate", "icon": "gate", "order": 14 },
     { "id": "energy", "kind": "entity", "size": "small", "label": "Energia", "entity_id": "sensor.home_power", "icon": "home_lightning", "accent": "red", "order": 20 },
     { "id": "presence", "kind": "entity", "size": "small", "label": "Obecność w domu", "short_label": "Obecność", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 21 },
     { "id": "watering", "kind": "entity", "size": "small", "label": "Podlewanie", "entity_id": "switch.garden_watering", "icon": "sprinkler", "order": 22 },
     { "id": "settings", "kind": "action", "size": "small", "label": "Konfiguracja", "short_label": "Config", "icon": "cog", "order": 23 }
   ],
-  "camera_actions": ["Wyłącz kamery", "Włącz kamery"]
+  "camera_actions": ["Lista kamer", "Pełny ekran"]
 }
 """

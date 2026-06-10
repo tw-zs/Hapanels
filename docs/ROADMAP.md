@@ -172,5 +172,24 @@ Next:
 - Build a HACS custom integration so HA can expose dashboard management/config UI.
 - Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
 
+## Milestone 9: Camera Support
+
+Goal: bring camera viewing into the native panel experience in a way that feels closer to Phylax's camera-first UX, while still using Hapanels' native Compose surfaces.
+
+Status: planned.
+
+Tasks:
+- Add a native camera browser with list/grid modes and live snapshot polling.
+- Add fullscreen camera overlay/detail with fast refresh tuning.
+- Extend the dashboard mockup with camera-focused tiles and quick actions.
+- Support camera-friendly HA refresh defaults and graceful fallback when no cameras are available.
+- Use Phylax as inspiration for camera browsing, live status presentation, and touch-friendly camera detail flows.
+
+Verification:
+- Camera entities from HA appear in the native camera browser.
+- Grid and fullscreen camera views poll snapshots without stalling the rest of the panel.
+- Dashboard mockup shows a dedicated camera tile/section.
+- Camera browsing stays usable on both tablets and wall panels.
+
 Maybe later:
 - ESPHome Bluetooth proxy support for nearby BLE devices.

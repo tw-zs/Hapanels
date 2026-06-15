@@ -2,6 +2,7 @@ package com.github.itskenny0.r1ha.core.hardware
 
 import android.content.Context
 import android.os.Build
+import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.prefs.HardwareProviderMode
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +21,9 @@ import kotlinx.coroutines.launch
 class PanelHardwareController(
     context: Context,
     private val settings: SettingsRepository,
+    private val haRepository: HaRepository? = null,
     private val androidFactory: (Context) -> PanelHardware = { AndroidTabletHardware(it) },
-    private val shellyFactory: (Context) -> PanelHardware = { ShellyWallDisplayHardware(it, settings) },
+    private val shellyFactory: (Context) -> PanelHardware = { ShellyWallDisplayHardware(it, settings, haRepository) },
     private val shellyDetector: () -> Boolean = { looksLikeShellyDevice() },
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : PanelHardware {

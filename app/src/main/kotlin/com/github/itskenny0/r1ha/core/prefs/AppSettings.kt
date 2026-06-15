@@ -30,7 +30,7 @@ enum class WheelKeySource { AUTO, DPAD, VOLUME }
 enum class HardwareProviderMode { AUTO, ANDROID_TABLET, SHELLY_WALL_DISPLAY }
 
 @kotlinx.serialization.Serializable
-enum class HardwareButtonActionKind { NONE, TOGGLE_RELAY, RELAY_ON, RELAY_OFF }
+enum class HardwareButtonActionKind { NONE, TOGGLE_RELAY, RELAY_ON, RELAY_OFF, HA_SERVICE, MQTT_PUBLISH }
 
 @kotlinx.serialization.Serializable
 enum class HardwareButtonTriggerPhase { DOWN, UP, CLICK }
@@ -43,6 +43,12 @@ data class HardwareButtonActionMapping(
     val pressType: String = "SHORT",
     val action: HardwareButtonActionKind = HardwareButtonActionKind.NONE,
     val relayId: Int = 1,
+    val haServiceDomain: String = "",
+    val haServiceName: String = "",
+    val haServiceDataJson: String = "",
+    val mqttTopic: String = "",
+    val mqttPayload: String = "",
+    val mqttRetain: Boolean = false,
 )
 
 /**

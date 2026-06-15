@@ -33,6 +33,10 @@ class PanelMqttBridge(
     private var session: MqttSession? = null
     private var settingsJob: Job? = null
     private var sessionJob: Job? = null
+    private var mqttConnectionState: String = "disabled"
+    private var lastConnectError: String = "none"
+    private var lastPublishError: String = "none"
+    private var lastSubscribeError: String = "none"
 
     fun start() {
         settingsJob?.cancel()
@@ -44,7 +48,10 @@ class PanelMqttBridge(
                     sessionJob?.cancel()
                     disconnectSession(publishOffline = true)
                     if (mqtt != null) {
+                        mqttConnectionState = "connecting"
                         sessionJob = scope.launch { maintainSession(mqtt) }
+                    } else {
+                        mqttConnectionState = "disabled"
                     }
                 }
         }
@@ -149,6 +156,62 @@ class PanelMqttBridge(
                   "unique_id":"${objectId}_hardware_provider",
                   "state_topic":"$baseTopic/hardware/provider/state",
                   "icon":"mdi:chip",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "mqtt_connection",
+            payload = """
+                {
+                  "name":"MQTT connection",
+                  "unique_id":"${objectId}_mqtt_connection",
+                  "state_topic":"$baseTopic/mqtt/connection/state",
+                  "icon":"mdi:lan-connect",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "mqtt_last_connect_error",
+            payload = """
+                {
+                  "name":"MQTT last connect error",
+                  "unique_id":"${objectId}_mqtt_last_connect_error",
+                  "state_topic":"$baseTopic/mqtt/last_connect_error/state",
+                  "icon":"mdi:lan-disconnect",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "mqtt_last_publish_error",
+            payload = """
+                {
+                  "name":"MQTT last publish error",
+                  "unique_id":"${objectId}_mqtt_last_publish_error",
+                  "state_topic":"$baseTopic/mqtt/last_publish_error/state",
+                  "icon":"mdi:publish-off",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
+            entityId = "mqtt_last_subscribe_error",
+            payload = """
+                {
+                  "name":"MQTT last subscribe error",
+                  "unique_id":"${objectId}_mqtt_last_subscribe_error",
+                  "state_topic":"$baseTopic/mqtt/last_subscribe_error/state",
+                  "icon":"mdi:message-badge-outline",
                   "availability_topic":"$baseTopic/status",
                   "device":${deviceJson()}
                 }
@@ -396,6 +459,14 @@ class PanelMqttBridge(
     private suspend fun publishPanelDiagnostics(capabilities: PanelCapabilities) {
         publish("$baseTopic/app/version/state", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", retain = true)
         publish("$baseTopic/hardware/provider/state", capabilities.providerLabel, retain = true)
+        publishMqttDiagnostics()
+    }
+
+    private suspend fun publishMqttDiagnostics() {
+        publish("$baseTopic/mqtt/connection/state", mqttConnectionState, retain = true)
+        publish("$baseTopic/mqtt/last_connect_error/state", lastConnectError, retain = true)
+        publish("$baseTopic/mqtt/last_publish_error/state", lastPublishError, retain = true)
+        publish("$baseTopic/mqtt/last_subscribe_error/state", lastSubscribeError, retain = true)
     }
 
     private suspend fun publishScreenDiagnostics(screen: PanelScreenState) {
@@ -419,6 +490,7 @@ class PanelMqttBridge(
             payload = payload.toByteArray(Charsets.UTF_8),
             retain = retain,
         ).onFailure { t ->
+            lastPublishError = mqttDiagnosticError(t.message)
             R1Log.w("PanelMqttBridge", "publish failed topic=$topic: ${t.message}")
         }
     }
@@ -434,8 +506,11 @@ class PanelMqttBridge(
                 useTls = mqtt.useTls,
                 onMessage = ::handleCommand,
             )
-            if (next.connect().isSuccess) {
+            val connectResult = next.connect()
+            if (connectResult.isSuccess) {
                 session = next
+                mqttConnectionState = "connected"
+                lastConnectError = "none"
                 subscribeCommands()
                 publishDiscovery(hardware.capabilities.value)
                 publishPanelDiagnostics(hardware.capabilities.value)
@@ -447,7 +522,13 @@ class PanelMqttBridge(
                     if (on != null) publish("$baseTopic/relay/$id/state", if (on) "ON" else "OFF", retain = true)
                 }
                 while (scope.isActive && session == next && next.isConnected) delay(1_000)
-                if (session == next) session = null
+                if (session == next) {
+                    mqttConnectionState = "disconnected"
+                    session = null
+                }
+            } else {
+                mqttConnectionState = "connect_failed"
+                lastConnectError = mqttDiagnosticError(connectResult.exceptionOrNull()?.message)
             }
             delay(15_000)
         }
@@ -463,12 +544,22 @@ class PanelMqttBridge(
     private suspend fun subscribeCommands() {
         val relayCount = hardware.capabilities.value.relayCount
         for (relayId in 1..relayCount) {
-            session?.subscribe("$baseTopic/relay/$relayId/set")
+            subscribe("$baseTopic/relay/$relayId/set")
         }
-        session?.subscribe("$baseTopic/screen/brightness/set")
-        session?.subscribe("$baseTopic/screen/auto_brightness/set")
-        session?.subscribe("$baseTopic/dashboard/config/set")
-        session?.subscribe("$baseTopic/dashboard/config/patch/set")
+        subscribe("$baseTopic/screen/brightness/set")
+        subscribe("$baseTopic/screen/auto_brightness/set")
+        subscribe("$baseTopic/dashboard/config/set")
+        subscribe("$baseTopic/dashboard/config/patch/set")
+        publishMqttDiagnostics()
+    }
+
+    private suspend fun subscribe(topic: String) {
+        val result = session?.subscribe(topic) ?: return
+        result.onSuccess {
+            lastSubscribeError = "none"
+        }.onFailure { t ->
+            lastSubscribeError = mqttDiagnosticError(t.message)
+        }
     }
 
     private suspend fun handleCommand(topic: String, payload: ByteArray) {
@@ -650,6 +741,13 @@ private fun String.safeId(): String = lowercase()
     .joinToString("")
     .trim('_')
     .ifBlank { "panel" }
+
+internal fun mqttDiagnosticError(message: String?): String = message
+    ?.trim()
+    ?.replace(Regex("\\s+"), " ")
+    ?.take(240)
+    ?.ifBlank { null }
+    ?: "unknown"
 
 private fun String.compactJson(): String = lineSequence()
     .map { it.trim() }

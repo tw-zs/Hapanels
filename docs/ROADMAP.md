@@ -48,7 +48,7 @@ Next:
 
 Goal: physical Shelly buttons produce reliable button events and can trigger local or HA actions.
 
-Status: mostly done for local relay actions; HA/MQTT action targets still pending.
+Status: done for current Shelly Wall Display hardware.
 
 Done:
 - Shared button event model.
@@ -60,16 +60,16 @@ Done:
 - Button action mapping settings for buttons 1-5.
 - Button action rows for press, release, short click, long press, double click, and triple click.
 - Local relay actions for configured button mappings: none, toggle relay, relay on, and relay off.
+- Non-local configured button actions for Home Assistant service calls and MQTT publishes.
+- Settings UI fields for HA service domain/name/data JSON and MQTT topic/payload/retain.
 - Button 1 short click defaults to relay 1 toggle when relay 1 exists.
 - Short click fires immediately when the same button has no configured double/triple click mapping.
 - Long press does not delay short-click relay behavior.
 - `PanelMqttBridge` publishes button pressed state and click event topics for HA discovery/state surfaces.
 
 Next:
-- Add non-local action targets for button mappings, especially HA service calls and MQTT publish actions.
-- Let button action rows choose relay id once more than one relay is supported.
-- Validate physical timing on Shelly Wall Display hardware across all five buttons.
-- Add or expand tests for configured long/double/triple mappings and immediate-short behavior.
+- Optional future polish: let button action rows choose relay id once more than one relay is supported.
+- Optional future polish: add built-in navigation/screen action targets if they prove useful on the mounted panel.
 
 ## Milestone 4: Shelly Relays And Sensors
 
@@ -94,7 +94,7 @@ Next:
 
 Goal: Home Assistant discovers the panel as a device with relays, buttons, sensors, and availability.
 
-Status: mostly done and smoke-tested against the user's Home Assistant MQTT broker.
+Status: done and smoke-tested against the user's Home Assistant MQTT broker.
 
 Done:
 - MQTT settings for host, port, TLS, username, password, and client id.
@@ -110,12 +110,12 @@ Done:
 - Screen auto-brightness switch discovery and command subscription via `hapanels/<device>/screen/auto_brightness/set`.
 - Dashboard config retained state/meta topics plus config import and patch command topics.
 - App online, app version, hardware provider, dashboard metadata, screen mode, target brightness, and applied brightness diagnostics.
+- MQTT connection status plus last connect, publish, and subscribe error diagnostics.
 - Home Assistant device triggers for physical button events.
 - Unit coverage for MQTT command parsing.
 - Real Home Assistant smoke tests for relay 1, brightness, auto-brightness, availability, diagnostics, and dashboard metadata.
 
 Next:
-- Add richer MQTT diagnostics for connection status and last publish/subscribe error.
 - Add Home Assistant device metadata refinements if HA UI naming needs polish.
 
 ## Milestone 6: Proximity, Brightness, Screensaver

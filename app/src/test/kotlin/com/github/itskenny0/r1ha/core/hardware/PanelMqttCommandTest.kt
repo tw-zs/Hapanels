@@ -69,4 +69,14 @@ class PanelMqttCommandTest {
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/other/relay/1/set", "ON"))
             .isNull()
     }
+
+    @Test
+    fun `normalizes mqtt diagnostic errors for HA sensor state`() {
+        assertThat(mqttDiagnosticError("  refused\nreturn code=5  "))
+            .isEqualTo("refused return code=5")
+        assertThat(mqttDiagnosticError(""))
+            .isEqualTo("unknown")
+        assertThat(mqttDiagnosticError("x".repeat(260)))
+            .hasLength(240)
+    }
 }

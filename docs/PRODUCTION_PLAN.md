@@ -128,7 +128,7 @@ Verification:
 
 Goal: physical Shelly buttons work inside Hapanels.
 
-Status: mostly done for local actions and MQTT/HA event exposure; HA service-call action targets still pending.
+Status: done for current Shelly Wall Display hardware.
 
 Tasks:
 
@@ -137,6 +137,7 @@ Tasks:
 - Detect physical button count per supported Shelly model.
 - Convert low-level key events to `PanelButtonEvent(buttonId, pressType)`.
 - Add button action mapping settings.
+- Add configured action targets for local relay control, HA service calls, and MQTT publishes.
 
 Button press types:
 
@@ -160,6 +161,7 @@ Verification:
 - Confirm short/long/double/triple press detection.
 - Confirm no crash when native input is unavailable.
 - Real Shelly button press and event topics have been smoke-tested through Home Assistant MQTT discovery.
+- Configured button action resolution is covered for relay, HA service, and MQTT publish targets.
 
 ### Milestone 4: Local Relays And Sensors
 
@@ -187,7 +189,7 @@ Verification:
 
 Goal: Home Assistant can discover and control panel hardware.
 
-Status: mostly done and smoke-tested against the user's Home Assistant MQTT broker.
+Status: done and smoke-tested against the user's Home Assistant MQTT broker.
 
 Tasks:
 
@@ -212,6 +214,7 @@ Verification:
 - Availability changes on app start/stop/network loss.
 - HA can control screen brightness and the auto-brightness switch through MQTT.
 - HA receives app/version, hardware-provider, dashboard, screen-mode, target-brightness, and applied-brightness diagnostics.
+- HA receives MQTT connection status plus last connect, publish, and subscribe error diagnostics.
 - Hapanels publishes retained dashboard config state/meta and accepts dashboard config import/patch commands.
 
 ### Milestone 6: Proximity, Brightness, Screensaver

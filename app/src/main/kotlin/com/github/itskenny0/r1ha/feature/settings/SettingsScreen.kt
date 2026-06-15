@@ -2769,7 +2769,25 @@ private fun ButtonActionMappingRow(
     onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
     pressType: String = "SHORT",
 ) {
-    val current = currentButtonAction(advanced, buttonId, triggerPhase, pressType, defaultAction)
+    val currentMapping = currentButtonMapping(advanced, buttonId, triggerPhase, pressType)
+    val current = currentMapping?.action ?: defaultAction
+    fun updateMapping(transform: (HardwareButtonActionMapping) -> HardwareButtonActionMapping) {
+        onUpdate { settings ->
+            val withoutCurrent = settings.hardwareButtonActions.filterNot {
+                it.buttonId == buttonId &&
+                    it.triggerPhase == triggerPhase &&
+                    it.pressType == pressType
+            }
+            val seed = currentButtonMapping(settings, buttonId, triggerPhase, pressType)
+                ?: HardwareButtonActionMapping(
+                    buttonId = buttonId,
+                    triggerPhase = triggerPhase,
+                    pressType = pressType,
+                    relayId = 1,
+                )
+            settings.copy(hardwareButtonActions = withoutCurrent + transform(seed))
+        }
+    }
     LabeledControl(label = label) {
         SegmentedEnumPicker(
             options = HardwareButtonActionKind.entries,
@@ -2780,25 +2798,63 @@ private fun ButtonActionMappingRow(
                     HardwareButtonActionKind.TOGGLE_RELAY -> "TOGGLE"
                     HardwareButtonActionKind.RELAY_ON -> "ON"
                     HardwareButtonActionKind.RELAY_OFF -> "OFF"
+                    HardwareButtonActionKind.HA_SERVICE -> "HA"
+                    HardwareButtonActionKind.MQTT_PUBLISH -> "MQTT"
                 }
             },
-            onSelect = { action ->
-                onUpdate { settings ->
-                    val withoutCurrent = settings.hardwareButtonActions.filterNot {
-                        it.buttonId == buttonId &&
-                            it.triggerPhase == triggerPhase &&
-                            it.pressType == pressType
-                    }
-                    val next = HardwareButtonActionMapping(
-                        buttonId = buttonId,
-                        triggerPhase = triggerPhase,
-                        pressType = pressType,
-                        action = action,
-                        relayId = 1,
-                    )
-                    settings.copy(hardwareButtonActions = withoutCurrent + next)
-                }
-            },
+            onSelect = { action -> updateMapping { it.copy(action = action) } },
+        )
+    }
+    if (current == HardwareButtonActionKind.HA_SERVICE) {
+        LabeledControl(label = "HA domain") {
+            R1TextField(
+                value = currentMapping?.haServiceDomain.orEmpty(),
+                onValueChange = { value -> updateMapping { it.copy(action = current, haServiceDomain = value.trim()) } },
+                placeholder = "light",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "HA service") {
+            R1TextField(
+                value = currentMapping?.haServiceName.orEmpty(),
+                onValueChange = { value -> updateMapping { it.copy(action = current, haServiceName = value.trim()) } },
+                placeholder = "toggle",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "HA data JSON") {
+            R1TextField(
+                value = currentMapping?.haServiceDataJson.orEmpty(),
+                onValueChange = { value -> updateMapping { it.copy(action = current, haServiceDataJson = value) } },
+                placeholder = "{\"entity_id\":\"light.kitchen\"}",
+                monospace = true,
+                singleLine = false,
+                minLines = 2,
+            )
+        }
+    }
+    if (current == HardwareButtonActionKind.MQTT_PUBLISH) {
+        LabeledControl(label = "MQTT topic") {
+            R1TextField(
+                value = currentMapping?.mqttTopic.orEmpty(),
+                onValueChange = { value -> updateMapping { it.copy(action = current, mqttTopic = value.trim()) } },
+                placeholder = "home/panel/button/1",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "MQTT payload") {
+            R1TextField(
+                value = currentMapping?.mqttPayload.orEmpty(),
+                onValueChange = { value -> updateMapping { it.copy(action = current, mqttPayload = value) } },
+                placeholder = "ON",
+                monospace = true,
+            )
+        }
+        SwitchRow(
+            label = "MQTT retain",
+            subtitle = "Keep the published payload as retained broker state.",
+            checked = currentMapping?.mqttRetain == true,
+            onCheckedChange = { retain -> updateMapping { it.copy(action = current, mqttRetain = retain) } },
         )
     }
 }
@@ -2856,6 +2912,18 @@ private fun currentButtonAction(
     }
     ?.action
     ?: defaultAction
+
+private fun currentButtonMapping(
+    advanced: AdvancedSettings,
+    buttonId: Int,
+    triggerPhase: HardwareButtonTriggerPhase,
+    pressType: String,
+): HardwareButtonActionMapping? = advanced.hardwareButtonActions
+    .firstOrNull {
+        it.buttonId == buttonId &&
+            it.triggerPhase == triggerPhase &&
+            it.pressType == pressType
+    }
 
 /**
  * NumberStepperRow — label + subtitle + −/+ pills around the current

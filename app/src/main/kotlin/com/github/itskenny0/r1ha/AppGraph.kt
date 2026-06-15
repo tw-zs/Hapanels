@@ -201,7 +201,7 @@ class AppGraph(context: Context) {
         WheelInput()
     }
 
-    val panelHardware: PanelHardware by lazy { PanelHardwareController(appContext, settings) }
+    val panelHardware: PanelHardware by lazy { PanelHardwareController(appContext, settings, haRepository) }
 
     val panelScreenManager: PanelScreenManager by lazy {
         PanelScreenManager(settings, panelHardware)

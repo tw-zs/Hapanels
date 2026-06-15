@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.mqtt.MqttPublisher
 import com.github.itskenny0.r1ha.core.prefs.HardwareButtonActionMapping
 import com.github.itskenny0.r1ha.core.prefs.HardwareButtonTriggerPhase
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
@@ -22,13 +24,17 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.io.File
 
 class ShellyWallDisplayHardware(
     context: Context,
     private val settings: SettingsRepository? = null,
+    private val haRepository: HaRepository? = null,
 ) : PanelHardware, SensorEventListener {
     private val appContext = context.applicationContext
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -307,6 +313,77 @@ class ShellyWallDisplayHardware(
                 setRelay(action.relayId, !current)
             }
             is PanelButtonAction.SetRelay -> setRelay(action.relayId, action.on)
+            is PanelButtonAction.CallHaService -> callHaService(action)
+            is PanelButtonAction.PublishMqtt -> publishMqtt(action)
+        }
+    }
+
+    private suspend fun callHaService(action: PanelButtonAction.CallHaService) {
+        val repo = haRepository
+        if (repo == null) {
+            eventBus.emit(
+                PanelHardwareEvent.UnsupportedAction(
+                    action = "haService(${action.domain}.${action.service})",
+                    detail = "Home Assistant repository is not available to the Shelly hardware provider.",
+                ),
+            )
+            return
+        }
+        val data = runCatching { parseButtonServiceData(action.dataJson) }
+            .onFailure { t ->
+                eventBus.emit(
+                    PanelHardwareEvent.UnsupportedAction(
+                        action = "haService(${action.domain}.${action.service})",
+                        detail = "Service data JSON is invalid: ${t.message ?: t::class.java.simpleName}",
+                    ),
+                )
+            }
+            .getOrNull() ?: return
+        repo.callRawService(action.domain, action.service, data)
+            .onSuccess { R1Log.i("ShellyWallDisplayHardware", "button fired HA service ${action.domain}.${action.service}") }
+            .onFailure { t ->
+                eventBus.emit(
+                    PanelHardwareEvent.UnsupportedAction(
+                        action = "haService(${action.domain}.${action.service})",
+                        detail = "Service call failed: ${t.message ?: t::class.java.simpleName}",
+                    ),
+                )
+                R1Log.w("ShellyWallDisplayHardware", "button HA service failed: ${t.message}", t)
+            }
+    }
+
+    private suspend fun publishMqtt(action: PanelButtonAction.PublishMqtt) {
+        val advanced = settings?.settings?.first()?.advanced
+        val host = advanced?.mqttHost?.trim().orEmpty()
+        if (host.isBlank()) {
+            eventBus.emit(
+                PanelHardwareEvent.UnsupportedAction(
+                    action = "mqttPublish(${action.topic})",
+                    detail = "MQTT host is empty in Advanced settings.",
+                ),
+            )
+            return
+        }
+        MqttPublisher.publish(
+            host = host,
+            port = advanced?.mqttPort ?: 1883,
+            topic = action.topic,
+            payload = action.payload.toByteArray(Charsets.UTF_8),
+            clientId = advanced?.mqttClientId?.ifBlank { null } ?: "hapanels-button-${Build.DEVICE}-${System.currentTimeMillis() and 0xFFFF}",
+            username = advanced?.mqttUsername?.ifBlank { null },
+            password = advanced?.mqttPassword?.ifBlank { null },
+            useTls = advanced?.mqttUseTls == true,
+            retain = action.retain,
+        ).onSuccess {
+            R1Log.i("ShellyWallDisplayHardware", "button published MQTT topic=${action.topic}")
+        }.onFailure { t ->
+            eventBus.emit(
+                PanelHardwareEvent.UnsupportedAction(
+                    action = "mqttPublish(${action.topic})",
+                    detail = "MQTT publish failed: ${t.message ?: t::class.java.simpleName}",
+                ),
+            )
+            R1Log.w("ShellyWallDisplayHardware", "button MQTT publish failed: ${t.message}", t)
         }
     }
 
@@ -318,6 +395,12 @@ class ShellyWallDisplayHardware(
         const val ACTION_REPEAT = 2
         const val BUTTON_MULTI_CLICK_TIMEOUT_MS = 400L
     }
+}
+
+private fun parseButtonServiceData(raw: String): JsonObject {
+    if (raw.isBlank()) return JsonObject(emptyMap())
+    return Json.parseToJsonElement(raw) as? JsonObject
+        ?: error("Service data must be a JSON object")
 }
 
 private val SHELLY_SCREEN_BRIGHTNESS_FILES = listOf(

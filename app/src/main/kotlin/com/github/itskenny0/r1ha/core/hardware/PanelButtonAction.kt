@@ -8,6 +8,8 @@ sealed interface PanelButtonAction {
     data object None : PanelButtonAction
     data class ToggleRelay(val relayId: Int) : PanelButtonAction
     data class SetRelay(val relayId: Int, val on: Boolean) : PanelButtonAction
+    data class CallHaService(val domain: String, val service: String, val dataJson: String) : PanelButtonAction
+    data class PublishMqtt(val topic: String, val payload: String, val retain: Boolean) : PanelButtonAction
 }
 
 object PanelButtonActionDefaults {
@@ -65,12 +67,33 @@ object PanelButtonActionDefaults {
     }
 
     private fun HardwareButtonActionMapping.toAction(relayCount: Int): PanelButtonAction {
-        if (relayId !in 1..relayCount) return PanelButtonAction.None
         return when (action) {
             HardwareButtonActionKind.NONE -> PanelButtonAction.None
-            HardwareButtonActionKind.TOGGLE_RELAY -> PanelButtonAction.ToggleRelay(relayId)
-            HardwareButtonActionKind.RELAY_ON -> PanelButtonAction.SetRelay(relayId, true)
-            HardwareButtonActionKind.RELAY_OFF -> PanelButtonAction.SetRelay(relayId, false)
+            HardwareButtonActionKind.TOGGLE_RELAY -> relayAction(relayCount) { PanelButtonAction.ToggleRelay(relayId) }
+            HardwareButtonActionKind.RELAY_ON -> relayAction(relayCount) { PanelButtonAction.SetRelay(relayId, true) }
+            HardwareButtonActionKind.RELAY_OFF -> relayAction(relayCount) { PanelButtonAction.SetRelay(relayId, false) }
+            HardwareButtonActionKind.HA_SERVICE -> {
+                val domain = haServiceDomain.trim()
+                val service = haServiceName.trim()
+                if (domain.isBlank() || service.isBlank()) {
+                    PanelButtonAction.None
+                } else {
+                    PanelButtonAction.CallHaService(domain, service, haServiceDataJson.trim())
+                }
+            }
+            HardwareButtonActionKind.MQTT_PUBLISH -> {
+                val topic = mqttTopic.trim()
+                if (topic.isBlank()) {
+                    PanelButtonAction.None
+                } else {
+                    PanelButtonAction.PublishMqtt(topic, mqttPayload, mqttRetain)
+                }
+            }
         }
     }
+
+    private inline fun HardwareButtonActionMapping.relayAction(
+        relayCount: Int,
+        build: () -> PanelButtonAction,
+    ): PanelButtonAction = if (relayId in 1..relayCount) build() else PanelButtonAction.None
 }

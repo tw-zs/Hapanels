@@ -182,4 +182,87 @@ class PanelButtonActionDefaultsTest {
             ),
         ).isTrue()
     }
+
+    @Test fun haServiceActionDoesNotRequireRelay() {
+        val mappings = listOf(
+            HardwareButtonActionMapping(
+                buttonId = 2,
+                action = HardwareButtonActionKind.HA_SERVICE,
+                haServiceDomain = "light",
+                haServiceName = "toggle",
+                haServiceDataJson = "{\"entity_id\":\"light.kitchen\"}",
+            ),
+        )
+
+        assertThat(
+            PanelButtonActionDefaults.actionFor(
+                buttonId = 2,
+                pressType = PanelButtonPressType.SHORT,
+                relayCount = 0,
+                mappings = mappings,
+            ),
+        ).isEqualTo(
+            PanelButtonAction.CallHaService(
+                domain = "light",
+                service = "toggle",
+                dataJson = "{\"entity_id\":\"light.kitchen\"}",
+            ),
+        )
+    }
+
+    @Test fun mqttPublishActionDoesNotRequireRelay() {
+        val mappings = listOf(
+            HardwareButtonActionMapping(
+                buttonId = 3,
+                pressType = PanelButtonPressType.DOUBLE.name,
+                action = HardwareButtonActionKind.MQTT_PUBLISH,
+                mqttTopic = "home/panel/button/3",
+                mqttPayload = "double",
+                mqttRetain = true,
+            ),
+        )
+
+        assertThat(
+            PanelButtonActionDefaults.actionFor(
+                buttonId = 3,
+                pressType = PanelButtonPressType.DOUBLE,
+                relayCount = 0,
+                mappings = mappings,
+            ),
+        ).isEqualTo(
+            PanelButtonAction.PublishMqtt(
+                topic = "home/panel/button/3",
+                payload = "double",
+                retain = true,
+            ),
+        )
+    }
+
+    @Test fun nonLocalActionsNeedRequiredFields() {
+        val mappings = listOf(
+            HardwareButtonActionMapping(buttonId = 2, action = HardwareButtonActionKind.HA_SERVICE),
+            HardwareButtonActionMapping(
+                buttonId = 3,
+                action = HardwareButtonActionKind.MQTT_PUBLISH,
+                mqttPayload = "ignored",
+            ),
+        )
+
+        assertThat(
+            PanelButtonActionDefaults.actionFor(
+                buttonId = 2,
+                pressType = PanelButtonPressType.SHORT,
+                relayCount = 1,
+                mappings = mappings,
+            ),
+        ).isEqualTo(PanelButtonAction.None)
+        assertThat(
+            PanelButtonActionDefaults.actionFor(
+                buttonId = 3,
+                pressType = PanelButtonPressType.SHORT,
+                relayCount = 1,
+                mappings = mappings,
+            ),
+        ).isEqualTo(PanelButtonAction.None)
+    }
 }

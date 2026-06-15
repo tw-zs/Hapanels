@@ -167,7 +167,7 @@ Verification:
 
 Goal: Shelly hardware appears as first-class local panel state.
 
-Status: mostly done for relay 1, ambient light, and screen brightness; temp/humidity/proximity remain gated on reliable hardware data.
+Status: done for relay 1, ambient light, screen brightness, and capability-based local panel tiles; temp/humidity/proximity remain gated on reliable hardware data.
 
 Tasks:
 
@@ -176,6 +176,7 @@ Tasks:
 - Create local state store for Shelly hardware state.
 - Add native UI cards for local relays and sensors.
 - Make relay control work even when HA is disconnected.
+- Add capability-based `Kontrola panelu` tiles to the favorites picker and card stack.
 
 Verification:
 
@@ -184,6 +185,7 @@ Verification:
 - App remains usable without HA connection for local hardware functions.
 - Relay 1 and screen brightness were smoke-tested on real Shelly Wall Display hardware.
 - Ambient light is exposed when reliable; proximity, temperature, and humidity are not exposed as fake sensors.
+- Non-Shelly tablets only see local panel tiles backed by their reported capabilities.
 
 ### Milestone 5: MQTT Discovery
 

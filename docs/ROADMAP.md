@@ -75,7 +75,7 @@ Next:
 
 Goal: Shelly relay and sensor state works locally and appears in Hapanels diagnostics/UI.
 
-Status: mostly done for relay 1 and real ambient-light exposure; additional sensors stay gated on reliable hardware data.
+Status: done for relay 1, real ambient-light exposure, and capability-based panel control tiles.
 
 Done:
 - Relay 1 sysfs state read/write helper with unit coverage.
@@ -85,9 +85,10 @@ Done:
 - Temperature/humidity are intentionally not exposed until the hardware provides reliable readings.
 - Relay 1 read/write was smoke-tested on real Shelly Wall Display hardware through Home Assistant MQTT.
 - Shelly screen brightness writes use the real sysfs backlight path while HA/MQTT keeps a stable 0-100% contract.
+- Favorites picker has a `Kontrola panelu` section for local panel tiles, filtered by current hardware capabilities.
+- Local panel tiles can render relay 1, screen brightness, auto-brightness, ambient light, and panel status without fake sensor data.
 
 Next:
-- Promote available light/proximity readings into dashboard cards.
 - Add temperature/humidity only when a reliable hardware or integration source exists.
 
 ## Milestone 5: MQTT Discovery

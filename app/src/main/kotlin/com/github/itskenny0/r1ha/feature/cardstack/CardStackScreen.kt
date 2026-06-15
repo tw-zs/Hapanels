@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.ha.ConnectionState
 import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
@@ -79,6 +80,7 @@ fun CardStackScreen(
     haRepository: HaRepository,
     settings: SettingsRepository,
     wheelInput: WheelInput,
+    panelHardware: PanelHardware,
     onOpenFavoritesPicker: () -> Unit,
     onOpenSettings: () -> Unit,
     /** Surfaced from the QuickActions sheet (long-press hamburger →
@@ -110,6 +112,7 @@ fun CardStackScreen(
             haRepository = haRepository,
             settings = settings,
             wheelInput = wheelInput,
+            panelHardware = panelHardware,
         )
     )
     val state by vm.state.collectAsStateWithLifecycle()

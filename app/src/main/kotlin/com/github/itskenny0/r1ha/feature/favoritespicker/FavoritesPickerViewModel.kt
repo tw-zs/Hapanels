@@ -7,12 +7,17 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.github.itskenny0.r1ha.core.ha.Domain
 import com.github.itskenny0.r1ha.core.ha.EntityState
 import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import com.github.itskenny0.r1ha.feature.panelcontrols.PanelControlTile
+import com.github.itskenny0.r1ha.feature.panelcontrols.availablePanelControlTiles
+import com.github.itskenny0.r1ha.feature.panelcontrols.materializePanelControlTile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -23,37 +28,39 @@ import kotlinx.coroutines.launch
  * chip row stays readable on a 240 px display (six or seven chips, not fifteen).
  */
 enum class PickerFilter(val label: String, val matches: (Domain) -> Boolean) {
-    ALL("ALL", { true }),
-    FAVS("★ FAVS", { true }),  // "isFavorite" filter applied outside `matches`; this entry is special-cased.
-    LIGHTS("LIGHTS", { it == Domain.LIGHT }),
-    SWITCHES("SWITCHES", { it == Domain.SWITCH || it == Domain.INPUT_BOOLEAN || it == Domain.AUTOMATION }),
-    COVERS("COVERS", { it == Domain.COVER }),
+    ALL("WSZYSTKIE", { true }),
+    FAVS("★ ULUBIONE", { true }),  // "isFavorite" filter applied outside `matches`; this entry is special-cased.
+    PANEL("KONTROLA PANELU", { false }),
+    LIGHTS("ŚWIATŁA", { it == Domain.LIGHT }),
+    SWITCHES("PRZEŁĄCZNIKI", { it == Domain.SWITCH || it == Domain.INPUT_BOOLEAN || it == Domain.AUTOMATION }),
+    COVERS("ROLETA/OSŁONY", { it == Domain.COVER }),
     // Valves get their own chip rather than living under COVERS — HA keeps the two
     // domains distinct (water valves vs window covers) and grouping them confused
     // discovery for users who knew they had a `valve.foo` entity but couldn't find it
     // by searching "valve".
-    VALVES("VALVES", { it == Domain.VALVE }),
-    CLIMATE("CLIMATE", { it == Domain.CLIMATE || it == Domain.HUMIDIFIER || it == Domain.FAN || it == Domain.WATER_HEATER }),
-    LOCKS("LOCKS", { it == Domain.LOCK }),
+    VALVES("ZAWORY", { it == Domain.VALVE }),
+    CLIMATE("KLIMAT", { it == Domain.CLIMATE || it == Domain.HUMIDIFIER || it == Domain.FAN || it == Domain.WATER_HEATER }),
+    LOCKS("ZAMKI", { it == Domain.LOCK }),
     MEDIA("MEDIA", { it == Domain.MEDIA_PLAYER }),
     // Action-only entities — scene/script/button/input_button. SCENES is the
     // human-friendly umbrella label even though it also covers scripts/buttons,
     // because that's the most-searched-for kind in this group.
-    SCENES("SCENES", { it.isAction }),
-    SENSORS("SENSORS", { it.isSensor }),
+    SCENES("SCENY", { it.isAction }),
+    SENSORS("CZUJNIKI", { it.isSensor }),
     // Number / input_number — settable scalars common in MQTT integrations (pump
     // speeds, calibration knobs, manual setpoints). Previously hidden inside ALL
     // because no chip filtered for them.
-    NUMBERS("NUMBERS", { it == Domain.NUMBER || it == Domain.INPUT_NUMBER }),
-    VACUUMS("VACUUMS", { it == Domain.VACUUM || it == Domain.LAWN_MOWER }),
+    NUMBERS("LICZBY", { it == Domain.NUMBER || it == Domain.INPUT_NUMBER }),
+    VACUUMS("ODKURZACZE", { it == Domain.VACUUM || it == Domain.LAWN_MOWER }),
     // Settable-enum entities — select / input_select. Useful for fan-mode selectors,
     // operating-mode pickers, room-target selectors for vacuums, etc.
-    SELECTS("SELECTS", { it.isSelect }),
+    SELECTS("WYBORY", { it.isSelect }),
 }
 
 class FavoritesPickerViewModel(
     private val repo: HaRepository,
     private val settings: SettingsRepository,
+    private val panelHardware: PanelHardware,
 ) : ViewModel() {
 
     @androidx.compose.runtime.Stable
@@ -76,8 +83,8 @@ class FavoritesPickerViewModel(
      */
     enum class SortOrder(val label: String) {
         ALPHA("A→Z"),
-        AREA("BY AREA"),
-        DOMAIN("BY KIND"),
+        AREA("WG POMIESZCZEŃ"),
+        DOMAIN("WG TYPU"),
     }
 
     data class UiState(
@@ -122,18 +129,20 @@ class FavoritesPickerViewModel(
             // a 'favourite' in picker terms means 'is in the currently-active page'.
             // Switching pages from the card stack will flow a new active-page id
             // here, the picker re-renders with that page's contents.
-            settings.settings
-                .map {
-                    val active = it.pages.firstOrNull { p -> p.id == it.activePageId }
-                    it.nameOverrides to active?.favorites.orEmpty()
+            combine(settings.settings, panelHardware.capabilities, panelHardware.runtimeState) { app, capabilities, runtime ->
+                val active = app.pages.firstOrNull { p -> p.id == app.activePageId }
+                val panelRows = availablePanelControlTiles(capabilities).mapNotNull { tile ->
+                    materializePanelControlTile(tile, capabilities, runtime, app.advanced)
                 }
+                PanelPickerSnapshot(app.nameOverrides, active?.favorites.orEmpty(), panelRows)
+            }
                 .distinctUntilChanged()
-                .collect { (overrides, favs) ->
+                .collect { snapshot ->
                     if (entitiesCache.isNotEmpty()) {
                         val cur = _ui.value
                         _ui.value = cur.copy(
-                            rows = buildRows(entitiesCache, favs, cur.filter, cur.query, overrides),
-                            countsByFilter = countsByFilter(entitiesCache, favs),
+                            rows = buildRows(entitiesCache, snapshot.panelRows, snapshot.favs, cur.filter, cur.query, snapshot.overrides),
+                            countsByFilter = countsByFilter(entitiesCache, snapshot.panelRows, snapshot.favs),
                         )
                     }
                 }
@@ -160,6 +169,7 @@ class FavoritesPickerViewModel(
             val favs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }
                 ?.favorites
                 ?: snapshot.favorites
+            val panelRows = currentPanelRows(snapshot)
             all.fold(
                 onSuccess = { list ->
                     // Keep BOTH scalar-controllable and on/off-only entities — on/off ones
@@ -169,8 +179,8 @@ class FavoritesPickerViewModel(
                     val cur = _ui.value
                     _ui.value = cur.copy(
                         loading = false,
-                        rows = buildRows(list, favs, cur.filter, cur.query, snapshot.nameOverrides),
-                        countsByFilter = countsByFilter(list, favs),
+                        rows = buildRows(list, panelRows, favs, cur.filter, cur.query, snapshot.nameOverrides),
+                        countsByFilter = countsByFilter(list, panelRows, favs),
                     )
                     R1Log.i("FavoritesPicker.refresh", "fetched ${list.size} entities")
                 },
@@ -199,12 +209,13 @@ class FavoritesPickerViewModel(
             val favs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }
                 ?.favorites
                 ?: snapshot.favorites
+            val panelRows = currentPanelRows(snapshot)
             // Read the LATEST query and filter (not the captured `cur`) — by the time
             // this coroutine runs the user may have typed more characters, and we want
             // the result list to reflect that.
             val now = _ui.value
             _ui.value = now.copy(
-                rows = buildRows(entitiesCache, favs, now.filter, now.query, snapshot.nameOverrides),
+                rows = buildRows(entitiesCache, panelRows, favs, now.filter, now.query, snapshot.nameOverrides),
             )
         }
     }
@@ -256,10 +267,11 @@ class FavoritesPickerViewModel(
             val favs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }
                 ?.favorites
                 ?: snapshot.favorites
+            val panelRows = currentPanelRows(snapshot)
             _ui.value = cur.copy(
                 filter = filter,
                 rows = buildRows(
-                    entitiesCache, favs, filter, cur.query, snapshot.nameOverrides,
+                    entitiesCache, panelRows, favs, filter, cur.query, snapshot.nameOverrides,
                     sortOrder = cur.sortPerFilter[filter] ?: SortOrder.ALPHA,
                 ),
             )
@@ -283,10 +295,11 @@ class FavoritesPickerViewModel(
             val favs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }
                 ?.favorites
                 ?: snapshot.favorites
+            val panelRows = currentPanelRows(snapshot)
             _ui.value = cur.copy(
                 sortPerFilter = cur.sortPerFilter + (cur.filter to next),
                 rows = buildRows(
-                    entitiesCache, favs, cur.filter, cur.query, snapshot.nameOverrides,
+                    entitiesCache, panelRows, favs, cur.filter, cur.query, snapshot.nameOverrides,
                     sortOrder = next,
                 ),
             )
@@ -303,6 +316,7 @@ class FavoritesPickerViewModel(
      *  configuration but can't remember the friendly name. */
     private fun buildRows(
         entities: List<EntityState>,
+        panelRows: List<EntityState>,
         favs: List<String>,
         filter: PickerFilter,
         query: String,
@@ -311,12 +325,13 @@ class FavoritesPickerViewModel(
     ): List<Row> {
         val favOrder = favs.withIndex().associate { (idx, id) -> id to idx }
         val q = query.trim().lowercase()
-        return entities
+        val haRows = entities
             .asSequence()
             .filter { ent ->
                 when (filter) {
                     PickerFilter.ALL -> true
                     PickerFilter.FAVS -> ent.id.value in favOrder
+                    PickerFilter.PANEL -> false
                     else -> filter.matches(ent.id.domain)
                 }
             }
@@ -335,6 +350,28 @@ class FavoritesPickerViewModel(
                     row.state.id.value.lowercase().contains(q)
             }
             .toList()
+        val localRows = panelRows
+            .asSequence()
+            .mapNotNull { ent ->
+                val tile = PanelControlTile.entries.firstOrNull { it.entityId == ent.id.value } ?: return@mapNotNull null
+                val include = filter == PickerFilter.ALL ||
+                    filter == PickerFilter.PANEL ||
+                    (filter == PickerFilter.FAVS && tile.favoriteId in favOrder)
+                if (!include) return@mapNotNull null
+                Row(
+                    state = ent,
+                    isFavorite = tile.favoriteId in favOrder,
+                    orderIndex = favOrder[tile.favoriteId],
+                    displayName = ent.friendlyName,
+                )
+            }
+            .filter { row ->
+                if (q.isEmpty()) true
+                else row.displayName.lowercase().contains(q) ||
+                    row.state.id.value.lowercase().contains(q)
+            }
+            .toList()
+        return (haRows + localRows)
             .let { rows ->
                 // On the FAVS chip the user is reasoning about their card-stack order, so
                 // sort by orderIndex — matches the order they'll see on the main screen
@@ -363,12 +400,15 @@ class FavoritesPickerViewModel(
     /** Tally how many entities match each filter — surfaces as a small badge on each chip
      *  so the user knows at a glance which filters are populated. Computed once per refresh
      *  rather than per-render so chip layout stays cheap. */
-    private fun countsByFilter(entities: List<EntityState>, favs: List<String>): Map<PickerFilter, Int> {
+    private fun countsByFilter(entities: List<EntityState>, panelRows: List<EntityState>, favs: List<String>): Map<PickerFilter, Int> {
         val favSet = favs.toSet()
         return PickerFilter.entries.associateWith { f ->
             when (f) {
-                PickerFilter.ALL -> entities.size
-                PickerFilter.FAVS -> entities.count { it.id.value in favSet }
+                PickerFilter.ALL -> entities.size + panelRows.size
+                PickerFilter.FAVS -> entities.count { it.id.value in favSet } + panelRows.count { row ->
+                    PanelControlTile.entries.any { it.entityId == row.id.value && it.favoriteId in favSet }
+                }
+                PickerFilter.PANEL -> panelRows.size
                 else -> entities.count { f.matches(it.id.domain) }
             }
         }
@@ -381,17 +421,19 @@ class FavoritesPickerViewModel(
             // scoped to whichever page the user has selected in the card stack.
             // updateActivePage handles the mutex + favourites-union recalculation.
             settings.updateActivePage { page ->
+                val storedId = PanelControlTile.entries.firstOrNull { it.entityId == entityId }?.favoriteId ?: entityId
                 val l = page.favorites.toMutableList()
-                if (entityId in l) l.remove(entityId) else l.add(entityId)
+                if (storedId in l) l.remove(storedId) else l.add(storedId)
                 page.copy(favorites = l)
             }
             // Local re-render reads from the active page after the write completes.
             val snapshot = settings.settings.first()
             val newFavs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }?.favorites.orEmpty()
+            val panelRows = currentPanelRows(snapshot)
             val cur = _ui.value
             _ui.value = cur.copy(
-                rows = buildRows(entitiesCache, newFavs, cur.filter, cur.query, snapshot.nameOverrides),
-                countsByFilter = countsByFilter(entitiesCache, newFavs),
+                rows = buildRows(entitiesCache, panelRows, newFavs, cur.filter, cur.query, snapshot.nameOverrides),
+                countsByFilter = countsByFilter(entitiesCache, panelRows, newFavs),
             )
         }
     }
@@ -399,15 +441,17 @@ class FavoritesPickerViewModel(
     fun moveUp(entityId: String) {
         viewModelScope.launch {
             settings.updateActivePage { page ->
+                val storedId = PanelControlTile.entries.firstOrNull { it.entityId == entityId }?.favoriteId ?: entityId
                 val l = page.favorites.toMutableList()
-                val idx = l.indexOf(entityId)
-                if (idx > 0) { l.removeAt(idx); l.add(idx - 1, entityId) }
+                val idx = l.indexOf(storedId)
+                if (idx > 0) { l.removeAt(idx); l.add(idx - 1, storedId) }
                 page.copy(favorites = l)
             }
             val snapshot = settings.settings.first()
             val newFavs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }?.favorites.orEmpty()
+            val panelRows = currentPanelRows(snapshot)
             val cur = _ui.value
-            _ui.value = cur.copy(rows = buildRows(entitiesCache, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
+            _ui.value = cur.copy(rows = buildRows(entitiesCache, panelRows, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
         }
     }
 
@@ -420,45 +464,61 @@ class FavoritesPickerViewModel(
     fun moveTo(entityId: String, toIndex: Int) {
         viewModelScope.launch {
             settings.updateActivePage { page ->
+                val storedId = PanelControlTile.entries.firstOrNull { it.entityId == entityId }?.favoriteId ?: entityId
                 val l = page.favorites.toMutableList()
-                val fromIdx = l.indexOf(entityId)
+                val fromIdx = l.indexOf(storedId)
                 if (fromIdx < 0) return@updateActivePage page
                 val clamped = toIndex.coerceIn(0, l.size - 1)
                 if (fromIdx == clamped) return@updateActivePage page
                 l.removeAt(fromIdx)
-                l.add(clamped, entityId)
+                l.add(clamped, storedId)
                 page.copy(favorites = l)
             }
             val snapshot = settings.settings.first()
             val newFavs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }?.favorites.orEmpty()
+            val panelRows = currentPanelRows(snapshot)
             val cur = _ui.value
-            _ui.value = cur.copy(rows = buildRows(entitiesCache, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
+            _ui.value = cur.copy(rows = buildRows(entitiesCache, panelRows, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
         }
     }
 
     fun moveDown(entityId: String) {
         viewModelScope.launch {
             settings.updateActivePage { page ->
+                val storedId = PanelControlTile.entries.firstOrNull { it.entityId == entityId }?.favoriteId ?: entityId
                 val l = page.favorites.toMutableList()
-                val idx = l.indexOf(entityId)
-                if (idx in 0 until l.size - 1) { l.removeAt(idx); l.add(idx + 1, entityId) }
+                val idx = l.indexOf(storedId)
+                if (idx in 0 until l.size - 1) { l.removeAt(idx); l.add(idx + 1, storedId) }
                 page.copy(favorites = l)
             }
             val snapshot = settings.settings.first()
             val newFavs = snapshot.pages.firstOrNull { it.id == snapshot.activePageId }?.favorites.orEmpty()
+            val panelRows = currentPanelRows(snapshot)
             val cur = _ui.value
-            _ui.value = cur.copy(rows = buildRows(entitiesCache, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
+            _ui.value = cur.copy(rows = buildRows(entitiesCache, panelRows, newFavs, cur.filter, cur.query, snapshot.nameOverrides))
         }
     }
+
+    private fun currentPanelRows(settings: com.github.itskenny0.r1ha.core.prefs.AppSettings): List<EntityState> =
+        availablePanelControlTiles(panelHardware.capabilities.value).mapNotNull { tile ->
+            materializePanelControlTile(tile, panelHardware.capabilities.value, panelHardware.runtimeState.value, settings.advanced)
+        }
 
     companion object {
         fun factory(
             repo: HaRepository,
             settings: SettingsRepository,
+            panelHardware: PanelHardware,
         ) = viewModelFactory {
             initializer {
-                FavoritesPickerViewModel(repo = repo, settings = settings)
+                FavoritesPickerViewModel(repo = repo, settings = settings, panelHardware = panelHardware)
             }
         }
     }
 }
+
+private data class PanelPickerSnapshot(
+    val overrides: Map<String, String>,
+    val favs: List<String>,
+    val panelRows: List<EntityState>,
+)

@@ -79,6 +79,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 settings = settings,
                 wheelInput = wheelInput,
+                panelHardware = panelHardware,
                 // launchSingleTop = true on every push so a rapid double-tap on the gear or a
                 // double-fire of the swipe gesture can't stack two copies of the same screen
                 // on the back stack (which would otherwise need two back-presses to escape).
@@ -142,6 +143,7 @@ fun AppNavGraph(
             FavoritesPickerScreen(
                 haRepository = haRepository,
                 settings = settings,
+                panelHardware = panelHardware,
                 wheelInput = wheelInput,
                 onBack = { navController.popBackStack() },
             )

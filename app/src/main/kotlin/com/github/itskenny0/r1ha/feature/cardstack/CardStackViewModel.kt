@@ -10,17 +10,24 @@ import com.github.itskenny0.r1ha.core.ha.EntityId
 import com.github.itskenny0.r1ha.core.ha.EntityState
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.ha.ServiceCall
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.input.WheelEvent
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.WheelSettings
 import com.github.itskenny0.r1ha.core.util.R1Log
+import com.github.itskenny0.r1ha.feature.panelcontrols.PanelControlTile
+import com.github.itskenny0.r1ha.feature.panelcontrols.isPanelControlFavoriteId
+import com.github.itskenny0.r1ha.feature.panelcontrols.materializePanelControlTile
+import com.github.itskenny0.r1ha.feature.panelcontrols.panelControlTileForEntityId
+import com.github.itskenny0.r1ha.feature.panelcontrols.panelControlTileForFavoriteId
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -183,6 +190,7 @@ class CardStackViewModel(
     private val haRepository: HaRepository,
     private val settings: SettingsRepository,
     private val wheelInput: WheelInput,
+    private val panelHardware: PanelHardware,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(CardStackUiState())
@@ -219,6 +227,10 @@ class CardStackViewModel(
         // within a frame of HA echoing the final value back.
         maxIntervalMillis = 150L,
     ) { entityId, pct ->
+        panelControlTileForEntityId(entityId.value)?.let { tile ->
+            applyPanelControl(tile, pct)
+            return@DebouncedCaller
+        }
         // Look up the entity's current state to pick the right service shape: scalar entities
         // get setPercent (turn_on with brightness_pct, set_percentage, set_cover_position,
         // volume_set), switch entities get the discrete setSwitch (turn_on/turn_off, open/
@@ -322,6 +334,18 @@ class CardStackViewModel(
         haRepository.call(call)
     }
 
+    private suspend fun applyPanelControl(tile: PanelControlTile, pct: Int) {
+        when (tile) {
+            PanelControlTile.Relay1 -> panelHardware.setRelay(1, pct > 0)
+            PanelControlTile.ScreenBrightness -> panelHardware.setScreenBrightness(pct.coerceIn(0, 100))
+            PanelControlTile.AutoBrightness -> settings.update { current ->
+                current.copy(advanced = current.advanced.copy(autoBrightnessEnabled = pct > 0))
+            }
+            PanelControlTile.AmbientLight,
+            PanelControlTile.PanelStatus -> Unit
+        }
+    }
+
     init {
         observeFavorites()
         // Keep a non-suspend snapshot of WheelSettings so onWheel() never has to hit the
@@ -370,6 +394,9 @@ class CardStackViewModel(
             val activeId: String,
             val unionFavorites: List<String>,
             val overrides: Map<String, String>,
+            val advanced: com.github.itskenny0.r1ha.core.prefs.AdvancedSettings,
+            val panelCapabilities: com.github.itskenny0.r1ha.core.hardware.PanelCapabilities,
+            val panelRuntime: com.github.itskenny0.r1ha.core.hardware.PanelHardwareRuntimeState,
             /**
              * Per-card overrides — bundled into the snapshot so the page-build
              * loop downstream can apply `hideWhenUnavailable` filtering without
@@ -378,8 +405,11 @@ class CardStackViewModel(
              */
             val entityOverrides: Map<String, com.github.itskenny0.r1ha.core.prefs.EntityOverride>,
         )
-        val sourceFlow = settings.settings
-            .map { s ->
+        val sourceFlow = combine(
+            settings.settings,
+            panelHardware.capabilities,
+            panelHardware.runtimeState,
+        ) { s, panelCapabilities, panelRuntime ->
                 val pages = s.pages
                 val unionFavorites = pages.flatMap { it.favorites }.distinct()
                 PagesSnapshot(
@@ -387,6 +417,9 @@ class CardStackViewModel(
                     activeId = s.activePageId,
                     unionFavorites = unionFavorites,
                     overrides = s.nameOverrides,
+                    advanced = s.advanced,
+                    panelCapabilities = panelCapabilities,
+                    panelRuntime = panelRuntime,
                     entityOverrides = s.entityOverrides,
                 )
             }
@@ -397,7 +430,10 @@ class CardStackViewModel(
                 // Subscribe to the UNION of every page so switching pages doesn't
                 // re-resubscribe; observe state is fast that way. The per-page
                 // slicing happens downstream of the entityMap.
-                val ids = snap.unionFavorites.mapNotNull { runCatching { EntityId(it) }.getOrNull() }.toSet()
+                val ids = snap.unionFavorites
+                    .filterNot(::isPanelControlFavoriteId)
+                    .mapNotNull { runCatching { EntityId(it) }.getOrNull() }
+                    .toSet()
                 if (ids.isEmpty()) {
                     flowOf(snap to emptyMap<EntityId, EntityState>())
                 } else {
@@ -411,6 +447,9 @@ class CardStackViewModel(
                 // call sites (wheel routing, currentIndex clamping, optimistic
                 // trim) so nothing downstream needs to know about cardsByPage.
                 fun materializeRow(id: String): EntityState? {
+                    panelControlTileForFavoriteId(id)?.let { tile ->
+                        return materializePanelControlTile(tile, snap.panelCapabilities, snap.panelRuntime, snap.advanced)
+                    }
                     val eid = runCatching { EntityId(id) }.getOrNull() ?: return null
                     val state = entityMap[eid] ?: return null
                     // Per-card "hide while unavailable" — drop the card from
@@ -490,6 +529,14 @@ class CardStackViewModel(
                 val favoriteSet = ordered.map { it.id }.toSet()
                 val newOptimistic = cur.optimisticPercents.filter { (id, optPct) ->
                     if (id !in favoriteSet) return@filter false
+                    panelControlTileForEntityId(id.value)?.let {
+                        val cached = ordered.firstOrNull { it.id == id } ?: return@filter false
+                        return@filter if (cached.supportsScalar) {
+                            cached.percent == null || cached.percent != optPct
+                        } else {
+                            cached.isOn != (optPct > 0)
+                        }
+                    }
                     val cached = entityMap[id] ?: return@filter true
                     if (cached.supportsScalar) {
                         val cachedPct = cached.percent
@@ -1258,12 +1305,14 @@ class CardStackViewModel(
             haRepository: HaRepository,
             settings: SettingsRepository,
             wheelInput: WheelInput,
+            panelHardware: PanelHardware,
         ) = viewModelFactory {
             initializer {
                 CardStackViewModel(
                     haRepository = haRepository,
                     settings = settings,
                     wheelInput = wheelInput,
+                    panelHardware = panelHardware,
                 )
             }
         }

@@ -35,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.ha.Domain
 import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.theme.R1
@@ -52,6 +53,7 @@ import androidx.compose.ui.semantics.semantics
 fun FavoritesPickerScreen(
     haRepository: HaRepository,
     settings: SettingsRepository,
+    panelHardware: PanelHardware,
     wheelInput: WheelInput,
     onBack: () -> Unit,
 ) {
@@ -68,7 +70,7 @@ fun FavoritesPickerScreen(
         )
     }
     val vm: FavoritesPickerViewModel = viewModel(
-        factory = FavoritesPickerViewModel.factory(repo = haRepository, settings = settings)
+        factory = FavoritesPickerViewModel.factory(repo = haRepository, settings = settings, panelHardware = panelHardware)
     )
     val ui by vm.ui.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -95,7 +97,7 @@ fun FavoritesPickerScreen(
                 .systemBarsPadding()
                 .imePadding(),
         ) {
-            R1TopBar(title = "FAVOURITES", onBack = onBack)
+            R1TopBar(title = "ULUBIONE", onBack = onBack)
             AdaptiveContent(modifier = Modifier.weight(1f)) {
 
             // Search + filter chips — both pinned above the list so the user can refine
@@ -126,7 +128,7 @@ fun FavoritesPickerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "SORT",
+                            text = "SORTUJ",
                             style = R1.labelMicro,
                             color = R1.InkMuted,
                         )
@@ -138,7 +140,7 @@ fun FavoritesPickerScreen(
                                 .border(1.dp, R1.Hairline, R1.ShapeS)
                                 .r1Pressable(
                                     onClick = { vm.cycleSortOrder() },
-                                    contentDescription = "Cycle sort order",
+                                    contentDescription = "Zmień sortowanie",
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                         ) {
@@ -243,11 +245,12 @@ private fun FilterChipRow(
                 return@forEach
             }
             val isSelected = filter == selected
+            val chipAccent = if (filter == PickerFilter.PANEL) R1.AccentCool else R1.AccentWarm
             Box(
                 modifier = Modifier
                     .padding(end = 6.dp)
                     .clip(R1.ShapeS)
-                    .background(if (isSelected) R1.AccentWarm else R1.Bg)
+                    .background(if (isSelected) chipAccent else R1.Bg)
                     .then(
                         if (isSelected) Modifier
                         else Modifier.border(1.dp, R1.Hairline, R1.ShapeS),
@@ -271,13 +274,13 @@ private fun FilteredEmptyState(filter: PickerFilter, query: String) {
     // all, filter pruned them all, or the favourites-only view with no favourites set
     // yet. Each gets a short hint that points the user at the next step.
     val (heading, body) = when {
-        query.isNotBlank() -> "NO MATCHES FOR \"${query.uppercase()}\"" to
-            "Try a different word. Search looks at both the entity name and the\nentity_id (e.g. \"sensor.\")."
-        filter == PickerFilter.ALL -> "NO CONTROLLABLE ENTITIES" to
-            "Home Assistant didn't return anything we know how to drive. No lights,\nswitches, scenes, or sensors."
-        filter == PickerFilter.FAVS -> "NO FAVOURITES YET" to
-            "Pick a chip above to start browsing, then tap an entity to favourite it."
-        else -> "NONE IN THIS FILTER" to "Tap ALL above to see every entity."
+        query.isNotBlank() -> "BRAK WYNIKÓW DLA \"${query.uppercase()}\"" to
+            "Spróbuj innego słowa. Szukamy po nazwie encji i po\nentity_id, np. \"sensor.\"."
+        filter == PickerFilter.ALL -> "BRAK OBSŁUGIWANYCH ENCJI" to
+            "Home Assistant nie zwrócił nic, czym umiemy sterować. Brak świateł,\nprzełączników, scen lub czujników."
+        filter == PickerFilter.FAVS -> "BRAK ULUBIONYCH" to
+            "Wybierz filtr powyżej, a potem stuknij encję, żeby dodać ją do ulubionych."
+        else -> "PUSTY FILTR" to "Stuknij WSZYSTKIE powyżej, żeby zobaczyć każdą encję."
     }
     Column(
         modifier = Modifier
@@ -312,7 +315,7 @@ private fun SearchBar(
         // a Canvas to every recomposition; a single character "⌕" or "Q" is cheaper and
         // reads as "this is a search field" especially next to the placeholder copy.
         Text(
-            text = "FIND",
+            text = "SZUKAJ",
             style = R1.labelMicro,
             color = R1.InkMuted,
             modifier = Modifier.padding(end = 8.dp),
@@ -321,7 +324,7 @@ private fun SearchBar(
             com.github.itskenny0.r1ha.ui.components.R1TextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = "kitchen, .door, scene, ...",
+                placeholder = "kuchnia, .door, scena, ...",
                 monospace = false,
             )
         }
@@ -368,7 +371,7 @@ private fun PreviewOverlay(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header — tells the user this is a preview, not the live card.
-            Text("PREVIEW · HOLD", style = R1.labelMicro, color = R1.AccentWarm)
+            Text("PODGLĄD · PRZYTRZYMANIE", style = R1.labelMicro, color = R1.AccentWarm)
             Spacer(Modifier.height(6.dp))
             // The card itself — same EntityCard the live stack uses, framed in a hairline
             // border so it reads as a "card surface" lifted off the overlay. The whole
@@ -389,7 +392,7 @@ private fun PreviewOverlay(
                 )
             }
             Spacer(Modifier.height(6.dp))
-            Text("Tap anywhere to dismiss", style = R1.body, color = R1.InkMuted)
+            Text("Stuknij gdziekolwiek, żeby zamknąć", style = R1.body, color = R1.InkMuted)
         }
     }
 }
@@ -407,7 +410,7 @@ private fun CenteredLoading() {
                 color = R1.AccentWarm,
             )
             Spacer(Modifier.height(16.dp))
-            Text("FETCHING ENTITIES…", style = R1.sectionHeader, color = R1.InkMuted)
+            Text("POBIERAM ENCJE…", style = R1.sectionHeader, color = R1.InkMuted)
         }
     }
 }
@@ -421,12 +424,12 @@ private fun ErrorState(message: String) {
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("ERROR", style = R1.labelMicro, color = R1.StatusRed)
+        Text("BŁĄD", style = R1.labelMicro, color = R1.StatusRed)
         Spacer(Modifier.height(8.dp))
         Text(message, style = R1.body, color = R1.Ink)
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "Open Settings → Sign out & reconnect to recover.",
+            text = "Otwórz Ustawienia → Wyloguj i połącz ponownie.",
             style = R1.body,
             color = R1.InkMuted,
         )
@@ -562,9 +565,9 @@ private fun ChannelRow(
                 // SENSOR for read-only sensors, ON/OFF for on-off-only switches, and silent
                 // for scalar entities (the percent control is implicit from the domain).
                 val tag = when {
-                    row.state.id.domain.isAction -> "TRIGGER"
-                    row.state.id.domain == Domain.SENSOR -> "READING"
-                    !row.state.supportsScalar -> "ON/OFF"
+                    row.state.id.domain.isAction -> "AKCJA"
+                    row.state.id.domain == Domain.SENSOR -> "ODCZYT"
+                    !row.state.supportsScalar -> "WŁ./WYŁ."
                     else -> null
                 }
                 if (tag != null) {
@@ -580,7 +583,7 @@ private fun ChannelRow(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "POS ${row.orderIndex + 1}",
+                        text = "POZ. ${row.orderIndex + 1}",
                         style = R1.labelMicro,
                         color = R1.InkSoft,
                     )
@@ -634,13 +637,13 @@ private fun ChannelRow(
                 onClick = onMoveUp,
                 enabled = canMoveUp,
                 direction = ChevronDirection.Up,
-                description = "Move up",
+                description = "Przenieś wyżej",
             )
             MoveChevron(
                 onClick = onMoveDown,
                 enabled = canMoveDown,
                 direction = ChevronDirection.Down,
-                description = "Move down",
+                description = "Przenieś niżej",
             )
         }
         Spacer(Modifier.width(10.dp))
@@ -720,33 +723,33 @@ private fun domainAccentFor(domain: Domain): Color = when (domain) {
 }
 
 private fun domainLabel(domain: Domain): String = when (domain) {
-    Domain.LIGHT -> "LIGHT"
-    Domain.FAN -> "FAN"
-    Domain.COVER -> "COVER"
+    Domain.LIGHT -> "ŚWIATŁO"
+    Domain.FAN -> "WENTYL."
+    Domain.COVER -> "OSŁONA"
     Domain.MEDIA_PLAYER -> "MEDIA"
-    Domain.SWITCH -> "SWITCH"
+    Domain.SWITCH -> "PRZEŁ."
     Domain.INPUT_BOOLEAN -> "TOGGLE"
-    Domain.AUTOMATION -> "AUTOMATION"
-    Domain.LOCK -> "LOCK"
-    Domain.HUMIDIFIER -> "HUMIDIFIER"
-    Domain.CLIMATE -> "CLIMATE"
-    Domain.SCENE -> "SCENE"
-    Domain.SCRIPT -> "SCRIPT"
-    Domain.BUTTON -> "BUTTON"
-    Domain.INPUT_BUTTON -> "BUTTON"
-    Domain.SENSOR -> "SENSOR"
-    Domain.BINARY_SENSOR -> "DETECTOR"
-    Domain.NUMBER -> "NUMBER"
-    Domain.INPUT_NUMBER -> "NUMBER"
-    Domain.VALVE -> "VALVE"
-    Domain.VACUUM -> "VACUUM"
-    Domain.LAWN_MOWER -> "MOWER"
-    Domain.WATER_HEATER -> "HEATER"
-    Domain.SELECT -> "SELECT"
-    Domain.INPUT_SELECT -> "SELECT"
-    Domain.COUNTER -> "COUNTER"
+    Domain.AUTOMATION -> "AUTOM."
+    Domain.LOCK -> "ZAMEK"
+    Domain.HUMIDIFIER -> "NAWILŻ."
+    Domain.CLIMATE -> "KLIMAT"
+    Domain.SCENE -> "SCENA"
+    Domain.SCRIPT -> "SKRYPT"
+    Domain.BUTTON -> "PRZYC."
+    Domain.INPUT_BUTTON -> "PRZYC."
+    Domain.SENSOR -> "CZUJNIK"
+    Domain.BINARY_SENSOR -> "DETEKTOR"
+    Domain.NUMBER -> "LICZBA"
+    Domain.INPUT_NUMBER -> "LICZBA"
+    Domain.VALVE -> "ZAWÓR"
+    Domain.VACUUM -> "ODKURZ."
+    Domain.LAWN_MOWER -> "KOSIARKA"
+    Domain.WATER_HEATER -> "BOJLER"
+    Domain.SELECT -> "WYBÓR"
+    Domain.INPUT_SELECT -> "WYBÓR"
+    Domain.COUNTER -> "LICZNIK"
     Domain.TIMER -> "TIMER"
-    Domain.INPUT_TEXT -> "TEXT"
-    Domain.INPUT_DATETIME -> "DATETIME"
-    Domain.UPDATE -> "UPDATE"
+    Domain.INPUT_TEXT -> "TEKST"
+    Domain.INPUT_DATETIME -> "DATA/CZAS"
+    Domain.UPDATE -> "AKTUAL."
 }

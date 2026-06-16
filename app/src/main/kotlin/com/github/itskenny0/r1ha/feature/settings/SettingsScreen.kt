@@ -487,56 +487,56 @@ fun SettingsScreen(
                     names.sumOf { sectionModifiedCount[it] ?: 0 }
                 item {
                     GroupCard(
-                        title = "Connection",
-                        subtitle = "Server, security, backup & restore",
+                        title = "Połączenie",
+                        subtitle = "Serwer, bezpieczeństwo, kopia i przywracanie",
                         modifiedCount = groupBadge("SERVER", "BACKUP & RESTORE", "SECURITY"),
                         onClick = { onOpenCategory(SettingsCategory.CONNECTION) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Appearance",
-                        subtitle = "Theme, card UI, dashboard",
+                        title = "Wygląd",
+                        subtitle = "Motyw, kafle i dashboard",
                         modifiedCount = groupBadge("APPEARANCE", "CARD UI", "DASHBOARD"),
                         onClick = { onOpenCategory(SettingsCategory.APPEARANCE) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Behaviour",
-                        subtitle = "Touch, haptics, quick tiles",
+                        title = "Zachowanie",
+                        subtitle = "Dotyk, wibracje i szybkie kafelki",
                         modifiedCount = groupBadge("BEHAVIOUR"),
                         onClick = { onOpenCategory(SettingsCategory.BEHAVIOUR) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Integrations",
-                        subtitle = "HA refresh tuning, cameras, defaults",
+                        title = "Integracje",
+                        subtitle = "Odświeżanie HA, kamery i domyślne widoki",
                         modifiedCount = groupBadge("INTEGRATIONS"),
                         onClick = { onOpenCategory(SettingsCategory.INTEGRATIONS) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Advanced",
-                        subtitle = "Dev menu, modified settings, reset",
+                        title = "Zaawansowane",
+                        subtitle = "Menu dev, zmienione ustawienia i reset",
                         modifiedCount = 0,
                         onClick = { onOpenCategory(SettingsCategory.ADVANCED) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Browse",
-                        subtitle = "Open Dashboard, Assist, Scenes, etc.",
+                        title = "Przeglądaj",
+                        subtitle = "Dashboard, Assist, sceny i narzędzia",
                         modifiedCount = 0,
                         onClick = { onOpenCategory(SettingsCategory.BROWSE) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "About",
-                        subtitle = "Version, source, file a bug",
+                        title = "O aplikacji",
+                        subtitle = "Wersja, kod źródłowy i zgłaszanie błędów",
                         modifiedCount = 0,
                         onClick = onOpenAbout,
                     )
@@ -891,37 +891,35 @@ fun SettingsScreen(
 
             if (shouldShow("BEHAVIOUR")) {
             // ── Behaviour ──────────────────────────────────────────────────────────
-            item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR) }) }
+            item { Section("ZACHOWANIE", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR) }) }
             if ("BEHAVIOUR" in expandedSections) {
             item { SubGroupLabel("OBSŁUGA") }
             item {
                 SwitchRow(
-                    label = "Haptic feedback",
+                    label = "Wibracje przy dotyku",
                     checked = s.behavior.haptics,
                     onCheckedChange = { vm.setHaptics(it) },
                 )
             }
             item {
                 SwitchRow(
-                    label = "Keep screen on",
+                    label = "Nie wygaszaj ekranu przez system",
                     checked = s.behavior.keepScreenOn,
                     onCheckedChange = { vm.setKeepScreenOn(it) },
                 )
             }
             item {
                 SwitchRow(
-                    label = "Tap to toggle",
-                    subtitle = "Off (default): the whole-card tap is inert so a miss " +
-                        "while aiming for the chrome buttons doesn't accidentally turn " +
-                        "the entity on. On: tap anywhere on the card to flip it.",
+                    label = "Dotknięcie kafla przełącza",
+                    subtitle = "Wyłączone: przypadkowy dotyk kafla nic nie przełączy. Włączone: dotknięcie dowolnego miejsca na kaflu zmienia stan encji.",
                     checked = s.behavior.tapToToggle,
                     onCheckedChange = { vm.setTapToToggle(it) },
                 )
             }
             item {
                 SwitchRow(
-                    label = "Hide status bar",
-                    subtitle = "Swipe down to peek the bar; auto-hides after release",
+                    label = "Ukryj pasek systemowy",
+                    subtitle = "Przesuń w dół, żeby go podejrzeć; po puszczeniu znów się schowa.",
                     checked = s.behavior.hideStatusBar,
                     onCheckedChange = { vm.setHideStatusBar(it) },
                 )
@@ -933,9 +931,8 @@ fun SettingsScreen(
             if (s.behavior.hideStatusBar) {
                 item {
                     SwitchRow(
-                        label = "↳ Show battery indicator",
-                        subtitle = "Tiny percent pill on the right of the chrome row " +
-                            "(polled every 30 s). Useful so a low panel battery doesn't catch you off-guard.",
+                        label = "↳ Pokaż baterię",
+                        subtitle = "Mały procent po prawej stronie paska aplikacji, odświeżany co 30 s.",
                         checked = s.behavior.showBatteryWhenStatusBarHidden,
                         onCheckedChange = { vm.setShowBatteryWhenStatusBarHidden(it) },
                     )
@@ -943,18 +940,17 @@ fun SettingsScreen(
             }
             item {
                 SwitchRow(
-                    label = "Start on Dashboard",
-                    subtitle = "Open the app on the TODAY dashboard instead of the card stack. " +
-                        "Useful for wall-mounted / kiosk panels. Takes effect on next app launch.",
+                    label = "Startuj od dashboardu",
+                    subtitle = "Po uruchomieniu pokaż dashboard zamiast stosu kafli. Działa od następnego startu aplikacji.",
                     checked = s.behavior.startOnDashboard,
                     onCheckedChange = { vm.setStartOnDashboard(it) },
                 )
             }
             item { SubGroupLabel("SPRZĘT PANELU") }
             item {
-                LabeledControl(label = "Panel hardware provider") {
+                LabeledControl(label = "Tryb sprzętu panelu") {
                     Text(
-                        text = "Auto selects Shelly on known Shelly builds, otherwise generic tablet. Shelly mode is currently a safe stub until the native port lands.",
+                        text = "Auto wybiera Shelly na znanych urządzeniach Shelly, w pozostałych przypadkach zwykły tablet.",
                         style = R1.labelMicro,
                         color = R1.InkMuted,
                     )
@@ -1087,12 +1083,8 @@ fun SettingsScreen(
             item { SubGroupLabel("ASYSTENT") }
             item {
                 SwitchRow(
-                    label = "Assist · open keyboard on entry",
-                    subtitle = "Off (default): tapping into Assist shows the screen but " +
-                        "leaves the keyboard closed; useful on phones where the IME " +
-                        "popping up otherwise re-centers the empty state jarringly. " +
-                        "On: opening Assist focuses the input field immediately. " +
-                        "Voice input (🎤) works regardless of this setting.",
+                    label = "Assist · otwieraj klawiaturę",
+                    subtitle = "Wyłączone: wejście do Assist nie pokazuje od razu klawiatury. Włączone: pole tekstowe dostaje fokus od razu. Głos działa niezależnie.",
                     checked = s.behavior.assistAutoOpenKeyboard,
                     onCheckedChange = { vm.setAssistAutoOpenKeyboard(it) },
                 )
@@ -1102,10 +1094,8 @@ fun SettingsScreen(
             item { SubGroupLabel("SZYBKIE KAFLE") }
             item {
                 SwitchRow(
-                    label = "Guest mode (read-only)",
-                    subtitle = "When on, the app refuses every outbound service call. " +
-                        "Lights, locks, scripts: everything is blocked until you turn this off. " +
-                        "Hand the device to a guest without worrying they'll toggle something.",
+                    label = "Tryb gościa (tylko odczyt)",
+                    subtitle = "Blokuje wszystkie wywołania usług HA: światła, zamki, skrypty i sceny nie będą przełączane z tego panelu.",
                     checked = s.guestModeEnabled,
                     onCheckedChange = { vm.setGuestModeEnabled(it) },
                 )
@@ -1119,7 +1109,7 @@ fun SettingsScreen(
             // toggleable from anywhere on the phone without opening
             // our app first.
             item {
-                LabeledControl(label = "Quick Settings tile") {
+                LabeledControl(label = "Kafelek szybkich ustawień") {
                     // entity_id text input + PICK button so the user
                     // can either type a known id or browse the live
                     // registry. The HaQuickTileService picks up the
@@ -1142,7 +1132,7 @@ fun SettingsScreen(
                                 .r1Pressable(onClick = { tilePickerOpen.value = true })
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
-                            Text(text = "PICK", style = R1.labelMicro, color = R1.AccentWarm)
+                            Text(text = "WYBIERZ", style = R1.labelMicro, color = R1.AccentWarm)
                         }
                     }
                     Spacer(Modifier.height(6.dp))
@@ -1154,9 +1144,7 @@ fun SettingsScreen(
                     // on stock Android so it matches what the user
                     // will see.
                     Text(
-                        text = "After binding, pull down the notification shade twice → " +
-                            "tap the pencil-edit icon → drag the 'HA Toggle' tile from " +
-                            "the bottom row up to your active set.",
+                        text = "Po przypisaniu rozwiń panel powiadomień dwa razy, dotknij ikony edycji i przeciągnij kafelek 'HA Toggle' do aktywnych kafelków.",
                         style = R1.labelMicro,
                         color = R1.InkMuted,
                     )
@@ -1166,7 +1154,7 @@ fun SettingsScreen(
             // binds a separate manifest-declared TileService so the user
             // can drag up to four HA-bound tiles into their shade.
             item {
-                LabeledControl(label = "Quick Settings tile · slot B (HA Toggle 2)") {
+                LabeledControl(label = "Kafelek szybkich ustawień · slot B (HA Toggle 2)") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.weight(1f)) {
                             R1TextField(
@@ -1180,7 +1168,7 @@ fun SettingsScreen(
                 }
             }
             item {
-                LabeledControl(label = "Quick Settings tile · slot C (HA Toggle 3)") {
+                LabeledControl(label = "Kafelek szybkich ustawień · slot C (HA Toggle 3)") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.weight(1f)) {
                             R1TextField(
@@ -1194,7 +1182,7 @@ fun SettingsScreen(
                 }
             }
             item {
-                LabeledControl(label = "Quick Settings tile · slot D (HA Toggle 4)") {
+                LabeledControl(label = "Kafelek szybkich ustawień · slot D (HA Toggle 4)") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.weight(1f)) {
                             R1TextField(

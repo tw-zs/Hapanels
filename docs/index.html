@@ -1,20 +1,151 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="utf-8">
-  <title>Rabbit R1 — Home Assistant client</title>
-  <link rel="redirect_uri" href="r1ha://auth-callback">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Hapanels</title>
+  <meta name="description" content="Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem.">
+  <link rel="redirect_uri" href="r1ha://auth-callback">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 640px; margin: 4em auto; padding: 0 1em; color: #1a1a1a; line-height: 1.55; }
-    code { background: #f3f3f3; padding: 1px 5px; border-radius: 3px; font-size: 0.95em; }
-    a { color: #F36F21; }
+    :root {
+      --bg: #0f1115;
+      --panel: #171b24;
+      --text: #eef2f7;
+      --muted: #9aa7b8;
+      --accent: #ff8a3d;
+      --accent-2: #6ee7ff;
+      --border: rgba(255, 255, 255, 0.08);
+      --shadow: 0 20px 70px rgba(0, 0, 0, 0.38);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(255, 138, 61, 0.20), transparent 32rem),
+        radial-gradient(circle at 86% 16%, rgba(110, 231, 255, 0.12), transparent 24rem),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    code { color: var(--accent-2); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
+    .hero {
+      display: grid;
+      gap: 28px;
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: center;
+      padding: clamp(22px, 4vw, 42px);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025));
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      width: 92px;
+      height: 92px;
+      padding: 14px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.045);
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    h1 { font-size: clamp(2.5rem, 6vw, 5rem); line-height: 0.92; margin: 0 0 16px; letter-spacing: -0.05em; }
+    .lead { font-size: clamp(1.05rem, 2vw, 1.22rem); color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
+    .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.045);
+    }
+    .button.primary { background: linear-gradient(135deg, var(--accent), #ffb15f); color: #18110d; font-weight: 750; border-color: transparent; }
+    .stack, .grid { display: grid; gap: 14px; }
+    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
+    .stat, .card {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.035);
+    }
+    .stat strong, .card h2 { display: block; margin: 0 0 8px; }
+    .muted, .card p, .footer { color: var(--muted); }
+    .section { margin-top: 24px; }
+    .section h3 { margin: 0 0 12px; font-size: 1.02rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-2); }
+    .card p { margin: 0; }
+    .footer { margin-top: 24px; font-size: 0.95rem; }
+
+    @media (max-width: 860px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>Rabbit R1 — Home Assistant client</h1>
-  <p>An Android app for the Rabbit R1 that uses the scroll wheel to control Home Assistant entities.</p>
-  <p>This page exists to advertise the OAuth redirect URI <code>r1ha://auth-callback</code> for Home Assistant's indieauth client validation. The app itself is on GitHub:</p>
-  <p><a href="https://github.com/itskenny0/Rabbit-R1-HA">github.com/itskenny0/Rabbit-R1-HA</a></p>
+  <main class="wrap">
+    <section class="hero">
+      <div>
+        <img class="brand" src="assets/hapanels-logo.svg" alt="Hapanels logo">
+        <h1>Hapanels</h1>
+        <p class="lead">Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem. Bez WebView jako głównego interfejsu: Compose UI, realne sterowanie sprzętem i MQTT discovery dla Home Assistant.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/tw-zs/Hapanels/releases">Pobierz APK</a>
+          <a class="button" href="https://github.com/tw-zs/Hapanels">GitHub</a>
+          <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/ROADMAP.md">Roadmap</a>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="stat">
+          <strong>Aktualny fokus</strong>
+          <span class="muted">Shelly buttons, relay, proximity presence, auto-brightness, AOD/screensaver i dashboard panelowy.</span>
+        </div>
+        <div class="stat">
+          <strong>Dla kogo</strong>
+          <span class="muted">Shelly Wall Display najpierw, większe tablety Android jako fallback.</span>
+        </div>
+        <div class="stat">
+          <strong>OAuth redirect</strong>
+          <span class="muted"><code>r1ha://auth-callback</code></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Co jest w środku</h3>
+      <div class="grid">
+        <div class="card">
+          <h2>Natywne UI</h2>
+          <p>Android + Compose zamiast Lovelace WebView jako podstawowego runtime.</p>
+        </div>
+        <div class="card">
+          <h2>Sprzęt panelu</h2>
+          <p>Relay, brightness, ambient light, buttony i binary proximity presence, gdy urządzenie realnie je udostępnia.</p>
+        </div>
+        <div class="card">
+          <h2>Home Assistant</h2>
+          <p>REST, WebSocket, service calls i MQTT discovery/state/command topics.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h3>Dokumentacja projektu</h3>
+      <div class="links">
+        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/README.md">README</a>
+        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/PRODUCTION_PLAN.md">Plan produkcyjny</a>
+        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/MILESTONE_6_AGENT_BRIEF.md">Milestone 6</a>
+        <a class="button" href="https://github.com/tw-zs/Hapanels/actions/workflows/pages.yml">GitHub Pages workflow</a>
+      </div>
+      <p class="footer">Ta strona jest statyczna i deployowana z katalogu <code>docs/</code> przez GitHub Actions.</p>
+    </section>
+  </main>
 </body>
 </html>

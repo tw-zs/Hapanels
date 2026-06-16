@@ -75,7 +75,7 @@ fun SensorCard(
                 Text("·", style = R1.labelMicro, color = R1.InkMuted)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = state.deviceClass.uppercase(),
+                    text = friendlyDeviceClassLabel(state.deviceClass),
                     style = R1.labelMicro,
                     color = R1.InkSoft,
                 )
@@ -235,7 +235,7 @@ fun SensorCard(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "READ-ONLY",
+            text = "TYLKO ODCZYT",
             style = R1.labelMicro,
             color = R1.InkMuted,
         )
@@ -294,36 +294,67 @@ private fun sensorReadoutStyle(
 private fun friendlyBinaryWord(state: EntityState): String {
     val on = state.isOn
     return when (state.deviceClass) {
-        "door", "garage_door", "window", "opening" -> if (on) "OPEN" else "CLOSED"
-        "motion", "occupancy", "presence" -> if (on) "MOTION" else "CLEAR"
+        "door", "garage_door", "window", "opening" -> if (on) "OTWARTE" else "ZAMKNIĘTE"
+        "motion" -> if (on) "RUCH" else "BRAK"
+        "occupancy", "presence" -> if (on) "OBECNOŚĆ" else "BRAK"
         // Moisture sensors trip on any wetness, not just leaks — a damp basement
         // floor or condensation on a window can also trigger them. WET reads as
         // descriptive rather than alarming, which matches the actual signal.
-        "moisture" -> if (on) "WET" else "DRY"
-        "smoke" -> if (on) "SMOKE" else "CLEAR"
-        "gas", "carbon_monoxide" -> if (on) "DETECTED" else "CLEAR"
-        "lock" -> if (on) "UNLOCKED" else "LOCKED"
-        "battery" -> if (on) "LOW" else "OK"
-        "battery_charging" -> if (on) "CHARGING" else "IDLE"
-        "power", "plug" -> if (on) "POWER" else "OFF"
+        "moisture" -> if (on) "MOKRO" else "SUCHO"
+        "smoke" -> if (on) "DYM" else "BRAK"
+        "gas", "carbon_monoxide" -> if (on) "WYKRYTO" else "BRAK"
+        "lock" -> if (on) "OTWARTE" else "ZAMKNIĘTE"
+        "battery" -> if (on) "NISKI" else "OK"
+        "battery_charging" -> if (on) "ŁADUJE" else "BEZCZYNNE"
+        "power", "plug" -> if (on) "ZASILANIE" else "WYŁ."
         "connectivity" -> if (on) "ONLINE" else "OFFLINE"
         // Temperature-class binary sensors trip when their threshold is crossed.
         // HA's contract: `cold` = too cold, `heat` = too hot. CRITICAL is the
         // shorter all-caps word that scans on narrow cards.
-        "cold" -> if (on) "COLD" else "OK"
-        "heat" -> if (on) "HOT" else "OK"
+        "cold" -> if (on) "ZIMNO" else "OK"
+        "heat" -> if (on) "GORĄCO" else "OK"
         // Photoresistor / light-detected sensors.
-        "light" -> if (on) "LIGHT" else "DARK"
+        "light" -> if (on) "JASNO" else "CIEMNO"
         // Generic safety / problem / tamper alarms. PROBLEM is shorter than
         // 'DETECTED' and scans more clearly on alarm-class cards.
         "safety", "problem", "tamper" -> if (on) "PROBLEM" else "OK"
         // Vibration / sound trip-detectors.
-        "vibration" -> if (on) "VIBRATION" else "STILL"
-        "sound" -> if (on) "SOUND" else "QUIET"
+        "vibration" -> if (on) "WIBRACJA" else "SPOKÓJ"
+        "sound" -> if (on) "DŹWIĘK" else "CISZA"
         // Motor / appliance running indicators (washing machine state, etc.).
-        "running" -> if (on) "RUNNING" else "IDLE"
+        "running" -> if (on) "DZIAŁA" else "STOP"
         // 'Update available' binary sensors (HA's `update` integration).
-        "update" -> if (on) "AVAILABLE" else "UP TO DATE"
-        else -> if (on) "ON" else "OFF"
+        "update" -> if (on) "DOSTĘPNA" else "AKTUALNE"
+        else -> if (on) "WŁ." else "WYŁ."
     }
+}
+
+private fun friendlyDeviceClassLabel(deviceClass: String?): String = when (deviceClass) {
+    "occupancy", "presence" -> "OBECNOŚĆ"
+    "motion" -> "RUCH"
+    "door" -> "DRZWI"
+    "garage_door" -> "BRAMA"
+    "window" -> "OKNO"
+    "opening" -> "OTWARCIE"
+    "moisture" -> "WILGOĆ"
+    "smoke" -> "DYM"
+    "gas" -> "GAZ"
+    "carbon_monoxide" -> "CZAD"
+    "lock" -> "ZAMEK"
+    "battery" -> "BATERIA"
+    "battery_charging" -> "ŁADOWANIE"
+    "power" -> "ZASILANIE"
+    "plug" -> "GNIAZDKO"
+    "connectivity" -> "ŁĄCZNOŚĆ"
+    "cold" -> "ZIMNO"
+    "heat" -> "CIEPŁO"
+    "light" -> "ŚWIATŁO"
+    "safety" -> "BEZPIECZEŃSTWO"
+    "problem" -> "PROBLEM"
+    "tamper" -> "SABOTAŻ"
+    "vibration" -> "WIBRACJA"
+    "sound" -> "DŹWIĘK"
+    "running" -> "PRACA"
+    "update" -> "AKTUALIZACJA"
+    else -> deviceClass?.replace('_', ' ')?.uppercase().orEmpty()
 }

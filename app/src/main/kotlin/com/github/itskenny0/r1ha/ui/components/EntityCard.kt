@@ -340,7 +340,7 @@ fun EntityCard(
                 // instead of Material's red — the previous `colorScheme.error` was close to
                 // StatusRed but not identical, which broke the palette discipline.
                 Text(
-                    text = "UNAVAILABLE",
+                    text = "NIEDOSTĘPNE",
                     style = R1.sectionHeader,
                     color = R1.StatusRed,
                 )
@@ -475,8 +475,8 @@ private fun computeMeterLabels(
 /** Sensor-card label — sensor and binary_sensor get distinct labels so the user can tell
  *  a numeric reading apart from a boolean trigger at a glance. */
 private fun sensorDomainLabel(domain: Domain): String = when (domain) {
-    Domain.SENSOR -> "SENSOR"
-    Domain.BINARY_SENSOR -> "DETECTOR"
+    Domain.SENSOR -> "CZUJNIK"
+    Domain.BINARY_SENSOR -> "DETEKTOR"
     else -> domain.prefix.uppercase()
 }
 

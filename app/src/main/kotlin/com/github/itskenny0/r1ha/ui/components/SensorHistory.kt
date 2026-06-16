@@ -161,14 +161,14 @@ fun SensorHistoryList(
     modifier: Modifier = Modifier,
 ) {
     if (points.isEmpty()) {
-        ChartHint(text = "NO HISTORY YET", modifier = modifier)
+        ChartHint(text = "BRAK HISTORII", modifier = modifier)
         return
     }
     // Newest-first, then capped to the user's preferred length.
     val recent = points.asReversed().take(maxEntries)
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "LAST ${recent.size} CHANGES",
+            text = "OSTATNIE ZMIANY · ${recent.size}",
             style = R1.labelMicro,
             color = R1.InkMuted,
         )

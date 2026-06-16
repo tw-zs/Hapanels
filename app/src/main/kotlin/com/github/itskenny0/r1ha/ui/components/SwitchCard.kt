@@ -130,28 +130,28 @@ fun SwitchCard(
         // each end will *do*, which for locks is much clearer phrased as the
         // physical state rather than the abstract on/off.
         val (onLabel, offLabel) = when (state.id.domain) {
-            com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> "UNLOCK" to "LOCK"
+            com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> "OTWÓRZ" to "ZAMKNIJ"
             // Covers / valves: tapping the top end-stop opens, tapping the bottom
             // end-stop closes. Same shape as ON / OFF semantically (the entity
             // has two stable states) but reads more naturally for the physical
             // mechanism. Matches the state word above (OPEN / CLOSED).
             com.github.itskenny0.r1ha.core.ha.Domain.COVER,
-            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "OPEN" to "CLOSE"
+            com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> "OTWÓRZ" to "ZAMKNIJ"
             // Vacuums map ON / OFF to CLEAN / DOCK — tapping CLEAN starts the
             // robot, tapping DOCK sends it back to base. Matches the actual
             // services dispatched (vacuum.start and vacuum.return_to_base).
-            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> "CLEAN" to "DOCK"
+            com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> "SPRZĄTAJ" to "BAZA"
             // Lawn mowers map identically — MOW kicks off the start_mowing
             // service, DOCK sends the mower back. The DOCK label matches the
             // service name `lawn_mower.dock` so the affordance reads true.
-            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> "MOW" to "DOCK"
+            com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> "KOŚ" to "BAZA"
             // Media players reach the SwitchCard path when they don't advertise
             // VOLUME_SET (radio streams, simple players). Tapping the top
             // end-stop dispatches media_play, bottom dispatches media_pause —
             // PLAY / PAUSE matches both the services and the universal media-
             // control glyph language.
-            com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> "PLAY" to "PAUSE"
-            else -> "ON" to "OFF"
+            com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> "GRAJ" to "PAUZA"
+            else -> "WŁ." to "WYŁ."
         }
         // Hide the SwitchTrack for code-required locks. The LockPanel below
         // surfaces explicit LOCK / UNLOCK chips that open the PIN keypad;
@@ -384,63 +384,63 @@ private fun MediaNowPlayingInline(state: EntityState, accent: Color) {
  * back to ON / OFF for everything else.
  */
 private fun friendlySwitchStateWord(state: EntityState): String {
-    val raw = state.rawState?.lowercase() ?: return if (state.isOn) "ON" else "OFF"
+    val raw = state.rawState?.lowercase() ?: return if (state.isOn) "WŁ." else "WYŁ."
     return when (state.id.domain) {
         com.github.itskenny0.r1ha.core.ha.Domain.COVER,
         com.github.itskenny0.r1ha.core.ha.Domain.VALVE -> when (raw) {
-            "open" -> "OPEN"
-            "closed" -> "CLOSED"
-            "opening" -> "OPENING"
-            "closing" -> "CLOSING"
-            "stopped" -> "STOPPED"
+            "open" -> "OTWARTE"
+            "closed" -> "ZAMKNIĘTE"
+            "opening" -> "OTWIERA"
+            "closing" -> "ZAMYKA"
+            "stopped" -> "STOP"
             else -> raw.uppercase()
         }
         com.github.itskenny0.r1ha.core.ha.Domain.VACUUM -> when (raw) {
-            "cleaning" -> "CLEANING"
-            "docked" -> "DOCKED"
-            "returning" -> "RETURNING"
-            "paused" -> "PAUSED"
-            "idle" -> "IDLE"
-            "error" -> "ERROR"
+            "cleaning" -> "SPRZĄTA"
+            "docked" -> "W BAZIE"
+            "returning" -> "WRACA"
+            "paused" -> "PAUZA"
+            "idle" -> "BEZCZYNNE"
+            "error" -> "BŁĄD"
             else -> raw.uppercase()
         }
         com.github.itskenny0.r1ha.core.ha.Domain.LAWN_MOWER -> when (raw) {
-            "mowing" -> "MOWING"
-            "docked" -> "DOCKED"
-            "returning" -> "RETURNING"
-            "paused" -> "PAUSED"
-            "error" -> "ERROR"
+            "mowing" -> "KOSI"
+            "docked" -> "W BAZIE"
+            "returning" -> "WRACA"
+            "paused" -> "PAUZA"
+            "error" -> "BŁĄD"
             else -> raw.uppercase()
         }
         com.github.itskenny0.r1ha.core.ha.Domain.LOCK -> when (raw) {
-            "locked" -> "LOCKED"
-            "unlocked" -> "UNLOCKED"
+            "locked" -> "ZAMKNIĘTE"
+            "unlocked" -> "OTWARTE"
             // Mid-transition states. HA reports these during the actuator's
             // mechanical travel; collapsing them to LOCKED / UNLOCKED via isOn
             // (the previous behaviour) read wrong because isOn = unlocked, so
             // a locking-in-progress lock falsely showed 'LOCKED' before the
             // bolt actually engaged.
-            "locking" -> "LOCKING"
-            "unlocking" -> "UNLOCKING"
+            "locking" -> "ZAMYKA"
+            "unlocking" -> "OTWIERA"
             // Some integrations expose intermediate motion-detected / opening
             // states; pass through if we ever see one.
-            "opening" -> "OPENING"
+            "opening" -> "OTWIERA"
             // Mechanical failure state — the lock got stuck mid-travel.
             // Surfacing JAMMED is much more useful than the old 'LOCKED' for
             // a user trying to figure out why the lock isn't responding.
-            "jammed" -> "JAMMED"
+            "jammed" -> "ZACIĘTE"
             else -> raw.uppercase()
         }
         com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE,
         com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER -> raw.uppercase()
         com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER -> when (raw) {
-            "playing" -> "PLAYING"
-            "paused" -> "PAUSED"
-            "idle" -> "IDLE"
-            "standby" -> "STANDBY"
-            "buffering" -> "BUFFERING"
+            "playing" -> "ODTWARZA"
+            "paused" -> "PAUZA"
+            "idle" -> "BEZCZYNNE"
+            "standby" -> "CZUWANIE"
+            "buffering" -> "BUFORUJE"
             else -> raw.uppercase()
         }
-        else -> if (state.isOn) "ON" else "OFF"
+        else -> if (state.isOn) "WŁ." else "WYŁ."
     }
 }

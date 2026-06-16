@@ -11,22 +11,17 @@
 <p align="center">
   <em>Hapanels is a native Android Home Assistant wall-panel app for Shelly Wall Display devices and larger Android tablets.
     
-[![Stars](https://img.shields.io/github/stars/tw-zs/Hapanels?style=for-the-badge&logo=github)](https://github.com/tw-zs/Hapanels)
-[![License](https://img.shields.io/github/license/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels)
-[![Latest Release](https://img.shields.io/github/v/release/tw-zs/Hapanels?style=for-the-badge&logo=github)](https://github.com/tw-zs/Hapanels/releases)
-[![Last Commit](https://img.shields.io/github/last-commit/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels/commits)
-[![Kotlin](https://img.shields.io/badge/Kotlin-99.8%25-7F52FF?style=for-the-badge&logo=kotlin)](https://kotlinlang.org)
-[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android)](https://developer.android.com)
-[![HA](https://img.shields.io/badge/Home%20Assistant-41BDF5?style=for-the-badge&logo=homeassistant)](https://www.home-assistant.io)
-[![License](https://img.shields.io/badge/License-Unlicense-blue?style=for-the-badge)](https://unlicense.org)
-[![Release Date](https://img.shields.io/github/release-date/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels/releases)
-[![Repo Size](https://img.shields.io/github/repo-size/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels)
-[![Forks](https://img.shields.io/github/forks/tw-zs/Hapanels?style=for-the-badge&logo=github)](https://github.com/tw-zs/Hapanels/forks)
-[![Issues](https://img.shields.io/github/issues/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels/issues)
-[![Commit Activity](https://img.shields.io/github/commit-activity/m/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels/commits)
-[![Contributors](https://img.shields.io/github/contributors/tw-zs/Hapanels?style=for-the-badge)](https://github.com/tw-zs/Hapanels/graphs/contributors)
-[![Android CI](https://img.shields.io/badge/Android%20CI-Passing-brightgreen?style=for-the-badge&logo=githubactions)](https://github.com/tw-zs/Hapanels/actions)
-![Badge](https://img.shields.io/badge/Yes,_i_like-BADGES-lime?style=for-the-badge&logo=badge)
+[![Stars](https://img.shields.io/github/stars/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels)
+[![License](https://img.shields.io/github/license/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels)
+[![Release](https://img.shields.io/github/v/release/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels/releases)
+[![Last Commit](https://img.shields.io/github/last-commit/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels/commits)
+[![Kotlin](https://img.shields.io/badge/Kotlin-99.8%25-7F52FF)](https://kotlinlang.org)
+[![Android](https://img.shields.io/badge/Android-3DDC84)](https://developer.android.com)
+[![HA](https://img.shields.io/badge/Home%20Assistant-41BDF5)](https://www.home-assistant.io)
+[![Repo Size](https://img.shields.io/github/repo-size/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels)
+[![Issues](https://img.shields.io/github/issues/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels/issues)
+[![Forks](https://img.shields.io/github/forks/tw-zs/Hapanels)](https://github.com/tw-zs/Hapanels/forks)
+![Badge](https://img.shields.io/badge/Yes,_i_like-BADGES-lime&logo=badge)
 </em>
 
 The project starts from the native HA client foundation in [R1HA](https://github.com/itskenny0/R1HA) and is intended to absorb the useful hardware layer ideas from [ShellyElevate](https://github.com/RapierXbox/ShellyElevate) without using ShellyElevate's Home Assistant WebView dashboard as the primary interface.

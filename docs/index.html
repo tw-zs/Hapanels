@@ -7,145 +7,269 @@
   <title>Hapanels</title>
   <meta name="description" content="Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem.">
   <link rel="redirect_uri" href="r1ha://auth-callback">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@300;400;700;800&display=swap">
   <style>
     :root {
-      --bg: #0f1115;
-      --panel: #171b24;
-      --text: #eef2f7;
-      --muted: #9aa7b8;
-      --accent: #ff8a3d;
-      --accent-2: #6ee7ff;
-      --border: rgba(255, 255, 255, 0.08);
-      --shadow: 0 20px 70px rgba(0, 0, 0, 0.38);
+      --bg: #111217;
+      --surface: #1b1d25;
+      --surface-2: #232631;
+      --text: #edf0f7;
+      --muted: #a8afbf;
+      --header: #e85d04;
+      --accent: #ffb000;
+      --link: #ffb74d;
+      --border: rgba(255, 255, 255, 0.10);
+      --shadow: 0 14px 40px rgba(0, 0, 0, 0.26);
+      --content: 760px;
+      --side: 260px;
     }
 
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background:
-        radial-gradient(circle at 18% 0%, rgba(255, 138, 61, 0.20), transparent 32rem),
-        radial-gradient(circle at 86% 16%, rgba(110, 231, 255, 0.12), transparent 24rem),
-        var(--bg);
+      font-family: Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
       color: var(--text);
-      line-height: 1.55;
+      line-height: 1.6;
     }
 
     a { color: inherit; text-decoration: none; }
-    code { color: var(--accent-2); }
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 64px; }
-    .hero {
-      display: grid;
-      gap: 28px;
-      grid-template-columns: 1.2fr 0.8fr;
+    code { font-family: "JetBrains Mono", monospace; color: var(--accent); }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--header);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    }
+    .topbar-inner {
+      display: flex;
       align-items: center;
-      padding: clamp(22px, 4vw, 42px);
+      gap: 14px;
+      max-width: 1220px;
+      height: 64px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .logo {
+      width: 38px;
+      height: 38px;
+      padding: 7px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+    .title { font-size: 1.05rem; font-weight: 800; flex: 1; }
+    .top-link { font-size: 0.9rem; font-weight: 700; opacity: 0.95; }
+    .tabs { background: #d95100; }
+    .tabs-inner {
+      display: flex;
+      gap: 22px;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 0 20px;
+      overflow-x: auto;
+    }
+    .tab {
+      display: block;
+      padding: 12px 0 10px;
+      border-bottom: 3px solid transparent;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .tab.active { border-color: white; color: white; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: var(--side) minmax(0, var(--content));
+      gap: 36px;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+    .sidebar {
+      position: sticky;
+      top: 116px;
+      align-self: start;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .sidebar-title { color: var(--text); font-weight: 800; margin-bottom: 10px; }
+    .nav-list { list-style: none; padding: 0; margin: 0; border-left: 1px solid var(--border); }
+    .nav-list a {
+      display: block;
+      padding: 8px 0 8px 16px;
+      border-left: 3px solid transparent;
+      transform: translateX(-2px);
+    }
+    .nav-list a:hover, .nav-list a.active { color: var(--accent); border-left-color: var(--accent); }
+
+    .content { min-width: 0; }
+    .hero {
+      padding: 30px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(232, 93, 4, 0.22), rgba(255, 176, 0, 0.08)), var(--surface);
       border: 1px solid var(--border);
-      border-radius: 30px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025));
       box-shadow: var(--shadow);
     }
-
-    .brand {
-      width: 92px;
-      height: 92px;
-      padding: 14px;
-      border-radius: 24px;
-      background: rgba(255, 255, 255, 0.045);
+    h1 { margin: 0 0 8px; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1; }
+    h2 { margin: 38px 0 14px; font-size: 1.65rem; }
+    h3 { margin: 0 0 8px; font-size: 1.12rem; }
+    p { margin: 0 0 14px; color: var(--muted); }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.09);
       border: 1px solid var(--border);
-      margin-bottom: 18px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text);
     }
-
-    h1 { font-size: clamp(2.5rem, 6vw, 5rem); line-height: 0.92; margin: 0 0 16px; letter-spacing: -0.05em; }
-    .lead { font-size: clamp(1.05rem, 2vw, 1.22rem); color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
-    .actions, .links { display: flex; flex-wrap: wrap; gap: 12px; }
+    .app-cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .app-card {
+      display: block;
+      min-height: 210px;
+      padding: 22px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      transition: transform 150ms ease, border-color 150ms ease;
+    }
+    .app-card:hover { transform: translateY(-2px); border-color: rgba(255, 176, 0, 0.55); }
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 72px;
+      height: 72px;
+      margin-bottom: 16px;
+      border-radius: 16px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .icon img { max-width: 48px; max-height: 48px; }
+    .steps {
+      margin: 0;
+      padding-left: 24px;
+      color: var(--muted);
+    }
+    .steps li { margin: 8px 0; }
+    .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
     .button {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 12px 16px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.045);
+      justify-content: center;
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: var(--header);
+      color: white;
+      font-weight: 800;
     }
-    .button.primary { background: linear-gradient(135deg, var(--accent), #ffb15f); color: #18110d; font-weight: 750; border-color: transparent; }
-    .stack, .grid { display: grid; gap: 14px; }
-    .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 16px; }
-    .stat, .card {
-      padding: 18px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.035);
+    .button.secondary { background: var(--surface-2); border: 1px solid var(--border); }
+    .note {
+      padding: 14px 16px;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      background: rgba(255, 176, 0, 0.08);
     }
-    .stat strong, .card h2 { display: block; margin: 0 0 8px; }
-    .muted, .card p, .footer { color: var(--muted); }
-    .section { margin-top: 24px; }
-    .section h3 { margin: 0 0 12px; font-size: 1.02rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-2); }
-    .card p { margin: 0; }
-    .footer { margin-top: 24px; font-size: 0.95rem; }
+    .footer { margin-top: 44px; color: var(--muted); font-size: 0.9rem; }
 
-    @media (max-width: 860px) {
-      .hero, .grid { grid-template-columns: 1fr; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .app-cards { grid-template-columns: 1fr; }
+      .top-link.optional { display: none; }
     }
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <section class="hero">
-      <div>
-        <img class="brand" src="assets/hapanels-logo.svg" alt="Hapanels logo">
-        <h1>Hapanels</h1>
-        <p class="lead">Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem. Bez WebView jako głównego interfejsu: Compose UI, realne sterowanie sprzętem i MQTT discovery dla Home Assistant.</p>
-        <div class="actions">
-          <a class="button primary" href="https://github.com/tw-zs/Hapanels/releases">Pobierz APK</a>
-          <a class="button" href="https://github.com/tw-zs/Hapanels">GitHub</a>
-          <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/ROADMAP.md">Roadmap</a>
-        </div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img class="logo" src="assets/hapanels_icon_no_text.svg" alt="Hapanels logo">
+      <div class="title">Hapanels</div>
+      <a class="top-link optional" href="https://github.com/tw-zs/Hapanels">GitHub</a>
+      <a class="top-link" href="https://github.com/tw-zs/Hapanels/releases">Releases</a>
+    </div>
+    <nav class="tabs" aria-label="Zakładki">
+      <div class="tabs-inner">
+        <a class="tab active" href="./">Strona główna</a>
+        <a class="tab" href="https://github.com/tw-zs/Hapanels/blob/main/docs/ROADMAP.md">Roadmap</a>
+        <a class="tab" href="https://github.com/tw-zs/Hapanels/blob/main/docs/PRODUCTION_PLAN.md">Plan produkcyjny</a>
+        <a class="tab" href="https://github.com/tw-zs/Hapanels/actions/workflows/pages.yml">Deployment</a>
       </div>
-      <div class="stack">
-        <div class="stat">
-          <strong>Aktualny fokus</strong>
-          <span class="muted">Shelly buttons, relay, proximity presence, auto-brightness, AOD/screensaver i dashboard panelowy.</span>
-        </div>
-        <div class="stat">
-          <strong>Dla kogo</strong>
-          <span class="muted">Shelly Wall Display najpierw, większe tablety Android jako fallback.</span>
-        </div>
-        <div class="stat">
-          <strong>OAuth redirect</strong>
-          <span class="muted"><code>r1ha://auth-callback</code></span>
-        </div>
-      </div>
-    </section>
+    </nav>
+  </header>
 
-    <section class="section">
-      <h3>Co jest w środku</h3>
-      <div class="grid">
-        <div class="card">
-          <h2>Natywne UI</h2>
-          <p>Android + Compose zamiast Lovelace WebView jako podstawowego runtime.</p>
-        </div>
-        <div class="card">
-          <h2>Sprzęt panelu</h2>
-          <p>Relay, brightness, ambient light, buttony i binary proximity presence, gdy urządzenie realnie je udostępnia.</p>
-        </div>
-        <div class="card">
-          <h2>Home Assistant</h2>
-          <p>REST, WebSocket, service calls i MQTT discovery/state/command topics.</p>
-        </div>
-      </div>
-    </section>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title">Nawigacja</div>
+      <nav aria-label="Nawigacja boczna">
+        <ul class="nav-list">
+          <li><a class="active" href="#hapanels">Strona główna</a></li>
+          <li><a href="#aplikacje">Dostępna aplikacja</a></li>
+          <li><a href="#instalacja">Szybka instalacja</a></li>
+          <li><a href="#projekt">O projekcie</a></li>
+        </ul>
+      </nav>
+    </aside>
 
-    <section class="section">
-      <h3>Dokumentacja projektu</h3>
-      <div class="links">
-        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/README.md">README</a>
-        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/PRODUCTION_PLAN.md">Plan produkcyjny</a>
-        <a class="button" href="https://github.com/tw-zs/Hapanels/blob/main/docs/MILESTONE_6_AGENT_BRIEF.md">Milestone 6</a>
-        <a class="button" href="https://github.com/tw-zs/Hapanels/actions/workflows/pages.yml">GitHub Pages workflow</a>
+    <main class="content">
+      <section id="hapanels" class="hero">
+        <h1>⭐ Hapanels</h1>
+        <p>Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem.</p>
+        <div class="badge-row" aria-label="Status projektu">
+          <span class="badge">Home Assistant</span>
+          <span class="badge">Android</span>
+          <span class="badge">Kotlin</span>
+          <span class="badge">Status: active</span>
+        </div>
+      </section>
+
+      <h2 id="aplikacje">Dostępna aplikacja</h2>
+      <div class="app-cards">
+        <a class="app-card" href="https://github.com/tw-zs/Hapanels/releases">
+          <div class="icon"><img src="assets/hapanels_icon_no_text.svg" alt="Hapanels"></div>
+          <h3>Hapanels</h3>
+          <p>Natywny dashboard panelowy: Compose UI, Shelly relay/button/proximity, auto-jasność, AOD i MQTT discovery.</p>
+        </a>
+        <a class="app-card" href="https://github.com/tw-zs/Hapanels/blob/main/docs/ROADMAP.md">
+          <div class="icon">📷</div>
+          <h3>Kamery i dashboardy</h3>
+          <p>Następny kierunek: natywny viewer kamer Home Assistant i dalsza synchronizacja dashboardów.</p>
+        </a>
       </div>
-      <p class="footer">Ta strona jest statyczna i deployowana z katalogu <code>docs/</code> przez GitHub Actions.</p>
-    </section>
-  </main>
+
+      <h2 id="instalacja">Szybka instalacja</h2>
+      <p>Pobierz najnowszy APK z GitHub Releases i zainstaluj go na panelu albo tablecie.</p>
+      <div class="button-row">
+        <a class="button" href="https://github.com/tw-zs/Hapanels/releases">Pobierz APK</a>
+        <a class="button secondary" href="https://github.com/tw-zs/Hapanels">Repozytorium</a>
+      </div>
+      <ol class="steps">
+        <li>Pobierz APK z sekcji Releases.</li>
+        <li>Zainstaluj aplikację na Shelly Wall Display albo tablecie Android.</li>
+        <li>Połącz z Home Assistant i włącz MQTT, jeśli chcesz discovery panelu w HA.</li>
+        <li>Na Shelly nadaj uprawnienie <code>WRITE_SETTINGS</code>, jeśli ma działać sterowanie jasnością.</li>
+      </ol>
+
+      <h2 id="projekt">O projekcie</h2>
+      <p>Hapanels nie udaje Lovelace w WebView. Home Assistant dostarcza encje, konfigurację i usługi, a aplikacja renderuje panel natywnie na Androidzie.</p>
+      <div class="note">
+        <strong>Zasada sprzętowa:</strong> pokazujemy tylko realne, zweryfikowane funkcje urządzenia. Brak fikcyjnych sensorów temperatury, wilgotności albo odległości.
+      </div>
+      <p class="footer">Strona statyczna deployowana z <code>docs/</code> przez GitHub Actions. OAuth redirect: <code>r1ha://auth-callback</code>.</p>
+    </main>
+  </div>
 </body>
 </html>

@@ -43,7 +43,7 @@ data class PanelScreenSettings(
                 minBrightnessPercent = advanced.autoBrightnessMinPercent.coerceIn(1, 100),
                 maxBrightnessPercent = advanced.autoBrightnessMaxPercent.coerceIn(1, 100),
                 screensaverEnabled = advanced.screensaverEnabled,
-                screensaverTimeoutMillis = advanced.screensaverTimeoutSec.coerceIn(15, 86_400) * 1_000L,
+                screensaverTimeoutMillis = advanced.screensaverTimeoutSec.coerceIn(5, 86_400) * 1_000L,
             )
         }
     }
@@ -90,6 +90,7 @@ class PanelScreenEngine(
         private set
 
     fun updateSettings(next: PanelScreenSettings, nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
+        val screensaverJustEnabled = !settings.screensaverEnabled && next.screensaverEnabled
         settings = next
         val brightness = if (next.autoBrightnessEnabled) {
             state.targetBrightnessPercent ?: brightnessFor(null, next)
@@ -103,6 +104,7 @@ class PanelScreenEngine(
             } else {
                 state.mode
             },
+            lastUserActivityAtMillis = if (screensaverJustEnabled) nowMillis else state.lastUserActivityAtMillis,
             updatedAtMillis = nowMillis,
         )
         return state
@@ -110,11 +112,19 @@ class PanelScreenEngine(
 
     fun onRuntimeState(runtime: PanelHardwareRuntimeState, nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
         val brightness = throttledBrightness(brightnessFor(runtime.ambientLightLux, settings), nowMillis)
-        val isNear = runtime.proximityDistanceCm?.let { it <= settings.proximityNearThresholdCm } == true
+        val isNear = runtime.proximityDistanceCm?.let { it < settings.proximityNearThresholdCm } == true
         logRuntimeSample(runtime, brightness, isNear)
-        val next = if (settings.proximityWakeEnabled && isNear && nowMillis - lastProximityWakeAtMillis >= PROXIMITY_WAKE_COOLDOWN_MS) {
-            lastProximityWakeAtMillis = nowMillis
-            wake(WakeReason.PROXIMITY, nowMillis, brightness)
+        val next = if (settings.proximityWakeEnabled && isNear) {
+            if (state.mode != PanelScreenMode.ACTIVE && nowMillis - lastProximityWakeAtMillis >= PROXIMITY_WAKE_COOLDOWN_MS) {
+                lastProximityWakeAtMillis = nowMillis
+                wake(WakeReason.PROXIMITY, nowMillis, brightness)
+            } else {
+                state.copy(
+                    targetBrightnessPercent = brightness,
+                    lastUserActivityAtMillis = nowMillis,
+                    updatedAtMillis = nowMillis,
+                )
+            }
         } else {
             state.copy(targetBrightnessPercent = brightness, updatedAtMillis = nowMillis)
         }
@@ -123,7 +133,11 @@ class PanelScreenEngine(
     }
 
     fun onUserActivity(reason: WakeReason = WakeReason.USER, nowMillis: Long = System.currentTimeMillis()): PanelScreenState =
-        wake(reason, nowMillis, state.targetBrightnessPercent)
+        if (state.mode == PanelScreenMode.ACTIVE) {
+            state.copy(lastUserActivityAtMillis = nowMillis, updatedAtMillis = nowMillis).also { state = it }
+        } else {
+            wake(reason, nowMillis, state.targetBrightnessPercent).also { state = it }
+        }
 
     fun onTick(nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
         if (!settings.screensaverEnabled) return state.copy(updatedAtMillis = nowMillis).also { state = it }
@@ -271,7 +285,7 @@ class PanelScreenManager(
     }
 
     fun reportUserActivity(reason: WakeReason = WakeReason.USER) {
-        scope.launch { publish(engine.onUserActivity(reason)) }
+        mutableState.value = engine.onUserActivity(reason)
     }
 
     private suspend fun publish(next: PanelScreenState) {

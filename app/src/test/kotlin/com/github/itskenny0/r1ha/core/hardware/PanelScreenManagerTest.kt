@@ -39,6 +39,23 @@ class PanelScreenManagerTest {
         assertThat(awake.mode).isEqualTo(PanelScreenMode.ACTIVE)
         assertThat(awake.lastWakeReason).isEqualTo(WakeReason.USER)
         assertThat(awake.lastUserActivityAtMillis).isEqualTo(32_000L)
+        assertThat(engine.onTick(61_999L).mode).isEqualTo(PanelScreenMode.ACTIVE)
+    }
+
+    @Test
+    fun userActivityWhileActiveDelaysScreensaver() {
+        val engine = PanelScreenEngine(
+            initialNowMillis = 0L,
+            initialSettings = PanelScreenSettings(
+                screensaverEnabled = true,
+                screensaverTimeoutMillis = 10_000L,
+            ),
+        )
+
+        engine.onUserActivity(WakeReason.USER, 9_000L)
+
+        assertThat(engine.onTick(18_999L).mode).isEqualTo(PanelScreenMode.ACTIVE)
+        assertThat(engine.onTick(19_000L).mode).isEqualTo(PanelScreenMode.SCREENSAVER)
     }
 
     @Test
@@ -62,6 +79,52 @@ class PanelScreenManagerTest {
 
         val ignoredByCooldown = engine.onRuntimeState(near, 12_500L)
         assertThat(ignoredByCooldown.lastWakeAtMillis).isEqualTo(12_000L)
+    }
+
+    @Test
+    fun enablingScreensaverStartsFreshIdleWindow() {
+        val engine = PanelScreenEngine(initialNowMillis = 0L)
+
+        engine.updateSettings(
+            PanelScreenSettings(screensaverEnabled = true, screensaverTimeoutMillis = 10_000L),
+            nowMillis = 60_000L,
+        )
+
+        assertThat(engine.onTick(69_999L).mode).isEqualTo(PanelScreenMode.ACTIVE)
+        assertThat(engine.onTick(70_000L).mode).isEqualTo(PanelScreenMode.SCREENSAVER)
+    }
+
+    @Test
+    fun proximityNearKeepsScreenAwakeWhilePresent() {
+        val engine = PanelScreenEngine(
+            initialNowMillis = 0L,
+            initialSettings = PanelScreenSettings(
+                proximityWakeEnabled = true,
+                proximityNearThresholdCm = 5f,
+                screensaverEnabled = true,
+                screensaverTimeoutMillis = 10_000L,
+            ),
+        )
+        val near = PanelHardwareRuntimeState(proximityDistanceCm = 3f)
+
+        engine.onRuntimeState(near, 9_000L)
+        assertThat(engine.onTick(18_999L).mode).isEqualTo(PanelScreenMode.ACTIVE)
+    }
+
+    @Test
+    fun proximityFarBoundaryDoesNotCountAsNear() {
+        val engine = PanelScreenEngine(
+            initialNowMillis = 0L,
+            initialSettings = PanelScreenSettings(
+                proximityWakeEnabled = true,
+                proximityNearThresholdCm = 10f,
+                screensaverEnabled = true,
+                screensaverTimeoutMillis = 10_000L,
+            ),
+        )
+
+        engine.onRuntimeState(PanelHardwareRuntimeState(proximityDistanceCm = 10f), 9_000L)
+        assertThat(engine.onTick(10_000L).mode).isEqualTo(PanelScreenMode.SCREENSAVER)
     }
 
     @Test

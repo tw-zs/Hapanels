@@ -893,6 +893,7 @@ fun SettingsScreen(
             // ── Behaviour ──────────────────────────────────────────────────────────
             item { Section("BEHAVIOUR", expanded = "BEHAVIOUR" in expandedSections, onToggle = { toggleSection("BEHAVIOUR") }, modifiedCount = sectionModifiedCount["BEHAVIOUR"] ?: 0, onReset = { vm.resetCategory(com.github.itskenny0.r1ha.core.prefs.SettingCategory.BEHAVIOUR) }) }
             if ("BEHAVIOUR" in expandedSections) {
+            item { SubGroupLabel("OBSŁUGA") }
             item {
                 SwitchRow(
                     label = "Haptic feedback",
@@ -949,6 +950,7 @@ fun SettingsScreen(
                     onCheckedChange = { vm.setStartOnDashboard(it) },
                 )
             }
+            item { SubGroupLabel("SPRZĘT PANELU") }
             item {
                 LabeledControl(label = "Panel hardware provider") {
                     Text(
@@ -973,30 +975,19 @@ fun SettingsScreen(
             }
             item {
                 SwitchRow(
-                    label = "Proximity wake",
-                    subtitle = "Wake the panel from the screensaver when the proximity sensor reports near presence.",
+                    label = "Wybudzanie zbliżeniem",
+                    subtitle = "Dodatkowy sposób wybudzania. Działa tylko wtedy, gdy wygaszacz ekranu jest włączony.",
                     checked = s.advanced.proximityWakeEnabled,
                     onCheckedChange = { enabled ->
                         vm.updateAdvanced { it.copy(proximityWakeEnabled = enabled) }
                     },
                 )
             }
-            item {
-                LabeledControl(label = "Proximity near distance") {
-                    SegmentedIntPicker(
-                        options = listOf(2, 5, 10),
-                        selected = s.advanced.proximityNearThresholdCm.toInt().coerceIn(2, 10),
-                        label = { "${it}cm" },
-                        onSelect = { cm ->
-                            vm.updateAdvanced { it.copy(proximityNearThresholdCm = cm.toFloat()) }
-                        },
-                    )
-                }
-            }
+            item { SubGroupLabel("EKRAN I WYGASZACZ") }
             item {
                 SwitchRow(
-                    label = "Auto brightness",
-                    subtitle = "Maps ambient light sensor lux to per-window screen brightness.",
+                    label = "Automatyczna jasność",
+                    subtitle = "Dopasowuje jasność ekranu do czujnika światła.",
                     checked = s.advanced.autoBrightnessEnabled,
                     onCheckedChange = { enabled ->
                         vm.updateAdvanced { it.copy(autoBrightnessEnabled = enabled) }
@@ -1004,32 +995,54 @@ fun SettingsScreen(
                 )
             }
             item {
-                LabeledControl(label = "Auto brightness range") {
-                    Text(text = "Minimum", style = R1.labelMicro, color = R1.InkMuted)
-                    SegmentedIntPicker(
-                        options = listOf(5, 10, 20, 30),
-                        selected = s.advanced.autoBrightnessMinPercent.coerceIn(5, 30),
-                        label = { "$it%" },
-                        onSelect = { percent ->
-                            vm.updateAdvanced { it.copy(autoBrightnessMinPercent = percent) }
-                        },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(text = "Maximum", style = R1.labelMicro, color = R1.InkMuted)
-                    SegmentedIntPicker(
-                        options = listOf(60, 80, 100),
-                        selected = s.advanced.autoBrightnessMaxPercent.coerceIn(60, 100),
-                        label = { "$it%" },
-                        onSelect = { percent ->
-                            vm.updateAdvanced { it.copy(autoBrightnessMaxPercent = percent) }
-                        },
+                LabeledControl(label = "Zakres automatycznej jasności") {
+                    val savedMin = s.advanced.autoBrightnessMinPercent.coerceIn(5, 100)
+                    val savedMax = s.advanced.autoBrightnessMaxPercent.coerceIn(savedMin, 100)
+                    var draftRange by remember(savedMin, savedMax) {
+                        mutableStateOf(savedMin.toFloat()..savedMax.toFloat())
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${draftRange.start.toInt()}–${draftRange.endInclusive.toInt()}%",
+                            style = R1.body,
+                            color = R1.AccentWarm,
+                            modifier = Modifier.width(82.dp),
+                        )
+                        androidx.compose.material3.RangeSlider(
+                            value = draftRange,
+                            onValueChange = { range ->
+                                val min = ((range.start / 5f).toInt() * 5).coerceIn(5, 100)
+                                val max = ((range.endInclusive / 5f).toInt() * 5).coerceIn(min, 100)
+                                draftRange = min.toFloat()..max.toFloat()
+                            },
+                            onValueChangeFinished = {
+                                vm.updateAdvanced {
+                                    it.copy(
+                                        autoBrightnessMinPercent = draftRange.start.toInt(),
+                                        autoBrightnessMaxPercent = draftRange.endInclusive.toInt(),
+                                    )
+                                }
+                            },
+                            valueRange = 5f..100f,
+                            colors = androidx.compose.material3.SliderDefaults.colors(
+                                thumbColor = R1.AccentWarm,
+                                activeTrackColor = R1.AccentWarm,
+                                inactiveTrackColor = R1.Hairline,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Text(
+                        text = "Dolny i górny limit jasności używany przez auto-jasność.",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
                     )
                 }
             }
             item {
                 SwitchRow(
-                    label = "Screensaver",
-                    subtitle = "Show a native dim clock overlay after the panel is idle.",
+                    label = "Wygaszacz ekranu",
+                    subtitle = "Po bezczynności pokazuje czarny ekran z zegarem. To jest sam tryb AOD.",
                     checked = s.advanced.screensaverEnabled,
                     onCheckedChange = { enabled ->
                         vm.updateAdvanced { it.copy(screensaverEnabled = enabled) }
@@ -1037,17 +1050,41 @@ fun SettingsScreen(
                 )
             }
             item {
-                LabeledControl(label = "Screensaver timeout") {
-                    SegmentedIntPicker(
-                        options = listOf(30, 60, 300, 900),
-                        selected = s.advanced.screensaverTimeoutSec.coerceIn(30, 900),
-                        label = { sec -> if (sec < 60) "${sec}s" else "${sec / 60}m" },
-                        onSelect = { seconds ->
-                            vm.updateAdvanced { it.copy(screensaverTimeoutSec = seconds) }
-                        },
+                LabeledControl(label = "Czas do wygaszacza") {
+                    val savedSeconds = s.advanced.screensaverTimeoutSec.coerceIn(5, 900)
+                    var draftSeconds by remember(savedSeconds) { mutableStateOf(savedSeconds) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatSecondsShort(draftSeconds),
+                            style = R1.body,
+                            color = R1.AccentWarm,
+                            modifier = Modifier.width(56.dp),
+                        )
+                        androidx.compose.material3.Slider(
+                            value = draftSeconds.toFloat(),
+                            onValueChange = { value ->
+                                draftSeconds = ((value / 5f).toInt() * 5).coerceIn(5, 900)
+                            },
+                            onValueChangeFinished = {
+                                vm.updateAdvanced { it.copy(screensaverTimeoutSec = draftSeconds) }
+                            },
+                            valueRange = 5f..900f,
+                            colors = androidx.compose.material3.SliderDefaults.colors(
+                                thumbColor = R1.AccentWarm,
+                                activeTrackColor = R1.AccentWarm,
+                                inactiveTrackColor = R1.Hairline,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Text(
+                        text = "Od 5 sekund do 15 minut. Dotyk zawsze wybudza; zbliżenie jest opcjonalnym dodatkowym sposobem.",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
                     )
                 }
             }
+            item { SubGroupLabel("ASYSTENT") }
             item {
                 SwitchRow(
                     label = "Assist · open keyboard on entry",
@@ -1062,6 +1099,7 @@ fun SettingsScreen(
             }
             item { ToastLogLevelRow(current = s.behavior.toastLogLevel, onSelect = { vm.setToastLogLevel(it) }) }
             item { OrientationModeRow(current = s.behavior.orientationMode, onSelect = { vm.setOrientationMode(it) }) }
+            item { SubGroupLabel("SZYBKIE KAFLE") }
             item {
                 SwitchRow(
                     label = "Guest mode (read-only)",
@@ -2120,6 +2158,12 @@ private fun Section(
 @Composable
 private fun SectionDivider() {
     Spacer(Modifier.height(2.dp))
+}
+
+private fun formatSecondsShort(seconds: Int): String = when {
+    seconds < 60 -> "${seconds}s"
+    seconds % 60 == 0 -> "${seconds / 60}m"
+    else -> "${seconds / 60}m ${seconds % 60}s"
 }
 
 /**

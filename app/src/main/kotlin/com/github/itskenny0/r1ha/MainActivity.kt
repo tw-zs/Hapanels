@@ -46,6 +46,7 @@ import com.github.itskenny0.r1ha.nav.Routes
 class MainActivity : ComponentActivity() {
 
     private lateinit var graph: AppGraph
+    private var lastTouchActivityAtMillis = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -342,7 +343,13 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (::graph.isInitialized && ev.actionMasked == MotionEvent.ACTION_DOWN) {
+        val action = ev.actionMasked
+        val shouldReportTouch = action == MotionEvent.ACTION_DOWN ||
+            action == MotionEvent.ACTION_UP ||
+            action == MotionEvent.ACTION_CANCEL ||
+            ev.eventTime - lastTouchActivityAtMillis >= 1_000L
+        if (::graph.isInitialized && shouldReportTouch) {
+            lastTouchActivityAtMillis = ev.eventTime
             graph.panelScreenManager.reportUserActivity(WakeReason.USER)
         }
         return super.dispatchTouchEvent(ev)
@@ -479,25 +486,40 @@ private fun PanelScreensaverOverlay(
     mode: PanelScreenMode,
     onWake: () -> Unit,
 ) {
-    if (mode != PanelScreenMode.SCREENSAVER) return
-    val now by produceState(initialValue = java.time.LocalTime.now()) {
-        while (true) {
-            value = java.time.LocalTime.now()
-            kotlinx.coroutines.delay(1_000L)
-        }
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Black)
-            .r1Pressable(onWake),
-        contentAlignment = androidx.compose.ui.Alignment.Center,
+    androidx.compose.animation.AnimatedVisibility(
+        visible = mode == PanelScreenMode.SCREENSAVER,
+        enter = androidx.compose.animation.fadeIn(
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 900,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing,
+            ),
+        ),
+        exit = androidx.compose.animation.fadeOut(
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 180,
+                easing = androidx.compose.animation.core.LinearEasing,
+            ),
+        ),
     ) {
-        com.github.itskenny0.r1ha.ui.i18n.Text(
-            text = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
-            style = com.github.itskenny0.r1ha.core.theme.R1.numeralXl.copy(letterSpacing = 0.sp),
-            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.82f),
-            modifier = Modifier.padding(24.dp),
-        )
+        val now by produceState(initialValue = java.time.LocalTime.now()) {
+            while (true) {
+                value = java.time.LocalTime.now()
+                kotlinx.coroutines.delay(1_000L)
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(androidx.compose.ui.graphics.Color.Black)
+                .r1Pressable(onWake),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            com.github.itskenny0.r1ha.ui.i18n.Text(
+                text = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                style = com.github.itskenny0.r1ha.core.theme.R1.numeralXl.copy(letterSpacing = 0.sp),
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.82f),
+                modifier = Modifier.padding(24.dp),
+            )
+        }
     }
 }

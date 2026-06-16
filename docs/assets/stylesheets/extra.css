@@ -1,0 +1,111 @@
+:root {
+  --md-text-font: "Nunito";
+  --md-code-font: "JetBrains Mono";
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: #111217;
+  --md-default-fg-color: #edf0f7;
+  --md-default-fg-color--light: #a8afbf;
+  --md-typeset-a-color: #ffb74d;
+  --md-accent-fg-color: #ffb000;
+}
+
+.md-header,
+.md-tabs {
+  background: #e85d04;
+}
+
+.md-tabs {
+  background: #d95100;
+}
+
+.hero {
+  margin: 0 0 1.6rem;
+  padding: 1.4rem 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(232, 93, 4, 0.22), rgba(255, 176, 0, 0.08));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.26);
+}
+
+.hero-lead {
+  margin: 0;
+  color: var(--md-default-fg-color--light);
+  font-size: 1.1rem;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--md-default-fg-color);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.app-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0.8rem 0 1.4rem;
+}
+
+.app-card {
+  display: block;
+  min-height: 10rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.20);
+  transition: transform 150ms ease, border-color 150ms ease;
+}
+
+.app-card:hover {
+  border-color: rgba(255, 176, 0, 0.55);
+  transform: translateY(-2px);
+}
+
+.app-card h3 {
+  margin: 0 0 0.35rem;
+  color: var(--md-default-fg-color);
+}
+
+.app-card p {
+  margin: 0;
+  color: var(--md-default-fg-color--light);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 3.6rem;
+  height: 3.6rem;
+  margin-bottom: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1.8rem;
+}
+
+.icon img {
+  max-width: 2.5rem;
+  max-height: 2.5rem;
+}
+
+@media (max-width: 700px) {
+  .app-cards {
+    grid-template-columns: 1fr;
+  }
+}

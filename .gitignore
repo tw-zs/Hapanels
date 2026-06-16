@@ -4,6 +4,7 @@
 local.properties
 .idea/
 build/
+site/
 captures/
 .externalNativeBuild/
 .cxx/

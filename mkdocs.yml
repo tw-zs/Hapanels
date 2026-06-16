@@ -1,0 +1,72 @@
+site_name: Hapanels
+site_description: Natywny panel Home Assistant dla Shelly Wall Display i tabletów z Androidem.
+site_url: https://tw-zs.github.io/Hapanels/
+repo_url: https://github.com/tw-zs/Hapanels
+repo_name: tw-zs/Hapanels
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  language: pl
+  logo: assets/hapanels_icon_no_text.svg
+  favicon: assets/hapanels_icon_no_text.svg
+  font:
+    text: Nunito
+    code: JetBrains Mono
+  palette:
+    - scheme: slate
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Tryb jasny
+    - scheme: default
+      primary: deep orange
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Tryb ciemny
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+extra_css:
+  - assets/stylesheets/extra.css
+
+extra:
+  alternate:
+    - name: Polski
+      link: ./
+      lang: pl
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/tw-zs/Hapanels
+
+nav:
+  - Strona główna: index.md
+  - Instalacja: installation.md
+  - Sprzęt panelu: hardware.md
+  - Development: development.md
+  - Roadmap: ROADMAP.md
+  - Plan produkcyjny: PRODUCTION_PLAN.md
+  - Milestone 6: MILESTONE_6_AGENT_BRIEF.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true

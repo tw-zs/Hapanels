@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <link rel="redirect_uri" href="r1ha://auth-callback">
+{% endblock %}

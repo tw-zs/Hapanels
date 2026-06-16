@@ -342,6 +342,7 @@ class CardStackViewModel(
                 current.copy(advanced = current.advanced.copy(autoBrightnessEnabled = pct > 0))
             }
             PanelControlTile.AmbientLight,
+            PanelControlTile.ProximityPresence,
             PanelControlTile.PanelStatus -> Unit
         }
     }

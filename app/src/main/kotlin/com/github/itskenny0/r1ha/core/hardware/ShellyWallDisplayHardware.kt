@@ -39,12 +39,15 @@ class ShellyWallDisplayHardware(
     private val appContext = context.applicationContext
     private val sensorManager = appContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
     private val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
-    private val proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+    private val proximitySensor = sensorManager?.getShellyProximitySensor()
     private val screenBrightnessFile = SHELLY_SCREEN_BRIGHTNESS_FILES.firstOrNull { it.exists() }
+    private val supportsGpioProximity = listOf(Build.MODEL, Build.DEVICE, Build.PRODUCT)
+        .any { value -> value.contains("blake", ignoreCase = true) || value.contains("xl", ignoreCase = true) }
     private val inputMonitor = ShellyInputMonitor()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var settingsJob: Job? = null
     @Volatile private var buttonActionMappings: List<HardwareButtonActionMapping> = emptyList()
+    @Volatile private var gpioProximityConfirmed = false
     private val buttonFlushHandler = Handler(Looper.getMainLooper())
     private val buttonDetector = PanelButtonPressDetector { event ->
         eventBus.tryEmit(event)
@@ -69,7 +72,7 @@ class ShellyWallDisplayHardware(
             relayCount = if (ShellyRelayStateStore.defaultRelayFile.exists()) 1 else 0,
             physicalButtonCount = 5,
             hasAmbientLightSensor = lightSensor != null,
-            hasProximitySensor = false,
+            hasProximitySensor = proximitySensor != null,
             supportsScreenBrightness = screenBrightnessFile != null,
             supportsWake = false,
         ),
@@ -104,25 +107,29 @@ class ShellyWallDisplayHardware(
             }
         }
         val lightRegistered = registerSensor(lightSensor)
-        registerSensor(proximitySensor)
-        capabilitiesState.value = capabilitiesState.value.copy(
-            hasAmbientLightSensor = lightRegistered,
-            hasProximitySensor = false,
+        val proximityRegistered = registerSensor(proximitySensor, useMainHandler = false)
+        R1Log.i(
+            "ShellyWallDisplayHardware",
+            "sensors light=${lightSensor?.name ?: "none"} registered=$lightRegistered proximity=${proximitySensor?.name ?: "none"} registered=$proximityRegistered",
         )
-        updateRuntime {
-            it.copy(
-                relayStates = initialRelayStates(),
-                screenBrightnessPercent = readScreenBrightnessPercent(),
-                ambientLightLux = it.ambientLightLux.takeIf { lightRegistered },
-                proximityDistanceCm = null,
-            )
-        }
         val inputStarted = inputMonitor.start(object : ShellyInputMonitor.KeyCallback {
             override fun onHardwareKey(keyCode: Int, action: Int, repeatCount: Int) {
                 handleHardwareKey(keyCode, action)
             }
         })
         R1Log.i("ShellyWallDisplayHardware", "native input started=$inputStarted")
+        capabilitiesState.value = capabilitiesState.value.copy(
+            hasAmbientLightSensor = lightRegistered,
+            hasProximitySensor = proximityRegistered || (inputStarted && supportsGpioProximity),
+        )
+        updateRuntime {
+            it.copy(
+                relayStates = initialRelayStates(),
+                screenBrightnessPercent = readScreenBrightnessPercent(),
+                ambientLightLux = it.ambientLightLux.takeIf { lightRegistered },
+                proximityDistanceCm = it.proximityDistanceCm.takeIf { proximityRegistered },
+            )
+        }
         statusState.value = statusState.value.copy(
             running = true,
             detail = if (inputStarted) {
@@ -228,14 +235,29 @@ class ShellyWallDisplayHardware(
     override fun onSensorChanged(event: SensorEvent) {
         when (event.sensor.type) {
             Sensor.TYPE_LIGHT -> updateRuntime { it.copy(ambientLightLux = sanitizePanelSensorReading(event.values.firstOrNull())) }
+            Sensor.TYPE_PROXIMITY -> {
+                if (gpioProximityConfirmed) return
+                val distance = sanitizePanelSensorReading(event.values.firstOrNull())
+                R1Log.d("ShellyWallDisplayHardware", "proximity distance=${distance?.toString() ?: "invalid"}cm")
+                updateRuntime { it.copy(proximityDistanceCm = distance) }
+            }
         }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
-    private fun registerSensor(sensor: Sensor?): Boolean = sensor?.let {
-        sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, Handler(Looper.getMainLooper())) == true
+    private fun registerSensor(sensor: Sensor?, useMainHandler: Boolean = true): Boolean = sensor?.let {
+        if (useMainHandler) {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, Handler(Looper.getMainLooper())) == true
+        } else {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) == true
+        }
     } ?: false
+
+    private fun SensorManager.getShellyProximitySensor(): Sensor? =
+        getDefaultSensor(Sensor.TYPE_PROXIMITY)
+            ?: getDefaultSensor(Sensor.TYPE_PROXIMITY, true)
+            ?: getDefaultSensor(Sensor.TYPE_PROXIMITY, false)
 
     private fun updateRuntime(transform: (PanelHardwareRuntimeState) -> PanelHardwareRuntimeState) {
         runtimeStateState.value = transform(runtimeStateState.value).copy(updatedAtMillis = System.currentTimeMillis())
@@ -248,6 +270,17 @@ class ShellyWallDisplayHardware(
     }.getOrNull()
 
     private fun handleHardwareKey(keyCode: Int, action: Int) {
+        val proximityDistance = ShellyInputKeyMap.proximityDistanceFor(keyCode)
+        if (proximityDistance != null) {
+            if (action == ACTION_DOWN) {
+                gpioProximityConfirmed = true
+                capabilitiesState.value = capabilitiesState.value.copy(hasProximitySensor = true)
+                R1Log.d("ShellyWallDisplayHardware", "gpio proximity distance=${proximityDistance}cm keyCode=$keyCode")
+                updateRuntime { it.copy(proximityDistanceCm = proximityDistance) }
+            }
+            return
+        }
+
         val relayId = ShellyInputKeyMap.relayIdFor(keyCode)
         if (relayId != null) {
             if (action == ACTION_DOWN || action == ACTION_UP) {
@@ -428,9 +461,17 @@ internal object ShellyInputKeyMap {
     const val KEY_F2 = 60
     const val KEY_F3 = 61
     const val KEY_F4 = 62
+    const val KEY_F5 = 63
+    const val KEY_F6 = 64
     const val KEY_F10 = 68
     const val KEY_F11 = 87
     const val KEY_F12 = 88
+
+    fun proximityDistanceFor(keyCode: Int): Float? = when (keyCode) {
+        KEY_F5 -> 0f
+        KEY_F6 -> 10f
+        else -> null
+    }
 
     fun buttonIdFor(keyCode: Int): Int? = when (keyCode) {
         KEY_F1 -> 1

@@ -29,7 +29,7 @@ class PanelMqttBridge(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val objectId = "hapanels_${Build.DEVICE.ifBlank { "panel" }.safeId()}"
     private val baseTopic = "hapanels/${Build.DEVICE.ifBlank { "panel" }.safeId()}"
-    private var discoverySignature: Pair<Int, Int>? = null
+    private var discoverySignature: PanelDiscoverySignature? = null
     private var session: MqttSession? = null
     private var settingsJob: Job? = null
     private var sessionJob: Job? = null
@@ -58,7 +58,7 @@ class PanelMqttBridge(
         scope.launch {
             hardware.capabilities
                 .collect { capabilities ->
-                    val signature = capabilities.relayCount to capabilities.physicalButtonCount
+                    val signature = PanelDiscoverySignature.from(capabilities)
                     if (signature != discoverySignature) {
                         discoverySignature = signature
                         publishDiscovery(capabilities)
@@ -80,7 +80,9 @@ class PanelMqttBridge(
                 runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/brightness/state", it.toString(), retain = true) }
                 runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/applied_brightness/state", it.toString(), retain = true) }
                 runtime.ambientLightLux?.let { publish("$baseTopic/sensor/ambient_light/state", it.toString(), retain = true) }
-                runtime.proximityDistanceCm?.let { publish("$baseTopic/sensor/proximity/state", it.toString(), retain = true) }
+                runtime.proximityDistanceCm?.let {
+                    publish("$baseTopic/binary_sensor/proximity_presence/state", if (it <= 5f) "ON" else "OFF", retain = true)
+                }
             }
         }
         scope.launch {
@@ -428,22 +430,24 @@ class PanelMqttBridge(
         }
         if (capabilities.hasProximitySensor) {
             discovery(
-                component = "sensor",
-                entityId = "proximity_distance",
+                component = "binary_sensor",
+                entityId = "proximity_presence",
                 payload = """
                     {
-                      "name":"Proximity distance",
-                      "unique_id":"${objectId}_proximity_distance",
-                      "state_topic":"$baseTopic/sensor/proximity/state",
-                      "state_class":"measurement",
-                      "unit_of_measurement":"cm",
-                      "icon":"mdi:arrow-expand-horizontal",
+                      "name":"Obecność przy panelu",
+                      "unique_id":"${objectId}_proximity_presence",
+                      "state_topic":"$baseTopic/binary_sensor/proximity_presence/state",
+                      "payload_on":"ON",
+                      "payload_off":"OFF",
+                      "device_class":"occupancy",
                       "availability_topic":"$baseTopic/status",
                       "device":${deviceJson()}
                     }
                 """.compactJson(),
             )
+            clearDiscovery(component = "sensor", entityId = "proximity_distance")
         } else {
+            clearDiscovery(component = "binary_sensor", entityId = "proximity_presence")
             clearDiscovery(component = "sensor", entityId = "proximity_distance")
         }
     }
@@ -753,3 +757,21 @@ private fun String.compactJson(): String = lineSequence()
     .map { it.trim() }
     .filter { it.isNotEmpty() }
     .joinToString("")
+
+private data class PanelDiscoverySignature(
+    val relayCount: Int,
+    val physicalButtonCount: Int,
+    val hasAmbientLightSensor: Boolean,
+    val hasProximitySensor: Boolean,
+    val supportsScreenBrightness: Boolean,
+) {
+    companion object {
+        fun from(capabilities: PanelCapabilities): PanelDiscoverySignature = PanelDiscoverySignature(
+            relayCount = capabilities.relayCount,
+            physicalButtonCount = capabilities.physicalButtonCount,
+            hasAmbientLightSensor = capabilities.hasAmbientLightSensor,
+            hasProximitySensor = capabilities.hasProximitySensor,
+            supportsScreenBrightness = capabilities.supportsScreenBrightness,
+        )
+    }
+}

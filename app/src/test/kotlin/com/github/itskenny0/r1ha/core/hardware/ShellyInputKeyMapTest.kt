@@ -17,10 +17,19 @@ class ShellyInputKeyMapTest {
         assertThat(ShellyInputKeyMap.buttonIdFor(ShellyInputKeyMap.KEY_F11)).isNull()
     }
 
+    @Test fun mapsGpioProximityKeysSeparatelyFromButtons() {
+        assertThat(ShellyInputKeyMap.proximityDistanceFor(ShellyInputKeyMap.KEY_F5)).isEqualTo(0f)
+        assertThat(ShellyInputKeyMap.proximityDistanceFor(ShellyInputKeyMap.KEY_F6)).isEqualTo(10f)
+        assertThat(ShellyInputKeyMap.buttonIdFor(ShellyInputKeyMap.KEY_F5)).isNull()
+        assertThat(ShellyInputKeyMap.buttonIdFor(ShellyInputKeyMap.KEY_F6)).isNull()
+    }
+
     @Test fun ignoresUnknownAndReservedKeys() {
         assertThat(ShellyInputKeyMap.buttonIdFor(ShellyInputKeyMap.KEY_F12)).isNull()
         assertThat(ShellyInputKeyMap.relayIdFor(ShellyInputKeyMap.KEY_F12)).isNull()
+        assertThat(ShellyInputKeyMap.proximityDistanceFor(ShellyInputKeyMap.KEY_F12)).isNull()
         assertThat(ShellyInputKeyMap.buttonIdFor(0)).isNull()
         assertThat(ShellyInputKeyMap.relayIdFor(0)).isNull()
+        assertThat(ShellyInputKeyMap.proximityDistanceFor(0)).isNull()
     }
 }

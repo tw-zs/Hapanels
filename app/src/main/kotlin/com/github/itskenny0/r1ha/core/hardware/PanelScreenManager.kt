@@ -4,6 +4,7 @@ import android.view.Window
 import android.view.WindowManager
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
+import com.github.itskenny0.r1ha.core.util.R1Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -78,6 +79,9 @@ class PanelScreenEngine(
     private var settings = initialSettings
     private var lastProximityWakeAtMillis = -PROXIMITY_WAKE_COOLDOWN_MS
     private var lastBrightnessTargetAtMillis = initialNowMillis - BRIGHTNESS_HYSTERESIS_MS
+    private var lastLoggedAmbientLightLux: Float? = null
+    private var lastLoggedProximityDistanceCm: Float? = null
+    private var lastLoggedTargetBrightness: Int? = null
     var state: PanelScreenState = PanelScreenState(
         targetBrightnessPercent = brightnessFor(null, initialSettings),
         lastUserActivityAtMillis = initialNowMillis,
@@ -87,7 +91,11 @@ class PanelScreenEngine(
 
     fun updateSettings(next: PanelScreenSettings, nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
         settings = next
-        val brightness = brightnessFor(null, next)
+        val brightness = if (next.autoBrightnessEnabled) {
+            state.targetBrightnessPercent ?: brightnessFor(null, next)
+        } else {
+            null
+        }
         state = state.copy(
             targetBrightnessPercent = brightness,
             mode = if (!next.screensaverEnabled && state.mode == PanelScreenMode.SCREENSAVER) {
@@ -103,6 +111,7 @@ class PanelScreenEngine(
     fun onRuntimeState(runtime: PanelHardwareRuntimeState, nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
         val brightness = throttledBrightness(brightnessFor(runtime.ambientLightLux, settings), nowMillis)
         val isNear = runtime.proximityDistanceCm?.let { it <= settings.proximityNearThresholdCm } == true
+        logRuntimeSample(runtime, brightness, isNear)
         val next = if (settings.proximityWakeEnabled && isNear && nowMillis - lastProximityWakeAtMillis >= PROXIMITY_WAKE_COOLDOWN_MS) {
             lastProximityWakeAtMillis = nowMillis
             wake(WakeReason.PROXIMITY, nowMillis, brightness)
@@ -137,14 +146,53 @@ class PanelScreenEngine(
     }
 
     private fun wake(reason: WakeReason, nowMillis: Long, brightness: Int?): PanelScreenState =
-        state.copy(
-            mode = PanelScreenMode.ACTIVE,
-            targetBrightnessPercent = brightness,
-            lastWakeReason = reason,
-            lastWakeAtMillis = nowMillis,
-            lastUserActivityAtMillis = nowMillis,
-            updatedAtMillis = nowMillis,
+        run {
+            R1Log.d(
+                "PanelScreenManager",
+                "wake reason=${reason.name.lowercase()} brightness=${brightness?.toString() ?: "system"}",
+            )
+            state.copy(
+                mode = PanelScreenMode.ACTIVE,
+                targetBrightnessPercent = brightness,
+                lastWakeReason = reason,
+                lastWakeAtMillis = nowMillis,
+                lastUserActivityAtMillis = nowMillis,
+                updatedAtMillis = nowMillis,
+            )
+        }
+
+    private fun logRuntimeSample(
+        runtime: PanelHardwareRuntimeState,
+        brightness: Int?,
+        isNear: Boolean,
+    ) {
+        val ambient = runtime.ambientLightLux
+        val proximity = runtime.proximityDistanceCm
+        val changed = ambient != lastLoggedAmbientLightLux || proximity != lastLoggedProximityDistanceCm || brightness != lastLoggedTargetBrightness
+        if (!changed && !isNear) return
+        lastLoggedAmbientLightLux = ambient
+        lastLoggedProximityDistanceCm = proximity
+        lastLoggedTargetBrightness = brightness
+        R1Log.d(
+            "PanelScreenManager",
+            buildString {
+                append("runtime lux=")
+                append(ambient?.toString() ?: "null")
+                append(" proximityCm=")
+                append(proximity?.toString() ?: "null")
+                append(" near=")
+                append(isNear)
+                append(" autoBrightness=")
+                append(settings.autoBrightnessEnabled)
+                append(" proximityWake=")
+                append(settings.proximityWakeEnabled)
+                append(" target=")
+                append(brightness?.toString() ?: "system")
+                append(" mode=")
+                append(state.mode.name.lowercase())
+            },
         )
+    }
 
     private fun brightnessFor(lux: Float?, settings: PanelScreenSettings): Int? =
         if (settings.autoBrightnessEnabled) {

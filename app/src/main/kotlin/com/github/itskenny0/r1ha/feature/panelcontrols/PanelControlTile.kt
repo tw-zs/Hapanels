@@ -16,6 +16,7 @@ enum class PanelControlTile(
     ScreenBrightness("hapanels://panel/screen_brightness", "Jasność ekranu", "number.hapanels_panel_screen_brightness"),
     AutoBrightness("hapanels://panel/auto_brightness", "Auto-jasność", "switch.hapanels_panel_auto_brightness"),
     AmbientLight("hapanels://panel/ambient_light", "Światło otoczenia", "sensor.hapanels_panel_ambient_light"),
+    ProximityPresence("hapanels://panel/proximity_presence", "Obecność przy panelu", "binary_sensor.hapanels_panel_proximity_presence"),
     PanelStatus("hapanels://panel/status", "Stan panelu", "binary_sensor.hapanels_panel_status"),
 }
 
@@ -30,6 +31,7 @@ fun availablePanelControlTiles(capabilities: PanelCapabilities): List<PanelContr
     if (capabilities.supportsScreenBrightness) add(PanelControlTile.ScreenBrightness)
     if (capabilities.supportsScreenBrightness && capabilities.hasAmbientLightSensor) add(PanelControlTile.AutoBrightness)
     if (capabilities.hasAmbientLightSensor) add(PanelControlTile.AmbientLight)
+    if (capabilities.hasProximitySensor) add(PanelControlTile.ProximityPresence)
     add(PanelControlTile.PanelStatus)
 }
 
@@ -106,6 +108,26 @@ fun materializePanelControlTile(
                 rawState = lux?.let { "%.1f".format(it) } ?: "unknown",
                 unit = "lx",
                 deviceClass = "illuminance",
+            )
+        }
+        PanelControlTile.ProximityPresence -> {
+            val near = runtime.proximityDistanceCm?.let { it <= 5f }
+            EntityState(
+                id = EntityId(tile.entityId),
+                friendlyName = tile.label,
+                area = "Kontrola panelu",
+                isOn = near == true,
+                percent = null,
+                raw = null,
+                lastChanged = now,
+                isAvailable = near != null,
+                supportsScalar = false,
+                rawState = when (near) {
+                    true -> "on"
+                    false -> "off"
+                    null -> "unknown"
+                },
+                deviceClass = "occupancy",
             )
         }
         PanelControlTile.PanelStatus -> EntityState(

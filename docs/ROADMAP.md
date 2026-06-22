@@ -194,3 +194,20 @@ Verification:
 
 Maybe later:
 - ESPHome Bluetooth proxy support for nearby BLE devices.
+
+## Milestone 10: First-Run Setup
+
+Goal: make first launch feel like a real device onboarding flow instead of a raw app start.
+
+Status: planned.
+
+Tasks:
+- First-run screen with a tablet name field.
+- Initial setup hints for the most important panel settings.
+- Save the chosen tablet name into app and HA-facing identity surfaces.
+- Small UX polish for the first-launch flow so it feels guided and not technical.
+
+Verification:
+- Fresh install shows onboarding before the main dashboard.
+- Tablet name can be entered and persists after restart.
+- Onboarding completes cleanly into normal panel use.

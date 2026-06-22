@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_BASE_TOPIC, DATA_PANELS, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
+from .const import CONF_BASE_TOPIC, DATA_CONFIGS, DATA_PANELS, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
 
 
 @dataclass
@@ -32,6 +32,7 @@ async def async_setup_entry(
 ) -> None:
     base_topic = entry.data.get(CONF_BASE_TOPIC, DEFAULT_BASE_TOPIC).strip("/")
     panels: dict[str, HapanelsSyncSensor] = hass.data[DOMAIN][entry.entry_id][DATA_PANELS]
+    configs: dict[str, Any] = hass.data[DOMAIN][entry.entry_id][DATA_CONFIGS]
 
     @callback
     def handle_sync_state(msg) -> None:
@@ -55,10 +56,27 @@ async def async_setup_entry(
     )
     hass.data[DOMAIN][entry.entry_id][DATA_UNSUB].append(unsub)
 
+    @callback
+    def handle_config_state(msg) -> None:
+        device = _device_from_topic(base_topic, msg.topic, "/dashboard/config/state")
+        if device is None:
+            return
+        try:
+            configs[device] = json.loads(msg.payload)
+        except json.JSONDecodeError:
+            configs.pop(device, None)
 
-def _device_from_topic(base_topic: str, topic: str) -> str | None:
+    config_unsub = await mqtt.async_subscribe(
+        hass,
+        f"{base_topic}/+/dashboard/config/state",
+        handle_config_state,
+        qos=0,
+    )
+    hass.data[DOMAIN][entry.entry_id][DATA_UNSUB].append(config_unsub)
+
+
+def _device_from_topic(base_topic: str, topic: str, suffix: str = "/dashboard/config/sync/state") -> str | None:
     prefix = f"{base_topic}/"
-    suffix = "/dashboard/config/sync/state"
     if not topic.startswith(prefix) or not topic.endswith(suffix):
         return None
     device = topic[len(prefix) : -len(suffix)]

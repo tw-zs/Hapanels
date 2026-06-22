@@ -16,6 +16,7 @@ from .const import (
     ATTR_DEVICE,
     ATTR_PATCH,
     CONF_BASE_TOPIC,
+    DATA_CONFIGS,
     DATA_PANELS,
     DATA_PANEL_REGISTERED,
     DATA_UNSUB,
@@ -39,6 +40,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         DATA_PANELS: {},
+        DATA_CONFIGS: {},
         DATA_UNSUB: [],
     }
 
@@ -87,6 +89,7 @@ def _register_websocket(hass: HomeAssistant) -> None:
     if hass.data[DOMAIN].get(DATA_WS_REGISTERED):
         return
     websocket_api.async_register_command(hass, websocket_list_panels)
+    websocket_api.async_register_command(hass, websocket_get_dashboard_config)
     hass.data[DOMAIN][DATA_WS_REGISTERED] = True
 
 
@@ -103,6 +106,21 @@ async def websocket_list_panels(hass: HomeAssistant, connection, msg) -> None:
             if as_dict is not None:
                 panels.append(as_dict())
     connection.send_result(msg["id"], {"panels": panels})
+
+
+@callback
+@websocket_api.websocket_command({
+    vol.Required("type"): "hapanels/get_dashboard_config",
+    vol.Required("device"): str,
+})
+@websocket_api.async_response
+async def websocket_get_dashboard_config(hass: HomeAssistant, connection, msg) -> None:
+    device = msg["device"]
+    for entry_data in hass.data.get(DOMAIN, {}).values():
+        if isinstance(entry_data, dict) and device in entry_data.get(DATA_CONFIGS, {}):
+            connection.send_result(msg["id"], {"device": device, "config": entry_data[DATA_CONFIGS][device]})
+            return
+    connection.send_result(msg["id"], {"device": device, "config": None})
 
 
 async def _register_panel(hass: HomeAssistant) -> None:

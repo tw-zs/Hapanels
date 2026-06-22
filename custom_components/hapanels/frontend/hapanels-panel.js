@@ -2,6 +2,7 @@ class HapanelsStudioPanel extends HTMLElement {
   connectedCallback() {
     this.attachShadow({ mode: "open" });
     this._panels = [];
+    this._configs = {};
     this._error = null;
     this._render();
     this._load();
@@ -18,6 +19,7 @@ class HapanelsStudioPanel extends HTMLElement {
     try {
       const result = await this._hass.callWS({ type: "hapanels/list_panels" });
       this._panels = result.panels || [];
+      await Promise.all(this._panels.map((panel) => this._loadConfig(panel.device)));
       this._error = null;
       this._loaded = true;
     } catch (err) {
@@ -26,6 +28,30 @@ class HapanelsStudioPanel extends HTMLElement {
       this._loading = false;
       this._render();
     }
+  }
+
+  async _loadConfig(device) {
+    if (!device) return;
+    const result = await this._hass.callWS({ type: "hapanels/get_dashboard_config", device });
+    this._configs[device] = result.config || null;
+  }
+
+  async _saveTileLabel(device, tileId, inputId) {
+    const config = this._configs[device];
+    const revision = Number(config?.revision);
+    const input = this.shadowRoot.getElementById(inputId);
+    const label = input?.value?.trim();
+    if (!config || !Number.isFinite(revision) || !label) return;
+    await this._hass.callService("hapanels", "patch_dashboard_config", {
+      device,
+      patch: {
+        base_revision: revision,
+        updated_by: "homeassistant:hapanels_studio",
+        surface: "dashboard",
+        tile_updates: [{ id: tileId, label }],
+      },
+    });
+    window.setTimeout(() => this._load(), 800);
   }
 
   _render() {
@@ -54,6 +80,10 @@ class HapanelsStudioPanel extends HTMLElement {
         .unknown, .invalid { background: rgba(255,255,255,.1); color: #c5cad3; }
         dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 18px 0 0; }
         dt { color: #8d95a3; } dd { margin: 0; overflow-wrap: anywhere; }
+        .tiles { margin-top: 18px; display: grid; gap: 10px; }
+        .tile { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(255,255,255,.03); }
+        input { min-width: 0; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: #090d12; color: #f5f3ee; padding: 10px; font: inherit; }
+        .small { padding: 10px 12px; border-radius: 10px; }
         .empty { border: 1px dashed rgba(255,255,255,.18); border-radius: 22px; padding: 28px; color: #a7adb8; }
         .error { color: #ff725d; margin-top: 12px; }
       </style>
@@ -70,10 +100,19 @@ class HapanelsStudioPanel extends HTMLElement {
       </main>
     `;
     this.shadowRoot.getElementById("refresh")?.addEventListener("click", () => this._load());
+    this.shadowRoot.querySelectorAll("[data-save-tile]").forEach((button) => {
+      button.addEventListener("click", () => this._saveTileLabel(
+        button.dataset.device,
+        button.dataset.tile,
+        button.dataset.input,
+      ));
+    });
   }
 
   _panelCard(panel) {
     const status = this._escape(panel.status || "unknown");
+    const config = this._configs[panel.device];
+    const tiles = (config?.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     return `
       <article class="card">
         <div class="name">
@@ -87,7 +126,18 @@ class HapanelsStudioPanel extends HTMLElement {
           <dt>Current</dt><dd>${this._escape(panel.current_revision ?? "-")}</dd>
           <dt>Attempted</dt><dd>${this._escape(panel.attempted_base_revision ?? "-")}</dd>
         </dl>
+        ${tiles.length ? `<div class="tiles">${tiles.map((tile) => this._tileEditor(panel.device, tile)).join("")}</div>` : `<div class="empty">Brak pobranej konfiguracji dashboardu.</div>`}
       </article>
+    `;
+  }
+
+  _tileEditor(device, tile) {
+    const inputId = `tile-${device}-${tile.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    return `
+      <div class="tile">
+        <input id="${this._escape(inputId)}" value="${this._escape(tile.label || tile.id)}" aria-label="Etykieta kafla ${this._escape(tile.id)}">
+        <button class="small" data-save-tile data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}" data-input="${this._escape(inputId)}">Zapisz</button>
+      </div>
     `;
   }
 

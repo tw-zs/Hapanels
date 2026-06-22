@@ -4,6 +4,7 @@ CONF_BASE_TOPIC = "base_topic"
 DEFAULT_BASE_TOPIC = "hapanels"
 
 DATA_PANELS = "panels"
+DATA_CONFIGS = "configs"
 DATA_UNSUB = "unsub"
 DATA_PANEL_REGISTERED = "panel_registered"
 DATA_WS_REGISTERED = "ws_registered"

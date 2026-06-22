@@ -7,7 +7,6 @@ DATA_PANELS = "panels"
 DATA_CONFIGS = "configs"
 DATA_UNSUB = "unsub"
 DATA_PANEL_REGISTERED = "panel_registered"
-DATA_WS_REGISTERED = "ws_registered"
 
 SERVICE_SET_DASHBOARD_CONFIG = "set_dashboard_config"
 SERVICE_PATCH_DASHBOARD_CONFIG = "patch_dashboard_config"

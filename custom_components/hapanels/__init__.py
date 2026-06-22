@@ -20,7 +20,6 @@ from .const import (
     DATA_PANELS,
     DATA_PANEL_REGISTERED,
     DATA_UNSUB,
-    DATA_WS_REGISTERED,
     DEFAULT_BASE_TOPIC,
     DOMAIN,
     PANEL_ELEMENT,
@@ -86,11 +85,8 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 def _register_websocket(hass: HomeAssistant) -> None:
-    if hass.data[DOMAIN].get(DATA_WS_REGISTERED):
-        return
     websocket_api.async_register_command(hass, websocket_list_panels)
     websocket_api.async_register_command(hass, websocket_get_dashboard_config)
-    hass.data[DOMAIN][DATA_WS_REGISTERED] = True
 
 
 @callback

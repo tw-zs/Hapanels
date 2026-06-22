@@ -244,6 +244,10 @@ class PanelScreenManager(
     private var startJob: Job? = null
     @Volatile
     private var window: Window? = null
+    @Volatile
+    private var aodMinBrightnessPercent: Int? = null
+    private var aodRestoreBrightnessPercent: Int? = null
+    private var lastAppliedAodBrightnessPercent: Int? = null
 
     fun attachWindow(window: Window) {
         this.window = window
@@ -280,7 +284,9 @@ class PanelScreenManager(
         scope.launch {
             state
                 .distinctUntilChanged { a, b -> a.targetBrightnessPercent == b.targetBrightnessPercent }
-                .collect { applyBrightness(it.targetBrightnessPercent) }
+                .collect {
+                    if (aodMinBrightnessPercent == null) applyBrightness(it.targetBrightnessPercent)
+                }
         }
     }
 
@@ -288,8 +294,40 @@ class PanelScreenManager(
         mutableState.value = engine.onUserActivity(reason)
     }
 
+    fun setAodBrightnessOverride(percent: Int?) {
+        val safePercent = percent?.coerceIn(1, 100)
+        if (safePercent != null) {
+            if (aodMinBrightnessPercent == null) {
+                aodRestoreBrightnessPercent = mutableState.value.targetBrightnessPercent
+                    ?: hardware.runtimeState.value.screenBrightnessPercent
+            }
+            aodMinBrightnessPercent = safePercent
+            applyAodBrightness(hardware.runtimeState.value.ambientLightLux)
+            return
+        }
+        if (aodMinBrightnessPercent == null) return
+        aodMinBrightnessPercent = null
+        lastAppliedAodBrightnessPercent = null
+        applyBrightness(aodRestoreBrightnessPercent ?: mutableState.value.targetBrightnessPercent)
+        aodRestoreBrightnessPercent = null
+    }
+
     private suspend fun publish(next: PanelScreenState) {
         mutableState.value = next
+        if (next.mode == PanelScreenMode.SCREENSAVER && aodMinBrightnessPercent != null) {
+            applyAodBrightness(hardware.runtimeState.value.ambientLightLux)
+        }
+    }
+
+    private fun applyAodBrightness(lux: Float?) {
+        val min = aodMinBrightnessPercent ?: return
+        val max = mutableState.value.targetBrightnessPercent
+            ?: hardware.runtimeState.value.screenBrightnessPercent
+            ?: 100
+        val next = PanelBrightnessCurve.percentForLux(lux, min, max.coerceAtLeast(min))
+        if (next == lastAppliedAodBrightnessPercent) return
+        lastAppliedAodBrightnessPercent = next
+        applyBrightness(next)
     }
 
     private fun applyBrightness(percent: Int?) {

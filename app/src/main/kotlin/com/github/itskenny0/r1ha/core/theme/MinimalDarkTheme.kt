@@ -112,6 +112,10 @@ object MinimalDarkTheme : R1Theme {
                         style = R1.labelMicro,
                     )
                 }
+                model.stateLabel?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(text = it, style = R1.labelMicro, color = accent)
+                }
                 Spacer(Modifier.height(20.dp))
                 // Hide the giant percent readout on media_player cards that are
                 // currently playing — same logic as PragmaticHybridTheme. The

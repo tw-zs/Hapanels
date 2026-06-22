@@ -1,0 +1,20 @@
+set_dashboard_config:
+  fields:
+    device:
+      required: true
+      selector:
+        text:
+    config:
+      required: true
+      selector:
+        object:
+patch_dashboard_config:
+  fields:
+    device:
+      required: true
+      selector:
+        text:
+    patch:
+      required: true
+      selector:
+        object:

@@ -54,6 +54,7 @@ extra:
 nav:
   - Strona główna: index.md
   - Instalacja: installation.md
+  - Integracja Home Assistant: home-assistant-integration.md
   - Sprzęt panelu: hardware.md
   - Development: development.md
   - Roadmap: ROADMAP.md

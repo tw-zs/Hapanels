@@ -65,13 +65,20 @@ class HapanelsDashboardConfigSource(
             )
         }
         val updatesById = patch.tileUpdates.associateBy { it.id }
-        val next = current.copy(
-            revision = current.revision + 1,
-            updatedBy = patch.updatedBy,
-            tiles = current.tiles.map { tile ->
-                updatesById[tile.id]?.let(tile::applyPatch) ?: tile
-            },
-        )
+        val next = when (patch.surface) {
+            HapanelsDashboardSurface.DASHBOARD -> current.copy(
+                revision = current.revision + 1,
+                updatedBy = patch.updatedBy,
+                tiles = current.tiles.applyPatches(updatesById),
+            )
+            HapanelsDashboardSurface.AOD -> current.copy(
+                revision = current.revision + 1,
+                updatedBy = patch.updatedBy,
+                alwaysOnDisplay = current.alwaysOnDisplay.copy(
+                    tiles = current.alwaysOnDisplay.tiles.applyPatches(updatesById),
+                ),
+            )
+        }
         dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
         HapanelsDashboardPatchResult.Applied(next)
     }
@@ -98,3 +105,9 @@ private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTil
     accent = patch.accent ?: accent,
     order = patch.order ?: order,
 )
+
+private fun List<HapanelsTileConfig>.applyPatches(
+    updatesById: Map<String, HapanelsTilePatch>,
+): List<HapanelsTileConfig> = map { tile ->
+    updatesById[tile.id]?.let(tile::applyPatch) ?: tile
+}

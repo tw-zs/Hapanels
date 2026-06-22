@@ -20,6 +20,7 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(config.dashboardId).isEqualTo("home-panel-main")
         assertThat(raw).contains("home-panel-main")
         assertThat(raw).contains("Oświetlenie")
+        assertThat(config.alwaysOnDisplay.tiles.first().kind).isEqualTo(HapanelsTileKind.CLOCK)
     }
 
     @Test fun importValidJsonReplacesCachedConfig() = runTest {
@@ -125,6 +126,60 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(result).isInstanceOf(HapanelsDashboardPatchResult.Applied::class.java)
         assertThat(loaded.tiles.first { it.id == "energy" }.label).isEqualTo("Pobór")
         assertThat(loaded.tiles.first { it.id == "energy" }.order).isEqualTo(99)
+    }
+
+    @Test fun syncStateJsonReportsSyncedAndConflict() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+
+        val synced = current.syncStateJson("synced")
+        val conflict = current.syncStateJson("conflict", attemptedBaseRevision = current.revision - 1, currentRevision = current.revision)
+
+        assertThat(synced).contains("\"status\":\"synced\"")
+        assertThat(synced).contains("\"revision\":${current.revision}")
+        assertThat(conflict).contains("\"status\":\"conflict\"")
+        assertThat(conflict).contains("\"attempted_base_revision\":${current.revision - 1}")
+        assertThat(conflict).contains("\"current_revision\":${current.revision}")
+    }
+
+    @Test fun applyPatchCanTargetAodTiles() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+
+        val result = source.applyPatch(
+            HapanelsDashboardPatch(
+                baseRevision = current.revision,
+                updatedBy = "homeassistant:aod_editor",
+                surface = HapanelsDashboardSurface.AOD,
+                tileUpdates = listOf(
+                    HapanelsTilePatch(
+                        id = "aod_temperature",
+                        label = "Na zewnątrz",
+                        order = 9,
+                    ),
+                ),
+            ),
+        )
+        val loaded = source.loadOrSeed()
+
+        assertThat(result).isInstanceOf(HapanelsDashboardPatchResult.Applied::class.java)
+        assertThat(loaded.revision).isEqualTo(current.revision + 1)
+        assertThat(loaded.updatedBy).isEqualTo("homeassistant:aod_editor")
+        assertThat(loaded.alwaysOnDisplay.tiles.first { it.id == "aod_temperature" }.label).isEqualTo("Na zewnątrz")
+        assertThat(loaded.alwaysOnDisplay.tiles.first { it.id == "aod_temperature" }.order).isEqualTo(9)
+        assertThat(loaded.tiles.first { it.id == "energy" }.label).isEqualTo("Energia")
+    }
+
+    @Test fun oldAodLayoutStringStillLoads() = runTest {
+        val source = newSource()
+        val oldRaw = SAMPLE_HAPANELS_DASHBOARD_JSON
+            .replace("\"layout\": \"grid\",", "\"layout\": \"minimal_clock\",")
+            .replace(Regex("\\n    \\\"grid_layout\\\": \\{[\\s\\S]*?\\n    \\},"), "")
+
+        val imported = source.importRaw(oldRaw)
+
+        assertThat(imported.alwaysOnDisplay.layout).isEqualTo(HapanelsAlwaysOnDisplayLayout.MINIMAL_CLOCK)
+        assertThat(imported.alwaysOnDisplay.gridLayout.columnsLandscape).isEqualTo(3)
     }
 
     private fun newSource(): HapanelsDashboardConfigSource = HapanelsDashboardConfigSource(

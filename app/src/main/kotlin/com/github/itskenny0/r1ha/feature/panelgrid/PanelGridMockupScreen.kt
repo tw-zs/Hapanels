@@ -627,9 +627,11 @@ private fun HapanelsTileConfig.liveLabel(liveState: EntityState?): String? {
         -> state.percent?.let { "$it%" } ?: state.rawState.orUnknown()
         com.github.itskenny0.r1ha.core.ha.Domain.CLIMATE,
         com.github.itskenny0.r1ha.core.ha.Domain.WATER_HEATER,
-        -> state.climateCurrentTemperature?.let { "${it.formatPanelNumber()}°" }
-            ?: state.climateTargetTemperature?.let { "${it.formatPanelNumber()}°" }
-            ?: state.climateHvacMode.orUnknown()
+        -> listOfNotNull(
+            state.climateHvacMode?.uppercase(Locale.getDefault()),
+            state.climateCurrentTemperature?.let { "${it.formatPanelNumber()}°" }
+                ?: state.climateTargetTemperature?.let { "${it.formatPanelNumber()}°" },
+        ).joinToString(" ").ifBlank { "nieznane" }
         com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER,
         -> state.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "nieznane"
         com.github.itskenny0.r1ha.core.ha.Domain.SENSOR,
@@ -667,10 +669,11 @@ private fun HapanelsTileAccent.color(): Color = when (this) {
     HapanelsTileAccent.WHITE -> Color.White.copy(alpha = 0.86f)
 }
 
-private object PanelIcons {
+internal object PanelIcons {
     @Composable
     fun Icon(icon: HapanelsPanelIcon, tint: Color, modifier: Modifier = Modifier) {
         val pathData = when (icon) {
+            HapanelsPanelIcon.CLOCK -> CLOCK
             HapanelsPanelIcon.LIGHTBULB -> LIGHTBULB
             HapanelsPanelIcon.LIGHTBULB_OFF -> LIGHTBULB_OFF
             HapanelsPanelIcon.SHIELD_LOCK -> SHIELD_LOCK
@@ -697,6 +700,7 @@ private object PanelIcons {
         }
     }
 
+    private const val CLOCK = "M12,20A8,8 0,1 0,12,4A8,8 0,0 0,12,20M12,2A10,10 0,1 1,12,22A10,10 0,0 1,12,2M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z"
     private const val LIGHTBULB = "M12,2A7,7 0,0 0,5 9C5,11.38 6.19,13.47 8,14.74V17A1,1 0,0 0,9 18H15A1,1 0,0 0,16 17V14.74C17.81,13.47 19,11.38 19,9A7,7 0,0 0,12 2M9,21A1,1 0,0 0,10 22H14A1,1 0,0 0,15 21V20H9V21Z"
     private const val LIGHTBULB_OFF = "M2.81,2.81L1.39,4.22L6.83,9.66C7.06,11.73 8.21,13.55 10,14.74V17A1,1 0,0 0,11 18H14.17L19.78,23.61L21.19,22.2L2.81,2.81M12,2A7,7 0,0 0,7.79 3.4L17.6,13.21C18.48,12.03 19,10.57 19,9A7,7 0,0 0,12 2M11,21A1,1 0,0 0,12 22H14A1,1 0,0 0,15 21V20H11V21Z"
     private const val SHIELD_LOCK = "M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7A2,2 0,0 1,14 9V10H15V16H9V10H10V9A2,2 0,0 1,12 7M12,8.2A0.8,0.8 0,0 0,11.2 9V10H12.8V9A0.8,0.8 0,0 0,12 8.2Z"

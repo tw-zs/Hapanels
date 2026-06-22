@@ -13,8 +13,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.github.itskenny0.r1ha.ui.components.ToastHost
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,7 +32,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,15 +47,32 @@ import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.flow.first
 import com.github.itskenny0.r1ha.core.input.WheelEvent
 import com.github.itskenny0.r1ha.core.hardware.PanelScreenMode
+import com.github.itskenny0.r1ha.core.hardware.PanelScreenManager
 import com.github.itskenny0.r1ha.core.hardware.WakeReason
+import com.github.itskenny0.r1ha.core.ha.Domain
+import com.github.itskenny0.r1ha.core.ha.EntityId
+import com.github.itskenny0.r1ha.core.ha.EntityState
+import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.WheelKeySource
 import com.github.itskenny0.r1ha.core.theme.LocalUiOptions
+import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.core.theme.R1ThemeHost
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileAccent
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileConfig
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileKind
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileSize
+import com.github.itskenny0.r1ha.feature.panelgrid.PanelIcons
 import com.github.itskenny0.r1ha.nav.AppNavGraph
 import com.github.itskenny0.r1ha.nav.Routes
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -272,6 +303,9 @@ class MainActivity : ComponentActivity() {
                                 .collectAsStateWithLifecycle()
                                 .value
                                 .mode,
+                            haRepository = graph.haRepository,
+                            dashboardConfigSource = graph.dashboardConfigSource,
+                            panelScreenManager = graph.panelScreenManager,
                             onWake = { graph.panelScreenManager.reportUserActivity(WakeReason.USER) },
                         )
                         // Toast host sits OUTSIDE the responsive column so
@@ -484,6 +518,9 @@ class MainActivity : ComponentActivity() {
 @androidx.compose.runtime.Composable
 private fun PanelScreensaverOverlay(
     mode: PanelScreenMode,
+    haRepository: HaRepository,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
+    panelScreenManager: PanelScreenManager,
     onWake: () -> Unit,
 ) {
     androidx.compose.animation.AnimatedVisibility(
@@ -507,19 +544,219 @@ private fun PanelScreensaverOverlay(
                 kotlinx.coroutines.delay(1_000L)
             }
         }
+        val config by produceState(
+            initialValue = null as com.github.itskenny0.r1ha.feature.panelgrid.HapanelsAlwaysOnDisplayConfig?,
+            key1 = mode,
+            key2 = dashboardConfigSource,
+        ) {
+            value = if (mode == PanelScreenMode.SCREENSAVER) {
+                runCatching { dashboardConfigSource.loadOrSeed().alwaysOnDisplay }.getOrNull()
+            } else {
+                null
+            }
+        }
+        val aod = config
+        val tiles = aod?.tiles.orEmpty().sortedBy { it.order }
+        val observedEntityIds = remember(tiles) { tiles.mapNotNull { it.entityId.toAodEntityIdOrNull() }.toSet() }
+        val liveEntities by produceState<Map<EntityId, EntityState>>(
+            initialValue = emptyMap(),
+            key1 = haRepository,
+            key2 = observedEntityIds,
+        ) {
+            if (observedEntityIds.isEmpty()) {
+                value = emptyMap()
+            } else {
+                haRepository.observe(observedEntityIds).collect { value = it }
+            }
+        }
+        val background = aod?.background?.toComposeColor() ?: Color.Black
+        val contentAlpha = (0.35f + ((aod?.brightnessPercent ?: 3).coerceIn(0, 100) / 100f) * 0.65f)
+            .coerceIn(0.35f, 1f)
+        androidx.compose.runtime.LaunchedEffect(mode, aod?.brightnessPercent, panelScreenManager) {
+            if (mode == PanelScreenMode.SCREENSAVER) {
+                panelScreenManager.setAodBrightnessOverride(aod?.brightnessPercent ?: 3)
+            }
+        }
+        DisposableEffect(mode, panelScreenManager) {
+            onDispose {
+                if (mode == PanelScreenMode.SCREENSAVER) {
+                    panelScreenManager.setAodBrightnessOverride(null)
+                }
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color.Black)
+                .background(background)
                 .r1Pressable(onWake),
             contentAlignment = androidx.compose.ui.Alignment.Center,
         ) {
+            if (tiles.isEmpty()) {
+                AodClock(now = now, alpha = contentAlpha, modifier = Modifier.padding(24.dp))
+            } else {
+                AodGrid(
+                    tiles = tiles,
+                    liveEntities = liveEntities,
+                    now = now,
+                    columns = aod?.gridLayout?.columnsLandscape?.coerceIn(1, 4) ?: 3,
+                    alpha = contentAlpha,
+                    modifier = Modifier.padding(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun AodGrid(
+    tiles: List<HapanelsTileConfig>,
+    liveEntities: Map<EntityId, EntityState>,
+    now: LocalTime,
+    columns: Int,
+    alpha: Float,
+    modifier: Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        tiles.chunked(columns).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { tile ->
+                    AodTile(
+                        tile = tile,
+                        liveState = tile.entityId.toAodEntityIdOrNull()?.let(liveEntities::get),
+                        now = now,
+                        alpha = alpha,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun AodTile(
+    tile: HapanelsTileConfig,
+    liveState: EntityState?,
+    now: LocalTime,
+    alpha: Float,
+    modifier: Modifier,
+) {
+    if (tile.kind == HapanelsTileKind.CLOCK) {
+        AodClock(now = now, alpha = alpha, modifier = modifier.height(128.dp))
+        return
+    }
+    Column(
+        modifier = modifier
+            .height(if (tile.size == HapanelsTileSize.LARGE) 128.dp else 96.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White.copy(alpha = 0.06f * alpha))
+            .padding(12.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        PanelIcons.Icon(tile.icon, tint = tile.accent.aodColor(alpha), modifier = Modifier.size(36.dp))
+        Spacer(Modifier.height(8.dp))
+        com.github.itskenny0.r1ha.ui.i18n.Text(
+            text = tile.shortLabel?.takeIf { it.isNotBlank() } ?: tile.label,
+            style = R1.body.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        tile.aodLiveLabel(liveState)?.let {
             com.github.itskenny0.r1ha.ui.i18n.Text(
-                text = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
-                style = com.github.itskenny0.r1ha.core.theme.R1.numeralXl.copy(letterSpacing = 0.sp),
-                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.82f),
-                modifier = Modifier.padding(24.dp),
+                text = it,
+                style = R1.labelMicro,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
             )
         }
     }
 }
+
+@androidx.compose.runtime.Composable
+private fun AodClock(now: LocalTime, alpha: Float, modifier: Modifier) {
+    val today = LocalDate.now()
+    val dateText = buildString {
+        append(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("pl", "PL")))
+        append(", ")
+        append(today.format(DateTimeFormatter.ofPattern("dd MMMM", Locale("pl", "PL"))))
+    }
+    Column(
+        modifier = modifier,
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        com.github.itskenny0.r1ha.ui.i18n.Text(
+            text = now.format(DateTimeFormatter.ofPattern("HH:mm")),
+            style = R1.numeralXl.copy(letterSpacing = 0.sp),
+            color = Color.White,
+        )
+        com.github.itskenny0.r1ha.ui.i18n.Text(
+            text = dateText,
+            style = R1.body.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+private fun HapanelsTileAccent.aodColor(alpha: Float): Color = when (this) {
+    HapanelsTileAccent.ORANGE -> Color(0xFFE99900)
+    HapanelsTileAccent.RED -> Color(0xFFFF5338)
+    HapanelsTileAccent.WHITE -> Color.White
+}.copy(alpha = 0.86f * alpha)
+
+private fun String?.toAodEntityIdOrNull(): EntityId? =
+    this?.takeIf { it.isNotBlank() }?.let { runCatching { EntityId(it) }.getOrNull() }
+
+private fun HapanelsTileConfig.aodLiveLabel(liveState: EntityState?): String? {
+    if (entityId.isNullOrBlank()) return null
+    val entity = entityId.toAodEntityIdOrNull() ?: return "niewspierane"
+    val state = liveState ?: return entity.objectId
+    if (!state.isAvailable) return "niedostępne"
+    return when (entity.domain) {
+        Domain.LIGHT,
+        Domain.SWITCH,
+        Domain.INPUT_BOOLEAN,
+        Domain.AUTOMATION,
+        -> if (state.isOn) "włączone" else "wyłączone"
+        Domain.COVER,
+        Domain.VALVE,
+        -> state.percent?.let { "$it%" } ?: state.rawState.aodUnknown()
+        Domain.CLIMATE,
+        Domain.WATER_HEATER,
+        -> state.climateCurrentTemperature?.let { "${it.aodNumber()}°" }
+            ?: state.climateTargetTemperature?.let { "${it.aodNumber()}°" }
+            ?: state.climateHvacMode.aodUnknown()
+        Domain.SENSOR,
+        Domain.NUMBER,
+        Domain.INPUT_NUMBER,
+        -> listOfNotNull(state.rawState, state.unit).joinToString(" ").ifBlank { "nieznane" }
+        Domain.BINARY_SENSOR -> if (state.isOn) "wykryto" else "brak"
+        else -> state.rawState.aodUnknown()
+    }
+}
+
+private fun String?.aodUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "nieznane"
+
+private fun Double.aodNumber(): String =
+    if (this % 1.0 == 0.0) toInt().toString() else String.format(Locale.US, "%.1f", this)
+
+private fun String.toComposeColor(): Color = runCatching {
+    val hex = removePrefix("#")
+    val value = hex.toLong(16)
+    when (hex.length) {
+        6 -> Color((0xFF000000 or value).toInt())
+        8 -> Color(value.toInt())
+        else -> Color.Black
+    }
+}.getOrDefault(Color.Black)

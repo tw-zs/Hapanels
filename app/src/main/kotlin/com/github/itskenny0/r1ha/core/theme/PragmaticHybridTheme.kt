@@ -126,6 +126,10 @@ object PragmaticHybridTheme : R1Theme {
                         style = R1.labelMicro,
                     )
                 }
+                model.stateLabel?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(text = it, style = R1.labelMicro, color = accent)
+                }
                 Spacer(Modifier.height(20.dp))
                 // Hide the giant percent readout on every media_player card —
                 // the right-side volume meter already conveys the volume %

@@ -9,6 +9,7 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
+import com.github.itskenny0.r1ha.feature.panelgrid.syncStateJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -583,6 +584,7 @@ class PanelMqttBridge(
             val raw = dashboardConfigSource.exportRaw()
             publish("$baseTopic/dashboard/config/state", raw, retain = true)
             publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+            publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced"), retain = true)
             publishDashboardMetadata(config)
         }.onFailure { t ->
             R1Log.w("PanelMqttBridge", "dashboard config publish failed: ${t.message}")
@@ -599,8 +601,10 @@ class PanelMqttBridge(
     private suspend fun importDashboardConfig(rawJson: String) {
         runCatching { dashboardConfigSource.importRaw(rawJson) }
             .onSuccess { config ->
+                syncAodSettings(config)
                 publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                 publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
+                publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced"), retain = true)
                 publishDashboardMetadata(config)
             }
             .onFailure { t ->
@@ -615,9 +619,15 @@ class PanelMqttBridge(
                     is HapanelsDashboardPatchResult.Applied -> {
                         publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                         publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
+                        publish("$baseTopic/dashboard/config/sync/state", result.config.syncStateJson("synced"), retain = true)
                         publishDashboardMetadata(result.config)
                     }
                     is HapanelsDashboardPatchResult.Conflict -> {
+                        publish("$baseTopic/dashboard/config/sync/state", result.currentConfig.syncStateJson(
+                            status = "conflict",
+                            attemptedBaseRevision = result.attemptedBaseRevision,
+                            currentRevision = result.currentRevision,
+                        ), retain = true)
                         publish("$baseTopic/dashboard/config/conflict", result.conflictJson(), retain = false)
                     }
                 }
@@ -625,6 +635,17 @@ class PanelMqttBridge(
             .onFailure { t ->
                 R1Log.w("PanelMqttBridge", "dashboard config patch failed: ${t.message}")
             }
+    }
+
+    private suspend fun syncAodSettings(config: HapanelsDashboardConfig) {
+        settings.update { current ->
+            current.copy(
+                advanced = current.advanced.copy(
+                    screensaverEnabled = config.alwaysOnDisplay.enabled,
+                    screensaverTimeoutSec = config.alwaysOnDisplay.timeoutSec.coerceIn(5, 900),
+                ),
+            )
+        }
     }
 
     private suspend fun publishDashboardMetadata(config: HapanelsDashboardConfig) {

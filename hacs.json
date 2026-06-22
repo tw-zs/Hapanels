@@ -1,0 +1,6 @@
+{
+  "name": "Hapanels",
+  "render_readme": true,
+  "domains": ["hapanels"],
+  "homeassistant": "2024.8.0"
+}

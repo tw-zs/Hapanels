@@ -30,13 +30,24 @@ data class HapanelsDashboardLayout(
 data class HapanelsAlwaysOnDisplayConfig(
     val enabled: Boolean = false,
     val layout: HapanelsAlwaysOnDisplayLayout = HapanelsAlwaysOnDisplayLayout.MINIMAL_CLOCK,
+    @SerialName("grid_layout") val gridLayout: HapanelsDashboardLayout = HapanelsDashboardLayout(
+        type = "fixed_grid",
+        columnsLandscape = 3,
+        columnsPortrait = 2,
+        gap = "small",
+    ),
+    @SerialName("timeout_sec") val timeoutSec: Int = 300,
+    @SerialName("brightness_percent") val brightnessPercent: Int = 3,
+    val background: String = "#000000",
     @SerialName("entity_ids") val entityIds: List<String> = emptyList(),
+    val tiles: List<HapanelsTileConfig> = emptyList(),
 )
 
 @Serializable
 enum class HapanelsAlwaysOnDisplayLayout {
     @SerialName("minimal_clock") MINIMAL_CLOCK,
     @SerialName("status_strip") STATUS_STRIP,
+    @SerialName("grid") GRID,
 }
 
 @Serializable
@@ -71,8 +82,15 @@ data class HapanelsTileConfig(
 data class HapanelsDashboardPatch(
     @SerialName("base_revision") val baseRevision: Int,
     @SerialName("updated_by") val updatedBy: String,
+    val surface: HapanelsDashboardSurface = HapanelsDashboardSurface.DASHBOARD,
     @SerialName("tile_updates") val tileUpdates: List<HapanelsTilePatch> = emptyList(),
 )
+
+@Serializable
+enum class HapanelsDashboardSurface {
+    @SerialName("dashboard") DASHBOARD,
+    @SerialName("aod") AOD,
+}
 
 @Serializable
 data class HapanelsTilePatch(
@@ -94,8 +112,40 @@ sealed interface HapanelsDashboardPatchResult {
     ) : HapanelsDashboardPatchResult
 }
 
+internal fun HapanelsDashboardConfig.syncStateJson(
+    status: String,
+    attemptedBaseRevision: Int? = null,
+    currentRevision: Int? = null,
+): String = buildString {
+    append('{')
+    append("\"status\":\"")
+    append(status.escapeJson())
+    append("\",")
+    append("\"dashboard_id\":\"")
+    append(dashboardId.escapeJson())
+    append("\",")
+    append("\"revision\":")
+    append(revision)
+    append(',')
+    append("\"updated_by\":\"")
+    append(updatedBy.escapeJson())
+    append('"')
+    if (currentRevision != null) {
+        append(',')
+        append("\"current_revision\":")
+        append(currentRevision)
+    }
+    if (attemptedBaseRevision != null) {
+        append(',')
+        append("\"attempted_base_revision\":")
+        append(attemptedBaseRevision)
+    }
+    append('}')
+}
+
 @Serializable
 enum class HapanelsTileKind {
+    @SerialName("clock") CLOCK,
     @SerialName("category") CATEGORY,
     @SerialName("action") ACTION,
     @SerialName("entity") ENTITY,
@@ -118,6 +168,7 @@ enum class HapanelsTileAccent {
 
 @Serializable
 enum class HapanelsPanelIcon {
+    @SerialName("clock") CLOCK,
     @SerialName("lightbulb") LIGHTBULB,
     @SerialName("lightbulb_off") LIGHTBULB_OFF,
     @SerialName("shield_lock") SHIELD_LOCK,
@@ -134,6 +185,21 @@ enum class HapanelsPanelIcon {
 private val dashboardJson = Json {
     ignoreUnknownKeys = true
     explicitNulls = false
+}
+
+private fun String.escapeJson(): String = buildString(length) {
+    for (char in this@escapeJson) {
+        when (char) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\b' -> append("\\b")
+            '\u000C' -> append("\\f")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else -> append(char)
+        }
+    }
 }
 
 fun sampleHapanelsDashboardConfig(): HapanelsDashboardConfig =
@@ -154,8 +220,22 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
   },
   "always_on_display": {
     "enabled": false,
-    "layout": "minimal_clock",
-    "entity_ids": []
+    "layout": "grid",
+    "timeout_sec": 300,
+    "brightness_percent": 3,
+    "background": "#000000",
+    "grid_layout": {
+      "type": "fixed_grid",
+      "columns_landscape": 3,
+      "columns_portrait": 2,
+      "gap": "small"
+    },
+    "entity_ids": [],
+    "tiles": [
+      { "id": "aod_clock", "kind": "clock", "size": "large", "label": "Zegar", "icon": "clock", "accent": "white", "order": 0 },
+      { "id": "aod_presence", "kind": "entity", "size": "small", "label": "Obecność", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 1 },
+      { "id": "aod_temperature", "kind": "entity", "size": "small", "label": "Temperatura", "entity_id": "sensor.outside_temperature", "icon": "home_thermometer", "accent": "orange", "order": 2 }
+    ]
   },
   "people": [
     { "id": "person.michal", "name": "Michał", "state": "poza domem", "status": "away" },

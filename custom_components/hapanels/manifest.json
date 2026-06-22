@@ -1,0 +1,11 @@
+{
+  "domain": "hapanels",
+  "name": "Hapanels",
+  "codeowners": ["@tw-zs"],
+  "config_flow": true,
+  "dependencies": ["mqtt"],
+  "documentation": "https://tw-zs.github.io/Hapanels/",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.1.0"
+}

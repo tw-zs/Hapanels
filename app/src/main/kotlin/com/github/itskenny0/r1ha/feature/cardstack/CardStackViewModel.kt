@@ -36,6 +36,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.roundToInt
 
 /**
@@ -73,6 +75,7 @@ data class CardStackUiState(
      * confirms the new option matches what the user picked.
      */
     val optimisticSelectOptions: Map<EntityId, String> = emptyMap(),
+    val optimisticClimateModes: Map<EntityId, String> = emptyMap(),
     /**
      * Number of entity IDs in the user's favourites list, regardless of whether HA has
      * sent state for them yet. Distinguishes "no favourites set" (zero) from "favourites
@@ -130,7 +133,8 @@ data class CardStackUiState(
      * doesn't bounce.
      */
     val displayedCards: List<EntityState>
-        get() = if (optimisticPercents.isEmpty() && optimisticSelectOptions.isEmpty()) {
+        get() = if (optimisticPercents.isEmpty() && optimisticSelectOptions.isEmpty() &&
+            optimisticClimateModes.isEmpty()) {
             // Common case: no wheel/tap is in flight. Skip the allocation of
             // the mapped list entirely — recompositions during static viewing
             // (e.g. swiping between pages, just looking at the deck) were
@@ -140,12 +144,13 @@ data class CardStackUiState(
             cards
         } else {
             cards.map { state ->
-                state.applyOptimistic(
-                    optimisticPercents[state.id],
-                    optimisticSelectOptions[state.id],
-                )
+                    state.applyOptimistic(
+                        optimisticPercents[state.id],
+                        optimisticSelectOptions[state.id],
+                        optimisticClimateModes[state.id],
+                    )
+                }
             }
-        }
 
     val activeState: EntityState?
         get() {
@@ -156,8 +161,9 @@ data class CardStackUiState(
             val card = cards.getOrNull(currentIndex) ?: return null
             val pctOverride = optimisticPercents[card.id]
             val selOverride = optimisticSelectOptions[card.id]
-            if (pctOverride == null && selOverride == null) return card
-            return card.applyOptimistic(pctOverride, selOverride)
+            val climateOverride = optimisticClimateModes[card.id]
+            if (pctOverride == null && selOverride == null && climateOverride == null) return card
+            return card.applyOptimistic(pctOverride, selOverride, climateOverride)
         }
 
     /**
@@ -172,18 +178,24 @@ data class CardStackUiState(
 private fun EntityState.applyOptimistic(
     percentOverride: Int?,
     selectOverride: String? = null,
+    climateModeOverride: String? = null,
 ): EntityState {
     val pctApplied = when {
         percentOverride == null -> this
         supportsScalar -> copy(percent = percentOverride)
         else -> copy(percent = percentOverride, isOn = percentOverride > 0)
     }
-    if (selectOverride == null) return pctApplied
+    val climateApplied = if (climateModeOverride == null) pctApplied else pctApplied.copy(
+        rawState = climateModeOverride,
+        climateHvacMode = climateModeOverride,
+        isOn = !climateModeOverride.equals("off", ignoreCase = true),
+    )
+    if (selectOverride == null) return climateApplied
     // For select / input_select entities the displayed value is
     // currentOption. We also rewrite rawState so themes that fall back to
     // it (SelectCard does, for the "unavailable" path) reflect the pick
     // optimistically too.
-    return pctApplied.copy(currentOption = selectOverride, rawState = selectOverride)
+    return climateApplied.copy(currentOption = selectOverride, rawState = selectOverride)
 }
 
 class CardStackViewModel(
@@ -554,12 +566,18 @@ class CardStackViewModel(
                     val cached = entityMap[id] ?: return@filter true
                     cached.currentOption != optVal
                 }
+                val newClimateOpt = cur.optimisticClimateModes.filter { (id, optVal) ->
+                    if (id !in favoriteSet) return@filter false
+                    val cached = entityMap[id] ?: return@filter true
+                    !cached.climateHvacMode.equals(optVal, ignoreCase = true)
+                }
                 _state.value = cur.copy(
                     cards = ordered,
                     cardsById = ordered.associateBy { it.id },
                     currentIndex = clampedIndex,
                     optimisticPercents = newOptimistic,
                     optimisticSelectOptions = newSelectOpt,
+                    optimisticClimateModes = newClimateOpt,
                     favouritesCount = favouriteIds.size,
                     settingsLoaded = true,
                     cardsByPage = cardsByPage,
@@ -1146,6 +1164,14 @@ class CardStackViewModel(
      */
     fun callService(call: com.github.itskenny0.r1ha.core.ha.ServiceCall) {
         R1Log.i("CardStack.callService", "${call.target} ${call.service}")
+        if (call.service == "set_hvac_mode") {
+            val mode = call.data["hvac_mode"]?.jsonPrimitive?.contentOrNull
+            if (mode != null) {
+                _state.value = _state.value.copy(
+                    optimisticClimateModes = _state.value.optimisticClimateModes + (call.target to mode),
+                )
+            }
+        }
         viewModelScope.launch {
             haRepository.call(call)
         }

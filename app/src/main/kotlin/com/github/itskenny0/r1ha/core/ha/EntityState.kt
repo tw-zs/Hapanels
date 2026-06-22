@@ -206,6 +206,10 @@ data class EntityState(
     val climateFanMode: String? = null,
     /** Climate / water_heater: every fan mode the integration accepts. */
     val climateFanModes: List<String> = emptyList(),
+    /** Climate-only: current swing mode (off / vertical / horizontal / both). */
+    val climateSwingMode: String? = null,
+    /** Climate-only: every swing mode the integration accepts. */
+    val climateSwingModes: List<String> = emptyList(),
     /** Climate / water_heater: live current temperature reading. */
     val climateCurrentTemperature: Double? = null,
     /** Climate / water_heater: target setpoint (single-target mode). */

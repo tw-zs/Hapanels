@@ -817,6 +817,10 @@ class DefaultHaRepository(
                 raw.attributes["fan_mode"].asString() else null,
             climateFanModes = if (id.domain == Domain.CLIMATE)
                 extractStringList(raw.attributes["fan_modes"]) else emptyList(),
+            climateSwingMode = if (id.domain == Domain.CLIMATE)
+                raw.attributes["swing_mode"].asString() else null,
+            climateSwingModes = if (id.domain == Domain.CLIMATE)
+                extractStringList(raw.attributes["swing_modes"]) else emptyList(),
             climatePresetMode = if (id.domain == Domain.CLIMATE)
                 raw.attributes["preset_mode"].asString() else null,
             climatePresetModes = if (id.domain == Domain.CLIMATE)
@@ -1321,6 +1325,10 @@ class DefaultHaRepository(
                         attrs["fan_mode"].asString() else null,
                     climateFanModes = if (id.domain == Domain.CLIMATE)
                         extractStringList(attrs["fan_modes"]) else emptyList(),
+                    climateSwingMode = if (id.domain == Domain.CLIMATE)
+                        attrs["swing_mode"].asString() else null,
+                    climateSwingModes = if (id.domain == Domain.CLIMATE)
+                        extractStringList(attrs["swing_modes"]) else emptyList(),
                     climatePresetMode = if (id.domain == Domain.CLIMATE)
                         attrs["preset_mode"].asString() else null,
                     climatePresetModes = if (id.domain == Domain.CLIMATE)

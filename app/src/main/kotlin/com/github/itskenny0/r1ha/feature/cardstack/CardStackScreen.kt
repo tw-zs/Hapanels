@@ -737,19 +737,35 @@ fun CardStackScreen(
                     // touching. Gating saves N-cards re-allocation × 2 peek neighbours per
                     // wheel detent during sustained spins on slower panel hardware.
                     val pageCards = androidx.compose.runtime.remember(
-                        pageCardsRaw, if (isActive) state.optimisticPercents else null,
+                        pageCardsRaw,
+                        if (isActive) state.optimisticPercents else null,
+                        if (isActive) state.optimisticSelectOptions else null,
+                        if (isActive) state.optimisticClimateModes else null,
                     ) {
-                        if (!isActive || state.optimisticPercents.isEmpty()) {
+                        if (!isActive || (state.optimisticPercents.isEmpty() &&
+                                state.optimisticSelectOptions.isEmpty() && state.optimisticClimateModes.isEmpty())) {
                             pageCardsRaw
                         } else {
                             pageCardsRaw.map { card ->
                                 val overridePct = state.optimisticPercents[card.id]
-                                if (overridePct != null) {
+                                val overrideSelect = state.optimisticSelectOptions[card.id]
+                                val overrideClimate = state.optimisticClimateModes[card.id]
+                                val pctCard = if (overridePct != null) {
                                     if (card.supportsScalar) card.copy(percent = overridePct)
                                     else card.copy(percent = overridePct, isOn = overridePct > 0)
                                 } else {
                                     card
                                 }
+                                val climateCard = if (overrideClimate != null) {
+                                    pctCard.copy(
+                                        rawState = overrideClimate,
+                                        climateHvacMode = overrideClimate,
+                                        isOn = !overrideClimate.equals("off", ignoreCase = true),
+                                    )
+                                } else pctCard
+                                if (overrideSelect != null) {
+                                    climateCard.copy(currentOption = overrideSelect, rawState = overrideSelect)
+                                } else climateCard
                             }
                         }
                     }

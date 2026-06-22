@@ -301,7 +301,6 @@ fun EntityCard(
                     accentOverride = overrideAccent,
                     displayValue = lightDisplay ?: displayValue,
                     displayUnit = lightDisplayUnit ?: displayUnit,
-                    stateLabel = if (isTempDomain) state.rawState?.uppercase() else null,
                     textSizeSp = perCardOverride.textSizeSp,
                     lightWheelMode = lightWheelMode,
                     lightEffect = state.effect,

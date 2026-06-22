@@ -34,7 +34,6 @@ data class CardRenderModel(
      */
     val displayValue: String? = null,
     val displayUnit: String? = null,
-    val stateLabel: String? = null,
     /** Per-card absolute readout size in sp from [EntityOverride.textSizeSp]. Null
      *  means use the theme's default size (72 sp for the big numeralXl on the percent
      *  card). The suffix is scaled proportionally so the unit doesn't dominate the

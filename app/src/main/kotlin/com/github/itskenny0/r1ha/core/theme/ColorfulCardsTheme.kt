@@ -212,10 +212,6 @@ object ColorfulCardsTheme : R1Theme {
                             style = R1.labelMicro,
                         )
                     }
-                    model.stateLabel?.takeIf { it.isNotBlank() }?.let {
-                        Spacer(Modifier.height(4.dp))
-                        Text(text = it, style = R1.labelMicro, color = Color.White)
-                    }
                     Spacer(Modifier.height(20.dp))
                     // Hide the giant percent readout on media_player cards with
                     // active now-playing — same parity rule as PragmaticHybridTheme

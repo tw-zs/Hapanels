@@ -18,10 +18,10 @@ from .const import (
     CONF_BASE_TOPIC,
     DATA_CONFIGS,
     DATA_PANELS,
-    DATA_PANEL_REGISTERED,
     DATA_UNSUB,
     DEFAULT_BASE_TOPIC,
     DOMAIN,
+    FRONTEND_VERSION,
     PANEL_ELEMENT,
     PANEL_URL_PATH,
     PLATFORMS,
@@ -120,8 +120,6 @@ async def websocket_get_dashboard_config(hass: HomeAssistant, connection, msg) -
 
 
 async def _register_panel(hass: HomeAssistant) -> None:
-    if hass.data[DOMAIN].get(DATA_PANEL_REGISTERED):
-        return
     frontend_dir = Path(__file__).parent / "frontend"
     if hasattr(hass.http, "async_register_static_paths"):
         from homeassistant.components.http import StaticPathConfig
@@ -135,13 +133,12 @@ async def _register_panel(hass: HomeAssistant) -> None:
         hass,
         webcomponent_name=PANEL_ELEMENT,
         frontend_url_path=PANEL_URL_PATH,
-        module_url=f"{STATIC_URL_PATH}/hapanels-panel.js",
+        module_url=f"{STATIC_URL_PATH}/hapanels-panel.js?v={FRONTEND_VERSION}",
         sidebar_title="Hapanels",
         sidebar_icon="mdi:tablet-dashboard",
         require_admin=False,
         config={},
     )
-    hass.data[DOMAIN][DATA_PANEL_REGISTERED] = True
 
 
 async def _publish_json(

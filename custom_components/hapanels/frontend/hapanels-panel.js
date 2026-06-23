@@ -1,4 +1,6 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
+const TILE_ICONS = ["clock", "lightbulb", "lightbulb_off", "shield_lock", "blinds", "home_thermometer", "cctv", "gate", "home_lightning", "motion_sensor", "sprinkler", "cog"];
+const TILE_ACCENTS = ["orange", "red", "white"];
 
 class HapanelsStudioPanel extends HTMLElement {
   connectedCallback() {
@@ -48,19 +50,29 @@ class HapanelsStudioPanel extends HTMLElement {
     this._configs[device] = result.config || null;
   }
 
-  async _saveTileLabel(device, tileId, inputId, surface = "dashboard") {
+  async _saveTile(device, tileId, prefix, surface = "dashboard") {
     const config = this._configs[device];
     const revision = Number(config?.revision);
-    const input = this.shadowRoot.getElementById(inputId);
-    const label = input?.value?.trim();
+    const label = this.shadowRoot.getElementById(`${prefix}-label`)?.value?.trim();
+    const shortLabel = this.shadowRoot.getElementById(`${prefix}-short`)?.value?.trim();
+    const entityId = this.shadowRoot.getElementById(`${prefix}-entity`)?.value?.trim();
+    const icon = this.shadowRoot.getElementById(`${prefix}-icon`)?.value;
+    const accent = this.shadowRoot.getElementById(`${prefix}-accent`)?.value;
+    const order = Number(this.shadowRoot.getElementById(`${prefix}-order`)?.value);
     if (!config || !Number.isFinite(revision) || !label) return;
+    const tile = { id: tileId, label };
+    if (shortLabel !== undefined) tile.short_label = shortLabel;
+    if (entityId !== undefined) tile.entity_id = entityId;
+    if (icon) tile.icon = icon;
+    if (accent) tile.accent = accent;
+    if (Number.isFinite(order)) tile.order = order;
     await this._hass.callService("hapanels", "patch_dashboard_config", {
       device,
       patch: {
         base_revision: revision,
         updated_by: "homeassistant:hapanels_studio",
         surface,
-        tile_updates: [{ id: tileId, label }],
+        tile_updates: [tile],
       },
     });
     window.setTimeout(() => this._load(), 800);
@@ -151,7 +163,11 @@ class HapanelsStudioPanel extends HTMLElement {
         .tab { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
         .tab.active { background: var(--accent); color: #1a0d03; border-color: transparent; }
         .tiles { display: grid; gap: 10px; }
-        .tile { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+        .tile { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); }
+        .tile-head { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; }
+        .fields { display: grid; grid-template-columns: 1.4fr 1fr 1.5fr .9fr .8fr .6fr auto; gap: 8px; align-items: end; }
+        .field { display: grid; gap: 5px; }
+        label { color: var(--muted); font-size: 12px; font-weight: 800; }
         input, select { min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); padding: 10px; font: inherit; }
         .small { padding: 10px 12px; border-radius: 10px; }
         .detail-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
@@ -287,13 +303,29 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _tileEditor(device, tile, surface) {
-    const inputId = `tile-${surface}-${device}-${tile.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    const prefix = `tile-${surface}-${device}-${tile.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     return `
       <div class="tile">
-        <input id="${this._escape(inputId)}" value="${this._escape(tile.label || tile.id)}" aria-label="Etykieta kafla ${this._escape(tile.id)}">
-        <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-input="${this._escape(inputId)}">Zapisz</button>
+        <div class="tile-head"><span>${this._escape(tile.id)}</span><span>${this._escape(tile.kind || "tile")} · ${this._escape(tile.size || "-")}</span></div>
+        <div class="fields">
+          ${this._inputField(`${prefix}-label`, "Label", tile.label || tile.id)}
+          ${this._inputField(`${prefix}-short`, "Short", tile.short_label || "")}
+          ${this._inputField(`${prefix}-entity`, "Entity", tile.entity_id || "")}
+          ${this._selectField(`${prefix}-icon`, "Ikona", TILE_ICONS, tile.icon)}
+          ${this._selectField(`${prefix}-accent`, "Accent", TILE_ACCENTS, tile.accent || "orange")}
+          ${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number")}
+          <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}">Zapisz</button>
+        </div>
       </div>
     `;
+  }
+
+  _inputField(id, label, value, type = "text") {
+    return `<div class="field"><label for="${this._escape(id)}">${this._escape(label)}</label><input id="${this._escape(id)}" type="${type}" value="${this._escape(value)}"></div>`;
+  }
+
+  _selectField(id, label, options, selected) {
+    return `<div class="field"><label for="${this._escape(id)}">${this._escape(label)}</label><select id="${this._escape(id)}">${options.map((option) => `<option value="${this._escape(option)}" ${option === selected ? "selected" : ""}>${this._escape(option)}</option>`).join("")}</select></div>`;
   }
 
   _settingsView() {
@@ -342,10 +374,10 @@ class HapanelsStudioPanel extends HTMLElement {
       button.addEventListener("click", () => { this._activeTab = button.dataset.tab; this._render(); });
     });
     this.shadowRoot.querySelectorAll("[data-save-tile]").forEach((button) => {
-      button.addEventListener("click", () => this._saveTileLabel(
+      button.addEventListener("click", () => this._saveTile(
         button.dataset.device,
         button.dataset.tile,
-        button.dataset.input,
+        button.dataset.prefix,
         button.dataset.surface,
       ));
     });

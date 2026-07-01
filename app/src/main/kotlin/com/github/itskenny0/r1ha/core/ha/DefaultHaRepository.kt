@@ -91,6 +91,7 @@ class DefaultHaRepository(
     override val callFailures: SharedFlow<EntityId> = _callFailures.asSharedFlow()
 
     private val cache = MutableStateFlow<Map<EntityId, EntityState>>(emptyMap())
+    private val observedEntities = MutableStateFlow<Set<EntityId>>(emptySet())
     private val pendingCalls = ConcurrentHashMap<Int, CompletableDeferred<Result<Unit>>>()
     /**
      * Parallel awaiter map keyed by the same request id space as [pendingCalls], but
@@ -251,6 +252,9 @@ class DefaultHaRepository(
             // bounces back to HA's last-known value instead of sitting stuck on the user's
             // intent. tryEmit is fine: the buffer is bounded with DROP_OLDEST.
             _callFailures.tryEmit(call.target)
+        }
+        if (outcome.isSuccess) {
+            refreshEntityFromHa(call.target, attempts = if (call.target in observedEntities.value) 4 else 1)
         }
     }
 
@@ -519,7 +523,7 @@ class DefaultHaRepository(
                     delay(HEARTBEAT_INTERVAL_MS)
                     val s = settings.settings.first()
                     if (s.server == null) continue
-                    if (s.favorites.isEmpty()) continue
+                    if (s.favorites.isEmpty() && observedEntities.value.isEmpty()) continue
                     val st = ws.state.value
                     // AuthLost / Idle won't be helped by polling — REST uses the same
                     // access token that just got rejected, and Idle means no URL yet.
@@ -1093,8 +1097,23 @@ class DefaultHaRepository(
         Domain.UPDATE -> false
     }
 
-    override fun observe(entities: Set<EntityId>): Flow<Map<EntityId, EntityState>> =
-        cache.map { it.filterKeys { id -> id in entities } }
+    override fun observe(entities: Set<EntityId>): Flow<Map<EntityId, EntityState>> {
+        if (entities.isNotEmpty()) {
+            val changed = observedEntities.value.let { current ->
+                val next = current + entities
+                if (next == current) false else {
+                    observedEntities.value = next
+                    true
+                }
+            }
+            if (changed && ws.state.value is ConnectionState.Connected) {
+                resubscribe()
+                seedJob?.cancel()
+                seedJob = scope.launch { seedCacheFromHa() }
+            }
+        }
+        return cache.map { it.filterKeys { id -> id in entities } }
+    }
 
     override suspend fun call(call: ServiceCall): Result<Unit> {
         // Read-only "guest mode": if the user has flipped the Settings toggle,
@@ -1439,6 +1458,149 @@ class DefaultHaRepository(
         }
     }
 
+    private suspend fun refreshEntityFromHa(entityId: EntityId, attempts: Int = 1) {
+        runCatching {
+            val s = settings.settings.first()
+            val server = s.server ?: return
+            refresher?.ensureFresh()
+            val url = "${server.url.trimEnd('/')}/api/states/${java.net.URLEncoder.encode(entityId.value, "UTF-8")}"
+            repeat(attempts.coerceAtLeast(1)) { attempt ->
+                val body = fetchStateBody(url) ?: run {
+                    if (attempt == 0 && refresher?.forceRefresh() == true) fetchStateBody(url) else null
+                } ?: return@repeat
+                applyRestState(entityId, body)
+                if (attempt < attempts - 1) delay(220)
+            }
+        }.onFailure { t ->
+            R1Log.w("HaRepo.entityRefresh", "${entityId.value}: ${t.message}")
+        }
+    }
+
+    private fun applyRestState(entityId: EntityId, body: String) {
+            val row = listStatesJson.decodeFromString<RawStateRow>(body)
+            val id = runCatching { EntityId(row.entity_id) }.getOrNull() ?: return
+            val stateStr = row.stateStr
+            val attrs = row.attrsObj
+            val available = stateStr != "unavailable" && stateStr != "unknown"
+            cache.update { current ->
+                val previous = current[id]
+                current + (id to previous.withRestState(
+                    id = id,
+                    friendlyName = attrs["friendly_name"].asString() ?: previous?.friendlyName ?: id.value.substringAfter('.'),
+                    area = attrs["area_id"].asString(),
+                    isOn = when (id.domain) {
+                        Domain.LIGHT, Domain.FAN, Domain.SWITCH, Domain.INPUT_BOOLEAN,
+                        Domain.AUTOMATION, Domain.HUMIDIFIER -> stateStr.equals("on", ignoreCase = true)
+                        Domain.COVER, Domain.VALVE -> stateStr.equals("open", ignoreCase = true)
+                        Domain.MEDIA_PLAYER -> stateStr.equals("playing", ignoreCase = true)
+                        Domain.LOCK -> stateStr.equals("unlocked", ignoreCase = true)
+                        Domain.CLIMATE, Domain.WATER_HEATER ->
+                            !stateStr.equals("off", ignoreCase = true) && available
+                        Domain.SCRIPT -> stateStr.equals("on", ignoreCase = true)
+                        Domain.SCENE, Domain.BUTTON, Domain.INPUT_BUTTON -> false
+                        Domain.BINARY_SENSOR -> stateStr.equals("on", ignoreCase = true)
+                        Domain.SENSOR -> false
+                        Domain.NUMBER, Domain.INPUT_NUMBER -> false
+                        Domain.VACUUM -> stateStr.equals("cleaning", ignoreCase = true) ||
+                            stateStr.equals("returning", ignoreCase = true) ||
+                            stateStr.equals("on", ignoreCase = true)
+                        Domain.LAWN_MOWER -> stateStr.equals("mowing", ignoreCase = true) ||
+                            stateStr.equals("returning", ignoreCase = true) ||
+                            stateStr.equals("on", ignoreCase = true)
+                        Domain.SELECT, Domain.INPUT_SELECT -> false
+                        Domain.COUNTER, Domain.INPUT_TEXT, Domain.INPUT_DATETIME -> false
+                        Domain.TIMER -> stateStr.equals("active", ignoreCase = true)
+                        Domain.UPDATE -> stateStr.equals("on", ignoreCase = true)
+                    },
+                    percent = if (available) computePercentWithState(id.domain, attrs, stateStr) else null,
+                    raw = computeRaw(id.domain, attrs)
+                        ?: if (id.domain == Domain.NUMBER || id.domain == Domain.INPUT_NUMBER) stateStr.toDoubleOrNull() else null,
+                    lastChanged = runCatching { Instant.parse(row.last_changed ?: "") }.getOrDefault(Instant.now()),
+                    isAvailable = available,
+                    rawState = stateStr,
+                    unit = attrs["unit_of_measurement"].asString() ?: attrs["temperature_unit"].asString(),
+                    deviceClass = attrs["device_class"].asString(),
+                    attributesJson = attrs,
+                    climateHvacMode = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        (if (id.domain == Domain.CLIMATE) stateStr else attrs["operation_mode"].asString()) else previous?.climateHvacMode,
+                    climateCurrentTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["current_temperature"].asDouble() else previous?.climateCurrentTemperature,
+                    climateTargetTemperature = if (id.domain == Domain.CLIMATE || id.domain == Domain.WATER_HEATER)
+                        attrs["temperature"].asDouble() else previous?.climateTargetTemperature,
+                    currentOption = if (id.domain.isSelect) stateStr.takeIf { it.isNotBlank() && it != "unknown" && it != "unavailable" } else previous?.currentOption,
+                ))
+            }
+            _lastEventAt.value = System.currentTimeMillis()
+            R1Log.i("HaRepo.entityRefresh", "updated ${entityId.value} from REST")
+    }
+
+    private suspend fun fetchStateBody(url: String): String? = withContext(Dispatchers.IO) {
+        val accessToken = latestAccessToken
+            ?: tokens.load()?.accessToken
+            ?: error("Authentication tokens missing. Sign out & reconnect from Settings.")
+        val req = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .build()
+        http.newCall(req).execute().use { resp ->
+            if (resp.code == 401) return@withContext null
+            require(resp.isSuccessful) { "Home Assistant returned HTTP ${resp.code} for ${req.url}" }
+            resp.body!!.string()
+        }
+    }
+
+    private fun EntityState?.withRestState(
+        id: EntityId,
+        friendlyName: String,
+        area: String?,
+        isOn: Boolean,
+        percent: Int?,
+        raw: Number?,
+        lastChanged: Instant,
+        isAvailable: Boolean,
+        rawState: String,
+        unit: String?,
+        deviceClass: String?,
+        attributesJson: kotlinx.serialization.json.JsonObject,
+        climateHvacMode: String?,
+        climateCurrentTemperature: Double?,
+        climateTargetTemperature: Double?,
+        currentOption: String?,
+    ): EntityState = this?.copy(
+        friendlyName = friendlyName,
+        area = area,
+        isOn = isOn,
+        percent = percent,
+        raw = raw,
+        lastChanged = lastChanged,
+        isAvailable = isAvailable,
+        rawState = rawState,
+        unit = unit,
+        deviceClass = deviceClass,
+        attributesJson = attributesJson,
+        climateHvacMode = climateHvacMode,
+        climateCurrentTemperature = climateCurrentTemperature,
+        climateTargetTemperature = climateTargetTemperature,
+        currentOption = currentOption,
+    ) ?: EntityState(
+        id = id,
+        friendlyName = friendlyName,
+        area = area,
+        isOn = isOn,
+        percent = percent,
+        raw = raw,
+        lastChanged = lastChanged,
+        isAvailable = isAvailable,
+        rawState = rawState,
+        unit = unit,
+        deviceClass = deviceClass,
+        attributesJson = attributesJson,
+        climateHvacMode = climateHvacMode,
+        climateCurrentTemperature = climateCurrentTemperature,
+        climateTargetTemperature = climateTargetTemperature,
+        currentOption = currentOption,
+    )
+
     /**
      * Seeds the in-memory cache from a one-shot REST `GET /api/states` so the user sees current
      * values immediately after adding a favourite (subscribe_trigger only fires on the *next*
@@ -1447,10 +1609,10 @@ class DefaultHaRepository(
      * WS Connected sometimes races HA's REST stack on slow servers.
      */
     private suspend fun seedCacheFromHa() {
-        val favIds = settings.settings.first().favorites
+        val targetIds = settings.settings.first().favorites
             .mapNotNull { runCatching { EntityId(it) }.getOrNull() }
-            .toSet()
-        if (favIds.isEmpty()) return
+            .toSet() + observedEntities.value
+        if (targetIds.isEmpty()) return
         var lastError: Throwable? = null
         repeat(3) { attempt ->
             val result = listAllEntities()
@@ -1463,7 +1625,7 @@ class DefaultHaRepository(
                         R1Log.w("HaRepo.seed", "server gone mid-seed; discarding ${all.size} entities")
                         return
                     }
-                    val byId = all.filter { it.id in favIds }.associateBy { it.id }
+                    val byId = all.filter { it.id in targetIds }.associateBy { it.id }
                     if (byId.isNotEmpty()) {
                         // Only toast on the FIRST successful seed (i.e. when the cache was
                         // previously empty). Doing the emptiness check INSIDE update {} closes
@@ -1474,12 +1636,12 @@ class DefaultHaRepository(
                             wasEmpty = current.isEmpty()
                             current + byId
                         }
-                        R1Log.i("HaRepo.seed", "seeded ${byId.size}/${favIds.size} favourites (attempt ${attempt + 1})")
+                        R1Log.i("HaRepo.seed", "seeded ${byId.size}/${targetIds.size} observed entities (attempt ${attempt + 1})")
                         if (wasEmpty) {
                             com.github.itskenny0.r1ha.core.util.Toaster.show("Loaded ${byId.size} entities")
                         }
                     } else {
-                        R1Log.w("HaRepo.seed", "REST returned ${all.size} entities but none matched favourites")
+                        R1Log.w("HaRepo.seed", "REST returned ${all.size} entities but none matched observed entities")
                     }
                     return
                 },
@@ -1513,10 +1675,10 @@ class DefaultHaRepository(
      * the REST cache needs continual refresh; one good poll per 30 s is plenty.
      */
     private suspend fun silentRefreshFromHa() {
-        val favIds = settings.settings.first().favorites
+        val targetIds = settings.settings.first().favorites
             .mapNotNull { runCatching { EntityId(it) }.getOrNull() }
-            .toSet()
-        if (favIds.isEmpty()) return
+            .toSet() + observedEntities.value
+        if (targetIds.isEmpty()) return
         val result = listAllEntities()
         result.fold(
             onSuccess = { all ->
@@ -1524,15 +1686,15 @@ class DefaultHaRepository(
                     R1Log.w("HaRepo.heartbeat", "server gone mid-poll; discarding ${all.size} entities")
                     return
                 }
-                val byId = all.filter { it.id in favIds }.associateBy { it.id }
+                val byId = all.filter { it.id in targetIds }.associateBy { it.id }
                 if (byId.isNotEmpty()) {
                     cache.update { current -> current + byId }
-                    R1Log.i("HaRepo.heartbeat", "REST refresh updated ${byId.size}/${favIds.size} favourites")
+                    R1Log.i("HaRepo.heartbeat", "REST refresh updated ${byId.size}/${targetIds.size} observed entities")
                     // The successful poll counts as a useful signal — back off until the
                     // next genuine silence window.
                     _lastEventAt.value = System.currentTimeMillis()
                 } else {
-                    R1Log.w("HaRepo.heartbeat", "REST returned ${all.size} entities; none matched favourites")
+                    R1Log.w("HaRepo.heartbeat", "REST returned ${all.size} entities; none matched observed entities")
                 }
             },
             onFailure = { t ->
@@ -2323,8 +2485,8 @@ class DefaultHaRepository(
 
     private fun resubscribe() {
         scope.launch {
-            val favs = settings.settings.first().favorites
-            if (favs.isEmpty()) {
+            val entityIds = (settings.settings.first().favorites + observedEntities.value.map { it.value }).distinct()
+            if (entityIds.isEmpty()) {
                 // User cleared their favourites — tear down the existing subscription so HA
                 // stops pushing events we no longer care about, instead of leaving a stale
                 // trigger subscribed forever.
@@ -2336,7 +2498,7 @@ class DefaultHaRepository(
                 return@launch
             }
             val newId = ws.nextRequestId()
-            ws.send(HaOutbound.SubscribeStateTrigger(id = newId, entityIds = favs))
+            ws.send(HaOutbound.SubscribeStateTrigger(id = newId, entityIds = entityIds))
             subscriptionId?.let { old ->
                 val unsubId = ws.nextRequestId()
                 ws.send(HaOutbound.UnsubscribeEvents(id = unsubId, subscription = old))

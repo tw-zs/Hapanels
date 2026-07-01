@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.WindowManager
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,6 +103,7 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
     }
 
     private fun detectCapabilities(): PanelCapabilities {
+        val resolution = screenResolutionPx()
         return PanelCapabilities(
             providerLabel = provider.label,
             hardwareModel = listOf(Build.MANUFACTURER, Build.MODEL)
@@ -112,8 +114,22 @@ class AndroidTabletHardware(context: Context) : PanelHardware, SensorEventListen
             hasProximitySensor = proximitySensor != null,
             supportsScreenBrightness = false,
             supportsWake = false,
+            screenWidthPx = resolution?.first,
+            screenHeightPx = resolution?.second,
         )
     }
+
+    private fun screenResolutionPx(): Pair<Int, Int>? = runCatching {
+        val windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            bounds.width() to bounds.height()
+        } else {
+            @Suppress("DEPRECATION")
+            val metrics = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            metrics.widthPixels to metrics.heightPixels
+        }
+    }.getOrNull()
 
     private fun registerSensor(sensor: Sensor?): Boolean = sensor?.let {
         sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, sensorHandler) == true

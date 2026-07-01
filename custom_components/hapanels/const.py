@@ -5,6 +5,7 @@ DEFAULT_BASE_TOPIC = "hapanels"
 
 DATA_PANELS = "panels"
 DATA_CONFIGS = "configs"
+DATA_PENDING_PATCHES = "pending_patches"
 DATA_UNSUB = "unsub"
 DATA_PANEL_REGISTERED = "panel_registered"
 
@@ -20,4 +21,4 @@ PLATFORMS = ["sensor"]
 PANEL_URL_PATH = "hapanels"
 PANEL_ELEMENT = "hapanels-studio-panel"
 STATIC_URL_PATH = "/hapanels_static"
-FRONTEND_VERSION = "20260622-tile-editor"
+FRONTEND_VERSION = "20260630-panel-children"

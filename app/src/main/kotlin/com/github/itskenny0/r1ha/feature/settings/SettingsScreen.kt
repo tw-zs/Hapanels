@@ -591,6 +591,7 @@ fun SettingsScreen(
                 item {
                     AdvancedMqttSettings(
                         advanced = s.advanced,
+                        serverUrl = s.server?.url,
                         onUpdate = vm::updateAdvanced,
                     )
                 }
@@ -2608,19 +2609,60 @@ private fun SwitchRow(
 @Composable
 private fun AdvancedMqttSettings(
     advanced: AdvancedSettings,
+    serverUrl: String?,
     onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
 ) {
+    var hostDraft by remember { mutableStateOf(advanced.mqttHost) }
+    var portDraft by remember { mutableStateOf(advanced.mqttPort.toString()) }
+    var usernameDraft by remember { mutableStateOf(advanced.mqttUsername) }
+    var passwordDraft by remember { mutableStateOf(advanced.mqttPassword) }
+    var clientIdDraft by remember { mutableStateOf(advanced.mqttClientId) }
+    val haBrokerHost = remember(serverUrl) { mqttHostFromServerUrl(serverUrl) }
+
+    androidx.compose.runtime.LaunchedEffect(advanced.mqttHost) { if (hostDraft != advanced.mqttHost) hostDraft = advanced.mqttHost }
+    androidx.compose.runtime.LaunchedEffect(advanced.mqttPort) { if (portDraft != advanced.mqttPort.toString()) portDraft = advanced.mqttPort.toString() }
+    androidx.compose.runtime.LaunchedEffect(advanced.mqttUsername) { if (usernameDraft != advanced.mqttUsername) usernameDraft = advanced.mqttUsername }
+    androidx.compose.runtime.LaunchedEffect(advanced.mqttPassword) { if (passwordDraft != advanced.mqttPassword) passwordDraft = advanced.mqttPassword }
+    androidx.compose.runtime.LaunchedEffect(advanced.mqttClientId) { if (clientIdDraft != advanced.mqttClientId) clientIdDraft = advanced.mqttClientId }
+    androidx.compose.runtime.LaunchedEffect(haBrokerHost) { if (hostDraft.isBlank() && haBrokerHost != null) hostDraft = haBrokerHost }
+    androidx.compose.runtime.LaunchedEffect(hostDraft, portDraft, usernameDraft, passwordDraft, clientIdDraft) {
+        kotlinx.coroutines.delay(700)
+        val port = portDraft.toIntOrNull()?.coerceIn(1, 65535) ?: return@LaunchedEffect
+        onUpdate {
+            it.copy(
+                mqttHost = hostDraft.trim(),
+                mqttPort = port,
+                mqttUsername = usernameDraft,
+                mqttPassword = passwordDraft,
+                mqttClientId = clientIdDraft.trim(),
+            )
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Broker used by the panel MQTT bridge. Empty host disables MQTT; changes persist immediately.",
-            style = R1.labelMicro,
-            color = R1.InkMuted,
-            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Broker używany przez most MQTT panelu. Pusty host wyłącza MQTT; zmiany zapisują się po chwili.",
+                style = R1.labelMicro,
+                color = R1.InkMuted,
+                modifier = Modifier.weight(1f),
+            )
+            if (haBrokerHost != null) {
+                Spacer(Modifier.width(12.dp))
+                com.github.itskenny0.r1ha.ui.components.R1Button(
+                    text = "Użyj IP HA",
+                    onClick = { hostDraft = haBrokerHost },
+                    variant = com.github.itskenny0.r1ha.ui.components.R1ButtonVariant.Outlined,
+                )
+            }
+        }
         LabeledControl(label = "Broker host") {
             R1TextField(
-                value = advanced.mqttHost,
-                onValueChange = { v -> onUpdate { it.copy(mqttHost = v.trim()) } },
+                value = hostDraft,
+                onValueChange = { hostDraft = it },
                 placeholder = "192.168.1.10",
                 monospace = true,
             )
@@ -2630,11 +2672,8 @@ private fun AdvancedMqttSettings(
                 Text("Port", style = R1.bodyEmph, color = R1.Ink)
                 Spacer(Modifier.height(8.dp))
                 R1TextField(
-                    value = advanced.mqttPort.toString(),
-                    onValueChange = { v ->
-                        val port = v.toIntOrNull()?.coerceIn(1, 65535)
-                        if (port != null) onUpdate { it.copy(mqttPort = port) }
-                    },
+                    value = portDraft,
+                    onValueChange = { portDraft = it.filter(Char::isDigit).take(5) },
                     placeholder = "1883",
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
@@ -2668,30 +2707,34 @@ private fun AdvancedMqttSettings(
         }
         LabeledControl(label = "Username") {
             R1TextField(
-                value = advanced.mqttUsername,
-                onValueChange = { v -> onUpdate { it.copy(mqttUsername = v) } },
+                value = usernameDraft,
+                onValueChange = { usernameDraft = it },
                 placeholder = "homeassistant",
                 monospace = true,
             )
         }
         LabeledControl(label = "Password") {
             R1TextField(
-                value = advanced.mqttPassword,
-                onValueChange = { v -> onUpdate { it.copy(mqttPassword = v) } },
+                value = passwordDraft,
+                onValueChange = { passwordDraft = it },
                 placeholder = "optional",
                 monospace = true,
             )
         }
         LabeledControl(label = "Client ID") {
             R1TextField(
-                value = advanced.mqttClientId,
-                onValueChange = { v -> onUpdate { it.copy(mqttClientId = v.trim()) } },
+                value = clientIdDraft,
+                onValueChange = { clientIdDraft = it },
                 placeholder = "auto",
                 monospace = true,
             )
         }
     }
 }
+
+private fun mqttHostFromServerUrl(serverUrl: String?): String? = runCatching {
+    java.net.URI(serverUrl.orEmpty()).host
+}.getOrNull()?.takeIf { it.isNotBlank() }
 
 @Composable
 private fun AdvancedButtonActionSettings(

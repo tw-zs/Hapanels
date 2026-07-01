@@ -73,9 +73,14 @@ data class HapanelsTileConfig(
     val label: String,
     @SerialName("short_label") val shortLabel: String? = null,
     @SerialName("entity_id") val entityId: String? = null,
-    val icon: HapanelsPanelIcon,
+    @SerialName("panel_id") val panelId: String? = null,
+    val icon: String,
     val accent: HapanelsTileAccent = HapanelsTileAccent.ORANGE,
     val order: Int,
+    val col: Int? = null,
+    val row: Int? = null,
+    val colSpan: Int? = null,
+    val rowSpan: Int? = null,
 )
 
 @Serializable
@@ -95,12 +100,19 @@ enum class HapanelsDashboardSurface {
 @Serializable
 data class HapanelsTilePatch(
     val id: String,
+    val kind: HapanelsTileKind? = null,
+    val size: HapanelsTileSize? = null,
     val label: String? = null,
     @SerialName("short_label") val shortLabel: String? = null,
     @SerialName("entity_id") val entityId: String? = null,
-    val icon: HapanelsPanelIcon? = null,
+    @SerialName("panel_id") val panelId: String? = null,
+    val icon: String? = null,
     val accent: HapanelsTileAccent? = null,
     val order: Int? = null,
+    val col: Int? = null,
+    val row: Int? = null,
+    val colSpan: Int? = null,
+    val rowSpan: Int? = null,
 )
 
 sealed interface HapanelsDashboardPatchResult {
@@ -150,6 +162,8 @@ enum class HapanelsTileKind {
     @SerialName("action") ACTION,
     @SerialName("entity") ENTITY,
     @SerialName("camera") CAMERA,
+    @SerialName("folder") FOLDER,
+    @SerialName("popup") POPUP,
 }
 
 @Serializable
@@ -164,22 +178,6 @@ enum class HapanelsTileAccent {
     @SerialName("orange") ORANGE,
     @SerialName("red") RED,
     @SerialName("white") WHITE,
-}
-
-@Serializable
-enum class HapanelsPanelIcon {
-    @SerialName("clock") CLOCK,
-    @SerialName("lightbulb") LIGHTBULB,
-    @SerialName("lightbulb_off") LIGHTBULB_OFF,
-    @SerialName("shield_lock") SHIELD_LOCK,
-    @SerialName("blinds") BLINDS,
-    @SerialName("home_thermometer") HOME_THERMOMETER,
-    @SerialName("cctv") CCTV,
-    @SerialName("gate") GATE,
-    @SerialName("home_lightning") HOME_LIGHTNING,
-    @SerialName("motion_sensor") MOTION_SENSOR,
-    @SerialName("sprinkler") SPRINKLER,
-    @SerialName("cog") COG,
 }
 
 private val dashboardJson = Json {

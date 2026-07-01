@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.WindowManager
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.mqtt.MqttPublisher
 import com.github.itskenny0.r1ha.core.prefs.HardwareButtonActionMapping
@@ -60,6 +61,7 @@ class ShellyWallDisplayHardware(
         extraBufferCapacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
+    private val screenResolution = screenResolutionPx()
 
     override val provider: PanelHardwareProvider = PanelHardwareProvider.SHELLY_WALL_DISPLAY
     private val capabilitiesState = MutableStateFlow(
@@ -75,6 +77,8 @@ class ShellyWallDisplayHardware(
             hasProximitySensor = proximitySensor != null,
             supportsScreenBrightness = screenBrightnessFile != null,
             supportsWake = false,
+            screenWidthPx = screenResolution?.first,
+            screenHeightPx = screenResolution?.second,
         ),
     )
     override val capabilities = capabilitiesState.asStateFlow()
@@ -253,6 +257,18 @@ class ShellyWallDisplayHardware(
             sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL) == true
         }
     } ?: false
+
+    private fun screenResolutionPx(): Pair<Int, Int>? = runCatching {
+        val windowManager = appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.currentWindowMetrics.bounds
+            bounds.width() to bounds.height()
+        } else {
+            @Suppress("DEPRECATION")
+            val metrics = android.util.DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+            metrics.widthPixels to metrics.heightPixels
+        }
+    }.getOrNull()
 
     private fun SensorManager.getShellyProximitySensor(): Sensor? =
         getDefaultSensor(Sensor.TYPE_PROXIMITY)

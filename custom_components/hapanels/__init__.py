@@ -17,6 +17,7 @@ from .const import (
     ATTR_PATCH,
     CONF_BASE_TOPIC,
     DATA_CONFIGS,
+    DATA_PENDING_PATCHES,
     DATA_PANELS,
     DATA_UNSUB,
     DEFAULT_BASE_TOPIC,
@@ -37,11 +38,12 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
+    hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {
         DATA_PANELS: {},
         DATA_CONFIGS: {},
+        DATA_PENDING_PATCHES: {},
         DATA_UNSUB: [],
-    }
+    })
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass, entry)
@@ -63,6 +65,7 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         return
 
     async def set_dashboard_config(call: ServiceCall) -> None:
+        hass.data[DOMAIN][entry.entry_id][DATA_PENDING_PATCHES].pop(call.data[ATTR_DEVICE], None)
         await _publish_json(
             hass,
             entry,
@@ -72,6 +75,7 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         )
 
     async def patch_dashboard_config(call: ServiceCall) -> None:
+        hass.data[DOMAIN][entry.entry_id][DATA_PENDING_PATCHES][call.data[ATTR_DEVICE]] = call.data[ATTR_PATCH]
         await _publish_json(
             hass,
             entry,
@@ -114,7 +118,11 @@ async def websocket_get_dashboard_config(hass: HomeAssistant, connection, msg) -
     device = msg["device"]
     for entry_data in hass.data.get(DOMAIN, {}).values():
         if isinstance(entry_data, dict) and device in entry_data.get(DATA_CONFIGS, {}):
-            connection.send_result(msg["id"], {"device": device, "config": entry_data[DATA_CONFIGS][device]})
+            connection.send_result(msg["id"], {
+                "device": device,
+                "config": entry_data[DATA_CONFIGS][device],
+                "pending_patch": entry_data.get(DATA_PENDING_PATCHES, {}).get(device),
+            })
             return
     connection.send_result(msg["id"], {"device": device, "config": None})
 
@@ -129,16 +137,20 @@ async def _register_panel(hass: HomeAssistant) -> None:
         ])
     else:
         hass.http.async_register_static_path(STATIC_URL_PATH, str(frontend_dir), False)
-    await panel_custom.async_register_panel(
-        hass,
-        webcomponent_name=PANEL_ELEMENT,
-        frontend_url_path=PANEL_URL_PATH,
-        module_url=f"{STATIC_URL_PATH}/hapanels-panel.js?v={FRONTEND_VERSION}",
-        sidebar_title="Hapanels",
-        sidebar_icon="mdi:tablet-dashboard",
-        require_admin=False,
-        config={},
-    )
+    try:
+        await panel_custom.async_register_panel(
+            hass,
+            webcomponent_name=PANEL_ELEMENT,
+            frontend_url_path=PANEL_URL_PATH,
+            module_url=f"{STATIC_URL_PATH}/hapanels-panel.js?v={FRONTEND_VERSION}",
+            sidebar_title="Hapanels",
+            sidebar_icon="mdi:tablet-dashboard",
+            require_admin=False,
+            config={},
+        )
+    except ValueError as err:
+        if f"Overwriting panel {PANEL_URL_PATH}" not in str(err):
+            raise
 
 
 async def _publish_json(

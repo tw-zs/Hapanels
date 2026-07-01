@@ -841,6 +841,7 @@ fun CardStackScreen(
                 // shows battery and we'd be redundant.
                 showBatteryIndicator = appSettings.behavior.hideStatusBar &&
                     appSettings.behavior.showBatteryWhenStatusBarHidden,
+                avoidTopSystemGesture = appSettings.behavior.hideStatusBar,
                 onOpenDevice = onOpenDevice,
                 chromeButtons = appSettings.ui.chromeButtons,
             )
@@ -2555,6 +2556,7 @@ private fun ChromeRow(
      *  indicator via Settings → Behaviour. Defaults to false so previews
      *  + the typical "status bar visible" path stay un-cluttered. */
     showBatteryIndicator: Boolean = false,
+    avoidTopSystemGesture: Boolean = false,
     /** Tap the battery pill to open the Device screen — local controls
      *  for brightness, volume, flashlight. Defaults to a no-op for
      *  previews so the indicator stays non-interactive when the
@@ -2604,6 +2606,7 @@ private fun ChromeRow(
                 onClick = {},
             )
             .statusBarsPadding()
+            .then(if (avoidTopSystemGesture) Modifier.padding(top = 48.dp) else Modifier)
             .padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

@@ -22,6 +22,9 @@ class PanelSyncState:
     updated_by: str | None = None
     current_revision: int | None = None
     attempted_base_revision: int | None = None
+    screen_resolution: str | None = None
+    screen_width_px: int | None = None
+    screen_height_px: int | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -73,6 +76,27 @@ async def async_setup_entry(
         qos=0,
     )
     hass.data[DOMAIN][entry.entry_id][DATA_UNSUB].append(config_unsub)
+
+    @callback
+    def handle_resolution_state(msg) -> None:
+        device = _device_from_topic(base_topic, msg.topic, "/screen/resolution/state")
+        if device is None:
+            return
+        entity = panels.get(device)
+        if entity is None:
+            entity = HapanelsSyncSensor(PanelSyncState(device=device))
+            panels[device] = entity
+            async_add_entities([entity])
+        payload = msg.payload.decode("utf-8") if isinstance(msg.payload, bytes) else str(msg.payload)
+        entity.update_resolution(payload)
+
+    resolution_unsub = await mqtt.async_subscribe(
+        hass,
+        f"{base_topic}/+/screen/resolution/state",
+        handle_resolution_state,
+        qos=0,
+    )
+    hass.data[DOMAIN][entry.entry_id][DATA_UNSUB].append(resolution_unsub)
 
 
 def _device_from_topic(base_topic: str, topic: str, suffix: str = "/dashboard/config/sync/state") -> str | None:
@@ -136,11 +160,25 @@ class HapanelsSyncSensor(SensorEntity):
             "updated_by": self._state.updated_by,
             "current_revision": self._state.current_revision,
             "attempted_base_revision": self._state.attempted_base_revision,
+            "screen_resolution": self._state.screen_resolution,
+            "screen_width_px": self._state.screen_width_px,
+            "screen_height_px": self._state.screen_height_px,
         }
 
     @callback
     def update_state(self, state: PanelSyncState) -> None:
+        state.screen_resolution = self._state.screen_resolution
+        state.screen_width_px = self._state.screen_width_px
+        state.screen_height_px = self._state.screen_height_px
         self._state = state
+        self.async_write_ha_state()
+
+    @callback
+    def update_resolution(self, resolution: str) -> None:
+        width, height = _parse_resolution(resolution)
+        self._state.screen_resolution = resolution if width and height else None
+        self._state.screen_width_px = width
+        self._state.screen_height_px = height
         self.async_write_ha_state()
 
     def as_dict(self) -> dict[str, Any]:
@@ -152,4 +190,14 @@ class HapanelsSyncSensor(SensorEntity):
             "updated_by": self._state.updated_by,
             "current_revision": self._state.current_revision,
             "attempted_base_revision": self._state.attempted_base_revision,
+            "screen_resolution": self._state.screen_resolution,
+            "screen_width_px": self._state.screen_width_px,
+            "screen_height_px": self._state.screen_height_px,
         }
+
+
+def _parse_resolution(value: str) -> tuple[int | None, int | None]:
+    parts = value.lower().replace("×", "x").split("x", 1)
+    if len(parts) != 2:
+        return None, None
+    return _as_int(parts[0]), _as_int(parts[1])

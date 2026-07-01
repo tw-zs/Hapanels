@@ -144,6 +144,7 @@ Next:
 Goal: ship a maintainable panel appliance.
 
 Next:
+- Fix Shelly/Android system shade race: after leaving Hapanels Studio, a fast tap near the top-left hamburger can open Android `NotificationShade` and look like a black screen before the app/AOD view returns. Current evidence: app stays foreground, no crash, no FavoritesPicker navigation, `mExpandedPanel=NotificationShade`. Evaluate proper immersive/kiosk handling or a robust top-gesture guard instead of relying on layout padding.
 - Boot/autostart.
 - Kiosk mode options.
 - Floating return-to-app button when Hapanels is backgrounded or hidden.
@@ -168,9 +169,16 @@ Done:
 - Retained MQTT dashboard config state/meta topics plus inbound `dashboard/config/set` import support.
 - Local dashboard edit patches with `base_revision` conflict detection and MQTT `dashboard/config/patch/set` support.
 - Entry points from the card stack, dashboard screen, and app navigation.
+- Hapanels Studio can edit tiles/AOD, show an approximate HTML preview, resize tiles from the preview, apply AOD presets, and resolve basic config conflicts.
+- Hapanels Studio tile editor uses Home Assistant's lazy `ha-entity-picker` instead of rendering every entity as `<option>`.
+- Native dashboard tile taps dispatch Home Assistant actions through the existing domain-aware `ServiceCall.tapAction` path.
 
 Next:
-- Build a HACS custom integration so HA can expose dashboard management/config UI.
+- Add drilldown panels: `panel_id` opens a native panel, backed by a persisted panel/card schema in dashboard config.
+- Continue Hapanels Studio layout polish after the editor rebuild, especially icon picker sizing and mobile wrapping.
+- Improve Hapanels Studio preview fidelity: match the Compose tablet renderer more closely for tile geometry, clock/person section, camera/action tiles, spacing, typography, and responsive behavior. Current HTML preview is useful for editing but not pixel-perfect.
+- Add fuller conflict resolution: compare tablet/current config vs Studio pending patch, show changed fields, and support per-tile/per-field merge instead of only “Studio wins” / “tablet wins”.
+- Add dashboard theme selection and persist theme presets in dashboard config.
 - Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
 
 ## Milestone 9: Camera Support

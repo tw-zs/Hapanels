@@ -31,6 +31,8 @@ data class PanelCapabilities(
     val hasProximitySensor: Boolean = false,
     val supportsScreenBrightness: Boolean = false,
     val supportsWake: Boolean = false,
+    val screenWidthPx: Int? = null,
+    val screenHeightPx: Int? = null,
 )
 
 data class PanelHardwareStatus(

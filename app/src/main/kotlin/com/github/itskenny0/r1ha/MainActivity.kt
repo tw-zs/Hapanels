@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.FileObserver
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import com.github.itskenny0.r1ha.core.input.WheelEvent
 import com.github.itskenny0.r1ha.core.hardware.PanelScreenMode
@@ -544,15 +546,34 @@ private fun PanelScreensaverOverlay(
                 kotlinx.coroutines.delay(1_000L)
             }
         }
+        val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
         val config by produceState(
             initialValue = null as com.github.itskenny0.r1ha.feature.panelgrid.HapanelsAlwaysOnDisplayConfig?,
             key1 = mode,
             key2 = dashboardConfigSource,
         ) {
-            value = if (mode == PanelScreenMode.SCREENSAVER) {
-                runCatching { dashboardConfigSource.loadOrSeed().alwaysOnDisplay }.getOrNull()
-            } else {
+            if (mode != PanelScreenMode.SCREENSAVER) {
                 null
+            } else {
+                val changes = Channel<Unit>(Channel.CONFLATED)
+                val realObserver = object : FileObserver(
+                    context.filesDir.absolutePath,
+                    CLOSE_WRITE or CREATE or MOVED_TO,
+                ) {
+                    override fun onEvent(event: Int, path: String?) {
+                        if (path == "hapanels_dashboard_config.json") changes.trySend(Unit)
+                    }
+                }
+                realObserver.startWatching()
+                try {
+                    value = runCatching { dashboardConfigSource.loadOrSeed().alwaysOnDisplay }.getOrNull()
+                    for (ignored in changes) {
+                        value = runCatching { dashboardConfigSource.loadOrSeed().alwaysOnDisplay }.getOrNull()
+                    }
+                } finally {
+                    realObserver.stopWatching()
+                    changes.close()
+                }
             }
         }
         val aod = config
@@ -570,11 +591,12 @@ private fun PanelScreensaverOverlay(
             }
         }
         val background = aod?.background?.toComposeColor() ?: Color.Black
-        val contentAlpha = (0.35f + ((aod?.brightnessPercent ?: 3).coerceIn(0, 100) / 100f) * 0.65f)
+        val brightnessPercent = aod?.brightnessPercent ?: 100
+        val contentAlpha = (0.35f + (brightnessPercent.coerceIn(0, 100) / 100f) * 0.65f)
             .coerceIn(0.35f, 1f)
         androidx.compose.runtime.LaunchedEffect(mode, aod?.brightnessPercent, panelScreenManager) {
-            if (mode == PanelScreenMode.SCREENSAVER) {
-                panelScreenManager.setAodBrightnessOverride(aod?.brightnessPercent ?: 3)
+            if (mode == PanelScreenMode.SCREENSAVER && aod != null) {
+                panelScreenManager.setAodBrightnessOverride(aod.brightnessPercent)
             }
         }
         DisposableEffect(mode, panelScreenManager) {

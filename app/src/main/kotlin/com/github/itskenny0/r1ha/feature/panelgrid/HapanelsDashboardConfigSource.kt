@@ -98,12 +98,19 @@ class HapanelsDashboardConfigSource(
 }
 
 private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTileConfig = copy(
+    kind = patch.kind ?: kind,
+    size = patch.size ?: size,
     label = patch.label ?: label,
     shortLabel = patch.shortLabel ?: shortLabel,
     entityId = patch.entityId ?: entityId,
+    panelId = patch.panelId ?: panelId,
     icon = patch.icon ?: icon,
     accent = patch.accent ?: accent,
     order = patch.order ?: order,
+    col = patch.col ?: col,
+    row = patch.row ?: row,
+    colSpan = patch.colSpan ?: colSpan,
+    rowSpan = patch.rowSpan ?: rowSpan,
 )
 
 private fun List<HapanelsTileConfig>.applyPatches(

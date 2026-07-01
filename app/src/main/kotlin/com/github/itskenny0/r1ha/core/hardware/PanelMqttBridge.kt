@@ -4,6 +4,7 @@ import android.os.Build
 import com.github.itskenny0.r1ha.BuildConfig
 import com.github.itskenny0.r1ha.core.mqtt.MqttSession
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.prefs.AdvancedSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
@@ -28,8 +29,9 @@ class PanelMqttBridge(
     private val screenManager: PanelScreenManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val objectId = "hapanels_${Build.DEVICE.ifBlank { "panel" }.safeId()}"
-    private val baseTopic = "hapanels/${Build.DEVICE.ifBlank { "panel" }.safeId()}"
+    private val panelDeviceId = panelDeviceId()
+    private val objectId = "hapanels_$panelDeviceId"
+    private val baseTopic = "hapanels/$panelDeviceId"
     private var discoverySignature: PanelDiscoverySignature? = null
     private var session: MqttSession? = null
     private var settingsJob: Job? = null
@@ -379,6 +381,20 @@ class PanelMqttBridge(
         )
         discovery(
             component = "sensor",
+            entityId = "screen_resolution",
+            payload = """
+                {
+                  "name":"Screen resolution",
+                  "unique_id":"${objectId}_screen_resolution",
+                  "state_topic":"$baseTopic/screen/resolution/state",
+                  "icon":"mdi:monitor-screenshot",
+                  "availability_topic":"$baseTopic/status",
+                  "device":${deviceJson()}
+                }
+            """.compactJson(),
+        )
+        discovery(
+            component = "sensor",
             entityId = "screen_target_brightness",
             payload = """
                 {
@@ -464,8 +480,16 @@ class PanelMqttBridge(
     private suspend fun publishPanelDiagnostics(capabilities: PanelCapabilities) {
         publish("$baseTopic/app/version/state", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})", retain = true)
         publish("$baseTopic/hardware/provider/state", capabilities.providerLabel, retain = true)
+        publish("$baseTopic/screen/resolution/state", screenResolutionState(capabilities), retain = true)
         publishMqttDiagnostics()
     }
+
+    private fun screenResolutionState(capabilities: PanelCapabilities): String =
+        if (capabilities.screenWidthPx != null && capabilities.screenHeightPx != null) {
+            "${capabilities.screenWidthPx}x${capabilities.screenHeightPx}"
+        } else {
+            "unknown"
+        }
 
     private suspend fun publishMqttDiagnostics() {
         publish("$baseTopic/mqtt/connection/state", mqttConnectionState, retain = true)
@@ -582,6 +606,7 @@ class PanelMqttBridge(
         runCatching {
             val config = dashboardConfigSource.loadOrSeed()
             val raw = dashboardConfigSource.exportRaw()
+            syncAodSettings(config)
             publish("$baseTopic/dashboard/config/state", raw, retain = true)
             publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
             publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced"), retain = true)
@@ -617,9 +642,10 @@ class PanelMqttBridge(
             .onSuccess { result ->
                 when (result) {
                     is HapanelsDashboardPatchResult.Applied -> {
-                        publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
-                        publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
-                        publish("$baseTopic/dashboard/config/sync/state", result.config.syncStateJson("synced"), retain = true)
+                publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
+                publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
+                publish("$baseTopic/dashboard/config/sync/state", result.config.syncStateJson("synced"), retain = true)
+                        syncAodSettings(result.config)
                         publishDashboardMetadata(result.config)
                     }
                     is HapanelsDashboardPatchResult.Conflict -> {
@@ -639,10 +665,20 @@ class PanelMqttBridge(
 
     private suspend fun syncAodSettings(config: HapanelsDashboardConfig) {
         settings.update { current ->
+            val defaults = AdvancedSettings()
+            val advanced = current.advanced
             current.copy(
                 advanced = current.advanced.copy(
-                    screensaverEnabled = config.alwaysOnDisplay.enabled,
-                    screensaverTimeoutSec = config.alwaysOnDisplay.timeoutSec.coerceIn(5, 900),
+                    screensaverEnabled = if (advanced.screensaverEnabled == defaults.screensaverEnabled) {
+                        config.alwaysOnDisplay.enabled
+                    } else {
+                        advanced.screensaverEnabled
+                    },
+                    screensaverTimeoutSec = if (advanced.screensaverTimeoutSec == defaults.screensaverTimeoutSec) {
+                        config.alwaysOnDisplay.timeoutSec.coerceIn(5, 900)
+                    } else {
+                        advanced.screensaverTimeoutSec
+                    },
                 ),
             )
         }
@@ -671,7 +707,7 @@ class PanelMqttBridge(
     private fun deviceJson(): String = """
         {
           "identifiers":["$objectId"],
-          "name":"Hapanels Shelly Wall Display",
+          "name":"Hapanels $panelDeviceId",
           "manufacturer":"tw-zs",
           "model":"${Build.MANUFACTURER} ${Build.MODEL}" 
         }
@@ -766,6 +802,14 @@ private fun String.safeId(): String = lowercase()
     .joinToString("")
     .trim('_')
     .ifBlank { "panel" }
+
+private fun panelDeviceId(): String = listOf(Build.DEVICE, Build.MODEL, Build.PRODUCT)
+    .takeIf { values -> values.any { it.contains("shelly", ignoreCase = true) || it.contains("wall_display", ignoreCase = true) } }
+    ?.let { "blake" }
+    ?: listOf(Build.DEVICE, Build.MODEL, Build.PRODUCT)
+    .firstOrNull { it.contains("blake", ignoreCase = true) }
+    ?.safeId()
+    ?: Build.DEVICE.ifBlank { "panel" }.safeId()
 
 internal fun mqttDiagnosticError(message: String?): String = message
     ?.trim()

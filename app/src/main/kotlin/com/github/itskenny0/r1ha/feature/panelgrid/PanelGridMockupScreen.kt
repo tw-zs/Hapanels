@@ -143,12 +143,13 @@ fun PanelGridMockupScreen(haRepository: HaRepository, onBack: () -> Unit) {
             .systemBarsPadding(),
     ) {
         val loadedConfig = config
+        val panelConfig = loadedConfig?.forPanel(currentPanelId)
         if (loadedConfig == null) {
             LoadingPanelConfig()
         } else if (compact) {
-            CompactPanel(config = loadedConfig.forPanel(currentPanelId), liveEntities = liveEntities, now = now, dateText = dateText, onTileClick = onTileClick)
+            CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
         } else {
-            WidePanel(config = loadedConfig.forPanel(currentPanelId), liveEntities = liveEntities, now = now, dateText = dateText, onTileClick = onTileClick)
+            WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
         }
         if (loadedConfig != null && popupTile != null) {
             PanelPopup(
@@ -198,8 +199,17 @@ private fun WidePanel(
     liveEntities: Map<EntityId, EntityState>,
     now: String,
     dateText: String,
+    isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
 ) {
+    if (isSubPanel && config.tiles.isEmpty()) {
+        EmptyPanelMessage()
+        return
+    }
+    if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
+        PanelSubTiles(config.tiles, liveEntities, onTileClick)
+        return
+    }
     if (config.tiles.any { it.hasGridCell() }) {
         WideGridPanel(config = config, liveEntities = liveEntities, now = now, dateText = dateText, onTileClick = onTileClick)
         return
@@ -364,8 +374,17 @@ private fun CompactPanel(
     liveEntities: Map<EntityId, EntityState>,
     now: String,
     dateText: String,
+    isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
 ) {
+    if (isSubPanel && config.tiles.isEmpty()) {
+        EmptyPanelMessage()
+        return
+    }
+    if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
+        PanelSubTiles(config.tiles, liveEntities, onTileClick)
+        return
+    }
     val actionTiles = remember(config) { config.tilesBySize(HapanelsTileSize.ACTION) }
     val largeTiles = remember(config) { config.tilesBySize(HapanelsTileSize.LARGE) }
     val smallTiles = remember(config) { config.tilesBySize(HapanelsTileSize.SMALL) }
@@ -411,6 +430,39 @@ private fun CompactPanel(
                     )
                 }
                 PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 48.dp, onClick = { onTileClick(smallTiles[3]) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyPanelMessage() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            "Brak elementów. Dodaj je w Hapanels Studio.",
+            color = Color.White.copy(alpha = 0.78f),
+            style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun PanelSubTiles(
+    tiles: List<HapanelsTileConfig>,
+    liveEntities: Map<EntityId, EntityState>,
+    onTileClick: (HapanelsTileConfig) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 72.dp, vertical = 72.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        tiles.sortedBy { it.order }.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { tile ->
+                    PanelActionTile(tile, liveState = tile.liveState(liveEntities), modifier = Modifier.weight(1f).height(126.dp), iconSize = 56.dp, onClick = { onTileClick(tile) })
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }

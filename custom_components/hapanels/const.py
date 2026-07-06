@@ -21,4 +21,4 @@ PLATFORMS = ["sensor"]
 PANEL_URL_PATH = "hapanels"
 PANEL_ELEMENT = "hapanels-studio-panel"
 STATIC_URL_PATH = "/hapanels_static"
-FRONTEND_VERSION = "20260630-panel-children"
+FRONTEND_VERSION = "20260706-popup-context"

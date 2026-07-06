@@ -298,6 +298,7 @@ class MainActivity : ComponentActivity() {
                                 wheelInput = graph.wheelInput,
                                 panelHardware = graph.panelHardware,
                                 panelScreenManager = graph.panelScreenManager,
+                                dashboardConfigSource = graph.dashboardConfigSource,
                             )
                         }
                         PanelScreensaverOverlay(

@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -78,7 +79,11 @@ private val NunitoPanelFont = FontFamily(
 )
 
 @Composable
-fun PanelGridMockupScreen(haRepository: HaRepository, onBack: () -> Unit) {
+fun PanelGridMockupScreen(
+    haRepository: HaRepository,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
+    onBack: () -> Unit,
+) {
     val cfg = LocalConfiguration.current
     val compact = cfg.screenWidthDp < 820
     val now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -90,7 +95,6 @@ fun PanelGridMockupScreen(haRepository: HaRepository, onBack: () -> Unit) {
     }
     val context = LocalContext.current.applicationContext
     val config by produceState<HapanelsDashboardConfig?>(initialValue = null, key1 = context) {
-        val source = HapanelsDashboardConfigSource(context)
         val changes = Channel<Unit>(Channel.CONFLATED)
         val observer = object : FileObserver(context.filesDir.absolutePath, CLOSE_WRITE or CREATE or MOVED_TO) {
             override fun onEvent(event: Int, path: String?) {
@@ -98,10 +102,12 @@ fun PanelGridMockupScreen(haRepository: HaRepository, onBack: () -> Unit) {
             }
         }
         observer.startWatching()
+        val sourceJob = launch { dashboardConfigSource.changes.collect { changes.trySend(Unit) } }
         try {
-            value = source.loadOrSeed()
-            for (ignored in changes) value = source.loadOrSeed()
+            value = dashboardConfigSource.loadOrSeed()
+            for (ignored in changes) value = dashboardConfigSource.loadOrSeed()
         } finally {
+            sourceJob.cancel()
             observer.stopWatching()
             changes.close()
         }
@@ -144,36 +150,40 @@ fun PanelGridMockupScreen(haRepository: HaRepository, onBack: () -> Unit) {
     ) {
         val loadedConfig = config
         val panelConfig = loadedConfig?.forPanel(currentPanelId)
-        if (loadedConfig == null) {
-            LoadingPanelConfig()
-        } else if (compact) {
-            CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
-        } else {
-            WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
+        Box(modifier = Modifier.fillMaxSize().then(if (popupTile != null) Modifier.blur(10.dp) else Modifier)) {
+            if (loadedConfig == null) {
+                LoadingPanelConfig()
+            } else if (compact) {
+                CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
+            } else {
+                WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
+            }
+            if (currentPanelTitle != null) {
+                Text(
+                    text = currentPanelTitle!!,
+                    color = Color.White,
+                    style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp),
+            ) {
+                ChevronBack(onClick = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() })
+            }
         }
         if (loadedConfig != null && popupTile != null) {
             PanelPopup(
                 tile = popupTile!!,
                 tiles = loadedConfig.popupTiles(popupTile!!),
                 liveEntities = liveEntities,
+                now = now,
+                dateText = dateText,
                 onTileClick = { tile -> onTileClick(tile); popupTile = null },
                 onClose = { popupTile = null },
             )
-        }
-        if (currentPanelTitle != null) {
-            Text(
-                text = currentPanelTitle!!,
-                color = Color.White,
-                style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(6.dp),
-        ) {
-            ChevronBack(onClick = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() })
         }
     }
 }
@@ -469,28 +479,37 @@ private fun PanelSubTiles(
 }
 
 @Composable
-private fun PanelClockBlock(now: String, dateText: String, modifier: Modifier) {
+private fun PanelClockBlock(now: String, dateText: String, modifier: Modifier, style: String? = null) {
+    val dateFirst = style == "date_top"
+    val compact = style == "compact"
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        if (dateFirst) ClockDateText(dateText)
         Text(
             now,
             color = Color(0xFFF4F4F6),
-            fontSize = 80.sp,
+            fontSize = if (compact) 58.sp else 80.sp,
             fontWeight = FontWeight.Black,
             fontFamily = NunitoPanelFont,
-            lineHeight = 80.sp,
+            lineHeight = if (compact) 58.sp else 72.sp,
         )
-        Text(
-            dateText,
-            color = Color(0xFFF4F4F6),
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = NunitoPanelFont,
-        )
+        if (!dateFirst) ClockDateText(dateText)
     }
+}
+
+@Composable
+private fun ClockDateText(dateText: String) {
+    Text(
+        dateText,
+        color = Color(0xFFF4F4F6),
+        fontSize = 19.sp,
+        fontWeight = FontWeight.Bold,
+        fontFamily = NunitoPanelFont,
+        lineHeight = 22.sp,
+    )
 }
 
 @Composable
@@ -586,7 +605,7 @@ private fun PanelLargeTileOrCamera(
     onClick: () -> Unit,
 ) {
     when (tile.kind) {
-        HapanelsTileKind.CLOCK -> PanelClockBlock(now = now.ifBlank { "--:--" }, dateText = dateText, modifier = modifier)
+        HapanelsTileKind.CLOCK -> PanelClockBlock(now = now.ifBlank { "--:--" }, dateText = dateText, modifier = modifier, style = tile.clockStyle)
         HapanelsTileKind.CAMERA -> PanelCameraTile(tile = tile, liveState = liveState, cameraActions = cameraActions, modifier = modifier, iconSize = iconSize, onClick = onClick)
         else -> PanelLargeTile(tile = tile, liveState = liveState, modifier = modifier, iconSize = iconSize, onClick = onClick)
     }
@@ -597,33 +616,76 @@ private fun PanelPopup(
     tile: HapanelsTileConfig,
     tiles: List<HapanelsTileConfig>,
     liveEntities: Map<EntityId, EntityState>,
+    now: String,
+    dateText: String,
     onTileClick: (HapanelsTileConfig) -> Unit,
     onClose: () -> Unit,
 ) {
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).r1Pressable(onClick = onClose),
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)).r1Pressable(onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
+        Box(
             modifier = Modifier
-                .fillMaxWidth(0.72f)
+                .fillMaxWidth(0.70f)
+                .fillMaxHeight(0.70f)
                 .clip(RoundedCornerShape(28.dp))
-                .background(PanelBg)
-                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(28.dp))
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .background(Color.White.copy(alpha = 0.13f))
+                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                .r1Pressable(onClick = { }),
         ) {
-            Text(tile.displayLabel(), color = Color.White, style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont))
-            if (tiles.isEmpty()) {
-                Text("Brak kafli w popupie. W Studio ustaw Panel na: ${tile.panelId.orEmpty()}", color = Muted, style = R1.body)
-            }
-            tiles.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { item ->
-                        PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = Modifier.weight(1f).height(118.dp), iconSize = 52.dp, onClick = { onTileClick(item) })
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            Canvas(Modifier.fillMaxSize()) {
+                repeat(900) { index ->
+                    val x = ((index * 37) % size.width.toInt().coerceAtLeast(1)).toFloat()
+                    val y = ((index * 53) % size.height.toInt().coerceAtLeast(1)).toFloat()
+                    drawCircle(Color.White.copy(alpha = 0.11f), radius = 0.8f, center = Offset(x, y))
                 }
+            }
+            Column(
+                modifier = Modifier.fillMaxSize().padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(tile.displayLabel(), color = Color.White, style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont))
+                if (tiles.isEmpty()) {
+                    Text("Brak kafli w popupie. W Studio ustaw Panel na: ${tile.panelId.orEmpty()}", color = Muted, style = R1.body)
+                } else if (tiles.any { it.hasGridCell() }) {
+                    PopupGrid(tiles, liveEntities, now, dateText, Modifier.weight(1f).fillMaxWidth(), onTileClick)
+                } else {
+                    tiles.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            row.forEach { item ->
+                                PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = Modifier.weight(1f).height(118.dp), iconSize = 52.dp, onClick = { onTileClick(item) })
+                            }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PopupGrid(
+    tiles: List<HapanelsTileConfig>,
+    liveEntities: Map<EntityId, EntityState>,
+    now: String,
+    dateText: String,
+    modifier: Modifier,
+    onTileClick: (HapanelsTileConfig) -> Unit,
+) {
+    BoxWithConstraints(modifier = modifier) {
+        val columns = 12
+        val rows = 9
+        val gap = 8.dp
+        val cellWidth = (maxWidth - gap * (columns - 1)) / columns
+        val cellHeight = (maxHeight - gap * (rows - 1)) / rows
+        tiles.sortedBy { it.order }.forEach { item ->
+            val itemModifier = Modifier.gridCell(item.col ?: return@forEach, item.row ?: return@forEach, item.colSpan ?: 1, item.rowSpan ?: 1, cellWidth, cellHeight, gap)
+            when (item.size) {
+                HapanelsTileSize.ACTION -> PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) })
+                HapanelsTileSize.SMALL -> PanelSmallTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) })
+                HapanelsTileSize.LARGE -> PanelLargeTileOrCamera(item, liveState = item.liveState(liveEntities), cameraActions = emptyList(), modifier = itemModifier, now = now, dateText = dateText, onClick = { onTileClick(item) })
             }
         }
     }

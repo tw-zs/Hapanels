@@ -81,6 +81,7 @@ data class HapanelsTileConfig(
     val row: Int? = null,
     val colSpan: Int? = null,
     val rowSpan: Int? = null,
+    @SerialName("clock_style") val clockStyle: String? = null,
 )
 
 @Serializable
@@ -113,6 +114,7 @@ data class HapanelsTilePatch(
     val row: Int? = null,
     val colSpan: Int? = null,
     val rowSpan: Int? = null,
+    @SerialName("clock_style") val clockStyle: String? = null,
 )
 
 sealed interface HapanelsDashboardPatchResult {

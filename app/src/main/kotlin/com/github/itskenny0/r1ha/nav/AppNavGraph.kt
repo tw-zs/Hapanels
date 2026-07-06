@@ -14,6 +14,7 @@ import com.github.itskenny0.r1ha.feature.about.AboutScreen
 import com.github.itskenny0.r1ha.feature.cardstack.CardStackScreen
 import com.github.itskenny0.r1ha.feature.favoritespicker.FavoritesPickerScreen
 import com.github.itskenny0.r1ha.feature.onboarding.OnboardingScreen
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.PanelGridMockupScreen
 import com.github.itskenny0.r1ha.feature.settings.SettingsScreen
 import com.github.itskenny0.r1ha.feature.themepicker.ThemePickerScreen
@@ -28,6 +29,7 @@ fun AppNavGraph(
     wheelInput: WheelInput,
     panelHardware: PanelHardware,
     panelScreenManager: PanelScreenManager,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
 ) {
     // App-shortcut deep-link consumer — MainActivity emits a route on
     // ShortcutBus whenever a launcher long-press shortcut delivers an
@@ -151,6 +153,7 @@ fun AppNavGraph(
         composable(Routes.PANEL_GRID_MOCKUP) {
             PanelGridMockupScreen(
                 haRepository = haRepository,
+                dashboardConfigSource = dashboardConfigSource,
                 onBack = { navController.popBackStack() },
             )
         }

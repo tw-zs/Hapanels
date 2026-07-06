@@ -1,9 +1,10 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260630-panel-children";
+const STUDIO_FRONTEND_VERSION = "20260706-popup-context";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
 const TILE_SIZES = ["large", "small", "action"];
+const CLOCK_STYLES = ["classic", "compact", "date_top"];
 const AOD_PRESETS = [
   { id: "night", name: "Nocny zegar", desc: "Ciemno, 1% jasności, sam zegar", aod: { enabled: true, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 1, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
   { id: "status", name: "Status dom", desc: "Cichy pasek statusu i osoby", aod: { enabled: true, layout: "status_strip", timeout_sec: 180, brightness_percent: 3, background: "#05070a", grid_layout: { type: "fixed_grid", columns_landscape: 4, columns_portrait: 2, gap: "small" } } },
@@ -27,6 +28,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this._focusedTileId = null;
     this._tabletPickerFilter = "all";
     this._layoutDrafts = {};
+    this._layoutContext = "main";
     this._layoutDrag = null;
     this._layoutGridCollapsed = localStorage.getItem("hapanels_layout_grid_collapsed") === "1";
     this._themeMode = localStorage.getItem("hapanels_studio_theme") || "auto";
@@ -86,6 +88,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const row = Number(this.shadowRoot.getElementById(`${prefix}-row`)?.value);
     const colSpan = Number(this.shadowRoot.getElementById(`${prefix}-colSpan`)?.value);
     const rowSpan = Number(this.shadowRoot.getElementById(`${prefix}-rowSpan`)?.value);
+    const clockStyle = this.shadowRoot.getElementById(`${prefix}-clockStyle`)?.value;
     if (!config || !Number.isFinite(revision) || !label) return;
     const tile = { id: tileId, label };
     if (kind) tile.kind = kind;
@@ -100,6 +103,7 @@ class HapanelsStudioPanel extends HTMLElement {
     if (Number.isFinite(row)) tile.row = row;
     if (Number.isFinite(colSpan)) tile.colSpan = colSpan;
     if (Number.isFinite(rowSpan)) tile.rowSpan = rowSpan;
+    if (clockStyle) tile.clock_style = clockStyle;
     await this._hass.callService("hapanels", "patch_dashboard_config", {
       device,
       patch: {
@@ -254,7 +258,8 @@ class HapanelsStudioPanel extends HTMLElement {
         .page { padding: 28px; max-width: 1180px; margin: 0 auto; }
         .hero { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
         .brand { display: flex; align-items: center; gap: 12px; }
-        .logo { width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(135deg, #ff7a1a, #ffb35c); display: grid; place-items: center; color: #160902; font-weight: 950; box-shadow: 0 12px 30px rgba(255,122,26,.25); }
+        .logo { width: 42px; height: 42px; border-radius: 14px; background: linear-gradient(135deg, #ff7a1a, #ffb35c); display: grid; place-items: center; color: #160902; box-shadow: 0 12px 30px rgba(255,122,26,.25); }
+        .logo svg { width: 36px; height: 36px; }
         h1 { margin: 0; font-size: 34px; letter-spacing: -0.03em; }
         h2 { margin: 0; font-size: 24px; }
         .sub { color: var(--muted); margin-top: 8px; }
@@ -389,8 +394,13 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-left-panel { display: grid; align-content: start; gap: 12px; }
         .layout-toolbar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
         .layout-frame { position: relative; width: 100%; align-self: start; border: 1px solid #334155; border-radius: 10px; background: #0f172a; overflow: hidden; }
+        .layout-frame.popup-context { border-color: rgba(255,255,255,.16); background: radial-gradient(circle at 20% 20%, rgba(255,255,255,.10), transparent 28%), #05070a; }
+        .layout-frame.popup-context::before { content:""; position:absolute; inset:0; background: rgba(0,0,0,.38); backdrop-filter: blur(6px); }
         .layout-frame.will-drop { border: 3px dashed #ef4444; overflow: visible; }
         .layout-grid { position: absolute; inset: 10px; display: grid; gap: 6px; overflow: visible; min-height: 0; grid-auto-columns: calc((100% - ((var(--cols) - 1) * 6px)) / var(--cols)); grid-auto-rows: calc((100% - ((var(--rows) - 1) * 6px)) / var(--rows)); }
+        .layout-frame.popup-context .layout-grid { inset: 15%; border: 1px solid rgba(255,255,255,.18); border-radius: 24px; padding: 10px; background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); box-shadow: 0 24px 80px rgba(0,0,0,.38); backdrop-filter: blur(18px) saturate(1.35); }
+        .layout-frame.popup-context .layout-grid::before { content:""; pointer-events:none; position:absolute; inset:0; border-radius:24px; opacity:.32; background-image: radial-gradient(circle, rgba(255,255,255,.55) 0 1px, transparent 1px); background-size: 5px 5px; mix-blend-mode: overlay; }
+        .layout-frame.popup-context .layout-cell-tile { background: rgba(31,41,55,.72); backdrop-filter: blur(8px); }
         .layout-cell-tile { position: relative; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; border: 1px solid #334155; border-radius: 6px; background: #1f2937; color: #cbd5e1; padding: 0; display: grid; place-items: center; text-align: center; cursor: pointer; user-select: none; font-size: clamp(.55rem, 1.4vw, .8rem); }
         .layout-tile-content { min-width: 0; min-height: 0; display: grid; gap: 3px; place-items: center; text-align: center; padding: 4px; pointer-events: none; }
         .layout-tile-icon { line-height: 1; }
@@ -422,6 +432,7 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-panel.tray-active { border-color: #facc15; box-shadow: 0 0 0 3px rgba(250,204,21,.18); }
         .layout-panel.tray-flash { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.25); }
         .layout-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .layout-context-select { width: 100%; }
         .tray-list { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; align-content: start; align-items: start; margin-bottom: 12px; }
         .tray-item { aspect-ratio: var(--tray-aspect, 1); display: grid; place-items: center; border: 0; border-radius: 6px; background: #374151; color: #cbd5e1; padding: 0; cursor: grab; user-select: none; }
         .tray-item.dragging { opacity: .6; }
@@ -439,6 +450,11 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-checks { display: flex; flex-wrap: wrap; gap: 10px; }
         .layout-checks label { display: flex; align-items: center; gap: 6px; color: #cbd5e1; font-size: .8rem; }
         .layout-checks input { width: auto; }
+        .clock-style-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        .clock-style-card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 8px; color: var(--text); text-align: center; }
+        .clock-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+        .clock-style-card strong { display: block; font-size: 24px; line-height: 1; }
+        .clock-style-card small { color: var(--muted); font-size: 10px; }
         .error { color: #ff725d; margin-top: 12px; }
         a { color: var(--accent); }
         @media (max-width: 900px) {
@@ -471,7 +487,7 @@ class HapanelsStudioPanel extends HTMLElement {
       <section class="hero">
         <div>
           <div class="brand">
-            <div class="logo" aria-hidden="true">H</div>
+            <div class="logo" aria-hidden="true">${this._logoMark()}</div>
             <h1>Hapanels Studio <span class="version">${STUDIO_FRONTEND_VERSION}</span></h1>
           </div>
           <div class="sub">Panele wykryte po MQTT i stan synchronizacji dashboardu/AOD.</div>
@@ -483,6 +499,10 @@ class HapanelsStudioPanel extends HTMLElement {
         </div>
       </section>
     `;
+  }
+
+  _logoMark() {
+    return `<svg viewBox="330 235 540 545" role="img" aria-label="Hapanels"><path d="M365 717V452c0-19 9-36 24-47l168-135c25-20 61-20 86 0l168 135c15 11 24 28 24 47v265" fill="none" stroke="currentColor" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"/><path d="M445 476c0-14 12-26 26-26h103c14 0 26 12 26 26v248c0 14-12 26-26 26H471c-14 0-26-12-26-26zM630 476c0-14 12-26 26-26h103c14 0 26 12 26 26v78c0 14-12 26-26 26H656c-14 0-26-12-26-26zM630 641c0-14 12-26 26-26h103c14 0 26 12 26 26v83c0 14-12 26-26 26H656c-14 0-26-12-26-26z" fill="#1e90ff"/></svg>`;
   }
 
   _mainView(panels) {
@@ -623,7 +643,10 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _previewView(device, config) {
-    const draft = this._layoutDraft(device, config);
+    const contexts = this._layoutContextOptions(config);
+    if (!contexts.some((item) => item.id === this._layoutContext)) this._layoutContext = "main";
+    const context = contexts.find((item) => item.id === this._layoutContext) || contexts[0];
+    const draft = this._layoutDraft(device, config, context);
     const grid = draft.grid;
     const selected = draft.tiles.find((tile) => tile.id === draft.selectedTileId) || draft.tiles[0];
     const outside = draft.tiles.filter((tile) => this._isOutsideGrid(tile, grid));
@@ -633,9 +656,15 @@ class HapanelsStudioPanel extends HTMLElement {
       <div class="layout-editor">
         <div class="layout-left-panel">
           <div class="layout-panel">
+            <label class="field layout-context-select">
+              <span>Kontekst</span>
+              <select id="layout-context">
+                ${contexts.map((item) => `<option value="${this._escape(item.id)}" ${item.id === context.id ? "selected" : ""}>${this._escape(item.label)}</option>`).join("")}
+              </select>
+            </label>
             <div class="layout-buttons">
               <button class="small" data-layout-add-ha>Dodaj kafel Home Assistant +</button>
-              <button class="small" data-pick-panel-tile data-target="layout">Dodaj kafel panelu +</button>
+              <button class="small" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Dodaj kafel panelu +</button>
               <button class="small secondary" data-layout-tray>Usuń kafelek</button>
             </div>
             <span class="sub">${this._escape(draft.tiles.length)}/${this._escape(grid.columns * grid.rows)}</span>
@@ -664,7 +693,7 @@ class HapanelsStudioPanel extends HTMLElement {
             </div>
           </div>
         </div>
-        <div class="layout-frame ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
+        <div class="layout-frame ${context.type === "popup" ? "popup-context" : ""} ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
           <div class="layout-grid" style="--cols:${this._escape(grid.columns)};--rows:${this._escape(grid.rows)};grid-template-columns:repeat(${this._escape(grid.columns)}, minmax(0, 1fr));grid-template-rows:repeat(${this._escape(grid.rows)}, minmax(0, 1fr));">
             ${draft.tiles.map((tile) => this._layoutTile(tile, grid, tile.id === draft.selectedTileId)).join("")}
             ${this._layoutGhost(draft)}
@@ -681,24 +710,46 @@ class HapanelsStudioPanel extends HTMLElement {
     `;
   }
 
-  _layoutDraft(device, config) {
-    const key = `${device}:${config.revision ?? "new"}`;
+  _layoutContextOptions(config) {
+    const items = [{ id: "main", type: "main", panelId: "", label: "Panel główny" }];
+    (config.tiles || []).filter((tile) => ["folder", "popup"].includes(tile.kind) && tile.panel_id).forEach((tile) => {
+      items.push({ id: `${tile.kind}:${tile.panel_id}`, type: tile.kind, panelId: tile.panel_id, label: `${tile.kind === "popup" ? "Popup" : "Folder"}: ${tile.label || tile.panel_id}` });
+    });
+    return items;
+  }
+
+  _layoutContextTiles(config, context) {
+    const tiles = config.tiles || [];
+    if (!context || context.id === "main") return tiles.filter((tile) => !tile.panel_id || ["folder", "popup"].includes(tile.kind));
+    return tiles.filter((tile) => tile.panel_id === context.panelId && !["folder", "popup"].includes(tile.kind));
+  }
+
+  _layoutContextEditor(config, context) {
+    if (!context || context.id === "main") return config.layout_editor || {};
+    return config.layout_editor?.contexts?.[context.panelId] || {};
+  }
+
+  _layoutDraft(device, config, context = null) {
+    const activeContext = context || this._layoutContextOptions(config).find((item) => item.id === this._layoutContext) || { id: "main" };
+    const key = `${device}:${config.revision ?? "new"}:${activeContext.id}`;
     if (this._layoutDrafts[key]) return this._layoutDrafts[key];
     const resolution = this._tabletResolution(device);
+    const editor = this._layoutContextEditor(config, activeContext);
     const grid = {
-      columns: Number(config.layout_editor?.grid?.columns) || 12,
-      rows: Number(config.layout_editor?.grid?.rows) || 9,
-      aspectWidth: resolution?.width || Number(config.layout_editor?.grid?.aspectWidth) || 16,
-      aspectHeight: resolution?.height || Number(config.layout_editor?.grid?.aspectHeight) || 9,
+      columns: Number(editor.grid?.columns) || 12,
+      rows: Number(editor.grid?.rows) || 9,
+      aspectWidth: resolution?.width || Number(editor.grid?.aspectWidth) || 16,
+      aspectHeight: resolution?.height || Number(editor.grid?.aspectHeight) || 9,
     };
-    const tiles = this._layoutTiles((config.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0)), grid);
+    const tiles = this._layoutTiles(this._layoutContextTiles(config, activeContext).slice().sort((a, b) => (a.order || 0) - (b.order || 0)), grid);
     const draft = {
+      context: activeContext,
       grid,
       tiles,
-      tray: (config.layout_editor?.tray || []).map((tile, index) => this._layoutTileModel(tile, index, grid)),
+      tray: (editor.tray || []).map((tile, index) => this._layoutTileModel(tile, index, grid)),
       selectedTileId: tiles[0]?.id || null,
     };
-    this._layoutDrafts = { [key]: draft };
+    this._layoutDrafts[key] = draft;
     return draft;
   }
 
@@ -883,6 +934,7 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _layoutSelectedPanel(tile) {
+    const clockStyle = tile.clock_style || "classic";
     return `
       <div class="layout-panel tile-settings">
         <strong>Ustawienia kafla</strong>
@@ -895,7 +947,12 @@ class HapanelsStudioPanel extends HTMLElement {
             <label><input id="layout-show-title" type="checkbox" ${tile.showTitle === false ? "" : "checked"}> Nazwa</label>
             <label><input id="layout-show-subtitle" type="checkbox" ${tile.showSubtitle === false ? "" : "checked"}> Podpis</label>
           </div>
+          ${tile.kind === "clock" ? `
+            ${this._selectField("layout-clock-style", "Styl zegara", CLOCK_STYLES, clockStyle, "span-6")}
+            <div class="clock-style-options span-12">${this._clockStyleCards(clockStyle, true)}</div>
+          ` : ""}
         </div>
+        ${["folder", "popup"].includes(tile.kind) ? this._tileChildrenSection(this._selectedDevice, tile) : ""}
       </div>
     `;
   }
@@ -974,6 +1031,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const draft = this._currentLayoutDraft();
     if (!draft) return;
     const tile = this._newLayoutTile(type, panelKind);
+    if (draft.context?.panelId) tile.panel_id = draft.context.panelId;
     Object.assign(tile, this._findFreeLayoutSlot(draft, tile, new Set(), []) || { col: 1, row: draft.grid.rows + 1 });
     draft.tiles.push(tile);
     draft.selectedTileId = tile.id;
@@ -987,7 +1045,7 @@ class HapanelsStudioPanel extends HTMLElement {
     }
     const kind = PANEL_TILE_KINDS.includes(panelKind) ? panelKind : "clock";
     const templates = {
-      clock: { id: `clock_${stamp}`, kind: "clock", size: "large", label: "Zegar", icon: "mdi:clock-outline", accent: "white", colSpan: 3, rowSpan: 2 },
+      clock: { id: `clock_${stamp}`, kind: "clock", size: "large", label: "Zegar", icon: "mdi:clock-outline", accent: "white", colSpan: 3, rowSpan: 2, clock_style: "classic" },
       folder: { id: `folder_${stamp}`, kind: "folder", size: "large", label: "Folder", short_label: "Folder", panel_id: `panel_${stamp}`, icon: "mdi:folder", accent: "orange", colSpan: 2, rowSpan: 2 },
       popup: { id: `popup_${stamp}`, kind: "popup", size: "large", label: "Popup", short_label: "Popup", panel_id: `popup_${stamp}`, icon: "mdi:view-grid-plus", accent: "orange", colSpan: 2, rowSpan: 2 },
     };
@@ -1051,6 +1109,19 @@ class HapanelsStudioPanel extends HTMLElement {
     `;
   }
 
+  _clockStyleLabel(style) {
+    return ({ classic: "Klasyczny", compact: "Kompakt", date_top: "Data u góry" }[style] || style);
+  }
+
+  _clockStyleCards(selected, live = false) {
+    return CLOCK_STYLES.map((style) => `
+      <button type="button" class="clock-style-card ${style === selected ? "active" : ""}" ${live ? `data-clock-style="${this._escape(style)}"` : ""}>
+        ${style === "date_top" ? `<small>środa, 01 lipca</small><strong>12:34</strong>` : `<strong>${style === "compact" ? "12:34" : "12:34"}</strong><small>środa, 01 lipca</small>`}
+        <small>${this._escape(this._clockStyleLabel(style))}</small>
+      </button>
+    `).join("");
+  }
+
   _syncSelectedLayoutTile() {
     const tile = this._selectedLayoutTile();
     if (!tile) return;
@@ -1060,6 +1131,8 @@ class HapanelsStudioPanel extends HTMLElement {
     tile.showIcon = !!this.shadowRoot.getElementById("layout-show-icon")?.checked;
     tile.showTitle = !!this.shadowRoot.getElementById("layout-show-title")?.checked;
     tile.showSubtitle = !!this.shadowRoot.getElementById("layout-show-subtitle")?.checked;
+    const clockStyle = this.shadowRoot.getElementById("layout-clock-style")?.value;
+    if (clockStyle) tile.clock_style = clockStyle;
     const element = this.shadowRoot.querySelector(`[data-layout-select][data-tile="${CSS.escape(tile.id)}"]`);
     element?.querySelector(".layout-tile-icon")?.setAttribute("icon", this._mdiIcon(tile.icon));
     const title = element?.querySelector(".layout-tile-title");
@@ -1298,7 +1371,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _resetLayoutDraft(device) {
     const config = this._configs[device];
     if (!config) return;
-    delete this._layoutDrafts[`${device}:${config.revision ?? "new"}`];
+    Object.keys(this._layoutDrafts).filter((key) => key.startsWith(`${device}:${config.revision ?? "new"}:`)).forEach((key) => delete this._layoutDrafts[key]);
     this._render();
   }
 
@@ -1309,10 +1382,21 @@ class HapanelsStudioPanel extends HTMLElement {
     const next = structuredClone(config);
     next.layout_editor = {
       ...(next.layout_editor || {}),
-      grid: structuredClone(draft.grid),
-      tray: draft.tray.map((tile, index) => ({ ...structuredClone(tile), order: index })),
     };
-    next.tiles = draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }));
+    if (draft.context?.id === "main") {
+      next.layout_editor.grid = structuredClone(draft.grid);
+      next.layout_editor.tray = draft.tray.map((tile, index) => ({ ...structuredClone(tile), order: index }));
+    } else {
+      next.layout_editor.contexts = { ...(next.layout_editor.contexts || {}) };
+      next.layout_editor.contexts[draft.context.panelId] = {
+        ...(next.layout_editor.contexts[draft.context.panelId] || {}),
+        grid: structuredClone(draft.grid),
+        tray: draft.tray.map((tile, index) => ({ ...structuredClone(tile), order: index })),
+      };
+    }
+    const savedIds = new Set(draft.tiles.map((tile) => tile.id));
+    const kept = (next.tiles || []).filter((tile) => !savedIds.has(tile.id) && !draft.tray.some((trayTile) => trayTile.id === tile.id));
+    next.tiles = [...kept, ...draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }))];
     await this._setConfig(device, next);
   }
 
@@ -1391,6 +1475,15 @@ class HapanelsStudioPanel extends HTMLElement {
     const focused = this._focusedTileId === tile.id;
     const collapsed = !focused && this._collapsedTiles.has(collapsedKey);
     const childSection = surface === "dashboard" && ["folder", "popup"].includes(tile.kind) ? this._tileChildrenSection(device, tile) : "";
+    const clockSection = tile.kind === "clock" ? `
+      <section class="tile-section">
+        <h3>Zegar</h3>
+        <div class="fields">
+          ${this._selectField(`${prefix}-clockStyle`, "Styl", CLOCK_STYLES, tile.clock_style || "classic", "span-6", "clock")}
+          <div class="clock-style-options span-12">${this._clockStyleCards(tile.clock_style || "classic")}</div>
+        </div>
+      </section>
+    ` : "";
     return `
       <div class="tile ${collapsed ? "collapsed" : ""} ${focused ? "focused" : ""}" data-tile-editor data-prefix="${this._escape(prefix)}" data-tile-id="${this._escape(tile.id)}" data-collapsed-key="${this._escape(collapsedKey)}" style="--tile-accent:${this._escape(this._accentColor(accent))}">
         <div class="tile-head">
@@ -1443,6 +1536,7 @@ class HapanelsStudioPanel extends HTMLElement {
                 ${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}
               </div>
             </section>
+            ${clockSection}
             ${childSection}
           </div>
         </div>
@@ -1691,9 +1785,22 @@ class HapanelsStudioPanel extends HTMLElement {
       button.addEventListener("click", () => { const [dw, dh] = button.dataset.layoutResize.split(",").map(Number); this._resizeLayoutTile(dw, dh); });
     });
     this.shadowRoot.querySelector("[data-layout-add-ha]")?.addEventListener("click", () => this._addLayoutDraftTile("ha"));
-    this.shadowRoot.querySelectorAll("#layout-tile-title, #layout-tile-subtitle, #layout-tile-icon, #layout-show-icon, #layout-show-title, #layout-show-subtitle").forEach((input) => {
+    this.shadowRoot.getElementById("layout-context")?.addEventListener("change", (event) => {
+      this._layoutContext = event.target.value || "main";
+      this._layoutDrag = null;
+      this._render();
+    });
+    this.shadowRoot.querySelectorAll("#layout-tile-title, #layout-tile-subtitle, #layout-tile-icon, #layout-show-icon, #layout-show-title, #layout-show-subtitle, #layout-clock-style").forEach((input) => {
       input.addEventListener("input", () => this._syncSelectedLayoutTile());
       input.addEventListener("change", () => this._syncSelectedLayoutTile());
+    });
+    this.shadowRoot.querySelectorAll("[data-clock-style]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const select = this.shadowRoot.getElementById("layout-clock-style");
+        if (select) select.value = button.dataset.clockStyle;
+        this._syncSelectedLayoutTile();
+        this._render();
+      });
     });
     this.shadowRoot.querySelector("[data-layout-tray]")?.addEventListener("click", () => this._layoutTileToTray());
     this.shadowRoot.querySelectorAll("[data-layout-restore]").forEach((button) => {

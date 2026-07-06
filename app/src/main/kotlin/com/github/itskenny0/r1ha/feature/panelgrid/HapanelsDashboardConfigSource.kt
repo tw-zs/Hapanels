@@ -2,6 +2,8 @@ package com.github.itskenny0.r1ha.feature.panelgrid
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,6 +28,9 @@ class HapanelsDashboardConfigSource(
     private val context: Context,
     private val cacheFileName: String = DASHBOARD_CACHE_FILE,
 ) {
+    private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val changes = _changes.asSharedFlow()
+
     suspend fun loadOrSeed(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
         val file = dashboardFile()
         val raw = if (file.exists()) {
@@ -51,6 +56,7 @@ class HapanelsDashboardConfigSource(
         val config = configJson.decodeFromString<HapanelsDashboardConfig>(raw)
         return withContext(Dispatchers.IO) {
             dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+            _changes.tryEmit(Unit)
             config
         }
     }
@@ -80,6 +86,7 @@ class HapanelsDashboardConfigSource(
             )
         }
         dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
+        _changes.tryEmit(Unit)
         HapanelsDashboardPatchResult.Applied(next)
     }
 
@@ -91,6 +98,7 @@ class HapanelsDashboardConfigSource(
     suspend fun resetToSample(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
         val config = sampleHapanelsDashboardConfig()
         dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+        _changes.tryEmit(Unit)
         config
     }
 
@@ -111,6 +119,7 @@ private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTil
     row = patch.row ?: row,
     colSpan = patch.colSpan ?: colSpan,
     rowSpan = patch.rowSpan ?: rowSpan,
+    clockStyle = patch.clockStyle ?: clockStyle,
 )
 
 private fun List<HapanelsTileConfig>.applyPatches(

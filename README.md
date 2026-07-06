@@ -31,6 +31,12 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
 - Hardware features are exposed only when they are real and verified. No fake temperature, humidity, or proximity sensors.
 - Camera support is planned as a native Compose viewer, not a WebView shortcut.
 
+## AI Usage
+
+- AI helps with coding, review, docs, and release notes.
+- Every change is still checked by hand and verified with builds or tests.
+- AI output is treated as draft material, not source of truth.
+
 ## Install
 
 Download the latest APK from [GitHub Releases](https://github.com/tw-zs/Hapanels/releases).

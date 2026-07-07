@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-clock-styles";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-clock-styles-label";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -870,7 +870,7 @@ class HapanelsStudioPanel extends HTMLElement {
             <div class="layout-buttons">
               <button class="small secondary" data-layout-reset data-device="${this._escape(device)}">Reset draftu</button>
               <button class="small secondary" data-layout-panel-preset data-device="${this._escape(device)}">Układ panelu</button>
-              <button class="small" data-layout-save data-device="${this._escape(device)}">Zapisz JSON</button>
+              <button class="small" data-layout-save data-device="${this._escape(device)}">Zapisz układ</button>
             </div>
           </div>
         </div>

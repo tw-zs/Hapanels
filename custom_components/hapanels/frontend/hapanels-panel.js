@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-help-panel";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-help-text";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -447,10 +447,7 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-switch-track::after { content: ""; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; border-radius: 999px; background: var(--muted); transition: transform .16s ease, background .16s ease; }
           .aod-switch input:checked + .aod-switch-track { background: color-mix(in srgb, var(--accent) 36%, var(--surface-2)); border-color: var(--accent); }
           .aod-switch input:checked + .aod-switch-track::after { transform: translateX(26px); background: var(--accent); }
-          .aod-help { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
-          .aod-help-card { border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); padding: 14px; display: grid; gap: 6px; }
-          .aod-help-card strong { font-size: 16px; }
-          .aod-help-card span { color: var(--muted); line-height: 1.45; }
+          .aod-help { border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); padding: 14px; margin-bottom: 18px; color: var(--muted); line-height: 1.5; }
           .aod-settings-intro { padding: 18px 18px 0; display: grid; gap: 6px; }
           .aod-settings-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 18px 18px; }
           .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; }
@@ -762,11 +759,7 @@ class HapanelsStudioPanel extends HTMLElement {
         <span class="aod-enable-copy"><strong>Always On Display</strong><span class="sub">Wygaszacz ekranu dla tabletu.</span></span>
         <label class="aod-switch"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}><span class="aod-switch-track"></span><span>${aod.enabled ? "Włączony" : "Wyłączony"}</span></label>
       </div>
-      <div class="aod-help">
-        <div class="aod-help-card"><strong>Zegar bez kafli</strong><span>Najprostszy AOD: sam zegar i data. Wtedy wybierasz styl zegara poniżej.</span></div>
-        <div class="aod-help-card"><strong>Presety zwyczajne</strong><span>Szybko ustawiają typ AOD, jasność, tło i timeout. Dobre jako punkt startowy.</span></div>
-        <div class="aod-help-card"><strong>Grid AOD</strong><span>Siatka nocnych kafli z encjami. Gdy dodasz kafle AOD, zamiast stylu zegara działa układ grid.</span></div>
-      </div>
+      <div class="aod-help">Wygaszacz ma dwa tryby: zegar z datą albo grid kafli. Presety ustawiają wygląd wygaszacza. Gdy dodasz kafle AOD, ekran przełączy się na układ grid.</div>
       ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin:12px 0 18px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
       <div class="tiles" style="margin-top:18px">

@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-style-groups";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-layout-order";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -743,13 +743,19 @@ class HapanelsStudioPanel extends HTMLElement {
     const tiles = (aod.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     const showClockStyles = !tiles.length && (aod.layout || "minimal_clock") !== "grid";
     return `
-      <div class="preset-grid">
-        ${AOD_PRESETS.map((preset) => `<button class="preset-card" data-aod-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}"><strong>${this._escape(preset.name)}</strong><span>${this._escape(preset.desc)}</span></button>`).join("")}
+      <div class="card" style="margin-bottom:18px">
+        <label style="display:flex;align-items:center;gap:10px;font-size:16px"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}>Włącz AOD</label>
       </div>
-      <div class="tiles" style="margin-bottom:16px">
+      ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin:12px 0 18px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
+      <div class="toolbar"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button></div>
+      <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
+      <div class="tiles" style="margin-top:18px">
         <div class="tile">
           <div class="tile-head"><span>Ustawienia AOD</span><span>${this._escape(aod.layout || "minimal_clock")}</span></div>
-          <div class="fields">
+          <div class="preset-grid" style="padding:18px 18px 0">
+            ${AOD_PRESETS.map((preset) => `<button class="preset-card" data-aod-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}"><strong>${this._escape(preset.name)}</strong><span>${this._escape(preset.desc)}</span></button>`).join("")}
+          </div>
+          <div class="fields" style="padding:18px">
             ${this._selectField("aod-layout", "Układ", ["minimal_clock", "status_strip", "grid"], aod.layout || "minimal_clock")}
             ${this._inputField("aod-timeout", "Timeout s", aod.timeout_sec ?? 300, "number")}
             ${this._inputField("aod-brightness", "Jasność %", aod.brightness_percent ?? 3, "number")}
@@ -758,14 +764,10 @@ class HapanelsStudioPanel extends HTMLElement {
             ${this._inputField("aod-columns-landscape", "Kolumny L", aod.grid_layout?.columns_landscape ?? 3, "number")}
             ${this._inputField("aod-columns-portrait", "Kolumny P", aod.grid_layout?.columns_portrait ?? 2, "number")}
             ${this._selectField("aod-gap", "Gap", ["small", "medium", "large"], aod.grid_layout?.gap || "small")}
-            <label style="display:flex;align-items:center;gap:8px"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}>Włącz AOD</label>
             <button class="small" data-save-aod data-device="${this._escape(device)}">Zapisz AOD</button>
           </div>
-          ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin-top:12px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
         </div>
       </div>
-      <div class="toolbar"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button></div>
-      <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
     `;
   }
 

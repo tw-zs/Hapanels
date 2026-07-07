@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-heavy-aod-clock";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-style-groups";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -14,12 +14,12 @@ const AOD_PRESETS = [
   { id: "off", name: "Wyłącz AOD", desc: "Bez wygaszacza ekranu", aod: { enabled: false, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 3, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
 ];
 const AOD_CLOCK_STYLES = [
-  { id: "default", name: "Domyślny", desc: "Czytelny, spokojny zegar AOD.", treatment: "Lekki font, klasyczny układ godziny i daty." },
-  { id: "modern", name: "Nowoczesny", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
-  { id: "warsaw_zaklad", name: "Warszawski Zakład", desc: "Miejski zegar z charakterem szyldu.", treatment: "Kondensowany font, ramka i techniczny klimat tablicy." },
-  { id: "popart", name: "Popart", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
-  { id: "fullscreen_bold", name: "Slim modern", desc: "Pełnoekranowy, smukły zegar z dużym oddechem.", treatment: "Cienkie cyfry i mała data pod spodem." },
-  { id: "fullscreen_heavy", name: "Gruby", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Większe, optycznie pogrubione cyfry wypełniają ekran." },
+  { id: "default", name: "Domyślny", category: "Wygląd domyślny", desc: "Czytelny, spokojny zegar AOD.", treatment: "Lekki font, klasyczny układ godziny i daty." },
+  { id: "fullscreen_bold", name: "Slim modern", category: "Wyglądy standardowe", desc: "Pełnoekranowy, smukły zegar z dużym oddechem.", treatment: "Cienkie cyfry i mała data pod spodem." },
+  { id: "fullscreen_heavy", name: "Szeroki", category: "Wyglądy standardowe", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Większe, optycznie pogrubione cyfry wypełniają ekran." },
+  { id: "warsaw_zaklad", name: "Warszawski Zakład", category: "Polskie inspiracje", desc: "Miejski zegar z charakterem szyldu.", treatment: "Kondensowany font, ramka i techniczny klimat tablicy." },
+  { id: "modern", name: "Nowoczesny", category: "Kolorowe abstrakcje", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
+  { id: "popart", name: "Popart", category: "Kolorowe abstrakcje", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
 ];
 const PANEL_THEME_PRESETS = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
@@ -437,8 +437,8 @@ class HapanelsStudioPanel extends HTMLElement {
           .appearance-support { display: flex; gap: 6px; flex-wrap: wrap; }
           .appearance-error { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,83,56,.30); background: rgba(255,83,56,.10); color: #ff725d; }
           .appearance-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-          .aod-style-panel { display: grid; gap: 12px; margin-top: 18px; }
-          .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+          .aod-style-panel { display: grid; gap: 18px; margin-top: 18px; }
+          .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; }
           .aod-style-card { text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); color: var(--text); padding: 12px; display: grid; gap: 10px; }
           .aod-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
           .aod-style-card strong { font-size: 17px; }
@@ -771,6 +771,10 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _aodClockStylePicker(device, config) {
     const selected = this._aodClockStyle(device, config);
+    const groups = AOD_CLOCK_STYLES.reduce((items, style) => {
+      (items[style.category] ||= []).push(style);
+      return items;
+    }, {});
     return `
       <div class="aod-style-panel">
         <div>
@@ -778,9 +782,14 @@ class HapanelsStudioPanel extends HTMLElement {
           <div class="sub">Tylko ekran AOD bez kafli. Nie zmienia motywu panelu.</div>
         </div>
         ${this._aodClockStyleError ? `<div class="appearance-error">${this._escape(this._aodClockStyleError)}</div>` : ""}
-        <div class="aod-style-grid">
-          ${AOD_CLOCK_STYLES.map((style) => this._aodClockStyleCard(device, style, style.id === selected)).join("")}
-        </div>
+        ${Object.entries(groups).map(([category, styles]) => `
+          <section class="appearance-category">
+            <h3>${this._escape(category)}</h3>
+            <div class="aod-style-grid">
+              ${styles.map((style) => this._aodClockStyleCard(device, style, style.id === selected)).join("")}
+            </div>
+          </section>
+        `).join("")}
       </div>
     `;
   }

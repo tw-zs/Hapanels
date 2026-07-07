@@ -320,12 +320,28 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         currentDisplay = { if (it.behavior.showBatteryWhenStatusBarHidden) "ON" else "OFF" },
     ),
     SettingEntry(
+        id = "behavior.kioskMode",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Kiosk mode",
+        description = "Hide system bars and try to keep Hapanels pinned with lock task",
+        isDefault = { it.behavior.kioskMode == defaults.behavior.kioskMode },
+        currentDisplay = { if (it.behavior.kioskMode) "ON" else "OFF" },
+    ),
+    SettingEntry(
         id = "behavior.startOnDashboard",
         category = SettingCategory.BEHAVIOUR,
         label = "Start on dashboard",
         description = "Open on the TODAY dashboard rather than the card stack",
         isDefault = { it.behavior.startOnDashboard == defaults.behavior.startOnDashboard },
         currentDisplay = { if (it.behavior.startOnDashboard) "ON" else "OFF" },
+    ),
+    SettingEntry(
+        id = "behavior.startOnBoot",
+        category = SettingCategory.BEHAVIOUR,
+        label = "Start on boot",
+        description = "Open Hapanels automatically after device reboot",
+        isDefault = { it.behavior.startOnBoot == defaults.behavior.startOnBoot },
+        currentDisplay = { if (it.behavior.startOnBoot) "ON" else "OFF" },
     ),
     SettingEntry(
         id = "behavior.wheelTogglesSwitches",
@@ -461,6 +477,22 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
             it.integrations.searchResultCap == defaults.integrations.searchResultCap
         },
         currentDisplay = { "${it.integrations.searchResultCap}" },
+    ),
+    SettingEntry(
+        id = "mqttPanelDeviceId",
+        category = SettingCategory.INTEGRATIONS,
+        label = "MQTT panel device id",
+        description = "Override device id used for Hapanels panel topics",
+        isDefault = { it.mqttPanelDeviceId == defaults.mqttPanelDeviceId },
+        currentDisplay = { it.mqttPanelDeviceId.takeIf { v -> v.isNotBlank() } ?: "(auto)" },
+    ),
+    SettingEntry(
+        id = "tabletFriendlyName",
+        category = SettingCategory.INTEGRATIONS,
+        label = "Tablet friendly name",
+        description = "Display name shown in Hapanels Studio and HA device metadata",
+        isDefault = { it.tabletFriendlyName == defaults.tabletFriendlyName },
+        currentDisplay = { it.tabletFriendlyName.takeIf { v -> v.isNotBlank() } ?: "(auto)" },
     ),
 
     // ── Dashboard ───────────────────────────────────────────────────────

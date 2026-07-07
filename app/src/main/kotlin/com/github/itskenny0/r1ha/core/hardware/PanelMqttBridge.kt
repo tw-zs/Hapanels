@@ -1,6 +1,8 @@
 package com.github.itskenny0.r1ha.core.hardware
 
+import android.content.Context
 import android.os.Build
+import android.provider.Settings
 import com.github.itskenny0.r1ha.BuildConfig
 import com.github.itskenny0.r1ha.core.mqtt.MqttSession
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
@@ -23,15 +25,17 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class PanelMqttBridge(
+    private val context: Context,
     private val settings: SettingsRepository,
     private val hardware: PanelHardware,
     private val dashboardConfigSource: HapanelsDashboardConfigSource,
     private val screenManager: PanelScreenManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val panelDeviceId = panelDeviceId()
-    private val objectId = "hapanels_$panelDeviceId"
-    private val baseTopic = "hapanels/$panelDeviceId"
+    private var panelDeviceId: String = "panel"
+    private var tabletFriendlyName: String = ""
+    private val objectId: String get() = "hapanels_$panelDeviceId"
+    private val baseTopic: String get() = "hapanels/$panelDeviceId"
     private var discoverySignature: PanelDiscoverySignature? = null
     private var session: MqttSession? = null
     private var settingsJob: Job? = null
@@ -44,70 +48,75 @@ class PanelMqttBridge(
     fun start() {
         settingsJob?.cancel()
         settingsJob = scope.launch {
-            settings.settings
-                .map { resolveMqtt(it) }
-                .distinctUntilChanged()
-                .collect { mqtt ->
-                    sessionJob?.cancel()
-                    disconnectSession(publishOffline = true)
-                    if (mqtt != null) {
-                        mqttConnectionState = "connecting"
-                        sessionJob = scope.launch { maintainSession(mqtt) }
-                    } else {
-                        mqttConnectionState = "disabled"
+            val initialSettings = settings.settings.first()
+            panelDeviceId = panelDeviceId(context, initialSettings)
+            tabletFriendlyName = initialSettings.tabletFriendlyName
+            launch {
+                settings.settings
+                    .map { resolveMqtt(it) }
+                    .distinctUntilChanged()
+                    .collect { mqtt ->
+                        sessionJob?.cancel()
+                        disconnectSession(publishOffline = true)
+                        if (mqtt != null) {
+                            mqttConnectionState = "connecting"
+                            sessionJob = scope.launch { maintainSession(mqtt) }
+                        } else {
+                            mqttConnectionState = "disabled"
+                        }
                     }
-                }
-        }
-        scope.launch {
-            hardware.capabilities
-                .collect { capabilities ->
-                    val signature = PanelDiscoverySignature.from(capabilities)
-                    if (signature != discoverySignature) {
-                        discoverySignature = signature
-                        publishDiscovery(capabilities)
-                        subscribeCommands()
-                        publishPanelDiagnostics(capabilities)
-                        publishDashboardConfig()
-                        publishAvailability(true)
+            }
+            launch {
+                hardware.capabilities
+                    .collect { capabilities ->
+                        val signature = PanelDiscoverySignature.from(capabilities)
+                        if (signature != discoverySignature) {
+                            discoverySignature = signature
+                            publishDiscovery(capabilities)
+                            subscribeCommands()
+                            publishPanelDiagnostics(capabilities)
+                            publishDashboardConfig()
+                            publishAvailability(true)
+                        }
                     }
-                }
-        }
-        scope.launch {
-            hardware.runtimeState.collect { runtime ->
-                runtime.relayStates.forEach { (id, on) ->
-                    if (on != null) publish("$baseTopic/relay/$id/state", if (on) "ON" else "OFF", retain = true)
-                }
-                (1..hardware.capabilities.value.physicalButtonCount).forEach { id ->
-                    publish("$baseTopic/button/$id/state", if (id in runtime.pressedButtonIds) "ON" else "OFF", retain = false)
-                }
-                runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/brightness/state", it.toString(), retain = true) }
-                runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/applied_brightness/state", it.toString(), retain = true) }
-                runtime.ambientLightLux?.let { publish("$baseTopic/sensor/ambient_light/state", it.toString(), retain = true) }
-                runtime.proximityDistanceCm?.let {
-                    publish("$baseTopic/binary_sensor/proximity_presence/state", if (it <= 5f) "ON" else "OFF", retain = true)
+            }
+            launch {
+                hardware.runtimeState.collect { runtime ->
+                    runtime.relayStates.forEach { (id, on) ->
+                        if (on != null) publish("$baseTopic/relay/$id/state", if (on) "ON" else "OFF", retain = true)
+                    }
+                    (1..hardware.capabilities.value.physicalButtonCount).forEach { id ->
+                        publish("$baseTopic/button/$id/state", if (id in runtime.pressedButtonIds) "ON" else "OFF", retain = false)
+                    }
+                    runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/brightness/state", it.toString(), retain = true) }
+                    runtime.screenBrightnessPercent?.let { publish("$baseTopic/screen/applied_brightness/state", it.toString(), retain = true) }
+                    runtime.ambientLightLux?.let { publish("$baseTopic/sensor/ambient_light/state", it.toString(), retain = true) }
+                    runtime.proximityDistanceCm?.let {
+                        publish("$baseTopic/binary_sensor/proximity_presence/state", if (it <= 5f) "ON" else "OFF", retain = true)
+                    }
                 }
             }
-        }
-        scope.launch {
-            screenManager.state.collect { screen -> publishScreenDiagnostics(screen) }
-        }
-        scope.launch {
-            settings.settings
-                .map { it.advanced.autoBrightnessEnabled }
-                .distinctUntilChanged()
-                .collect { enabled -> publishAutoBrightnessState(enabled) }
-        }
-        scope.launch {
-            hardware.events.collect { event ->
-                when (event) {
-                    is PanelHardwareEvent.Button -> {
-                        publish("$baseTopic/button/${event.buttonId}/event", event.type.name.lowercase(), retain = false)
+            launch {
+                screenManager.state.collect { screen -> publishScreenDiagnostics(screen) }
+            }
+            launch {
+                settings.settings
+                    .map { it.advanced.autoBrightnessEnabled }
+                    .distinctUntilChanged()
+                    .collect { enabled -> publishAutoBrightnessState(enabled) }
+            }
+            launch {
+                hardware.events.collect { event ->
+                    when (event) {
+                        is PanelHardwareEvent.Button -> {
+                            publish("$baseTopic/button/${event.buttonId}/event", event.type.name.lowercase(), retain = false)
+                        }
+                        is PanelHardwareEvent.Relay -> {
+                            publish("$baseTopic/relay/${event.relayId}/state", if (event.on) "ON" else "OFF", retain = true)
+                        }
+                        is PanelHardwareEvent.Lifecycle,
+                        is PanelHardwareEvent.UnsupportedAction -> Unit
                     }
-                    is PanelHardwareEvent.Relay -> {
-                        publish("$baseTopic/relay/${event.relayId}/state", if (event.on) "ON" else "OFF", retain = true)
-                    }
-                    is PanelHardwareEvent.Lifecycle,
-                    is PanelHardwareEvent.UnsupportedAction -> Unit
                 }
             }
         }
@@ -533,6 +542,9 @@ class PanelMqttBridge(
                 username = mqtt.username,
                 password = mqtt.password,
                 useTls = mqtt.useTls,
+                willTopic = "$baseTopic/status",
+                willPayload = "offline".toByteArray(Charsets.UTF_8),
+                willRetain = true,
                 onMessage = ::handleCommand,
             )
             val connectResult = next.connect()
@@ -609,7 +621,7 @@ class PanelMqttBridge(
             syncAodSettings(config)
             publish("$baseTopic/dashboard/config/state", raw, retain = true)
             publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
-            publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced"), retain = true)
+            publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced", panelName = panelDisplayName()), retain = true)
             publishDashboardMetadata(config)
         }.onFailure { t ->
             R1Log.w("PanelMqttBridge", "dashboard config publish failed: ${t.message}")
@@ -629,7 +641,7 @@ class PanelMqttBridge(
                 syncAodSettings(config)
                 publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                 publish("$baseTopic/dashboard/config/meta", config.dashboardMetaJson(), retain = true)
-                publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced"), retain = true)
+                publish("$baseTopic/dashboard/config/sync/state", config.syncStateJson("synced", panelName = panelDisplayName()), retain = true)
                 publishDashboardMetadata(config)
             }
             .onFailure { t ->
@@ -644,13 +656,14 @@ class PanelMqttBridge(
                     is HapanelsDashboardPatchResult.Applied -> {
                 publish("$baseTopic/dashboard/config/state", dashboardConfigSource.exportRaw(), retain = true)
                 publish("$baseTopic/dashboard/config/meta", result.config.dashboardMetaJson(), retain = true)
-                publish("$baseTopic/dashboard/config/sync/state", result.config.syncStateJson("synced"), retain = true)
+                publish("$baseTopic/dashboard/config/sync/state", result.config.syncStateJson("synced", panelName = panelDisplayName()), retain = true)
                         syncAodSettings(result.config)
                         publishDashboardMetadata(result.config)
                     }
                     is HapanelsDashboardPatchResult.Conflict -> {
                         publish("$baseTopic/dashboard/config/sync/state", result.currentConfig.syncStateJson(
                             status = "conflict",
+                            panelName = panelDisplayName(),
                             attemptedBaseRevision = result.attemptedBaseRevision,
                             currentRevision = result.currentRevision,
                         ), retain = true)
@@ -707,11 +720,13 @@ class PanelMqttBridge(
     private fun deviceJson(): String = """
         {
           "identifiers":["$objectId"],
-          "name":"Hapanels $panelDeviceId",
+          "name":"${panelDisplayName().escapeJson()}",
           "manufacturer":"tw-zs",
           "model":"${Build.MANUFACTURER} ${Build.MODEL}" 
         }
     """.compactJson()
+
+    private fun panelDisplayName(): String = tabletFriendlyName.ifBlank { "Hapanels $panelDeviceId" }
 
     private data class MqttConfig(
         val host: String,
@@ -803,13 +818,30 @@ private fun String.safeId(): String = lowercase()
     .trim('_')
     .ifBlank { "panel" }
 
-private fun panelDeviceId(): String = listOf(Build.DEVICE, Build.MODEL, Build.PRODUCT)
-    .takeIf { values -> values.any { it.contains("shelly", ignoreCase = true) || it.contains("wall_display", ignoreCase = true) } }
-    ?.let { "blake" }
-    ?: listOf(Build.DEVICE, Build.MODEL, Build.PRODUCT)
-    .firstOrNull { it.contains("blake", ignoreCase = true) }
+private fun panelDeviceId(context: Context, settings: AppSettings): String = resolvePanelDeviceId(
+    panelDeviceId = settings.mqttPanelDeviceId,
+    mqttClientId = settings.advanced.mqttClientId,
+    androidId = stableAndroidId(context),
+    buildDevice = Build.DEVICE,
+    buildModel = Build.MODEL,
+    buildProduct = Build.PRODUCT,
+)
+
+internal fun resolvePanelDeviceId(
+    panelDeviceId: String?,
+    mqttClientId: String?,
+    androidId: String?,
+    buildDevice: String,
+    buildModel: String,
+    buildProduct: String,
+): String = listOf(panelDeviceId, mqttClientId, androidId, buildDevice, buildModel, buildProduct)
+    .firstNotNullOfOrNull { it?.trim()?.takeIf { value -> value.isNotBlank() } }
     ?.safeId()
-    ?: Build.DEVICE.ifBlank { "panel" }.safeId()
+    ?: "panel"
+
+private fun stableAndroidId(context: Context): String? = runCatching {
+    Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+}.getOrNull()?.takeIf { it.isNotBlank() }
 
 internal fun mqttDiagnosticError(message: String?): String = message
     ?.trim()

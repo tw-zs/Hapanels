@@ -63,7 +63,11 @@ data class AppBackup(
     val behaviorTapToToggle: Boolean = false,
     val behaviorHideStatusBar: Boolean = false,
     val behaviorShowBatteryWhenStatusBarHidden: Boolean = false,
+    val behaviorKioskMode: Boolean = false,
     val behaviorStartOnDashboard: Boolean = false,
+    val behaviorStartOnBoot: Boolean = false,
+    val mqttPanelDeviceId: String = "",
+    val tabletFriendlyName: String = "",
     val behaviorWheelTogglesSwitches: Boolean = true,
     val behaviorToastLogLevel: ToastLogLevel = ToastLogLevel.OFF,
 
@@ -130,7 +134,11 @@ fun AppSettings.toBackup(createdAt: String): AppBackup = AppBackup(
     behaviorTapToToggle = behavior.tapToToggle,
     behaviorHideStatusBar = behavior.hideStatusBar,
     behaviorShowBatteryWhenStatusBarHidden = behavior.showBatteryWhenStatusBarHidden,
+    behaviorKioskMode = behavior.kioskMode,
     behaviorStartOnDashboard = behavior.startOnDashboard,
+    behaviorStartOnBoot = behavior.startOnBoot,
+    mqttPanelDeviceId = mqttPanelDeviceId,
+    tabletFriendlyName = tabletFriendlyName,
     behaviorWheelTogglesSwitches = behavior.wheelTogglesSwitches,
     behaviorToastLogLevel = behavior.toastLogLevel,
     advanced = advanced,
@@ -189,7 +197,9 @@ fun AppBackup.applyOnto(prev: AppSettings): AppSettings {
             tapToToggle = behaviorTapToToggle,
             hideStatusBar = behaviorHideStatusBar,
             showBatteryWhenStatusBarHidden = behaviorShowBatteryWhenStatusBarHidden,
+            kioskMode = behaviorKioskMode,
             startOnDashboard = behaviorStartOnDashboard,
+            startOnBoot = behaviorStartOnBoot,
             wheelTogglesSwitches = behaviorWheelTogglesSwitches,
             toastLogLevel = behaviorToastLogLevel,
         ),
@@ -201,6 +211,8 @@ fun AppBackup.applyOnto(prev: AppSettings): AppSettings {
         favorites = pages.flatMap { it.favorites }.distinct(),
         nameOverrides = nameOverrides,
         entityOverrides = entityOverrides,
+        mqttPanelDeviceId = mqttPanelDeviceId,
+        tabletFriendlyName = tabletFriendlyName,
     )
 }
 

@@ -89,8 +89,18 @@ class SettingsViewModel(
     fun setShowBatteryWhenStatusBarHidden(enabled: Boolean) = update {
         it.copy(behavior = it.behavior.copy(showBatteryWhenStatusBarHidden = enabled))
     }
+    fun setKioskMode(enabled: Boolean) = update { it.copy(behavior = it.behavior.copy(kioskMode = enabled)) }
     fun setStartOnDashboard(enabled: Boolean) = update {
         it.copy(behavior = it.behavior.copy(startOnDashboard = enabled))
+    }
+    fun setStartOnBoot(enabled: Boolean) = update {
+        it.copy(behavior = it.behavior.copy(startOnBoot = enabled))
+    }
+    fun setMqttPanelDeviceId(deviceId: String) = update {
+        it.copy(mqttPanelDeviceId = deviceId.trim())
+    }
+    fun setTabletFriendlyName(name: String) = update {
+        it.copy(tabletFriendlyName = name.trim())
     }
     fun setHardwareProviderMode(mode: com.github.itskenny0.r1ha.core.prefs.HardwareProviderMode) =
         update { it.copy(behavior = it.behavior.copy(hardwareProviderMode = mode)) }

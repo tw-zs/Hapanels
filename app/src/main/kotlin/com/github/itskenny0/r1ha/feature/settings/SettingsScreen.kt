@@ -591,8 +591,12 @@ fun SettingsScreen(
                 item {
                     AdvancedMqttSettings(
                         advanced = s.advanced,
+                        panelDeviceId = s.mqttPanelDeviceId,
+                        tabletFriendlyName = s.tabletFriendlyName,
                         serverUrl = s.server?.url,
                         onUpdate = vm::updateAdvanced,
+                        onPanelDeviceIdUpdate = vm::setMqttPanelDeviceId,
+                        onTabletFriendlyNameUpdate = vm::setTabletFriendlyName,
                     )
                 }
                 item { Section("BUTTON ACTIONS") }
@@ -941,10 +945,26 @@ fun SettingsScreen(
             }
             item {
                 SwitchRow(
+                    label = "Tryb kiosku",
+                    subtitle = "Ukrywa paski systemowe i próbuje przypiąć Hapanels do ekranu.",
+                    checked = s.behavior.kioskMode,
+                    onCheckedChange = { vm.setKioskMode(it) },
+                )
+            }
+            item {
+                SwitchRow(
                     label = "Startuj od dashboardu",
                     subtitle = "Po uruchomieniu pokaż dashboard zamiast stosu kafli. Działa od następnego startu aplikacji.",
                     checked = s.behavior.startOnDashboard,
                     onCheckedChange = { vm.setStartOnDashboard(it) },
+                )
+            }
+            item {
+                SwitchRow(
+                    label = "Autostart po bootowaniu",
+                    subtitle = "Po restarcie urządzenia Hapanels otworzy się sam. Działa od następnego rebootu.",
+                    checked = s.behavior.startOnBoot,
+                    onCheckedChange = { vm.setStartOnBoot(it) },
                 )
             }
             item { SubGroupLabel("SPRZĘT PANELU") }
@@ -2609,14 +2629,20 @@ private fun SwitchRow(
 @Composable
 private fun AdvancedMqttSettings(
     advanced: AdvancedSettings,
+    panelDeviceId: String,
+    tabletFriendlyName: String,
     serverUrl: String?,
     onUpdate: ((AdvancedSettings) -> AdvancedSettings) -> Unit,
+    onPanelDeviceIdUpdate: (String) -> Unit,
+    onTabletFriendlyNameUpdate: (String) -> Unit,
 ) {
     var hostDraft by remember { mutableStateOf(advanced.mqttHost) }
     var portDraft by remember { mutableStateOf(advanced.mqttPort.toString()) }
     var usernameDraft by remember { mutableStateOf(advanced.mqttUsername) }
     var passwordDraft by remember { mutableStateOf(advanced.mqttPassword) }
     var clientIdDraft by remember { mutableStateOf(advanced.mqttClientId) }
+    var panelDeviceIdDraft by remember { mutableStateOf(panelDeviceId) }
+    var tabletFriendlyNameDraft by remember { mutableStateOf(tabletFriendlyName) }
     val haBrokerHost = remember(serverUrl) { mqttHostFromServerUrl(serverUrl) }
 
     androidx.compose.runtime.LaunchedEffect(advanced.mqttHost) { if (hostDraft != advanced.mqttHost) hostDraft = advanced.mqttHost }
@@ -2624,8 +2650,10 @@ private fun AdvancedMqttSettings(
     androidx.compose.runtime.LaunchedEffect(advanced.mqttUsername) { if (usernameDraft != advanced.mqttUsername) usernameDraft = advanced.mqttUsername }
     androidx.compose.runtime.LaunchedEffect(advanced.mqttPassword) { if (passwordDraft != advanced.mqttPassword) passwordDraft = advanced.mqttPassword }
     androidx.compose.runtime.LaunchedEffect(advanced.mqttClientId) { if (clientIdDraft != advanced.mqttClientId) clientIdDraft = advanced.mqttClientId }
+    androidx.compose.runtime.LaunchedEffect(panelDeviceId) { if (panelDeviceIdDraft != panelDeviceId) panelDeviceIdDraft = panelDeviceId }
+    androidx.compose.runtime.LaunchedEffect(tabletFriendlyName) { if (tabletFriendlyNameDraft != tabletFriendlyName) tabletFriendlyNameDraft = tabletFriendlyName }
     androidx.compose.runtime.LaunchedEffect(haBrokerHost) { if (hostDraft.isBlank() && haBrokerHost != null) hostDraft = haBrokerHost }
-    androidx.compose.runtime.LaunchedEffect(hostDraft, portDraft, usernameDraft, passwordDraft, clientIdDraft) {
+    androidx.compose.runtime.LaunchedEffect(hostDraft, portDraft, usernameDraft, passwordDraft, clientIdDraft, panelDeviceIdDraft, tabletFriendlyNameDraft) {
         kotlinx.coroutines.delay(700)
         val port = portDraft.toIntOrNull()?.coerceIn(1, 65535) ?: return@LaunchedEffect
         onUpdate {
@@ -2637,6 +2665,8 @@ private fun AdvancedMqttSettings(
                 mqttClientId = clientIdDraft.trim(),
             )
         }
+        onPanelDeviceIdUpdate(panelDeviceIdDraft.trim())
+        onTabletFriendlyNameUpdate(tabletFriendlyNameDraft.trim())
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -2729,6 +2759,28 @@ private fun AdvancedMqttSettings(
                 monospace = true,
             )
         }
+        LabeledControl(label = "Panel device id") {
+            R1TextField(
+                value = panelDeviceIdDraft,
+                onValueChange = { panelDeviceIdDraft = it },
+                placeholder = "auto",
+                monospace = true,
+            )
+        }
+        LabeledControl(label = "Nazwa tabletu") {
+            R1TextField(
+                value = tabletFriendlyNameDraft,
+                onValueChange = { tabletFriendlyNameDraft = it },
+                placeholder = "auto",
+                monospace = true,
+            )
+        }
+        Text(
+            text = "Puste id = stabilny identyfikator z Android ID. Pusta nazwa = Hapanels + id. Zmiany wchodzą po restarcie aplikacji.",
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+            modifier = Modifier.padding(horizontal = 22.dp, vertical = 4.dp),
+        )
     }
 }
 

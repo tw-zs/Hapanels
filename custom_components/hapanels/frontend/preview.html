@@ -79,7 +79,7 @@
           { id: "climate", kind: "category", size: "action", label: "Klimat", entity_id: "climate.home", icon: "mdi:home-thermometer", accent: "orange", order: 2, col: 11, row: 1, colSpan: 2, rowSpan: 2 },
           { id: "lamp", kind: "entity", size: "large", label: "Lampa", entity_id: "light.kitchen", icon: "mdi:lightbulb", accent: "orange", order: 10, col: 1, row: 3, colSpan: 4, rowSpan: 3 },
           { id: "lights", kind: "category", size: "large", label: "Oświetlenie", entity_id: "group.all_lights", icon: "mdi:lightbulb-group", accent: "orange", order: 11, col: 5, row: 3, colSpan: 4, rowSpan: 3 },
-          { id: "covers", kind: "category", size: "large", label: "Rolety", entity_id: "cover.all_covers", icon: "mdi:blinds", accent: "orange", order: 12, col: 9, row: 3, colSpan: 4, rowSpan: 3 },
+          { id: "covers", kind: "cover", size: "large", label: "Rolety", entity_id: "cover.all_covers", icon: "mdi:blinds", accent: "orange", order: 12, col: 9, row: 3, colSpan: 4, rowSpan: 3, cover_visual: "blind", cover_direction: "top" },
           { id: "cameras", kind: "camera", size: "large", label: "hrj/kamera", entity_id: "camera.front", icon: "mdi:cctv", accent: "orange", order: 13, col: 1, row: 6, colSpan: 4, rowSpan: 3 },
           { id: "gate", kind: "category", size: "large", label: "Brama", entity_id: "cover.gate", icon: "mdi:gate", accent: "orange", order: 14, col: 5, row: 6, colSpan: 4, rowSpan: 4 },
           { id: "energy", kind: "entity", size: "small", label: "Energia", entity_id: "sensor.home_power", icon: "mdi:home-lightning-bolt", accent: "red", order: 20, col: 9, row: 6, colSpan: 2, rowSpan: 2 },
@@ -101,16 +101,16 @@
         states: {
           "light.kitchen": { attributes: { friendly_name: "Lampa", icon: "mdi:lightbulb" } },
           "group.all_lights": { attributes: { friendly_name: "Oświetlenie", icon: "mdi:lightbulb-group" } },
-          "cover.all_covers": { attributes: { friendly_name: "Rolety", icon: "mdi:blinds" } },
+          "cover.all_covers": { state: "open", attributes: { friendly_name: "Rolety", icon: "mdi:blinds", current_position: 64 } },
           "climate.home": { attributes: { friendly_name: "Klimat", icon: "mdi:home-thermometer" } },
           "camera.front": { attributes: { friendly_name: "hrj/kamera", icon: "mdi:cctv" } },
-          "cover.gate": { attributes: { friendly_name: "Brama", icon: "mdi:gate" } },
+          "cover.gate": { state: "closed", attributes: { friendly_name: "Brama", icon: "mdi:gate", current_position: 0 } },
           "sensor.home_power": { attributes: { friendly_name: "Energia", icon: "mdi:home-lightning-bolt" } }
         },
         async callWS(message) {
           if (message.type === "hapanels/list_panels") {
             const config = loadConfig();
-            return { panels: [{ device: PANEL_DEVICE, status: "synced", dashboard_id: config.dashboard_id, revision: config.revision, updated_by: config.updated_by, screen_resolution: "1280x800", screen_width_px: 1280, screen_height_px: 800 }] };
+            return { panels: [{ device: PANEL_DEVICE, panel_name: "Tablet testowy", status: "synced", dashboard_id: config.dashboard_id, revision: config.revision, updated_by: config.updated_by, screen_resolution: "1280x800", screen_width_px: 1280, screen_height_px: 800 }] };
           }
           if (message.type === "hapanels/get_dashboard_config") return { config: loadConfig(), pending_patch: null };
           throw new Error(`Unsupported mock WS: ${message.type}`);
@@ -132,6 +132,7 @@
             saveConfig(config);
             return;
           }
+          if (service === "accept_tablet_config") return;
           throw new Error(`Unsupported mock service: hapanels.${service}`);
         }
       };

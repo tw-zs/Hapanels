@@ -13,7 +13,9 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,8 +36,12 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,6 +69,7 @@ import com.github.itskenny0.r1ha.core.theme.R1ThemeHost
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsAodClockStyle
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileAccent
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileConfig
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileKind
@@ -170,22 +177,33 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Honour the user's "Hide status bar" toggle live — flipping it in Settings
+            // Honour the user's bar-hiding toggles live — flipping them in Settings
             // applies immediately without an activity restart. WindowInsetsController is
             // the recommended API since SDK 30; we already require min 30 so no fallback
             // path is needed.
-            androidx.compose.runtime.LaunchedEffect(settings.behavior.hideStatusBar) {
+            val hideSystemBars = settings.behavior.kioskMode || settings.behavior.hideStatusBar
+            androidx.compose.runtime.LaunchedEffect(hideSystemBars) {
                 val controller = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
-                if (settings.behavior.hideStatusBar) {
+                controller.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat
+                        .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (settings.behavior.kioskMode) {
+                    controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                } else if (settings.behavior.hideStatusBar) {
                     controller.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars())
                     // Make the user-swipe-to-show transient (auto-hides after a beat) so
                     // peeking the bar to check the time doesn't permanently break the
                     // hidden state.
-                    controller.systemBarsBehavior =
-                        androidx.core.view.WindowInsetsControllerCompat
-                            .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 } else {
-                    controller.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+                    controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                }
+            }
+
+            androidx.compose.runtime.LaunchedEffect(settings.behavior.kioskMode) {
+                runCatching {
+                    if (settings.behavior.kioskMode) startLockTask() else stopLockTask()
+                }.onFailure { err ->
+                    R1Log.w("MainActivity.kioskMode", "lock task toggle failed: ${err.message}")
                 }
             }
 
@@ -615,7 +633,12 @@ private fun PanelScreensaverOverlay(
             contentAlignment = androidx.compose.ui.Alignment.Center,
         ) {
             if (tiles.isEmpty()) {
-                AodClock(now = now, alpha = contentAlpha, modifier = Modifier.padding(24.dp))
+                AodClock(
+                    now = now,
+                    alpha = contentAlpha,
+                    style = aod?.clockStyle ?: HapanelsAodClockStyle.DEFAULT,
+                    modifier = Modifier.padding(24.dp),
+                )
             } else {
                 AodGrid(
                     tiles = tiles,
@@ -705,27 +728,110 @@ private fun AodTile(
 }
 
 @androidx.compose.runtime.Composable
-private fun AodClock(now: LocalTime, alpha: Float, modifier: Modifier) {
+private fun AodClock(
+    now: LocalTime,
+    alpha: Float,
+    modifier: Modifier,
+    style: HapanelsAodClockStyle = HapanelsAodClockStyle.DEFAULT,
+) {
     val today = LocalDate.now()
     val dateText = buildString {
         append(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("pl", "PL")))
         append(", ")
         append(today.format(DateTimeFormatter.ofPattern("dd MMMM", Locale("pl", "PL"))))
     }
+    val timeText = now.format(DateTimeFormatter.ofPattern("HH:mm"))
+    val monoton = FontFamily(Font(R.font.monoton_regular))
+    val zaklad = FontFamily(Font(R.font.zaklad_regular))
+    val bangers = FontFamily(Font(R.font.bangers_regular))
+    val bigShoulders = FontFamily(Font(R.font.big_shoulders_display_wght, FontWeight.Black))
+
+    if (style == HapanelsAodClockStyle.FULLSCREEN_BOLD) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            val timeSize = minOf(maxWidth.value / 4.7f, maxHeight.value / 1.7f).sp
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = timeText,
+                    style = R1.numeralXl.copy(
+                        fontFamily = bigShoulders,
+                        fontSize = timeSize,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-3).sp,
+                    ),
+                    color = Color.White.copy(alpha = alpha),
+                    maxLines = 1,
+                )
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = dateText,
+                    style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = Color.White.copy(alpha = 0.72f * alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        return
+    }
+
+    val (timeStyle, timeColor, dateColor) = when (style) {
+        HapanelsAodClockStyle.MODERN -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = monoton,
+                fontSize = 74.sp,
+                letterSpacing = 1.sp,
+                shadow = Shadow(Color(0xFF00E5FF).copy(alpha = 0.75f * alpha), Offset(0f, 0f), 18f),
+            ),
+            Color(0xFFE6FBFF).copy(alpha = alpha),
+            Color(0xFF8CEEFF).copy(alpha = 0.74f * alpha),
+        )
+        HapanelsAodClockStyle.WARSAW_ZAKLAD -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = zaklad,
+                fontSize = 84.sp,
+                letterSpacing = 1.sp,
+                shadow = Shadow(Color(0xFFFFB000).copy(alpha = 0.45f * alpha), Offset(0f, 0f), 10f),
+            ),
+            Color(0xFFFFE7B0).copy(alpha = alpha),
+            Color(0xFFFFB000).copy(alpha = 0.78f * alpha),
+        )
+        HapanelsAodClockStyle.POPART -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = bangers,
+                fontSize = 92.sp,
+                letterSpacing = 2.sp,
+                shadow = Shadow(Color(0xFF0099FF).copy(alpha = 0.8f * alpha), Offset(5f, 5f), 0f),
+            ),
+            Color(0xFFFFF13A).copy(alpha = alpha),
+            Color(0xFFFF4EC8).copy(alpha = 0.86f * alpha),
+        )
+        HapanelsAodClockStyle.DEFAULT,
+        HapanelsAodClockStyle.FULLSCREEN_BOLD -> Triple(
+            R1.numeralXl.copy(letterSpacing = 0.sp),
+            Color.White,
+            Color.White,
+        )
+    }
     Column(
         modifier = modifier,
         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        if (style == HapanelsAodClockStyle.POPART) {
+            Canvas(Modifier.size(210.dp, 38.dp)) {
+                for (x in 0..8) for (y in 0..1) {
+                    drawCircle(Color(0xFFFF4EC8).copy(alpha = 0.35f * alpha), 5f, Offset(x * 26f, y * 22f + 8f))
+                }
+            }
+        }
         com.github.itskenny0.r1ha.ui.i18n.Text(
-            text = now.format(DateTimeFormatter.ofPattern("HH:mm")),
-            style = R1.numeralXl.copy(letterSpacing = 0.sp),
-            color = Color.White,
+            text = timeText,
+            style = timeStyle,
+            color = timeColor,
         )
         com.github.itskenny0.r1ha.ui.i18n.Text(
             text = dateText,
             style = R1.body.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-            color = Color.White,
+            color = dateColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

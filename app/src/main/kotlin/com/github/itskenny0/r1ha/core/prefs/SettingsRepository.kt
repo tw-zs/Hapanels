@@ -132,11 +132,15 @@ class SettingsRepository private constructor(
         val behaviorTapToggle = booleanPreferencesKey("behavior.tap_toggle")
         val behaviorHideStatus = booleanPreferencesKey("behavior.hide_status_bar")
         val behaviorShowBatteryWhenHidden = booleanPreferencesKey("behavior.show_battery_when_status_bar_hidden")
+        val behaviorKioskMode = booleanPreferencesKey("behavior.kiosk_mode")
         val behaviorStartOnDashboard = booleanPreferencesKey("behavior.start_on_dashboard")
+        val behaviorStartOnBoot = booleanPreferencesKey("behavior.start_on_boot")
         val behaviorHardwareProviderMode = stringPreferencesKey("behavior.hardware_provider_mode")
         val behaviorWheelTogglesSwitches = booleanPreferencesKey("behavior.wheel_toggles_switches")
         val behaviorWheelTutorialSeen = booleanPreferencesKey("behavior.wheel_tutorial_seen")
         val behaviorToastLogLevel = stringPreferencesKey("behavior.toast_log_level")
+        val mqttPanelDeviceId = stringPreferencesKey("mqtt.panel_device_id")
+        val tabletFriendlyName = stringPreferencesKey("tablet.friendly_name")
         /** entity_id bound to the Android Quick Settings tile. Empty
          *  string sentinel = unbound (a null-equivalent that the
          *  preferences API can store; we map empty → null at read
@@ -254,7 +258,9 @@ class SettingsRepository private constructor(
                     tapToToggle = p[K.behaviorTapToggle] ?: false,
                     hideStatusBar = p[K.behaviorHideStatus] ?: false,
                     showBatteryWhenStatusBarHidden = p[K.behaviorShowBatteryWhenHidden] ?: false,
+                    kioskMode = p[K.behaviorKioskMode] ?: false,
                     startOnDashboard = p[K.behaviorStartOnDashboard] ?: true,
+                    startOnBoot = p[K.behaviorStartOnBoot] ?: false,
                     hardwareProviderMode = p[K.behaviorHardwareProviderMode]
                         ?.let { runCatching { HardwareProviderMode.valueOf(it) }.getOrNull() }
                         ?: HardwareProviderMode.AUTO,
@@ -293,6 +299,8 @@ class SettingsRepository private constructor(
                 guestModeEnabled = p[K.guestModeEnabled] ?: false,
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
                 entityOverrides = decodeEntityOverrides(p[K.entityOverrides]),
+                mqttPanelDeviceId = p[K.mqttPanelDeviceId]?.takeIf { it.isNotBlank() }.orEmpty(),
+                tabletFriendlyName = p[K.tabletFriendlyName]?.takeIf { it.isNotBlank() }.orEmpty(),
                 advanced = p[K.advancedJson]
                     ?.let {
                         runCatching {
@@ -389,7 +397,9 @@ class SettingsRepository private constructor(
                 p[K.behaviorTapToggle] = next.behavior.tapToToggle
                 p[K.behaviorHideStatus] = next.behavior.hideStatusBar
                 p[K.behaviorShowBatteryWhenHidden] = next.behavior.showBatteryWhenStatusBarHidden
+                p[K.behaviorKioskMode] = next.behavior.kioskMode
                 p[K.behaviorStartOnDashboard] = next.behavior.startOnDashboard
+                p[K.behaviorStartOnBoot] = next.behavior.startOnBoot
                 p[K.behaviorHardwareProviderMode] = next.behavior.hardwareProviderMode.name
                 p[K.behaviorWheelTogglesSwitches] = next.behavior.wheelTogglesSwitches
                 p[K.behaviorWheelTutorialSeen] = next.behavior.wheelTutorialSeen
@@ -400,6 +410,8 @@ class SettingsRepository private constructor(
                 p[K.behaviorQuickTileEntityIdD] = next.behavior.quickTileEntityIdD.orEmpty()
                 p[K.behaviorAssistAutoOpenKeyboard] = next.behavior.assistAutoOpenKeyboard
                 p[K.behaviorAssistAgentId] = next.behavior.assistAgentId.orEmpty()
+                p[K.mqttPanelDeviceId] = next.mqttPanelDeviceId
+                p[K.tabletFriendlyName] = next.tabletFriendlyName
                 p[K.behaviorAssistMacros] = next.behavior.assistMacros
                     .filter { it.isNotBlank() }
                     .joinToString("\n") { line ->

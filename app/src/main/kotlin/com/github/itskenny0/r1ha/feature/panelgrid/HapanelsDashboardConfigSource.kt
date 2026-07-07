@@ -71,16 +71,20 @@ class HapanelsDashboardConfigSource(
             )
         }
         val updatesById = patch.tileUpdates.associateBy { it.id }
+        val patchedTheme = patch.theme ?: current.theme
         val next = when (patch.surface) {
             HapanelsDashboardSurface.DASHBOARD -> current.copy(
                 revision = current.revision + 1,
                 updatedBy = patch.updatedBy,
+                theme = patchedTheme,
                 tiles = current.tiles.applyPatches(updatesById),
             )
             HapanelsDashboardSurface.AOD -> current.copy(
                 revision = current.revision + 1,
                 updatedBy = patch.updatedBy,
+                theme = patchedTheme,
                 alwaysOnDisplay = current.alwaysOnDisplay.copy(
+                    clockStyle = patch.aodClockStyle ?: current.alwaysOnDisplay.clockStyle,
                     tiles = current.alwaysOnDisplay.tiles.applyPatches(updatesById),
                 ),
             )
@@ -120,6 +124,8 @@ private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTil
     colSpan = patch.colSpan ?: colSpan,
     rowSpan = patch.rowSpan ?: rowSpan,
     clockStyle = patch.clockStyle ?: clockStyle,
+    coverVisual = patch.coverVisual ?: coverVisual,
+    coverDirection = patch.coverDirection ?: coverDirection,
 )
 
 private fun List<HapanelsTileConfig>.applyPatches(

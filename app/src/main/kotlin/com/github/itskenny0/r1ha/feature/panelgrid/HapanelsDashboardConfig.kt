@@ -12,6 +12,7 @@ data class HapanelsDashboardConfig(
     @SerialName("updated_by") val updatedBy: String,
     val title: String,
     val layout: HapanelsDashboardLayout,
+    val theme: HapanelsThemeConfig = defaultHapanelsThemeConfig,
     @SerialName("always_on_display") val alwaysOnDisplay: HapanelsAlwaysOnDisplayConfig = HapanelsAlwaysOnDisplayConfig(),
     val people: List<HapanelsPersonConfig> = emptyList(),
     val tiles: List<HapanelsTileConfig> = emptyList(),
@@ -30,6 +31,7 @@ data class HapanelsDashboardLayout(
 data class HapanelsAlwaysOnDisplayConfig(
     val enabled: Boolean = false,
     val layout: HapanelsAlwaysOnDisplayLayout = HapanelsAlwaysOnDisplayLayout.MINIMAL_CLOCK,
+    @SerialName("clock_style") val clockStyle: HapanelsAodClockStyle = HapanelsAodClockStyle.DEFAULT,
     @SerialName("grid_layout") val gridLayout: HapanelsDashboardLayout = HapanelsDashboardLayout(
         type = "fixed_grid",
         columnsLandscape = 3,
@@ -48,6 +50,15 @@ enum class HapanelsAlwaysOnDisplayLayout {
     @SerialName("minimal_clock") MINIMAL_CLOCK,
     @SerialName("status_strip") STATUS_STRIP,
     @SerialName("grid") GRID,
+}
+
+@Serializable
+enum class HapanelsAodClockStyle {
+    @SerialName("default") DEFAULT,
+    @SerialName("modern") MODERN,
+    @SerialName("warsaw_zaklad") WARSAW_ZAKLAD,
+    @SerialName("popart") POPART,
+    @SerialName("fullscreen_bold") FULLSCREEN_BOLD,
 }
 
 @Serializable
@@ -82,6 +93,8 @@ data class HapanelsTileConfig(
     val colSpan: Int? = null,
     val rowSpan: Int? = null,
     @SerialName("clock_style") val clockStyle: String? = null,
+    @SerialName("cover_visual") val coverVisual: String? = null,
+    @SerialName("cover_direction") val coverDirection: String? = null,
 )
 
 @Serializable
@@ -89,6 +102,8 @@ data class HapanelsDashboardPatch(
     @SerialName("base_revision") val baseRevision: Int,
     @SerialName("updated_by") val updatedBy: String,
     val surface: HapanelsDashboardSurface = HapanelsDashboardSurface.DASHBOARD,
+    val theme: HapanelsThemeConfig? = null,
+    @SerialName("aod_clock_style") val aodClockStyle: HapanelsAodClockStyle? = null,
     @SerialName("tile_updates") val tileUpdates: List<HapanelsTilePatch> = emptyList(),
 )
 
@@ -115,6 +130,8 @@ data class HapanelsTilePatch(
     val colSpan: Int? = null,
     val rowSpan: Int? = null,
     @SerialName("clock_style") val clockStyle: String? = null,
+    @SerialName("cover_visual") val coverVisual: String? = null,
+    @SerialName("cover_direction") val coverDirection: String? = null,
 )
 
 sealed interface HapanelsDashboardPatchResult {
@@ -128,6 +145,7 @@ sealed interface HapanelsDashboardPatchResult {
 
 internal fun HapanelsDashboardConfig.syncStateJson(
     status: String,
+    panelName: String? = null,
     attemptedBaseRevision: Int? = null,
     currentRevision: Int? = null,
 ): String = buildString {
@@ -144,6 +162,12 @@ internal fun HapanelsDashboardConfig.syncStateJson(
     append("\"updated_by\":\"")
     append(updatedBy.escapeJson())
     append('"')
+    panelName?.takeIf { it.isNotBlank() }?.let {
+        append(',')
+        append("\"panel_name\":\"")
+        append(it.escapeJson())
+        append('"')
+    }
     if (currentRevision != null) {
         append(',')
         append("\"current_revision\":")
@@ -163,6 +187,7 @@ enum class HapanelsTileKind {
     @SerialName("category") CATEGORY,
     @SerialName("action") ACTION,
     @SerialName("entity") ENTITY,
+    @SerialName("cover") COVER,
     @SerialName("camera") CAMERA,
     @SerialName("folder") FOLDER,
     @SerialName("popup") POPUP,
@@ -247,7 +272,7 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     { "id": "all_lights_off", "kind": "action", "size": "action", "label": "Zgaś wszystko", "icon": "lightbulb_off", "accent": "white", "order": 0 },
     { "id": "alarm_settings", "kind": "action", "size": "action", "label": "Ustawienia alarmu", "short_label": "Alarm", "icon": "shield_lock", "accent": "white", "order": 1 },
     { "id": "lights", "kind": "category", "size": "large", "label": "Oświetlenie", "entity_id": "group.all_lights", "icon": "lightbulb", "order": 10 },
-    { "id": "covers", "kind": "category", "size": "large", "label": "Rolety i żaluzje", "short_label": "Rolety", "entity_id": "cover.all_covers", "icon": "blinds", "order": 11 },
+    { "id": "covers", "kind": "cover", "size": "large", "label": "Rolety i żaluzje", "short_label": "Rolety", "entity_id": "cover.all_covers", "icon": "blinds", "order": 11, "cover_visual": "blind", "cover_direction": "top" },
     { "id": "climate", "kind": "category", "size": "large", "label": "Klimat", "entity_id": "climate.home", "icon": "home_thermometer", "order": 12 },
     { "id": "cameras", "kind": "camera", "size": "large", "label": "Monitoring", "entity_id": "camera.front", "icon": "cctv", "order": 13 },
     { "id": "gate", "kind": "category", "size": "large", "label": "Brama", "entity_id": "cover.gate", "icon": "gate", "order": 14 },

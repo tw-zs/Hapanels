@@ -10,7 +10,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_BASE_TOPIC, DATA_CONFIGS, DATA_PANELS, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
+from . import clear_pending_if_synced
+from .const import CONF_BASE_TOPIC, DATA_CONFIGS, DATA_PANELS, DATA_PENDING_PATCHES, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
 
 
 @dataclass
@@ -20,6 +21,7 @@ class PanelSyncState:
     revision: int | None = None
     dashboard_id: str | None = None
     updated_by: str | None = None
+    panel_name: str | None = None
     current_revision: int | None = None
     attempted_base_revision: int | None = None
     screen_resolution: str | None = None
@@ -50,6 +52,12 @@ async def async_setup_entry(
             async_add_entities([entity])
         else:
             entity.update_state(state)
+        clear_pending_if_synced(
+            hass.data[DOMAIN][entry.entry_id][DATA_PENDING_PATCHES],
+            device,
+            state.status,
+            state.revision,
+        )
 
     unsub = await mqtt.async_subscribe(
         hass,
@@ -120,6 +128,7 @@ def _parse_state(device: str, payload: str) -> PanelSyncState:
         revision=_as_int(raw.get("revision")),
         dashboard_id=raw.get("dashboard_id"),
         updated_by=raw.get("updated_by"),
+        panel_name=raw.get("panel_name"),
         current_revision=_as_int(raw.get("current_revision")),
         attempted_base_revision=_as_int(raw.get("attempted_base_revision")),
         extra=raw,
@@ -143,7 +152,7 @@ class HapanelsSyncSensor(SensorEntity):
         self._attr_unique_id = f"hapanels_{state.device}_dashboard_sync"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, state.device)},
-            "name": f"Hapanels {state.device}",
+            "name": state.panel_name or f"Hapanels {state.device}",
             "manufacturer": "tw-zs",
         }
 
@@ -158,6 +167,7 @@ class HapanelsSyncSensor(SensorEntity):
             "dashboard_id": self._state.dashboard_id,
             "revision": self._state.revision,
             "updated_by": self._state.updated_by,
+            "panel_name": self._state.panel_name,
             "current_revision": self._state.current_revision,
             "attempted_base_revision": self._state.attempted_base_revision,
             "screen_resolution": self._state.screen_resolution,
@@ -171,6 +181,10 @@ class HapanelsSyncSensor(SensorEntity):
         state.screen_width_px = self._state.screen_width_px
         state.screen_height_px = self._state.screen_height_px
         self._state = state
+        self._attr_device_info = {
+            **self._attr_device_info,
+            "name": state.panel_name or f"Hapanels {state.device}",
+        }
         self.async_write_ha_state()
 
     @callback
@@ -188,6 +202,7 @@ class HapanelsSyncSensor(SensorEntity):
             "dashboard_id": self._state.dashboard_id,
             "revision": self._state.revision,
             "updated_by": self._state.updated_by,
+            "panel_name": self._state.panel_name,
             "current_revision": self._state.current_revision,
             "attempted_base_revision": self._state.attempted_base_revision,
             "screen_resolution": self._state.screen_resolution,

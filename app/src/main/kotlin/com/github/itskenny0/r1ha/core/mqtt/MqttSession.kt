@@ -26,6 +26,9 @@ class MqttSession(
     private val username: String? = null,
     private val password: String? = null,
     private val useTls: Boolean = false,
+    private val willTopic: String? = null,
+    private val willPayload: ByteArray? = null,
+    private val willRetain: Boolean = false,
     private val onMessage: suspend (topic: String, payload: ByteArray) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
@@ -48,7 +51,7 @@ class MqttSession(
             nextSocket.soTimeout = timeoutMs
             val nextOutput = DataOutputStream(nextSocket.getOutputStream())
             val nextInput = DataInputStream(nextSocket.getInputStream())
-            writeConnect(nextOutput, clientId, username, password)
+            writeConnect(nextOutput, clientId, username, password, willTopic, willPayload, willRetain)
             nextOutput.flush()
             val ackType = nextInput.readUnsignedByte()
             if (ackType != 0x20) error("expected CONNACK, got 0x${ackType.toString(16)}")
@@ -132,8 +135,22 @@ class MqttSession(
         val topicLength = ((body[0].toInt() and 0xFF) shl 8) or (body[1].toInt() and 0xFF)
         val topic = body.decodeToString(startIndex = 2, endIndex = 2 + topicLength)
         val qos = (header and 0x06) shr 1
-        val payloadStart = 2 + topicLength + if (qos > 0) 2 else 0
-        if (payloadStart <= body.size) onMessage(topic, body.copyOfRange(payloadStart, body.size))
+        val packetIdOffset = 2 + topicLength
+        val payloadStart = packetIdOffset + if (qos > 0) 2 else 0
+        if (payloadStart > body.size) return
+        val packetId = if (qos > 0) {
+            ((body[packetIdOffset].toInt() and 0xFF) shl 8) or (body[packetIdOffset + 1].toInt() and 0xFF)
+        } else {
+            null
+        }
+        onMessage(topic, body.copyOfRange(payloadStart, body.size))
+        if (qos == 1 && packetId != null) {
+            writeFrame { out ->
+                out.writeByte(0x40)
+                out.writeByte(0x02)
+                out.writeShort(packetId)
+            }
+        }
     }
 
     private fun writeSubscribe(out: DataOutputStream, topicFilter: String) {
@@ -141,7 +158,7 @@ class MqttSession(
         val v = DataOutputStream(body)
         v.writeShort(packetIds.getAndUpdate { if (it == 65_535) 1 else it + 1 })
         writeUtf(v, topicFilter)
-        v.writeByte(0) // QoS 0
+        v.writeByte(1) // QoS 1 for important sync commands
         val payload = body.toByteArray()
         out.writeByte(0x82)
         writeRemainingLength(out, payload.size)
@@ -168,18 +185,32 @@ private fun openSocket(host: String, port: Int, useTls: Boolean, timeoutMs: Int)
         Socket().apply { connect(InetSocketAddress(host, port), timeoutMs) }
     }
 
-private fun writeConnect(out: DataOutputStream, clientId: String, username: String?, password: String?) {
+private fun writeConnect(
+    out: DataOutputStream,
+    clientId: String,
+    username: String?,
+    password: String?,
+    willTopic: String?,
+    willPayload: ByteArray?,
+    willRetain: Boolean,
+) {
     val body = ByteArrayOutputStream()
     val v = DataOutputStream(body)
     v.writeShort(4)
     v.writeBytes("MQTT")
     v.writeByte(0x04)
     var flags = 0x02
+    if (willTopic != null && willPayload != null) flags = flags or 0x04 or (if (willRetain) 0x20 else 0x00)
     if (username != null) flags = flags or 0x80
     if (password != null) flags = flags or 0x40
     v.writeByte(flags)
     v.writeShort(60)
     writeUtf(v, clientId)
+    if (willTopic != null && willPayload != null) {
+        writeUtf(v, willTopic)
+        v.writeShort(willPayload.size)
+        v.write(willPayload)
+    }
     if (username != null) writeUtf(v, username)
     if (password != null) {
         val bytes = password.toByteArray(Charsets.UTF_8)

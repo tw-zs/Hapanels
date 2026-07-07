@@ -191,6 +191,11 @@ data class Behavior(
      */
     val showBatteryWhenStatusBarHidden: Boolean = false,
     /**
+     * Kiosk mode: hide system bars and try to keep app pinned via lock-task.
+     * Meant for wall panels where leaving app should be hard, not a tap away.
+     */
+    val kioskMode: Boolean = false,
+    /**
      * When on, the app opens on the TODAY dashboard rather than the
      * card stack. Useful for wall-mounted / kiosk panel setups where the
      * device's primary purpose is information radiation (weather,
@@ -198,6 +203,11 @@ data class Behavior(
      * for the tablet-first Hapanels shell.
      */
     val startOnDashboard: Boolean = true,
+    /**
+     * When on, the app reopens itself after boot. Useful for kiosk tablets
+     * and wall panels that should come back automatically after power loss.
+     */
+    val startOnBoot: Boolean = false,
     val hardwareProviderMode: HardwareProviderMode = HardwareProviderMode.AUTO,
     /**
      * When on (the default), scrolling the wheel on a non-scalar card (lock,
@@ -736,4 +746,11 @@ data class AppSettings(
     val dashboard: DashboardSettings = DashboardSettings(),
     /** Per-surface refresh intervals + integration tuning. */
     val integrations: IntegrationsSettings = IntegrationsSettings(),
+
+    /** MQTT device id used for panel topics and HA discovery. Empty = stable
+     *  per-device default derived from Android ID. */
+    val mqttPanelDeviceId: String = "",
+    /** Friendly tablet name shown in Hapanels Studio and HA device metadata.
+     *  Empty = derived from panel device id. */
+    val tabletFriendlyName: String = "",
 )

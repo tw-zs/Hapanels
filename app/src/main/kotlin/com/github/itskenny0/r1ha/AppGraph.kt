@@ -213,6 +213,7 @@ class AppGraph(context: Context) {
 
     val panelMqttBridge: com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge by lazy {
         com.github.itskenny0.r1ha.core.hardware.PanelMqttBridge(
+            appContext,
             settings,
             panelHardware,
             dashboardConfigSource,

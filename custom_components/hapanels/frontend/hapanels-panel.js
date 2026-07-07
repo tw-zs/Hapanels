@@ -1,15 +1,36 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260706-popup-context";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-clock-styles";
 const TILE_ACCENTS = ["orange", "red", "white"];
-const TILE_KINDS = ["entity", "category", "action", "camera", "clock", "folder", "popup"];
+const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
 const TILE_SIZES = ["large", "small", "action"];
 const CLOCK_STYLES = ["classic", "compact", "date_top"];
+const COVER_VISUALS = ["blind", "shade", "curtain", "gate"];
+const COVER_DIRECTIONS = ["top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"];
 const AOD_PRESETS = [
   { id: "night", name: "Nocny zegar", desc: "Ciemno, 1% jasności, sam zegar", aod: { enabled: true, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 1, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
   { id: "status", name: "Status dom", desc: "Cichy pasek statusu i osoby", aod: { enabled: true, layout: "status_strip", timeout_sec: 180, brightness_percent: 3, background: "#05070a", grid_layout: { type: "fixed_grid", columns_landscape: 4, columns_portrait: 2, gap: "small" } } },
   { id: "grid", name: "Kafle nocne", desc: "Siatka AOD dla kilku encji", aod: { enabled: true, layout: "grid", timeout_sec: 300, brightness_percent: 4, background: "#080b0f", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "medium" } } },
   { id: "off", name: "Wyłącz AOD", desc: "Bez wygaszacza ekranu", aod: { enabled: false, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 3, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
+];
+const AOD_CLOCK_STYLES = [
+  { id: "default", name: "Domyślny", desc: "Czytelny, spokojny zegar AOD.", treatment: "Lekki font, klasyczny układ godziny i daty." },
+  { id: "modern", name: "Nowoczesny", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
+  { id: "warsaw_zaklad", name: "Warszawski Zakład", desc: "Miejski zegar z charakterem szyldu.", treatment: "Kondensowany font, ramka i techniczny klimat tablicy." },
+  { id: "popart", name: "Popart", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
+  { id: "fullscreen_bold", name: "Pełnoekranowy gruby zegar", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Bardzo gruby font, cyfry wypełniają prawie cały ekran." },
+];
+const PANEL_THEME_PRESETS = [
+  { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
+  { id: "light_breeze", name: "Light Breeze", category: "Wygląd monochromatyczny", description: "Chłodny, jasny błękit z lekkim kontrastem.", light: { bg: "#f4faff", surface: "#ffffff", tile: "#ddecf7", text: "#10202c", muted: "#5d7482", accent: "#3fa7d6", border: "#c2d7e6", hover: "#eaf6fd", active: "#d3edfa", selected: "#b8e1f4" }, dark: { bg: "#07141c", surface: "#132832", tile: "#203946", text: "#eaf8ff", muted: "#9db8c8", accent: "#51b7e8", border: "#315260", hover: "#1b3440", active: "#254c5d", selected: "#2f6177" } },
+  { id: "desert_sun", name: "Desert Sun", category: "Wygląd monochromatyczny", description: "Ciepły piasek i bursztyn.", light: { bg: "#fff8ee", surface: "#fffcf7", tile: "#f1e0c8", text: "#2a1b06", muted: "#765f3f", accent: "#d99a21", border: "#d8c29d", hover: "#ffefd2", active: "#ffe1a6", selected: "#ffd27a" }, dark: { bg: "#1b1205", surface: "#2d2110", tile: "#41321a", text: "#fff3df", muted: "#d1b98f", accent: "#eaa12a", border: "#5d4725", hover: "#3a2b16", active: "#5a421d", selected: "#705222" } },
+  { id: "forest_leaves", name: "Forest Leaves", category: "Wygląd monochromatyczny", description: "Zielenie lasu, spokojne i kontrastowe.", light: { bg: "#f4fbf2", surface: "#ffffff", tile: "#dcebd7", text: "#11210f", muted: "#5f7358", accent: "#5c9e46", border: "#c3d6bd", hover: "#eaf6e6", active: "#d9efd2", selected: "#c3e6b9" }, dark: { bg: "#081409", surface: "#172619", tile: "#263828", text: "#eff8ec", muted: "#a8bfa0", accent: "#7dbb63", border: "#3a5138", hover: "#203321", active: "#31502f", selected: "#3e6339" } },
+  { id: "baltic_dawn", name: "Bałtyk o świcie", category: "Polskie inspiracje", description: "Morski błękit, mgła i różowy świt.", light: { bg: "#f3fafa", surface: "#ffffff", tile: "#d7e9ea", text: "#0f2326", muted: "#60777a", accent: "#e8918e", border: "#bfd6d8", hover: "#e6f4f5", active: "#cdecef", selected: "#ffdad8" }, dark: { bg: "#061416", surface: "#14282b", tile: "#233a3e", text: "#eaf8f9", muted: "#a5bcbf", accent: "#ffb4b0", border: "#365459", hover: "#1d3438", active: "#2b5157", selected: "#613735" } },
+  { id: "bieszczady_sunset", name: "Bieszczadzkie zachody", category: "Polskie inspiracje", description: "Ciepły zachód nad połoninami.", light: { bg: "#fff7f0", surface: "#fffcf9", tile: "#f1ded2", text: "#2b170f", muted: "#765f55", accent: "#d06a3a", border: "#d9c1b5", hover: "#ffede3", active: "#ffd9c8", selected: "#ffc4a8" }, dark: { bg: "#1a0e0a", surface: "#2c1d17", tile: "#432e25", text: "#fff1ea", muted: "#d4b5a6", accent: "#ff8d57", border: "#60463a", hover: "#392820", active: "#5b3e31", selected: "#734e3c" } },
+  { id: "masurian_nights", name: "Mazurskie noce", category: "Polskie inspiracje", description: "Granat jezior i nocne światło.", light: { bg: "#f5f8ff", surface: "#ffffff", tile: "#dde6f6", text: "#121d2f", muted: "#626f86", accent: "#7f96d6", border: "#c5d2e8", hover: "#ecf3ff", active: "#dcebff", selected: "#c7dbff" }, dark: { bg: "#070d1a", surface: "#171e31", tile: "#252e46", text: "#eff3ff", muted: "#aeb8d0", accent: "#8ea7f2", border: "#3b4663", hover: "#202840", active: "#334061", selected: "#405079" } },
+  { id: "aurora_glass", name: "Aurora Glass", category: "Kolorowe abstrakcyjne", description: "Szklany gradient zorzy z chłodnym fioletem i cyjanem.", light: { bg: "#f7f8ff", surface: "#ffffff", tile: "#e7e4ff", text: "#151427", muted: "#686785", accent: "#20bfd6", border: "#d4d0f5", hover: "#f0eeff", active: "#e2ddff", selected: "#d7f6fb" }, dark: { bg: "#080817", surface: "#17162b", tile: "#252344", text: "#f4f1ff", muted: "#b7b1d9", accent: "#69e4f4", border: "#3d3a66", hover: "#201f3a", active: "#332f62", selected: "#214b5a" } },
+  { id: "neon_noir", name: "Neon Noir", category: "Kolorowe abstrakcyjne", description: "Ciemny premium look z neonowym magenta i elektrycznym błękitem.", light: { bg: "#fff7fb", surface: "#ffffff", tile: "#ffddec", text: "#26111e", muted: "#795d70", accent: "#0078d4", border: "#e8bed5", hover: "#ffedf6", active: "#ffd9eb", selected: "#d7ecff" }, dark: { bg: "#09040d", surface: "#1b1022", tile: "#31183c", text: "#ffeef8", muted: "#d1a7c4", accent: "#58c7ff", border: "#53305f", hover: "#271430", active: "#421c54", selected: "#193f5c" } },
+  { id: "velvet_spectrum", name: "Velvet Spectrum", category: "Kolorowe abstrakcyjne", description: "Miękki, luksusowy miks śliwki, złota i indygo.", light: { bg: "#fff8f4", surface: "#ffffff", tile: "#f0ddea", text: "#251524", muted: "#735c6d", accent: "#c18a2a", border: "#ddc2d5", hover: "#ffeff8", active: "#f2d4e8", selected: "#ffe0a8" }, dark: { bg: "#100913", surface: "#211426", tile: "#35203c", text: "#fff0fa", muted: "#c7a8c4", accent: "#e4b65c", border: "#56355f", hover: "#2d1934", active: "#4b2758", selected: "#60481f" } },
 ];
 
 class HapanelsStudioPanel extends HTMLElement {
@@ -30,10 +51,12 @@ class HapanelsStudioPanel extends HTMLElement {
     this._layoutDrafts = {};
     this._layoutContext = "main";
     this._layoutDrag = null;
+    this._panelThemeError = null;
+    this._aodClockStyleError = null;
     this._layoutGridCollapsed = localStorage.getItem("hapanels_layout_grid_collapsed") === "1";
     this._themeMode = localStorage.getItem("hapanels_studio_theme") || "auto";
     this._hiddenDevices = new Set(JSON.parse(localStorage.getItem("hapanels_hidden_devices") || "[]"));
-    this._collapsedTiles = new Set(JSON.parse(localStorage.getItem("hapanels_collapsed_tiles") || "[]"));
+    this._expandedTiles = new Set(JSON.parse(localStorage.getItem("hapanels_expanded_tiles") || "[]"));
     this._render();
     this._load();
   }
@@ -89,6 +112,8 @@ class HapanelsStudioPanel extends HTMLElement {
     const colSpan = Number(this.shadowRoot.getElementById(`${prefix}-colSpan`)?.value);
     const rowSpan = Number(this.shadowRoot.getElementById(`${prefix}-rowSpan`)?.value);
     const clockStyle = this.shadowRoot.getElementById(`${prefix}-clockStyle`)?.value;
+    const coverVisual = this.shadowRoot.getElementById(`${prefix}-coverVisual`)?.value;
+    const coverDirection = this.shadowRoot.getElementById(`${prefix}-coverDirection`)?.value;
     if (!config || !Number.isFinite(revision) || !label) return;
     const tile = { id: tileId, label };
     if (kind) tile.kind = kind;
@@ -104,6 +129,8 @@ class HapanelsStudioPanel extends HTMLElement {
     if (Number.isFinite(colSpan)) tile.colSpan = colSpan;
     if (Number.isFinite(rowSpan)) tile.rowSpan = rowSpan;
     if (clockStyle) tile.clock_style = clockStyle;
+    if (coverVisual) tile.cover_visual = coverVisual;
+    if (coverDirection) tile.cover_direction = coverDirection;
     await this._hass.callService("hapanels", "patch_dashboard_config", {
       device,
       patch: {
@@ -199,6 +226,10 @@ class HapanelsStudioPanel extends HTMLElement {
     return this._visiblePanels().find((panel) => panel.device === this._selectedDevice) || null;
   }
 
+  _panelLabel(panel) {
+    return panel?.panel_name || panel?.device || "panel";
+  }
+
   _pickerPanels() {
     const all = this._panels || [];
     if (this._tabletPickerFilter === "hidden") return all.filter((panel) => this._hiddenDevices.has(panel.device));
@@ -287,9 +318,11 @@ class HapanelsStudioPanel extends HTMLElement {
         .tiles { display: grid; gap: 14px; }
         .tile { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, var(--surface), var(--surface-2)); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
         .tile.focused { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 18px 50px rgba(0,0,0,.20); }
-        .tile-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; }
+        .tile-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; cursor: pointer; user-select: none; }
         .tile.collapsed .tile-head { border-bottom: 0; }
-        .tile.collapsed .tile-body, .tile.collapsed .tile-footer { display: none; }
+        .tile-expandable { overflow: hidden; max-height: 2400px; opacity: 1; transform: translateY(0); transition: max-height .26s cubic-bezier(.2,.8,.2,1), opacity .16s ease, transform .16s ease; will-change: max-height, opacity, transform; }
+        .tile-expandable-inner { overflow: hidden; }
+        .tile.collapsed .tile-expandable { max-height: 0; opacity: 0; transform: translateY(-8px); pointer-events: none; transition-duration: 300ms, 300ms, 300ms; }
         .tile-title { display: flex; align-items: center; gap: 10px; color: var(--text); }
         .tile-title button { padding: 0; width: 28px; height: 28px; display: grid; place-items: center; background: transparent; color: var(--muted); }
         .tile-toggle { padding: 0; width: 30px; height: 30px; display: grid; place-items: center; background: transparent; color: var(--muted); }
@@ -301,7 +334,13 @@ class HapanelsStudioPanel extends HTMLElement {
         .tile-preview-box { min-height: 210px; margin: 18px auto; border: 1px solid var(--line); border-radius: 16px; display: grid; place-items: center; text-align: center; max-width: 250px; background: var(--bg); }
         .tile-preview-target { border-radius: 10px; cursor: default; transition: background .12s ease, box-shadow .12s ease, color .12s ease; }
         .tile-preview-target:hover { background: color-mix(in srgb, var(--tile-accent, currentColor) 12%, transparent); }
-        .field.tile-highlight, .icon-field.tile-highlight { border-radius: 12px; outline: 2px solid var(--tile-accent, currentColor); outline-offset: 6px; box-shadow: 0 0 28px color-mix(in srgb, var(--tile-accent, currentColor) 28%, transparent); }
+        .field, .icon-field { transition: background 800ms ease, box-shadow 800ms ease, transform 800ms ease; }
+        .field label, .icon-field label { transition: color 300ms ease; }
+        .field.tile-highlight, .icon-field.tile-highlight { border-radius: 12px; outline: 0; background: color-mix(in srgb, var(--tile-accent, currentColor) 18%, var(--surface)); box-shadow: 0 0 36px color-mix(in srgb, var(--tile-accent, currentColor) 34%, transparent); transform: translateY(-1px); transition-duration: 300ms, 300ms, 300ms; }
+        .field.tile-highlight label, .icon-field.tile-highlight label { color: color-mix(in srgb, var(--tile-accent, currentColor) 78%, var(--muted)); }
+        .field.tile-highlight input, .field.tile-highlight select, .icon-field.tile-highlight input { border-color: transparent; box-shadow: none; background: color-mix(in srgb, var(--tile-accent, currentColor) 8%, var(--bg)); }
+        .field:has(.icon-field.tile-highlight) { background: transparent; box-shadow: none; transform: none; }
+        .icon-field.tile-highlight .icon-preview { background: color-mix(in srgb, var(--tile-accent, currentColor) 18%, var(--bg)); box-shadow: none; border-color: transparent; }
         .tile-preview-box ha-icon { --mdc-icon-size: 64px; color: currentColor; }
         .tile-preview-box strong { display: block; margin-top: 14px; font-size: 24px; color: var(--text); text-transform: none; }
         .tile-preview-box span { display: block; margin-top: 6px; color: var(--muted); font-size: 16px; text-transform: none; }
@@ -331,10 +370,10 @@ class HapanelsStudioPanel extends HTMLElement {
         input, select { border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); padding: 10px; }
         ha-entity-picker { --mdc-theme-surface: var(--surface); --mdc-theme-on-surface: var(--text); --mdc-theme-primary: var(--accent); display: block; }
         .entity-fallback { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-        .icon-field { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: end; }
-        .icon-field input { min-height: 42px; }
+        .icon-field { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--bg) 92%, transparent); }
+        .icon-field input { min-height: 36px; }
         ha-icon-picker { max-width: 100%; overflow: hidden; }
-        .icon-preview { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; color: #e99900; background: var(--bg); }
+        .icon-preview { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; color: #e99900; background: var(--bg); }
         .accent-orange { color: #e99900; }
         .accent-red { color: #ff5338; }
         .accent-white { color: #f1f1f1; }
@@ -353,7 +392,62 @@ class HapanelsStudioPanel extends HTMLElement {
         .panel-tile-preview.accent-white ha-icon { color: #f1f1f1; }
         .panel-tile-preview.accent-red ha-icon { color: #ff5338; }
         .panel-tile-preview strong, .panel-tile-preview small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .settings-panel { display: grid; gap: 16px; }
+         .settings-panel { display: grid; gap: 16px; }
+          .appearance-panel {
+            --appearance-bg: var(--bg);
+            --appearance-surface: var(--surface);
+            --appearance-surface-variant: var(--surface-2);
+            --appearance-text: var(--text);
+            --appearance-text-muted: var(--muted);
+            --appearance-accent: var(--accent);
+            --appearance-border: var(--line);
+            --appearance-hover: color-mix(in srgb, var(--appearance-accent) 10%, var(--appearance-surface-variant));
+            --appearance-active: color-mix(in srgb, var(--appearance-accent) 18%, var(--appearance-surface));
+            --appearance-selected: color-mix(in srgb, var(--appearance-accent) 40%, transparent);
+            display: grid;
+            gap: 18px;
+            color: var(--appearance-text);
+          }
+          .appearance-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: end; flex-wrap: wrap; }
+          .appearance-mode { display: flex; gap: 8px; flex-wrap: wrap; }
+          .appearance-mode button { background: var(--appearance-surface-variant); color: var(--appearance-text); border: 1px solid var(--appearance-border); }
+          .appearance-mode button.active { background: var(--appearance-accent); color: #160902; border-color: transparent; }
+          .appearance-category { display: grid; gap: 10px; }
+          .appearance-category h3 { margin: 0; color: var(--appearance-text-muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+          .appearance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; }
+          .appearance-card { text-align: left; border: 1px solid var(--appearance-border); border-radius: 20px; background: var(--appearance-surface-variant); color: var(--appearance-text); padding: 14px; display: grid; gap: 10px; }
+          .appearance-card:hover { background: var(--appearance-hover); }
+          .appearance-card.active { border-color: var(--appearance-accent); box-shadow: 0 0 0 2px var(--appearance-selected); background: var(--appearance-active); }
+          .appearance-card strong { font-size: 18px; }
+          .appearance-card small { color: var(--appearance-text-muted); line-height: 1.4; }
+          .appearance-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+          .appearance-preview { height: 96px; border: 1px solid var(--appearance-border); border-radius: 16px; padding: 10px; background: var(--preset-bg); display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; }
+          .appearance-preview-main, .appearance-preview-side span { border-radius: 12px; background: var(--preset-tile); }
+          .appearance-preview-main { display: grid; place-items: center; color: var(--preset-accent); }
+          .appearance-preview-main::before { content: ""; width: 28px; height: 28px; border-radius: 50%; background: currentColor; box-shadow: 0 0 22px color-mix(in srgb, currentColor 55%, transparent); }
+          .appearance-preview-side { display: grid; gap: 8px; }
+          .appearance-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+          .appearance-swatch { width: 22px; height: 22px; border-radius: 999px; border: 1px solid var(--appearance-border); background: var(--swatch); }
+          .appearance-support { display: flex; gap: 6px; flex-wrap: wrap; }
+          .appearance-error { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,83,56,.30); background: rgba(255,83,56,.10); color: #ff725d; }
+          .appearance-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+          .aod-style-panel { display: grid; gap: 12px; margin-top: 18px; }
+          .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+          .aod-style-card { text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); color: var(--text); padding: 12px; display: grid; gap: 10px; }
+          .aod-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+          .aod-style-card strong { font-size: 17px; }
+          .aod-style-card small { color: var(--muted); line-height: 1.35; }
+          .aod-style-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
+          .aod-clock-preview { height: 84px; border: 1px solid rgba(255,255,255,.10); border-radius: 16px; background: #020304; color: #f7f3e8; display: grid; place-items: center; text-align: center; overflow: hidden; }
+          .aod-clock-preview span { display: block; }
+          .aod-clock-preview .time { font-size: 30px; line-height: 1; letter-spacing: .02em; }
+          .aod-clock-preview .date { margin-top: 5px; color: #9ca3af; font-size: 10px; }
+          .aod-clock-preview.modern .time { font-weight: 200; letter-spacing: .08em; }
+          .aod-clock-preview.warsaw_zaklad { border-color: #c6a15b; color: #f3d28a; font-family: Georgia, serif; text-transform: uppercase; }
+          .aod-clock-preview.warsaw_zaklad .time { border: 1px solid #c6a15b; padding: 6px 10px; font-weight: 800; }
+          .aod-clock-preview.popart { background: radial-gradient(circle at 80% 20%, #ffcf33 0 18%, transparent 19%), radial-gradient(circle at 12% 85%, #31d1ff 0 18%, transparent 19%), #120713; color: #ff5aa5; }
+          .aod-clock-preview.popart .time { font-weight: 950; text-shadow: 3px 3px 0 #111; }
+          .aod-clock-preview.fullscreen_bold .time { font-size: 44px; font-weight: 950; letter-spacing: -.08em; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
         .picker-filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
@@ -366,7 +460,13 @@ class HapanelsStudioPanel extends HTMLElement {
         .conflict-box { margin: 16px 0; border: 1px solid rgba(255,83,56,.30); background: rgba(255,83,56,.10); border-radius: 18px; padding: 16px; }
         .conflict-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
         .settings-row { display: grid; gap: 8px; margin-top: 16px; }
-        .toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+        .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+        .add-button { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 10px 14px; transition: background .18s ease, box-shadow .18s ease, transform .18s ease; }
+        .add-button::after { content: "+"; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: rgba(0,0,0,.16); font-size: 13px; line-height: 1; }
+        .add-button.secondary::after { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+        .add-button.secondary { background: color-mix(in srgb, var(--surface-2) 78%, transparent); color: var(--text); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line)); }
+        .add-button:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(255,122,26,.18); }
+        .add-button.secondary:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 12%, transparent); }
         .tablet-preview { background: #080c0f; border: 1px solid var(--line); border-radius: 18px; padding: 14px; color: #f5f3ee; max-width: 980px; margin: 0 auto; }
         .tablet-top { display: grid; grid-template-columns: 1.25fr 1.2fr 1.6fr; gap: 10px; margin-bottom: 10px; }
         .tablet-clock { min-height: 130px; display: grid; place-items: center; color: #eee; font-size: 64px; font-weight: 300; letter-spacing: .03em; }
@@ -455,6 +555,20 @@ class HapanelsStudioPanel extends HTMLElement {
         .clock-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
         .clock-style-card strong { display: block; font-size: 24px; line-height: 1; }
         .clock-style-card small { color: var(--muted); font-size: 10px; }
+        .cover-preview { min-height: 120px; display: grid; place-items: center; gap: 4px; border-radius: 16px; background: color-mix(in srgb, var(--tile-accent, currentColor) 8%, var(--bg)); color: var(--text); overflow: hidden; }
+        .cover-preview strong, .cover-preview small { position: relative; z-index: 1; }
+        .cover-preview small { color: var(--muted); }
+        .cover-scene { position: relative; width: min(180px, 70%); height: 54px; border-radius: 14px; background: rgba(255,255,255,.06); overflow: hidden; box-shadow: inset 0 0 0 1px var(--line); }
+        .cover-scene span { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.20), rgba(255,255,255,.06)); animation: coverPreview 2.4s ease-in-out infinite alternate; }
+        .cover-curtain .cover-scene span { width: 50%; background: repeating-linear-gradient(90deg, rgba(255,255,255,.26) 0 8px, rgba(255,255,255,.10) 8px 16px); }
+        .cover-curtain .cover-scene span + span { left: auto; right: 0; animation-direction: alternate-reverse; }
+        .cover-shade .cover-scene span { background: repeating-linear-gradient(0deg, rgba(255,255,255,.24) 0 4px, rgba(255,255,255,.08) 4px 9px); }
+        .cover-gate .cover-scene span { background: repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 10px, rgba(255,255,255,.08) 10px 18px); }
+        .cover-top .cover-scene span { transform-origin: top; }
+        .cover-bottom .cover-scene span { transform-origin: bottom; }
+        .cover-left .cover-scene span { transform-origin: left; }
+        .cover-right .cover-scene span { transform-origin: right; }
+        @keyframes coverPreview { from { transform: scale(1); opacity: .95; } to { transform: scale(.42); opacity: .72; } }
         .error { color: #ff725d; margin-top: 12px; }
         a { color: var(--accent); }
         @media (max-width: 900px) {
@@ -527,7 +641,7 @@ class HapanelsStudioPanel extends HTMLElement {
     return `
       <button class="card panel-card" data-select-device="${this._escape(panel.device)}">
         <div class="name">
-          <span>${this._escape(panel.device || "panel")}</span>
+          <span>${this._escape(this._panelLabel(panel))}</span>
           <span class="pill ${status}">${this._statusLabel(panel.status)}</span>
         </div>
         <dl>
@@ -547,7 +661,7 @@ class HapanelsStudioPanel extends HTMLElement {
         <div class="detail-head">
           <div>
             <button id="back" class="secondary small">← Tablety</button>
-            <h2 style="margin-top:16px">${this._escape(panel.device || "panel")}</h2>
+            <h2 style="margin-top:16px">${this._escape(this._panelLabel(panel))}</h2>
             <div class="sub"><span class="pill ${status}">${this._statusLabel(panel.status)}</span> Dashboard ${this._escape(panel.dashboard_id || "-")} · rewizja ${this._escape(panel.revision ?? "-")}</div>
           </div>
           <div class="actions">
@@ -561,6 +675,7 @@ class HapanelsStudioPanel extends HTMLElement {
           ${this._tab("aod", "AOD")}
           ${this._tab("settings", "Informacje")}
           ${this._tab("preview", "Podgląd")}
+          ${this._tab("appearance", "Wygląd")}
         </div>
         ${this._tabContent(panel.device, config, panel)}
       </section>
@@ -589,11 +704,12 @@ class HapanelsStudioPanel extends HTMLElement {
     if (mode === "studio") {
       const patch = structuredClone(this._pendingPatches[device]);
       if (patch) {
-        patch.base_revision = Number(this._configs[device]?.revision || 0);
+        const panel = this._panels.find((item) => item.device === device);
+        patch.base_revision = Number(panel?.current_revision ?? panel?.revision ?? this._configs[device]?.revision ?? 0);
         await this._hass.callService("hapanels", "patch_dashboard_config", { device, patch });
       }
     } else if (mode === "tablet") {
-      await this._setConfig(device, this._configs[device]);
+      await this._hass.callService("hapanels", "accept_tablet_config", { device });
     }
     await this._load();
   }
@@ -603,11 +719,12 @@ class HapanelsStudioPanel extends HTMLElement {
     if (this._activeTab === "aod") return this._aodView(device, config);
     if (this._activeTab === "settings") return this._tabletInfoView(config, panel);
     if (this._activeTab === "preview") return this._previewView(device, config);
+    if (this._activeTab === "appearance") return this._appearanceView(device, config, panel);
     const tiles = (config.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     return `
       <div class="toolbar">
-        <button data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Dodaj kafel Home Assistant +</button>
-        <button data-pick-panel-tile data-target="tiles" data-device="${this._escape(device)}" data-surface="dashboard">Dodaj kafel panelu +</button>
+        <button class="add-button" data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Dodaj HA</button>
+        <button class="add-button secondary" data-pick-panel-tile data-target="tiles" data-device="${this._escape(device)}" data-surface="dashboard">Dodaj panel</button>
       </div>
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "dashboard")).join("")}</div>
     `;
@@ -616,6 +733,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _aodView(device, config) {
     const aod = config.always_on_display || {};
     const tiles = (aod.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const showClockStyles = !tiles.length && (aod.layout || "minimal_clock") !== "grid";
     return `
       <div class="preset-grid">
         ${AOD_PRESETS.map((preset) => `<button class="preset-card" data-aod-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}"><strong>${this._escape(preset.name)}</strong><span>${this._escape(preset.desc)}</span></button>`).join("")}
@@ -635,11 +753,74 @@ class HapanelsStudioPanel extends HTMLElement {
             <label style="display:flex;align-items:center;gap:8px"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}>Włącz AOD</label>
             <button class="small" data-save-aod data-device="${this._escape(device)}">Zapisz AOD</button>
           </div>
+          ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin-top:12px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
         </div>
       </div>
       <div class="toolbar"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button></div>
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
     `;
+  }
+
+  _aodClockStylePicker(device, config) {
+    const selected = this._aodClockStyle(device, config);
+    return `
+      <div class="aod-style-panel">
+        <div>
+          <strong>Styl zegara AOD</strong>
+          <div class="sub">Tylko ekran AOD bez kafli. Nie zmienia motywu panelu.</div>
+        </div>
+        ${this._aodClockStyleError ? `<div class="appearance-error">${this._escape(this._aodClockStyleError)}</div>` : ""}
+        <div class="aod-style-grid">
+          ${AOD_CLOCK_STYLES.map((style) => this._aodClockStyleCard(device, style, style.id === selected)).join("")}
+        </div>
+      </div>
+    `;
+  }
+
+  _aodClockStyleCard(device, style, active) {
+    return `
+      <button class="aod-style-card ${active ? "active" : ""}" data-aod-clock-style="${this._escape(style.id)}" data-device="${this._escape(device)}">
+        <span class="aod-style-head"><strong>${this._escape(style.name)}</strong>${active ? `<span class="pill synced">Aktywny</span>` : ""}</span>
+        <span class="aod-clock-preview ${this._escape(style.id)}" aria-hidden="true"><span><span class="time">12:34</span><span class="date">środa, 01 lipca</span></span></span>
+        <small>${this._escape(style.desc)}</small>
+        <small>${this._escape(style.treatment)}</small>
+      </button>
+    `;
+  }
+
+  _aodClockStyleStorageKey(device) {
+    return `hapanels_aod_clock_style_${device || "default"}`;
+  }
+
+  _aodClockStyle(device, config) {
+    const value = localStorage.getItem(this._aodClockStyleStorageKey(device)) || config?.always_on_display?.clock_style;
+    return AOD_CLOCK_STYLES.some((style) => style.id === value) ? value : AOD_CLOCK_STYLES[0].id;
+  }
+
+  async _applyAodClockStyle(device, styleId) {
+    const config = this._configs[device];
+    const revision = Number(config?.revision);
+    if (!config || !Number.isFinite(revision) || !AOD_CLOCK_STYLES.some((style) => style.id === styleId)) return;
+    const aod = { ...(config.always_on_display || {}), clock_style: styleId };
+    this._configs[device] = { ...config, always_on_display: aod };
+    localStorage.setItem(this._aodClockStyleStorageKey(device), styleId);
+    this._aodClockStyleError = null;
+    this._render();
+    try {
+      await this._hass.callService("hapanels", "patch_dashboard_config", {
+        device,
+        patch: {
+          base_revision: revision,
+          updated_by: "homeassistant:hapanels_studio",
+          surface: "aod",
+          aod_clock_style: styleId,
+        },
+      });
+      window.setTimeout(() => this._load(), 800);
+    } catch (err) {
+      this._aodClockStyleError = `Styl zapisany lokalnie. Nie udało się wysłać do panelu: ${err?.message || err}`;
+      this._render();
+    }
   }
 
   _previewView(device, config) {
@@ -663,8 +844,8 @@ class HapanelsStudioPanel extends HTMLElement {
               </select>
             </label>
             <div class="layout-buttons">
-              <button class="small" data-layout-add-ha>Dodaj kafel Home Assistant +</button>
-              <button class="small" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Dodaj kafel panelu +</button>
+              <button class="small add-button" data-layout-add-ha>Dodaj HA</button>
+              <button class="small add-button secondary" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Dodaj panel</button>
               <button class="small secondary" data-layout-tray>Usuń kafelek</button>
             </div>
             <span class="sub">${this._escape(draft.tiles.length)}/${this._escape(grid.columns * grid.rows)}</span>
@@ -710,6 +891,95 @@ class HapanelsStudioPanel extends HTMLElement {
     `;
   }
 
+  _appearanceView(device, config, panel = null) {
+    const presetId = this._panelThemePreset(device, config);
+    const mode = this._panelThemeMode(device, config);
+    const groups = PANEL_THEME_PRESETS.reduce((items, preset) => {
+      (items[preset.category] ||= []).push(preset);
+      return items;
+    }, {});
+    return `
+      <div class="appearance-panel">
+        <div class="appearance-toolbar">
+          <div>
+            <strong>Motyw panelu</strong>
+            <div class="sub">${this._escape(this._panelLabel(panel))} · dashboard ${this._escape(config.dashboard_id || "-")} · rewizja ${this._escape(config.revision ?? "-")}</div>
+          </div>
+          <div class="appearance-mode" aria-label="Tryb jasny lub ciemny panelu">
+            <button class="small ${mode === "light" ? "active" : "secondary"}" data-panel-theme-mode="light" data-device="${this._escape(device)}">Jasny</button>
+            <button class="small ${mode === "dark" ? "active" : "secondary"}" data-panel-theme-mode="dark" data-device="${this._escape(device)}">Ciemny</button>
+          </div>
+        </div>
+        ${this._panelThemeError ? `<div class="appearance-error">${this._escape(this._panelThemeError)}</div>` : ""}
+        ${Object.entries(groups).map(([category, presets]) => `
+          <section class="appearance-category">
+            <h3>${this._escape(category)}</h3>
+            <div class="appearance-grid">
+              ${presets.map((preset) => this._appearancePresetCard(device, preset, preset.id === presetId, mode)).join("")}
+            </div>
+          </section>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  _appearancePresetCard(device, preset, active, mode) {
+    const colors = preset[mode] || preset.dark;
+    const swatches = [colors.bg, colors.surface, colors.tile, colors.text, colors.muted, colors.accent];
+    return `
+      <button class="appearance-card ${active ? "active" : ""}" data-panel-theme-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}" style="--preset-bg:${this._escape(colors.bg)};--preset-tile:${this._escape(colors.tile)};--preset-accent:${this._escape(colors.accent)}">
+        <span class="appearance-card-head">
+          <span><strong>${this._escape(preset.name)}</strong></span>
+          ${active ? `<span class="pill synced">Aktywny</span>` : ""}
+        </span>
+        <span class="appearance-preview" aria-hidden="true"><span class="appearance-preview-main"></span><span class="appearance-preview-side"><span></span><span></span></span></span>
+        <small>${this._escape(preset.description)}</small>
+        <span class="appearance-swatches">${swatches.map((color) => `<span class="appearance-swatch" style="--swatch:${this._escape(color)}" title="${this._escape(color)}"></span>`).join("")}</span>
+        <span class="appearance-support"><span class="pill unknown">Light</span><span class="pill unknown">Dark</span></span>
+      </button>
+    `;
+  }
+
+  _panelThemeStorageKey(device, key) {
+    return `hapanels_panel_theme_${key}_${device || "default"}`;
+  }
+
+  _panelThemePreset(device, config) {
+    const value = localStorage.getItem(this._panelThemeStorageKey(device, "preset")) || config?.theme?.preset;
+    return PANEL_THEME_PRESETS.some((preset) => preset.id === value) ? value : PANEL_THEME_PRESETS[0].id;
+  }
+
+  _panelThemeMode(device, config) {
+    const value = localStorage.getItem(this._panelThemeStorageKey(device, "mode")) || config?.theme?.mode;
+    return value === "light" || value === "dark" ? value : "dark";
+  }
+
+  async _applyPanelTheme(device, nextTheme) {
+    const config = this._configs[device];
+    const revision = Number(config?.revision);
+    if (!config || !Number.isFinite(revision)) return;
+    const theme = { preset: this._panelThemePreset(device, config), mode: this._panelThemeMode(device, config), ...nextTheme };
+    this._configs[device] = { ...config, theme: { ...(config.theme || {}), ...theme } };
+    localStorage.setItem(this._panelThemeStorageKey(device, "preset"), theme.preset);
+    localStorage.setItem(this._panelThemeStorageKey(device, "mode"), theme.mode);
+    this._panelThemeError = null;
+    this._render();
+    try {
+      await this._hass.callService("hapanels", "patch_dashboard_config", {
+        device,
+        patch: {
+          base_revision: revision,
+          updated_by: "homeassistant:hapanels_studio",
+          theme,
+        },
+      });
+      window.setTimeout(() => this._load(), 800);
+    } catch (err) {
+      this._panelThemeError = `Motyw zapisany lokalnie. Nie udało się wysłać do panelu: ${err?.message || err}`;
+      this._render();
+    }
+  }
+
   _layoutContextOptions(config) {
     const items = [{ id: "main", type: "main", panelId: "", label: "Panel główny" }];
     (config.tiles || []).filter((tile) => ["folder", "popup"].includes(tile.kind) && tile.panel_id).forEach((tile) => {
@@ -746,11 +1016,19 @@ class HapanelsStudioPanel extends HTMLElement {
       context: activeContext,
       grid,
       tiles,
-      tray: (editor.tray || []).map((tile, index) => this._layoutTileModel(tile, index, grid)),
+      tray: this._layoutSharedTrayDraft(device, config, grid),
       selectedTileId: tiles[0]?.id || null,
     };
     this._layoutDrafts[key] = draft;
     return draft;
+  }
+
+  _layoutSharedTrayDraft(device, config, grid) {
+    const key = `${device}:${config.revision ?? "new"}:tray`;
+    if (!this._layoutDrafts[key]) {
+      this._layoutDrafts[key] = (config.layout_editor?.tray || []).map((tile, index) => this._layoutTileModel(tile, index, grid));
+    }
+    return this._layoutDrafts[key];
   }
 
   _layoutTiles(tiles, grid) {
@@ -1159,7 +1437,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _clearLayoutTray() {
     const draft = this._currentLayoutDraft();
     if (!draft || !draft.tray.length || !window.confirm("Na pewno wyczyścić zasobnik?")) return;
-    draft.tray = [];
+    draft.tray.splice(0, draft.tray.length);
     this._render();
   }
 
@@ -1359,7 +1637,8 @@ class HapanelsStudioPanel extends HTMLElement {
         draft.tray.push(...covered);
       }
       if (drag.source === "tray") {
-        draft.tray = draft.tray.filter((item) => item.id !== tile.id);
+        draft.tray.splice(draft.tray.findIndex((item) => item.id === tile.id), 1);
+        tile.panel_id = draft.context?.id === "main" ? (["folder", "popup"].includes(tile.kind) ? tile.panel_id : "") : draft.context.panelId;
         draft.tiles.push(tile);
       }
       draft.selectedTileId = tile.id;
@@ -1383,19 +1662,19 @@ class HapanelsStudioPanel extends HTMLElement {
     next.layout_editor = {
       ...(next.layout_editor || {}),
     };
+    const tray = this._layoutSharedTrayDraft(device, config, draft.grid);
     if (draft.context?.id === "main") {
       next.layout_editor.grid = structuredClone(draft.grid);
-      next.layout_editor.tray = draft.tray.map((tile, index) => ({ ...structuredClone(tile), order: index }));
     } else {
       next.layout_editor.contexts = { ...(next.layout_editor.contexts || {}) };
       next.layout_editor.contexts[draft.context.panelId] = {
         ...(next.layout_editor.contexts[draft.context.panelId] || {}),
         grid: structuredClone(draft.grid),
-        tray: draft.tray.map((tile, index) => ({ ...structuredClone(tile), order: index })),
       };
     }
+    next.layout_editor.tray = tray.map((tile, index) => ({ ...structuredClone(tile), order: index }));
     const savedIds = new Set(draft.tiles.map((tile) => tile.id));
-    const kept = (next.tiles || []).filter((tile) => !savedIds.has(tile.id) && !draft.tray.some((trayTile) => trayTile.id === tile.id));
+    const kept = (next.tiles || []).filter((tile) => !savedIds.has(tile.id) && !tray.some((trayTile) => trayTile.id === tile.id));
     next.tiles = [...kept, ...draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }))];
     await this._setConfig(device, next);
   }
@@ -1470,10 +1749,11 @@ class HapanelsStudioPanel extends HTMLElement {
   _tileEditor(device, tile, surface) {
     const prefix = `tile-${surface}-${device}-${tile.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     const entityLabel = tile.entity_id ? this._entityLabel(tile.entity_id) : (tile.kind || "-");
+    const tileLabel = tile.short_label || tile.label || tile.id;
     const accent = tile.accent || "orange";
     const collapsedKey = `${surface}:${device}:${tile.id}`;
     const focused = this._focusedTileId === tile.id;
-    const collapsed = !focused && this._collapsedTiles.has(collapsedKey);
+    const collapsed = !focused && !this._expandedTiles.has(collapsedKey);
     const childSection = surface === "dashboard" && ["folder", "popup"].includes(tile.kind) ? this._tileChildrenSection(device, tile) : "";
     const clockSection = tile.kind === "clock" ? `
       <section class="tile-section">
@@ -1484,66 +1764,94 @@ class HapanelsStudioPanel extends HTMLElement {
         </div>
       </section>
     ` : "";
+    const coverSection = tile.kind === "cover" ? `
+      <section class="tile-section">
+        <h3>Cover</h3>
+        <div class="fields">
+          ${this._selectField(`${prefix}-coverVisual`, "Wygląd", COVER_VISUALS, tile.cover_visual || "blind", "span-6", "cover")}
+          ${this._selectField(`${prefix}-coverDirection`, "Otwieranie", COVER_DIRECTIONS, tile.cover_direction || "top", "span-6", "cover")}
+          <div class="cover-preview span-12 cover-${this._escape(tile.cover_visual || "blind")} cover-${this._escape(tile.cover_direction || "top")}">
+            <div class="cover-scene"><span></span><span></span></div>
+            <strong>${this._escape(this._coverVisualLabel(tile.cover_visual || "blind"))}</strong>
+            <small>${this._escape(this._coverDirectionLabel(tile.cover_direction || "top"))}</small>
+          </div>
+        </div>
+      </section>
+    ` : "";
     return `
       <div class="tile ${collapsed ? "collapsed" : ""} ${focused ? "focused" : ""}" data-tile-editor data-prefix="${this._escape(prefix)}" data-tile-id="${this._escape(tile.id)}" data-collapsed-key="${this._escape(collapsedKey)}" style="--tile-accent:${this._escape(this._accentColor(accent))}">
         <div class="tile-head">
-          <div class="tile-title"><span>${this._escape(tile.id)}</span><button class="secondary" title="Edytuj nazwę">✎</button></div>
-          <div class="tile-summary"><span>${this._escape(tile.kind || "tile")}</span><span>·</span><span>${this._escape(tile.size || "-")}</span><span>·</span><span>order ${this._escape(tile.order ?? 0)}</span><button class="tile-toggle secondary" data-toggle-tile title="Zwiń/rozwiń"><span>⌃</span></button></div>
-        </div>
-        <div class="tile-body">
-          <aside class="tile-preview-pane">
-            <h3>Podgląd kafla</h3>
-            <div class="tile-preview-box accent-${this._escape(accent)}">
-              <div>
-                <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon>
-                <strong class="tile-live-label tile-preview-target" data-highlight-target="label">${this._escape(tile.short_label || tile.label || tile.id)}</strong>
-                <span class="tile-live-entity tile-preview-target" data-highlight-target="entity">${this._escape(entityLabel)}</span>
-              </div>
-            </div>
-            <div class="tile-preview-meta">
-              <div class="tile-preview-target" data-highlight-target="kind"><span>○</span><span>Typ<strong class="tile-live-kind">${this._escape(tile.kind || "-")}</strong></span></div>
-              <div class="tile-preview-target" data-highlight-target="size"><span>▣</span><span>Rozmiar<strong class="tile-live-size">${this._escape(tile.size || "-")}</strong></span></div>
-              <div class="tile-preview-target" data-highlight-target="accent"><span>●</span><span>Accent<strong class="tile-live-accent">${this._escape(accent)}</strong></span></div>
-            </div>
-            <div class="tile-note">ⓘ Podgląd aktualizuje się automatycznie po zmianie ustawień.</div>
-          </aside>
-          <div class="tile-form">
-            <section class="tile-section">
-              <h3>Podstawowe</h3>
-              <div class="fields">
-                ${this._inputField(`${prefix}-label`, "Label", tile.label || tile.id, "text", "span-6", "label")}
-                ${this._entityField(`${prefix}-entity`, "Źródło", tile.entity_id || "", "entity", "span-6")}
-                ${this._inputField(`${prefix}-short`, "Short (opcjonalnie)", tile.short_label || "", "text", "span-6", "label")}
-              </div>
-            </section>
-            <section class="tile-section">
-              <h3>Wygląd</h3>
-              <div class="fields">
-                ${this._selectField(`${prefix}-kind`, "Typ", TILE_KINDS, tile.kind || "entity", "span-3", "kind")}
-                ${this._selectField(`${prefix}-size`, "Rozmiar", TILE_SIZES, tile.size || "large", "span-3", "size")}
-                ${this._iconField(`${prefix}-icon`, "Ikona (MDI)", this._mdiIcon(tile.icon), accent, "icon", "span-6")}
-                ${this._selectField(`${prefix}-accent`, "Accent (kolor)", TILE_ACCENTS, accent, "span-4", "accent")}
-              </div>
-            </section>
-            <section class="tile-section">
-              <h3>Zaawansowane</h3>
-              <div class="fields">
-                ${this._inputField(`${prefix}-panel`, "Panel (opcjonalnie)", tile.panel_id || "", "text", "span-6", "panel")}
-                ${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}
-                ${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}
-                ${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}
-                ${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}
-                ${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}
-              </div>
-            </section>
-            ${clockSection}
-            ${childSection}
+          <div class="tile-title">
+            <span>${this._escape(tileLabel)}</span>
+            <small>${this._escape(tile.id)}</small>
+            <button class="secondary" title="Edytuj nazwę">✎</button>
+          </div>
+          <div class="tile-summary">
+            <span>${this._escape(tile.kind || "tile")}</span><span>·</span>
+            <span>${this._escape(tile.size || "-")}</span><span>·</span>
+            <span>order ${this._escape(tile.order ?? 0)}</span><span>·</span>
+            <span>${this._escape(entityLabel)}</span>
+            <button class="tile-toggle secondary" data-toggle-tile title="Zwiń/rozwiń"><span>⌃</span></button>
           </div>
         </div>
-        <div class="tile-footer">
-          <button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń</button>
-          <div class="tile-actions">
-            <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}">Zapisz</button>
+        <div class="tile-expandable">
+          <div class="tile-expandable-inner">
+            <div class="tile-body">
+              <aside class="tile-preview-pane">
+                <h3>Podgląd kafla</h3>
+                <div class="tile-preview-box accent-${this._escape(accent)}">
+                  <div>
+                    <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon>
+                    <strong class="tile-live-label tile-preview-target" data-highlight-target="label">${this._escape(tile.short_label || tile.label || tile.id)}</strong>
+                    <span class="tile-live-entity tile-preview-target" data-highlight-target="entity">${this._escape(entityLabel)}</span>
+                  </div>
+                </div>
+                <div class="tile-preview-meta">
+                  <div class="tile-preview-target" data-highlight-target="kind"><span>○</span><span>Typ<strong class="tile-live-kind">${this._escape(tile.kind || "-")}</strong></span></div>
+                  <div class="tile-preview-target" data-highlight-target="size"><span>▣</span><span>Rozmiar<strong class="tile-live-size">${this._escape(tile.size || "-")}</strong></span></div>
+                  <div class="tile-preview-target" data-highlight-target="accent"><span>●</span><span>Accent<strong class="tile-live-accent">${this._escape(accent)}</strong></span></div>
+                </div>
+              </aside>
+              <div class="tile-form">
+                <section class="tile-section">
+                  <h3>Podstawowe</h3>
+                  <div class="fields">
+                    ${this._inputField(`${prefix}-label`, "Label", tile.label || tile.id, "text", "span-6", "label")}
+                    ${this._entityField(`${prefix}-entity`, "Źródło", tile.entity_id || "", "entity", "span-6", tile.kind === "cover" ? ["cover"] : null)}
+                    ${this._inputField(`${prefix}-short`, "Short (opcjonalnie)", tile.short_label || "", "text", "span-6", "label")}
+                  </div>
+                </section>
+                <section class="tile-section">
+                  <h3>Wygląd</h3>
+                  <div class="fields">
+                    ${this._selectField(`${prefix}-kind`, "Typ", TILE_KINDS, tile.kind || "entity", "span-3", "kind")}
+                    ${this._selectField(`${prefix}-size`, "Rozmiar", TILE_SIZES, tile.size || "large", "span-3", "size")}
+                    ${this._iconField(`${prefix}-icon`, "Ikona (MDI)", this._mdiIcon(tile.icon), accent, "icon", "span-6")}
+                    ${this._selectField(`${prefix}-accent`, "Accent (kolor)", TILE_ACCENTS, accent, "span-4", "accent")}
+                  </div>
+                </section>
+                <section class="tile-section">
+                  <h3>Zaawansowane</h3>
+                  <div class="fields">
+                    ${this._inputField(`${prefix}-panel`, "Panel (opcjonalnie)", tile.panel_id || "", "text", "span-6", "panel")}
+                    ${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}
+                    ${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}
+                    ${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}
+                    ${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}
+                    ${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}
+                  </div>
+                </section>
+                ${clockSection}
+                ${coverSection}
+                ${childSection}
+              </div>
+            </div>
+            <div class="tile-footer">
+              <button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń</button>
+              <div class="tile-actions">
+                <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}">Zapisz</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1576,11 +1884,12 @@ class HapanelsStudioPanel extends HTMLElement {
     return `<div class="field ${span}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._escape(label)}</label><input id="${this._escape(id)}" type="${type}" value="${this._escape(value)}"></div>`;
   }
 
-  _entityField(id, label, selected, fieldKey = "", span = "span-4") {
+  _entityField(id, label, selected, fieldKey = "", span = "span-4", domains = null) {
+    const domainAttr = Array.isArray(domains) && domains.length ? ` data-domains="${this._escape(domains.join(","))}"` : "";
     if (customElements.get("ha-entity-picker")) {
-      return `<div class="field ${this._escape(span)}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._escape(label)}</label><ha-entity-picker id="${this._escape(id)}" value="${this._escape(selected)}" allow-custom-entity></ha-entity-picker></div>`;
+      return `<div class="field ${this._escape(span)}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._escape(label)}</label><ha-entity-picker id="${this._escape(id)}" value="${this._escape(selected)}" allow-custom-entity${domainAttr}></ha-entity-picker></div>`;
     }
-    return `<div class="field ${this._escape(span)}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._escape(label)}</label><input id="${this._escape(id)}" value="${this._escape(selected)}" placeholder="light.kitchen"></div>`;
+    return `<div class="field ${this._escape(span)}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._escape(label)}</label><input id="${this._escape(id)}" value="${this._escape(selected)}" placeholder="${domains?.[0] || "light"}.kitchen"></div>`;
   }
 
   _selectField(id, label, options, selected, span = "span-3", fieldKey = "") {
@@ -1595,6 +1904,14 @@ class HapanelsStudioPanel extends HTMLElement {
   _mdiIcon(icon) {
     if (!icon) return "mdi:cog";
     return icon.startsWith("mdi:") ? icon : `mdi:${icon.replaceAll("_", "-")}`;
+  }
+
+  _coverVisualLabel(value) {
+    return ({ blind: "Roleta", shade: "Żaluzja", curtain: "Zasłony", gate: "Brama" }[value] || value);
+  }
+
+  _coverDirectionLabel(value) {
+    return ({ top: "Od góry", bottom: "Od dołu", left: "Od lewej", right: "Od prawej", top_left: "Z góry/lewej", top_right: "Z góry/prawej", bottom_left: "Z dołu/lewej", bottom_right: "Z dołu/prawej" }[value] || value);
   }
 
   _statusLabel(status) {
@@ -1705,9 +2022,23 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => { this._activeTab = button.dataset.tab; this._render(); });
     });
+    this.shadowRoot.querySelectorAll("[data-theme-mode]").forEach((select) => {
+      select.addEventListener("change", () => this._setThemeMode(select.value));
+    });
+    this.shadowRoot.querySelectorAll("[data-panel-theme-mode]").forEach((button) => {
+      button.addEventListener("click", () => this._applyPanelTheme(button.dataset.device, { mode: button.dataset.panelThemeMode }));
+    });
+    this.shadowRoot.querySelectorAll("[data-panel-theme-preset]").forEach((button) => {
+      button.addEventListener("click", () => this._applyPanelTheme(button.dataset.device, { preset: button.dataset.panelThemePreset }));
+    });
+    this.shadowRoot.querySelectorAll("[data-show-hidden]").forEach((button) => {
+      button.addEventListener("click", () => this._showAllDevices());
+    });
     this.shadowRoot.querySelectorAll("ha-entity-picker[id$='-entity']").forEach((picker) => {
       picker.hass = this._hass;
       picker.value = picker.getAttribute("value") || "";
+      const domains = picker.dataset.domains?.split(",").filter(Boolean);
+      if (domains?.length) picker.includeDomains = domains;
       picker.addEventListener("value-changed", (event) => {
         picker.value = event.detail?.value || "";
         this._fillEntityDefaults(picker);
@@ -1753,6 +2084,9 @@ class HapanelsStudioPanel extends HTMLElement {
     });
     this.shadowRoot.querySelectorAll("[data-aod-preset]").forEach((button) => {
       button.addEventListener("click", () => this._applyAodPreset(button.dataset.device, button.dataset.aodPreset));
+    });
+    this.shadowRoot.querySelectorAll("[data-aod-clock-style]").forEach((button) => {
+      button.addEventListener("click", () => this._applyAodClockStyle(button.dataset.device, button.dataset.aodClockStyle));
     });
     this.shadowRoot.querySelectorAll("[data-preview-size]").forEach((select) => {
       select.addEventListener("change", () => this._setTileSize(select.dataset.device, select.dataset.tile, select.value));
@@ -1843,6 +2177,12 @@ class HapanelsStudioPanel extends HTMLElement {
       });
     });
     this.shadowRoot.querySelectorAll(".tile-head").forEach((head) => {
+      head.addEventListener("click", (event) => {
+        if (event.target.closest("button")) return;
+        this._toggleTileCollapsed(head.closest("[data-tile-editor]"));
+      });
+    });
+    this.shadowRoot.querySelectorAll(".tile-head").forEach((head) => {
       head.addEventListener("dblclick", () => this._toggleTileCollapsed(head.closest("[data-tile-editor]")));
     });
     this.shadowRoot.querySelectorAll("[data-highlight-target]").forEach((element) => {
@@ -1884,10 +2224,10 @@ class HapanelsStudioPanel extends HTMLElement {
   _toggleTileCollapsed(tile) {
     const key = tile?.dataset.collapsedKey;
     if (!key) return;
-    if (this._collapsedTiles.has(key)) this._collapsedTiles.delete(key);
-    else this._collapsedTiles.add(key);
-    localStorage.setItem("hapanels_collapsed_tiles", JSON.stringify([...this._collapsedTiles]));
-    tile.classList.toggle("collapsed", this._collapsedTiles.has(key));
+    if (this._expandedTiles.has(key)) this._expandedTiles.delete(key);
+    else this._expandedTiles.add(key);
+    localStorage.setItem("hapanels_expanded_tiles", JSON.stringify([...this._expandedTiles]));
+    tile.classList.toggle("collapsed", !this._expandedTiles.has(key));
   }
 
   _setTileHighlight(element, active) {
@@ -1895,9 +2235,9 @@ class HapanelsStudioPanel extends HTMLElement {
     const key = element.dataset.highlightTarget;
     const target = tile?.querySelector(`[data-field-key="${CSS.escape(key)}"]`);
     if (!target) return;
-    target.classList.toggle("tile-highlight", active);
     const iconField = target.querySelector(".icon-field");
     if (iconField) iconField.classList.toggle("tile-highlight", active);
+    else target.classList.toggle("tile-highlight", active);
   }
 
   _syncTilePreview(input) {
@@ -1909,6 +2249,9 @@ class HapanelsStudioPanel extends HTMLElement {
     const icon = this._mdiIcon(value("icon"));
     const label = value("short") || value("label") || tile.querySelector(".tile-title span")?.textContent || "Kafel";
     const entity = value("entity");
+    const kind = value("kind") || "entity";
+    const entityPicker = this.shadowRoot.getElementById(`${prefix}-entity`);
+    if (entityPicker?.tagName === "HA-ENTITY-PICKER") entityPicker.includeDomains = kind === "cover" ? ["cover"] : undefined;
     tile.querySelector(".tile-live-icon")?.setAttribute("icon", icon);
     const previewBox = tile.querySelector(".tile-preview-box");
     if (previewBox) {
@@ -1918,10 +2261,16 @@ class HapanelsStudioPanel extends HTMLElement {
     tile.style.setProperty("--tile-accent", this._accentColor(accent));
     const setText = (selector, text) => { const el = tile.querySelector(selector); if (el) el.textContent = text; };
     setText(".tile-live-label", label);
-    setText(".tile-live-entity", entity ? this._entityLabel(entity) : (value("kind") || "-"));
-    setText(".tile-live-kind", value("kind") || "-");
+    setText(".tile-live-entity", entity ? this._entityLabel(entity) : kind);
+    setText(".tile-live-kind", kind);
     setText(".tile-live-size", value("size") || "-");
     setText(".tile-live-accent", accent);
+    const coverPreview = tile.querySelector(".cover-preview");
+    if (coverPreview) {
+      coverPreview.className = `cover-preview span-12 cover-${value("coverVisual") || "blind"} cover-${value("coverDirection") || "top"}`;
+      setText(".cover-preview strong", this._coverVisualLabel(value("coverVisual") || "blind"));
+      setText(".cover-preview small", this._coverDirectionLabel(value("coverDirection") || "top"));
+    }
   }
 
   _escape(value) {

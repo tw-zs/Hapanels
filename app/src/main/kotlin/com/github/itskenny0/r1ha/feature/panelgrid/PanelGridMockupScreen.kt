@@ -1,10 +1,22 @@
 package com.github.itskenny0.r1ha.feature.panelgrid
 
 import android.content.Context
+import android.content.res.Configuration
 import android.os.FileObserver
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
@@ -24,19 +36,25 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +77,7 @@ import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -66,16 +85,15 @@ import java.time.format.TextStyle
 import java.util.Locale
 import org.json.JSONObject
 
-private val PanelBg = Color(0xFF090D10)
-private val TileBg = Color(0xFF23242D)
-private val TileStroke = Color.White.copy(alpha = 0.035f)
-private val Orange = Color(0xFFE99900)
-private val Red = Color(0xFFFF5338)
-private val Green = Color(0xFF58C56A)
-private val Muted = Color(0xFF888C96)
+private val LocalHapanelsTheme = staticCompositionLocalOf { defaultHapanelsThemeConfig.resolveHapanelsThemeColors() }
 private val NunitoPanelFont = FontFamily(
     Font(R.font.nunito_regular, weight = FontWeight.Normal),
     Font(R.font.nunito_bold, weight = FontWeight.Bold),
+)
+
+private data class HapanelsPanelRenderConfig(
+    val dashboard: HapanelsDashboardConfig,
+    val theme: HapanelsThemeColors,
 )
 
 @Composable
@@ -86,6 +104,7 @@ fun PanelGridMockupScreen(
 ) {
     val cfg = LocalConfiguration.current
     val compact = cfg.screenWidthDp < 820
+    val systemDark = (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
     val today = LocalDate.now()
     val dateText = buildString {
@@ -94,7 +113,7 @@ fun PanelGridMockupScreen(
         append(today.format(DateTimeFormatter.ofPattern("dd MMMM", Locale("pl", "PL"))))
     }
     val context = LocalContext.current.applicationContext
-    val config by produceState<HapanelsDashboardConfig?>(initialValue = null, key1 = context) {
+    val renderConfig by produceState<HapanelsPanelRenderConfig?>(initialValue = null, key1 = context, key2 = systemDark) {
         val changes = Channel<Unit>(Channel.CONFLATED)
         val observer = object : FileObserver(context.filesDir.absolutePath, CLOSE_WRITE or CREATE or MOVED_TO) {
             override fun onEvent(event: Int, path: String?) {
@@ -103,19 +122,26 @@ fun PanelGridMockupScreen(
         }
         observer.startWatching()
         val sourceJob = launch { dashboardConfigSource.changes.collect { changes.trySend(Unit) } }
+        suspend fun loadRenderConfig(): HapanelsPanelRenderConfig {
+            val dashboard = dashboardConfigSource.loadOrSeed()
+            val raw = runCatching { context.filesDir.resolve("hapanels_dashboard_config.json").readText() }.getOrDefault("")
+            return HapanelsPanelRenderConfig(dashboard, raw.toHapanelsPanelTheme(systemDark))
+        }
         try {
-            value = dashboardConfigSource.loadOrSeed()
-            for (ignored in changes) value = dashboardConfigSource.loadOrSeed()
+            value = loadRenderConfig()
+            for (ignored in changes) value = loadRenderConfig()
         } finally {
             sourceJob.cancel()
             observer.stopWatching()
             changes.close()
         }
     }
+    val config = renderConfig?.dashboard
     val observedEntityIds = remember(config) { config?.observableEntityIds() ?: emptySet() }
     var currentPanelId by remember(config) { androidx.compose.runtime.mutableStateOf<String?>(null) }
     var currentPanelTitle by remember(config) { androidx.compose.runtime.mutableStateOf<String?>(null) }
     var popupTile by remember(config) { androidx.compose.runtime.mutableStateOf<HapanelsTileConfig?>(null) }
+    var popupOpen by remember(config) { androidx.compose.runtime.mutableStateOf(false) }
     val liveEntities by produceState<Map<EntityId, EntityState>>(
         initialValue = emptyMap(),
         key1 = haRepository,
@@ -128,6 +154,14 @@ fun PanelGridMockupScreen(
         }
     }
     val scope = rememberCoroutineScope()
+    val onSetCoverPercent = remember(haRepository) {
+        { tile: HapanelsTileConfig, percent: Int ->
+            tile.entityId.toEntityIdOrNull()?.let { entityId ->
+                scope.launch { haRepository.call(ServiceCall.setPercent(entityId, percent)) }
+            }
+            Unit
+        }
+    }
     val onTileClick = remember(haRepository, liveEntities) {
         { tile: HapanelsTileConfig ->
             when (tile.kind) {
@@ -135,65 +169,84 @@ fun PanelGridMockupScreen(
                     currentPanelId = tile.panelId?.takeIf { it.isNotBlank() }
                     currentPanelTitle = tile.displayLabel()
                 }
-                HapanelsTileKind.POPUP -> popupTile = tile
+                HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
                 else -> tile.tapAction(liveEntities)?.let { call -> scope.launch { haRepository.call(call) } }
             }
             Unit
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(PanelBg)
-            .systemBarsPadding(),
-    ) {
-        val loadedConfig = config
-        val panelConfig = loadedConfig?.forPanel(currentPanelId)
-        Box(modifier = Modifier.fillMaxSize().then(if (popupTile != null) Modifier.blur(10.dp) else Modifier)) {
-            if (loadedConfig == null) {
-                LoadingPanelConfig()
-            } else if (compact) {
-                CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
-            } else {
-                WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick)
+    CompositionLocalProvider(LocalHapanelsTheme provides (renderConfig?.theme ?: defaultHapanelsThemeConfig.resolveHapanelsThemeColors())) {
+        val theme = LocalHapanelsTheme.current
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(theme.background)
+                .systemBarsPadding(),
+        ) {
+            val loadedConfig = config
+            val panelConfig = loadedConfig?.forPanel(currentPanelId)
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (loadedConfig == null) {
+                    LoadingPanelConfig()
+                } else if (compact) {
+                    CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                } else {
+                    WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                }
+                if (currentPanelTitle != null) {
+                    Text(
+                        text = currentPanelTitle!!,
+                        color = theme.textPrimary,
+                        style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp),
+                ) {
+                    ChevronBack(onClick = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() })
+                }
             }
-            if (currentPanelTitle != null) {
-                Text(
-                    text = currentPanelTitle!!,
-                    color = Color.White,
-                    style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
-                )
+            if (loadedConfig != null && popupTile != null) {
+                val tile = popupTile!!
+                val tiles = loadedConfig.popupTiles(tile)
+                AnimatedVisibility(
+                    visible = popupOpen,
+                    enter = slideInVertically(animationSpec = tween(180), initialOffsetY = { it / 18 }) + fadeIn(tween(120)) + scaleIn(initialScale = 0.965f, animationSpec = tween(180)),
+                    exit = slideOutVertically(animationSpec = tween(140), targetOffsetY = { it / 24 }) + fadeOut(tween(90)) + scaleOut(targetScale = 0.985f, animationSpec = tween(140)),
+                ) {
+                    PanelPopup(
+                        tile = tile,
+                        tiles = tiles,
+                        liveEntities = liveEntities,
+                        now = now,
+                        dateText = dateText,
+                        onTileClick = onTileClick,
+                        onSetCoverPercent = onSetCoverPercent,
+                        onClose = { popupOpen = false },
+                    )
+                }
+                LaunchedEffect(popupOpen) {
+                    if (!popupOpen) {
+                        kotlinx.coroutines.delay(180)
+                        if (!popupOpen) popupTile = null
+                    }
+                }
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(6.dp),
-            ) {
-                ChevronBack(onClick = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() })
-            }
-        }
-        if (loadedConfig != null && popupTile != null) {
-            PanelPopup(
-                tile = popupTile!!,
-                tiles = loadedConfig.popupTiles(popupTile!!),
-                liveEntities = liveEntities,
-                now = now,
-                dateText = dateText,
-                onTileClick = { tile -> onTileClick(tile); popupTile = null },
-                onClose = { popupTile = null },
-            )
         }
     }
 }
 
 @Composable
 private fun LoadingPanelConfig() {
+    val theme = LocalHapanelsTheme.current
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             "Ładowanie panelu...",
-            color = Color.White.copy(alpha = 0.78f),
+            color = theme.textPrimary.copy(alpha = 0.78f),
             style = R1.body.copy(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -211,17 +264,18 @@ private fun WidePanel(
     dateText: String,
     isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
 ) {
     if (isSubPanel && config.tiles.isEmpty()) {
         EmptyPanelMessage()
         return
     }
     if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
-        PanelSubTiles(config.tiles, liveEntities, onTileClick)
+        PanelSubTiles(config.tiles, liveEntities, onTileClick, onSetCoverPercent)
         return
     }
     if (config.tiles.any { it.hasGridCell() }) {
-        WideGridPanel(config = config, liveEntities = liveEntities, now = now, dateText = dateText, onTileClick = onTileClick)
+        WideGridPanel(config = config, liveEntities = liveEntities, now = now, dateText = dateText, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
         return
     }
     val actionTiles = remember(config) { config.tilesBySize(HapanelsTileSize.ACTION) }
@@ -246,7 +300,7 @@ private fun WidePanel(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 actionTiles.forEach { action ->
-                    PanelActionTile(action, liveState = action.liveState(liveEntities), modifier = Modifier.weight(1f).fillMaxHeight(), onClick = { onTileClick(action) })
+                    PanelActionTile(action, liveState = action.liveState(liveEntities), modifier = Modifier.weight(1f).fillMaxHeight(), onClick = { onTileClick(action) }, onSetPercent = { onSetCoverPercent(action, it) })
                 }
             }
         }
@@ -264,6 +318,7 @@ private fun WidePanel(
                     cameraActions = config.cameraActions,
                     modifier = Modifier.weight(1f),
                     onClick = { onTileClick(largeTiles[0]) },
+                    onSetPercent = { onSetCoverPercent(largeTiles[0], it) },
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PanelLargeTileOrCamera(
@@ -272,6 +327,7 @@ private fun WidePanel(
                         cameraActions = config.cameraActions,
                         modifier = Modifier.weight(1f),
                         onClick = { onTileClick(largeTiles[3]) },
+                        onSetPercent = { onSetCoverPercent(largeTiles[3], it) },
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PanelTextAction(config.cameraActions.getOrElse(0) { "Wyłącz kamery" }, modifier = Modifier.weight(1f))
@@ -289,6 +345,7 @@ private fun WidePanel(
                     cameraActions = config.cameraActions,
                     modifier = Modifier.weight(1f),
                     onClick = { onTileClick(largeTiles[1]) },
+                    onSetPercent = { onSetCoverPercent(largeTiles[1], it) },
                 )
                 PanelLargeTileOrCamera(
                     tile = largeTiles[4],
@@ -296,6 +353,7 @@ private fun WidePanel(
                     cameraActions = config.cameraActions,
                     modifier = Modifier.weight(1f),
                     onClick = { onTileClick(largeTiles[4]) },
+                    onSetPercent = { onSetCoverPercent(largeTiles[4], it) },
                 )
             }
             Column(
@@ -308,18 +366,19 @@ private fun WidePanel(
                     cameraActions = config.cameraActions,
                     modifier = Modifier.weight(1f),
                     onClick = { onTileClick(largeTiles[2]) },
+                    onSetPercent = { onSetCoverPercent(largeTiles[2], it) },
                 )
                 Row(
                     modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PanelSmallTile(smallTiles[0], liveState = smallTiles[0].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[0]) })
-                        PanelSmallTile(smallTiles[2], liveState = smallTiles[2].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[2]) })
+                        PanelSmallTile(smallTiles[0], liveState = smallTiles[0].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[0]) }, onSetPercent = { onSetCoverPercent(smallTiles[0], it) })
+                        PanelSmallTile(smallTiles[2], liveState = smallTiles[2].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[2]) }, onSetPercent = { onSetCoverPercent(smallTiles[2], it) })
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PanelSmallTile(smallTiles[1], liveState = smallTiles[1].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[1]) })
-                        PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[3]) })
+                        PanelSmallTile(smallTiles[1], liveState = smallTiles[1].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[1]) }, onSetPercent = { onSetCoverPercent(smallTiles[1], it) })
+                        PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), onClick = { onTileClick(smallTiles[3]) }, onSetPercent = { onSetCoverPercent(smallTiles[3], it) })
                     }
                 }
             }
@@ -334,6 +393,7 @@ private fun WideGridPanel(
     now: String,
     dateText: String,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
 ) {
     BoxWithConstraints(
         modifier = Modifier
@@ -362,8 +422,8 @@ private fun WideGridPanel(
                 gap = gap,
             )
             when (tile.size) {
-                HapanelsTileSize.ACTION -> PanelActionTile(tile, liveState = tile.liveState(liveEntities), modifier = modifier, onClick = { onTileClick(tile) })
-                HapanelsTileSize.SMALL -> PanelSmallTile(tile, liveState = tile.liveState(liveEntities), modifier = modifier, onClick = { onTileClick(tile) })
+                HapanelsTileSize.ACTION -> PanelActionTile(tile, liveState = tile.liveState(liveEntities), modifier = modifier, onClick = { onTileClick(tile) }, onSetPercent = { onSetCoverPercent(tile, it) })
+                HapanelsTileSize.SMALL -> PanelSmallTile(tile, liveState = tile.liveState(liveEntities), modifier = modifier, onClick = { onTileClick(tile) }, onSetPercent = { onSetCoverPercent(tile, it) })
                 HapanelsTileSize.LARGE -> PanelLargeTileOrCamera(
                     tile = tile,
                     liveState = tile.liveState(liveEntities),
@@ -372,6 +432,7 @@ private fun WideGridPanel(
                     now = now,
                     dateText = dateText,
                     onClick = { onTileClick(tile) },
+                    onSetPercent = { onSetCoverPercent(tile, it) },
                 )
             }
         }
@@ -386,13 +447,14 @@ private fun CompactPanel(
     dateText: String,
     isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
 ) {
     if (isSubPanel && config.tiles.isEmpty()) {
         EmptyPanelMessage()
         return
     }
     if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
-        PanelSubTiles(config.tiles, liveEntities, onTileClick)
+        PanelSubTiles(config.tiles, liveEntities, onTileClick, onSetCoverPercent)
         return
     }
     val actionTiles = remember(config) { config.tilesBySize(HapanelsTileSize.ACTION) }
@@ -408,7 +470,7 @@ private fun CompactPanel(
         PeopleGrid(config.people, modifier = Modifier.fillMaxWidth().height(122.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             actionTiles.forEach { action ->
-                PanelActionTile(action, liveState = action.liveState(liveEntities), modifier = Modifier.weight(1f).height(112.dp), iconSize = 54.dp, onClick = { onTileClick(action) })
+                PanelActionTile(action, liveState = action.liveState(liveEntities), modifier = Modifier.weight(1f).height(112.dp), iconSize = 54.dp, onClick = { onTileClick(action) }, onSetPercent = { onSetCoverPercent(action, it) })
             }
         }
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -423,6 +485,7 @@ private fun CompactPanel(
                         now = now,
                         dateText = dateText,
                         onClick = { onTileClick(tile) },
+                        onSetPercent = { onSetCoverPercent(tile, it) },
                     )
                 }
             }
@@ -437,9 +500,10 @@ private fun CompactPanel(
                         now = now,
                         dateText = dateText,
                         onClick = { onTileClick(tile) },
+                        onSetPercent = { onSetCoverPercent(tile, it) },
                     )
                 }
-                PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 48.dp, onClick = { onTileClick(smallTiles[3]) })
+                PanelSmallTile(smallTiles[3], liveState = smallTiles[3].liveState(liveEntities), modifier = Modifier.weight(1f), iconSize = 48.dp, onClick = { onTileClick(smallTiles[3]) }, onSetPercent = { onSetCoverPercent(smallTiles[3], it) })
             }
         }
     }
@@ -447,10 +511,11 @@ private fun CompactPanel(
 
 @Composable
 private fun EmptyPanelMessage() {
+    val theme = LocalHapanelsTheme.current
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             "Brak elementów. Dodaj je w Hapanels Studio.",
-            color = Color.White.copy(alpha = 0.78f),
+            color = theme.textPrimary.copy(alpha = 0.78f),
             style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
             textAlign = TextAlign.Center,
         )
@@ -462,6 +527,7 @@ private fun PanelSubTiles(
     tiles: List<HapanelsTileConfig>,
     liveEntities: Map<EntityId, EntityState>,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 72.dp, vertical = 72.dp),
@@ -470,7 +536,7 @@ private fun PanelSubTiles(
         tiles.sortedBy { it.order }.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 row.forEach { tile ->
-                    PanelActionTile(tile, liveState = tile.liveState(liveEntities), modifier = Modifier.weight(1f).height(126.dp), iconSize = 56.dp, onClick = { onTileClick(tile) })
+                    PanelActionTile(tile, liveState = tile.liveState(liveEntities), modifier = Modifier.weight(1f).height(126.dp), iconSize = 56.dp, onClick = { onTileClick(tile) }, onSetPercent = { onSetCoverPercent(tile, it) })
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
@@ -480,6 +546,7 @@ private fun PanelSubTiles(
 
 @Composable
 private fun PanelClockBlock(now: String, dateText: String, modifier: Modifier, style: String? = null) {
+    val theme = LocalHapanelsTheme.current
     val dateFirst = style == "date_top"
     val compact = style == "compact"
     Column(
@@ -490,7 +557,7 @@ private fun PanelClockBlock(now: String, dateText: String, modifier: Modifier, s
         if (dateFirst) ClockDateText(dateText)
         Text(
             now,
-            color = Color(0xFFF4F4F6),
+            color = theme.textPrimary,
             fontSize = if (compact) 58.sp else 80.sp,
             fontWeight = FontWeight.Black,
             fontFamily = NunitoPanelFont,
@@ -502,9 +569,10 @@ private fun PanelClockBlock(now: String, dateText: String, modifier: Modifier, s
 
 @Composable
 private fun ClockDateText(dateText: String) {
+    val theme = LocalHapanelsTheme.current
     Text(
         dateText,
-        color = Color(0xFFF4F4F6),
+        color = theme.textPrimary,
         fontSize = 19.sp,
         fontWeight = FontWeight.Bold,
         fontFamily = NunitoPanelFont,
@@ -528,11 +596,12 @@ private fun PeopleGrid(people: List<HapanelsPersonConfig>, modifier: Modifier) {
 
 @Composable
 private fun PanelPersonChip(person: HapanelsPersonConfig, modifier: Modifier) {
+    val theme = LocalHapanelsTheme.current
     Row(
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(20.dp))
-            .background(TileBg)
+            .background(theme.tileBackground)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -540,28 +609,28 @@ private fun PanelPersonChip(person: HapanelsPersonConfig, modifier: Modifier) {
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.10f)),
+                .background(theme.textPrimary.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
             Box(
                 modifier = Modifier
                     .size(7.dp)
                     .clip(CircleShape)
-                    .background(person.status.color()),
+                    .background(person.status.color(theme)),
             )
         }
         Spacer(Modifier.width(9.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 person.name,
-                color = Color.White,
+                color = theme.textPrimary,
                 style = R1.body.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
             )
             Text(
                 person.state,
-                color = Color.White.copy(alpha = 0.84f),
+                color = theme.textPrimary.copy(alpha = 0.84f),
                 style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
@@ -577,13 +646,19 @@ private fun PanelLargeTile(
     modifier: Modifier,
     iconSize: Dp = 92.dp,
     onClick: () -> Unit,
+    onSetPercent: (Int) -> Unit = {},
 ) {
+    val theme = LocalHapanelsTheme.current
+    if (tile.kind == HapanelsTileKind.COVER) {
+        PanelCoverTile(tile = tile, liveState = liveState, modifier = modifier, onClick = onClick, onSetPercent = onSetPercent)
+        return
+    }
     PanelTileShell(modifier = modifier, onClick = onClick) {
-        PanelIcons.Icon(tile.icon, tint = tile.accent.color(), modifier = Modifier.size(iconSize))
+        PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
         Spacer(Modifier.height(14.dp))
         Text(
             tile.displayLabel(),
-            color = Color.White,
+            color = theme.textPrimary,
             style = R1.body.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, fontFamily = NunitoPanelFont),
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
@@ -603,10 +678,12 @@ private fun PanelLargeTileOrCamera(
     now: String = "",
     dateText: String = "",
     onClick: () -> Unit,
+    onSetPercent: (Int) -> Unit = {},
 ) {
     when (tile.kind) {
         HapanelsTileKind.CLOCK -> PanelClockBlock(now = now.ifBlank { "--:--" }, dateText = dateText, modifier = modifier, style = tile.clockStyle)
         HapanelsTileKind.CAMERA -> PanelCameraTile(tile = tile, liveState = liveState, cameraActions = cameraActions, modifier = modifier, iconSize = iconSize, onClick = onClick)
+        HapanelsTileKind.COVER -> PanelCoverTile(tile = tile, liveState = liveState, modifier = modifier, onClick = onClick, onSetPercent = onSetPercent)
         else -> PanelLargeTile(tile = tile, liveState = liveState, modifier = modifier, iconSize = iconSize, onClick = onClick)
     }
 }
@@ -619,10 +696,12 @@ private fun PanelPopup(
     now: String,
     dateText: String,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
     onClose: () -> Unit,
 ) {
+    val theme = LocalHapanelsTheme.current
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)).r1Pressable(onClick = onClose),
+        modifier = Modifier.fillMaxSize().background(theme.popupOverlay).r1Pressable(onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -630,31 +709,24 @@ private fun PanelPopup(
                 .fillMaxWidth(0.70f)
                 .fillMaxHeight(0.70f)
                 .clip(RoundedCornerShape(28.dp))
-                .background(Color.White.copy(alpha = 0.13f))
-                .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(28.dp))
+                .background(theme.popupBackground)
+                .border(1.dp, theme.tileStroke.copy(alpha = (theme.tileStroke.alpha * 2.85f).coerceAtMost(1f)), RoundedCornerShape(28.dp))
                 .r1Pressable(onClick = { }),
         ) {
-            Canvas(Modifier.fillMaxSize()) {
-                repeat(900) { index ->
-                    val x = ((index * 37) % size.width.toInt().coerceAtLeast(1)).toFloat()
-                    val y = ((index * 53) % size.height.toInt().coerceAtLeast(1)).toFloat()
-                    drawCircle(Color.White.copy(alpha = 0.11f), radius = 0.8f, center = Offset(x, y))
-                }
-            }
             Column(
                 modifier = Modifier.fillMaxSize().padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(tile.displayLabel(), color = Color.White, style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont))
+                Text(tile.displayLabel(), color = theme.textPrimary, style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont))
                 if (tiles.isEmpty()) {
-                    Text("Brak kafli w popupie. W Studio ustaw Panel na: ${tile.panelId.orEmpty()}", color = Muted, style = R1.body)
+                    Text("Brak kafli w popupie. W Studio ustaw Panel na: ${tile.panelId.orEmpty()}", color = theme.textMuted, style = R1.body)
                 } else if (tiles.any { it.hasGridCell() }) {
-                    PopupGrid(tiles, liveEntities, now, dateText, Modifier.weight(1f).fillMaxWidth(), onTileClick)
+                    PopupGrid(tiles, liveEntities, now, dateText, Modifier.weight(1f).fillMaxWidth(), onTileClick, onSetCoverPercent)
                 } else {
                     tiles.chunked(3).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             row.forEach { item ->
-                                PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = Modifier.weight(1f).height(118.dp), iconSize = 52.dp, onClick = { onTileClick(item) })
+                                PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = Modifier.weight(1f).height(118.dp), iconSize = 52.dp, onClick = { onTileClick(item) }, onSetPercent = { onSetCoverPercent(item, it) })
                             }
                             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                         }
@@ -673,6 +745,7 @@ private fun PopupGrid(
     dateText: String,
     modifier: Modifier,
     onTileClick: (HapanelsTileConfig) -> Unit,
+    onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
 ) {
     BoxWithConstraints(modifier = modifier) {
         val columns = 12
@@ -683,9 +756,9 @@ private fun PopupGrid(
         tiles.sortedBy { it.order }.forEach { item ->
             val itemModifier = Modifier.gridCell(item.col ?: return@forEach, item.row ?: return@forEach, item.colSpan ?: 1, item.rowSpan ?: 1, cellWidth, cellHeight, gap)
             when (item.size) {
-                HapanelsTileSize.ACTION -> PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) })
-                HapanelsTileSize.SMALL -> PanelSmallTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) })
-                HapanelsTileSize.LARGE -> PanelLargeTileOrCamera(item, liveState = item.liveState(liveEntities), cameraActions = emptyList(), modifier = itemModifier, now = now, dateText = dateText, onClick = { onTileClick(item) })
+                HapanelsTileSize.ACTION -> PanelActionTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) }, onSetPercent = { onSetCoverPercent(item, it) })
+                HapanelsTileSize.SMALL -> PanelSmallTile(item, liveState = item.liveState(liveEntities), modifier = itemModifier, onClick = { onTileClick(item) }, onSetPercent = { onSetCoverPercent(item, it) })
+                HapanelsTileSize.LARGE -> PanelLargeTileOrCamera(item, liveState = item.liveState(liveEntities), cameraActions = emptyList(), modifier = itemModifier, now = now, dateText = dateText, onClick = { onTileClick(item) }, onSetPercent = { onSetCoverPercent(item, it) })
             }
         }
     }
@@ -700,24 +773,25 @@ private fun PanelCameraTile(
     iconSize: Dp = 92.dp,
     onClick: () -> Unit,
 ) {
+    val theme = LocalHapanelsTheme.current
     PanelTileShell(modifier = modifier, padding = 12.dp, onClick = onClick) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PanelIcons.Icon(tile.icon, tint = tile.accent.color(), modifier = Modifier.size(iconSize))
+            PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     tile.displayLabel(),
-                    color = Color.White,
+                    color = theme.textPrimary,
                     style = R1.body.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, fontFamily = NunitoPanelFont),
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 1,
                 )
                 Text(
                     text = "Podgląd na żywo",
-                    color = Color.White.copy(alpha = 0.72f),
+                    color = theme.textPrimary.copy(alpha = 0.72f),
                     style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 )
             }
@@ -729,9 +803,9 @@ private fun PanelCameraTile(
             Text(
                 text = cameraState,
                 color = when {
-                    liveState == null -> Orange
-                    !liveState.isAvailable -> Red
-                    else -> Green
+                    liveState == null -> theme.accentOrange
+                    !liveState.isAvailable -> theme.accentRed
+                    else -> theme.accentGreen
                 },
                 style = R1.labelMicro.copy(fontSize = 12.sp, fontFamily = NunitoPanelFont, fontWeight = FontWeight.Bold),
                 textAlign = TextAlign.End,
@@ -744,15 +818,15 @@ private fun PanelCameraTile(
                 .height(108.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black.copy(alpha = 0.18f))
-                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp)),
+                .border(1.dp, theme.tileStroke, RoundedCornerShape(16.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                PanelIcons.Icon("mdi:cctv", tint = Orange, modifier = Modifier.size(48.dp))
+                PanelIcons.Icon("mdi:cctv", tint = theme.accentOrange, modifier = Modifier.size(48.dp))
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "LIVE SNAPSHOT",
-                    color = Color.White.copy(alpha = 0.84f),
+                    color = theme.textPrimary.copy(alpha = 0.84f),
                     style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 )
             }
@@ -766,19 +840,200 @@ private fun PanelCameraTile(
 }
 
 @Composable
+private fun PanelCoverTile(
+    tile: HapanelsTileConfig,
+    liveState: EntityState?,
+    modifier: Modifier,
+    compact: Boolean = false,
+    onClick: () -> Unit,
+    onSetPercent: (Int) -> Unit,
+) {
+    val theme = LocalHapanelsTheme.current
+    val target = ((liveState?.percent ?: if (liveState?.isOn == true) 100 else 0).coerceIn(0, 100)) / 100f
+    val openFraction by animateFloatAsState(targetValue = target, animationSpec = tween(520), label = "coverPosition")
+    PanelTileShell(modifier = modifier, padding = if (compact) 10.dp else 12.dp, onClick = onClick, pressedScale = 1f, pressedAlpha = 1f) {
+        CoverAnimation(
+            visual = tile.coverVisual ?: "blind",
+            direction = tile.coverDirection ?: "top",
+            openFraction = openFraction,
+            accent = tile.accent.color(theme),
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            onSetPercent = onSetPercent,
+        )
+        Spacer(Modifier.height(if (compact) 6.dp else 10.dp))
+        Text(
+            tile.displayLabel(),
+            color = theme.textPrimary,
+            style = R1.body.copy(fontSize = if (compact) 14.sp else 17.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+            textAlign = TextAlign.Center,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
+        )
+        PanelLiveStatus(tile = tile, liveState = liveState, compact = compact)
+    }
+}
+
+@Composable
+private fun CoverAnimation(
+    visual: String,
+    direction: String,
+    openFraction: Float,
+    accent: Color,
+    modifier: Modifier,
+    onSetPercent: (Int) -> Unit,
+) {
+    val theme = LocalHapanelsTheme.current
+    BoxWithConstraints(modifier = modifier.clip(RoundedCornerShape(16.dp))) {
+        var frameHeightPx by remember { mutableFloatStateOf(0f) }
+        var dragFraction by remember { mutableFloatStateOf(-1f) }
+        LaunchedEffect(openFraction) {
+            if (dragFraction >= 0f && abs(dragFraction - openFraction) < 0.02f) dragFraction = -1f
+        }
+        fun setFromY(y: Float): Int? {
+            val height = frameHeightPx.takeIf { it > 0f } ?: return null
+            val ratio = (y / height).coerceIn(0f, 1f)
+            val percent = if (direction.startsWith("bottom")) ratio * 100f else (1f - ratio) * 100f
+            val value = percent.toInt().coerceIn(0, 100)
+            dragFraction = value / 100f
+            return value
+        }
+        val fraction = (if (dragFraction >= 0f) dragFraction else openFraction).coerceIn(0f, 1f)
+        val blindHeight = (1f - fraction).coerceIn(0.06f, 1f)
+        val scaleWidth = maxWidth * 0.16f
+        val gap = maxWidth * 0.035f
+        val frameWidth = (maxWidth - scaleWidth - gap).coerceAtMost(maxHeight * 0.62f).coerceAtLeast(maxWidth * 0.52f)
+        val frameHeight = maxHeight * 0.74f
+        val railWidth = frameWidth * 1.10f
+        val railHeight = (frameHeight * 0.075f).coerceIn(6.dp, 24.dp)
+        val bottomRailHeight = (frameHeight * 0.035f).coerceIn(4.dp, 10.dp)
+        val frameShape = RoundedCornerShape(2.dp)
+        val railShape = RoundedCornerShape(2.dp)
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(modifier = Modifier.width(railWidth).fillMaxHeight()) {
+                Box(
+                    modifier = Modifier
+                        .width(railWidth)
+                        .height(railHeight)
+                        .align(Alignment.TopCenter)
+                        .clip(railShape)
+                        .background(theme.coverRail.copy(alpha = 0.96f))
+                        .border(1.dp, theme.textPrimary.copy(alpha = 0.65f), railShape),
+                )
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .width(frameWidth)
+                        .height(frameHeight)
+                        .align(Alignment.Center)
+                        .clip(frameShape)
+                        .onSizeChanged { frameHeightPx = it.height.toFloat() }
+                        .pointerInput(direction) {
+                            awaitEachGesture {
+                                val down = awaitFirstDown()
+                                var pendingPercent = setFromY(down.position.y)
+                                down.consume()
+                                do {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull() ?: break
+                                    if (change.pressed) {
+                                        pendingPercent = setFromY(change.position.y)
+                                        change.consume()
+                                    }
+                                } while (change.pressed)
+                                pendingPercent?.let(onSetPercent)
+                            }
+                        }
+                        .background(Brush.verticalGradient(listOf(theme.textPrimary.copy(alpha = 0.18f), Color.Black.copy(alpha = 0.08f))))
+                        .border(2.dp, theme.textPrimary.copy(alpha = 0.72f), frameShape),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight(if (visual == "curtain") 1f else blindHeight)
+                            .fillMaxWidth()
+                            .align(if (direction.startsWith("bottom")) Alignment.BottomCenter else Alignment.TopCenter)
+                            .clip(RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp))
+                            .background(Brush.verticalGradient(listOf(theme.coverRail.copy(alpha = 0.96f), accent.copy(alpha = 0.34f), accent.copy(alpha = 0.55f))))
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val pitch = 8.dp.toPx()
+                            val highlight = theme.textPrimary.copy(alpha = 0.46f)
+                            val shadow = accent.copy(alpha = 0.24f)
+                            var y = 6.dp.toPx()
+                            while (y < size.height) {
+                                drawLine(highlight, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
+                                drawLine(shadow, Offset(0f, y + 3.dp.toPx()), Offset(size.width, y + 3.dp.toPx()), strokeWidth = 1.dp.toPx())
+                                y += pitch
+                            }
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .width((frameWidth * 0.18f).coerceIn(18.dp, 34.dp))
+                            .height((frameHeight * 0.025f).coerceIn(5.dp, 8.dp))
+                            .align(Alignment.TopCenter)
+                            .offset(y = (maxHeight * blindHeight - 4.dp).coerceAtLeast(10.dp))
+                            .clip(R1.ShapeRound)
+                            .background(theme.textPrimary.copy(alpha = 0.78f)),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .width(railWidth)
+                        .height(bottomRailHeight)
+                        .align(Alignment.BottomCenter)
+                        .clip(frameShape)
+                        .background(theme.coverRail.copy(alpha = 0.92f))
+                        .border(1.dp, theme.textPrimary.copy(alpha = 0.48f), railShape),
+                )
+            }
+            Spacer(Modifier.width(gap))
+            CoverMiniScale(accent = theme.textPrimary.copy(alpha = 0.72f), modifier = Modifier.width(scaleWidth).fillMaxHeight(0.76f))
+        }
+    }
+}
+
+@Composable
+private fun CoverMiniScale(accent: Color, modifier: Modifier) {
+    val labels = listOf("100", "75", "50", "25", "0")
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.fillMaxHeight().width(12.dp)) {
+            Box(modifier = Modifier.fillMaxHeight().width(1.dp).align(Alignment.CenterStart).background(accent.copy(alpha = 0.5f)))
+            Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+                repeat(labels.size) { Box(modifier = Modifier.width(12.dp).height(1.dp).background(accent.copy(alpha = 0.5f))) }
+            }
+        }
+        Spacer(Modifier.width(4.dp))
+        Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
+            labels.forEach { label ->
+                Text(label, color = accent, style = R1.labelMicro.copy(fontSize = 8.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont), maxLines = 1)
+            }
+        }
+    }
+}
+
+@Composable
 private fun PanelSmallTile(
     tile: HapanelsTileConfig,
     liveState: EntityState?,
     modifier: Modifier,
     iconSize: Dp = 50.dp,
     onClick: () -> Unit,
+    onSetPercent: (Int) -> Unit = {},
 ) {
+    val theme = LocalHapanelsTheme.current
+    if (tile.kind == HapanelsTileKind.COVER) {
+        PanelCoverTile(tile = tile, liveState = liveState, modifier = modifier, compact = true, onClick = onClick, onSetPercent = onSetPercent)
+        return
+    }
     PanelTileShell(modifier = modifier, padding = 10.dp, onClick = onClick) {
-        PanelIcons.Icon(tile.icon, tint = tile.accent.color(), modifier = Modifier.size(iconSize))
+        PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
         Spacer(Modifier.height(7.dp))
         Text(
             tile.displayLabel(),
-            color = Color.White,
+            color = theme.textPrimary,
             style = R1.body.copy(
                 fontSize = 14.sp,
                 fontFamily = NunitoPanelFont,
@@ -801,13 +1056,19 @@ private fun PanelActionTile(
     modifier: Modifier,
     iconSize: Dp = 68.dp,
     onClick: () -> Unit,
+    onSetPercent: (Int) -> Unit = {},
 ) {
+    val theme = LocalHapanelsTheme.current
+    if (action.kind == HapanelsTileKind.COVER) {
+        PanelCoverTile(tile = action, liveState = liveState, modifier = modifier, compact = true, onClick = onClick, onSetPercent = onSetPercent)
+        return
+    }
     PanelTileShell(modifier = modifier, padding = 12.dp, onClick = onClick) {
-        PanelIcons.Icon(action.icon, tint = action.accent.color(), modifier = Modifier.size(iconSize))
+        PanelIcons.Icon(action.icon, tint = action.accent.color(theme), modifier = Modifier.size(iconSize))
         Spacer(Modifier.height(10.dp))
         Text(
             action.displayLabel(),
-            color = Color.White,
+            color = theme.textPrimary,
             style = R1.body.copy(
                 fontSize = 15.sp,
                 fontFamily = NunitoPanelFont,
@@ -825,11 +1086,12 @@ private fun PanelActionTile(
 
 @Composable
 private fun PanelLiveStatus(tile: HapanelsTileConfig, liveState: EntityState?, compact: Boolean) {
+    val theme = LocalHapanelsTheme.current
     val label = tile.liveLabel(liveState) ?: return
     Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
     Text(
         label,
-        color = liveState.statusColor(),
+        color = liveState.statusColor(theme),
         style = R1.labelMicro.copy(
             fontSize = if (compact) 10.sp else 12.sp,
             fontFamily = NunitoPanelFont,
@@ -844,18 +1106,19 @@ private fun PanelLiveStatus(tile: HapanelsTileConfig, liveState: EntityState?, c
 
 @Composable
 private fun PanelTextAction(label: String, modifier: Modifier) {
+    val theme = LocalHapanelsTheme.current
     Box(
         modifier = modifier
             .height(46.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(TileBg)
+            .background(theme.tileBackground)
             .r1Pressable(onClick = {})
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             label,
-            color = Color.White,
+            color = theme.textPrimary,
             style = R1.body.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = NunitoPanelFont),
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
@@ -869,15 +1132,18 @@ private fun PanelTileShell(
     modifier: Modifier,
     padding: Dp = 14.dp,
     onClick: () -> Unit,
+    pressedScale: Float = 0.97f,
+    pressedAlpha: Float = 0.78f,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val theme = LocalHapanelsTheme.current
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(TileBg)
-            .border(1.dp, TileStroke, RoundedCornerShape(18.dp))
-            .r1Pressable(onClick = onClick)
+            .background(theme.tileBackground)
+            .border(1.dp, theme.tileStroke, RoundedCornerShape(18.dp))
+            .r1Pressable(onClick = onClick, pressedScale = pressedScale, pressedAlpha = pressedAlpha)
             .padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -950,11 +1216,11 @@ private fun String?.orUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "n
 private fun Double.formatPanelNumber(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format(Locale.US, "%.1f", this)
 
-private fun EntityState?.statusColor(): Color = when {
-    this == null -> Muted
-    !isAvailable -> Red
-    isOn -> Green
-    else -> Color.White.copy(alpha = 0.62f)
+private fun EntityState?.statusColor(theme: HapanelsThemeColors): Color = when {
+    this == null -> theme.textMuted
+    !isAvailable -> theme.accentRed
+    isOn -> theme.accentGreen
+    else -> theme.textPrimary.copy(alpha = 0.62f)
 }
 
 private fun HapanelsTileConfig.displayLabel(): String =
@@ -992,16 +1258,54 @@ private fun List<HapanelsTileConfig>.padPanelTiles(tileSize: HapanelsTileSize, c
         )
     }
 
-private fun HapanelsPersonStatus.color(): Color = when (this) {
-    HapanelsPersonStatus.HOME -> Green
-    HapanelsPersonStatus.AWAY -> Red
-    HapanelsPersonStatus.UNKNOWN -> Muted
+private fun HapanelsPersonStatus.color(theme: HapanelsThemeColors): Color = when (this) {
+    HapanelsPersonStatus.HOME -> theme.accentGreen
+    HapanelsPersonStatus.AWAY -> theme.accentRed
+    HapanelsPersonStatus.UNKNOWN -> theme.textMuted
 }
 
-private fun HapanelsTileAccent.color(): Color = when (this) {
-    HapanelsTileAccent.ORANGE -> Orange
-    HapanelsTileAccent.RED -> Red
-    HapanelsTileAccent.WHITE -> Color.White.copy(alpha = 0.86f)
+private fun HapanelsTileAccent.color(theme: HapanelsThemeColors): Color = when (this) {
+    HapanelsTileAccent.ORANGE -> theme.accentOrange
+    HapanelsTileAccent.RED -> theme.accentRed
+    HapanelsTileAccent.WHITE -> theme.textPrimary.copy(alpha = 0.86f)
+}
+
+private val HapanelsThemeColors.background: Color get() = panelBg
+private val HapanelsThemeColors.tileBackground: Color get() = surface
+private val HapanelsThemeColors.tileStroke: Color get() = border
+private val HapanelsThemeColors.accentOrange: Color get() = accent
+private val HapanelsThemeColors.accentRed: Color get() = danger
+private val HapanelsThemeColors.accentGreen: Color get() = success
+private val HapanelsThemeColors.popupBackground: Color get() = surfaceVariant
+private val HapanelsThemeColors.popupOverlay: Color get() = panelBg.copy(alpha = 0.96f)
+private val HapanelsThemeColors.coverRail: Color get() = primary
+
+private fun String.toHapanelsPanelTheme(systemDark: Boolean): HapanelsThemeColors = runCatching {
+    val root = JSONObject(this)
+    val theme = root.optJSONObject("theme") ?: return@runCatching defaultHapanelsThemeConfig.resolveHapanelsThemeColors()
+    HapanelsThemeConfig(
+        preset = theme.optString("preset").toHapanelsThemePreset(),
+        mode = theme.optString("mode").toHapanelsThemeMode(),
+    ).resolveHapanelsThemeColors(isSystemInDarkTheme = systemDark)
+}.getOrDefault(defaultHapanelsThemeConfig.resolveHapanelsThemeColors())
+
+private fun String.toHapanelsThemePreset(): HapanelsThemePreset = when (this) {
+    "light_breeze" -> HapanelsThemePreset.LIGHT_BREEZE
+    "desert_sun" -> HapanelsThemePreset.DESERT_SUN
+    "forest_leaves" -> HapanelsThemePreset.FOREST_LEAVES
+    "baltic_dawn" -> HapanelsThemePreset.BALTIC_DAWN
+    "bieszczady_sunset" -> HapanelsThemePreset.BIESZCZADY_SUNSET
+    "masurian_nights" -> HapanelsThemePreset.MASURIAN_NIGHTS
+    "aurora_glass" -> HapanelsThemePreset.AURORA_GLASS
+    "neon_noir" -> HapanelsThemePreset.NEON_NOIR
+    "velvet_spectrum" -> HapanelsThemePreset.VELVET_SPECTRUM
+    else -> HapanelsThemePreset.DEFAULT
+}
+
+private fun String.toHapanelsThemeMode(): HapanelsThemeMode = when (this) {
+    "light" -> HapanelsThemeMode.LIGHT
+    "system" -> HapanelsThemeMode.SYSTEM
+    else -> HapanelsThemeMode.DARK
 }
 
 internal object PanelIcons {

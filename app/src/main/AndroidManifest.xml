@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Microphone access for the voice satellite. Requested at runtime when
          the user opens the satellite screen; we never record outside that
          surface, and the surface itself shows a permission rationale dialog
@@ -220,6 +221,18 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.github.itskenny0.r1ha.action.HA_SERVICE_CALL"/>
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot autostart receiver. When enabled in Settings → Behaviour, the
+             app relaunches itself after device boot (and after app updates).
+             The receiver only fires when the user has explicitly opted in. -->
+        <receiver
+            android:name=".core.startup.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
         </receiver>
 

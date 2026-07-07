@@ -11,6 +11,7 @@ DATA_PANEL_REGISTERED = "panel_registered"
 
 SERVICE_SET_DASHBOARD_CONFIG = "set_dashboard_config"
 SERVICE_PATCH_DASHBOARD_CONFIG = "patch_dashboard_config"
+SERVICE_ACCEPT_TABLET_CONFIG = "accept_tablet_config"
 
 ATTR_DEVICE = "device"
 ATTR_CONFIG = "config"
@@ -21,4 +22,4 @@ PLATFORMS = ["sensor"]
 PANEL_URL_PATH = "hapanels"
 PANEL_ELEMENT = "hapanels-studio-panel"
 STATIC_URL_PATH = "/hapanels_static"
-FRONTEND_VERSION = "20260706-popup-context"
+FRONTEND_VERSION = "20260707-aod-clock-styles"

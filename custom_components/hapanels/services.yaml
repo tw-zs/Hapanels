@@ -18,3 +18,9 @@ patch_dashboard_config:
       required: true
       selector:
         object:
+accept_tablet_config:
+  fields:
+    device:
+      required: true
+      selector:
+        text:

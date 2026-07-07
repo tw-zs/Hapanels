@@ -59,6 +59,7 @@ enum class HapanelsAodClockStyle {
     @SerialName("warsaw_zaklad") WARSAW_ZAKLAD,
     @SerialName("popart") POPART,
     @SerialName("fullscreen_bold") FULLSCREEN_BOLD,
+    @SerialName("fullscreen_heavy") FULLSCREEN_HEAVY,
 }
 
 @Serializable

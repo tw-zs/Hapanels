@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-copy-tiles";
+const STUDIO_FRONTEND_VERSION = "20260707-heavy-aod-clock";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -18,7 +18,8 @@ const AOD_CLOCK_STYLES = [
   { id: "modern", name: "Nowoczesny", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
   { id: "warsaw_zaklad", name: "Warszawski Zakład", desc: "Miejski zegar z charakterem szyldu.", treatment: "Kondensowany font, ramka i techniczny klimat tablicy." },
   { id: "popart", name: "Popart", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
-  { id: "fullscreen_bold", name: "Pełnoekranowy gruby zegar", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Bardzo gruby font, cyfry wypełniają prawie cały ekran." },
+  { id: "fullscreen_bold", name: "Slim modern", desc: "Pełnoekranowy, smukły zegar z dużym oddechem.", treatment: "Cienkie cyfry i mała data pod spodem." },
+  { id: "fullscreen_heavy", name: "Gruby", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Większe, optycznie pogrubione cyfry wypełniają ekran." },
 ];
 const PANEL_THEME_PRESETS = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
@@ -453,6 +454,7 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-clock-preview.popart { background: radial-gradient(circle at 80% 20%, #ffcf33 0 18%, transparent 19%), radial-gradient(circle at 12% 85%, #31d1ff 0 18%, transparent 19%), #120713; color: #ff5aa5; }
           .aod-clock-preview.popart .time { font-weight: 950; text-shadow: 3px 3px 0 #111; }
           .aod-clock-preview.fullscreen_bold .time { font-size: 44px; font-weight: 950; letter-spacing: -.08em; }
+          .aod-clock-preview.fullscreen_heavy .time { font-size: 52px; font-weight: 950; letter-spacing: -.12em; text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
         .picker-filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }

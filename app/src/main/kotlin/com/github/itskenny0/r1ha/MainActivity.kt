@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -746,25 +747,35 @@ private fun AodClock(
     val bangers = FontFamily(Font(R.font.bangers_regular))
     val bigShoulders = FontFamily(Font(R.font.big_shoulders_display_wght, FontWeight.Black))
 
-    if (style == HapanelsAodClockStyle.FULLSCREEN_BOLD) {
+    if (style == HapanelsAodClockStyle.FULLSCREEN_BOLD || style == HapanelsAodClockStyle.FULLSCREEN_HEAVY) {
         BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            val timeSize = minOf(maxWidth.value / 4.7f, maxHeight.value / 1.7f).sp
+            val heavy = style == HapanelsAodClockStyle.FULLSCREEN_HEAVY
+            val timeSize = minOf(
+                maxWidth.value / (if (heavy) 3.55f else 4.7f),
+                maxHeight.value / (if (heavy) 1.16f else 1.7f),
+            ).sp
             Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                com.github.itskenny0.r1ha.ui.i18n.Text(
-                    text = timeText,
-                    style = R1.numeralXl.copy(
-                        fontFamily = bigShoulders,
-                        fontSize = timeSize,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = (-3).sp,
-                    ),
-                    color = Color.White.copy(alpha = alpha),
-                    maxLines = 1,
-                )
+                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    val offsets = if (heavy) listOf(0.dp to 0.dp, (-1).dp to 0.dp, 1.dp to 0.dp, 0.dp to (-1).dp, 0.dp to 1.dp) else listOf(0.dp to 0.dp)
+                    offsets.forEach { (x, y) ->
+                        com.github.itskenny0.r1ha.ui.i18n.Text(
+                            text = timeText,
+                            modifier = Modifier.offset(x = x, y = y),
+                            style = R1.numeralXl.copy(
+                                fontFamily = bigShoulders,
+                                fontSize = timeSize,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = if (heavy) (-7).sp else (-3).sp,
+                            ),
+                            color = Color.White.copy(alpha = alpha),
+                            maxLines = 1,
+                        )
+                    }
+                }
                 com.github.itskenny0.r1ha.ui.i18n.Text(
                     text = dateText,
-                    style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
-                    color = Color.White.copy(alpha = 0.72f * alpha),
+                    style = R1.body.copy(fontSize = if (heavy) 20.sp else 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp),
+                    color = Color.White.copy(alpha = if (heavy) 0.64f * alpha else 0.72f * alpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -805,7 +816,8 @@ private fun AodClock(
             Color(0xFFFF4EC8).copy(alpha = 0.86f * alpha),
         )
         HapanelsAodClockStyle.DEFAULT,
-        HapanelsAodClockStyle.FULLSCREEN_BOLD -> Triple(
+        HapanelsAodClockStyle.FULLSCREEN_BOLD,
+        HapanelsAodClockStyle.FULLSCREEN_HEAVY -> Triple(
             R1.numeralXl.copy(letterSpacing = 0.sp),
             Color.White,
             Color.White,

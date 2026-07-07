@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-switch";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-help-panel";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -447,6 +447,12 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-switch-track::after { content: ""; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; border-radius: 999px; background: var(--muted); transition: transform .16s ease, background .16s ease; }
           .aod-switch input:checked + .aod-switch-track { background: color-mix(in srgb, var(--accent) 36%, var(--surface-2)); border-color: var(--accent); }
           .aod-switch input:checked + .aod-switch-track::after { transform: translateX(26px); background: var(--accent); }
+          .aod-help { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+          .aod-help-card { border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); padding: 14px; display: grid; gap: 6px; }
+          .aod-help-card strong { font-size: 16px; }
+          .aod-help-card span { color: var(--muted); line-height: 1.45; }
+          .aod-settings-intro { padding: 18px 18px 0; display: grid; gap: 6px; }
+          .aod-settings-actions { display: flex; justify-content: space-between; gap: 10px; align-items: center; flex-wrap: wrap; padding: 0 18px 18px; }
           .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; }
           .aod-style-card { text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); color: var(--text); padding: 12px; display: grid; gap: 10px; }
           .aod-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
@@ -756,12 +762,17 @@ class HapanelsStudioPanel extends HTMLElement {
         <span class="aod-enable-copy"><strong>Always On Display</strong><span class="sub">Wygaszacz ekranu dla tabletu.</span></span>
         <label class="aod-switch"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}><span class="aod-switch-track"></span><span>${aod.enabled ? "Włączony" : "Wyłączony"}</span></label>
       </div>
+      <div class="aod-help">
+        <div class="aod-help-card"><strong>Zegar bez kafli</strong><span>Najprostszy AOD: sam zegar i data. Wtedy wybierasz styl zegara poniżej.</span></div>
+        <div class="aod-help-card"><strong>Presety zwyczajne</strong><span>Szybko ustawiają typ AOD, jasność, tło i timeout. Dobre jako punkt startowy.</span></div>
+        <div class="aod-help-card"><strong>Grid AOD</strong><span>Siatka nocnych kafli z encjami. Gdy dodasz kafle AOD, zamiast stylu zegara działa układ grid.</span></div>
+      </div>
       ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin:12px 0 18px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
-      <div class="toolbar"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button></div>
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
       <div class="tiles" style="margin-top:18px">
         <div class="tile">
           <div class="tile-head"><span>Ustawienia AOD</span><span>${this._escape(aod.layout || "minimal_clock")}</span></div>
+          <div class="aod-settings-intro"><strong>Presety i ustawienia zaawansowane</strong><span class="sub">Zmień tu timeout, jasność, tło albo przełącz AOD w tryb grid z kaflami.</span></div>
           <div class="preset-grid" style="padding:18px 18px 0">
             ${AOD_PRESETS.map((preset) => `<button class="preset-card" data-aod-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}"><strong>${this._escape(preset.name)}</strong><span>${this._escape(preset.desc)}</span></button>`).join("")}
           </div>
@@ -774,8 +785,8 @@ class HapanelsStudioPanel extends HTMLElement {
             ${this._inputField("aod-columns-landscape", "Kolumny L", aod.grid_layout?.columns_landscape ?? 3, "number")}
             ${this._inputField("aod-columns-portrait", "Kolumny P", aod.grid_layout?.columns_portrait ?? 2, "number")}
             ${this._selectField("aod-gap", "Gap", ["small", "medium", "large"], aod.grid_layout?.gap || "small")}
-            <button class="small" data-save-aod data-device="${this._escape(device)}">Zapisz AOD</button>
           </div>
+          <div class="aod-settings-actions"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button><button class="small" data-save-aod data-device="${this._escape(device)}">Zapisz AOD</button></div>
         </div>
       </div>
     `;

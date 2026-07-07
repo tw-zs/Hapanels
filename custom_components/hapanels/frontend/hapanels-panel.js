@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-help-text";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-help-bottom";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -759,7 +759,6 @@ class HapanelsStudioPanel extends HTMLElement {
         <span class="aod-enable-copy"><strong>Always On Display</strong><span class="sub">Wygaszacz ekranu dla tabletu.</span></span>
         <label class="aod-switch"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}><span class="aod-switch-track"></span><span>${aod.enabled ? "Włączony" : "Wyłączony"}</span></label>
       </div>
-      <div class="aod-help">Wygaszacz ma dwa tryby: zegar z datą albo grid kafli. Presety ustawiają wygląd wygaszacza. Gdy dodasz kafle AOD, ekran przełączy się na układ grid.</div>
       ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin:12px 0 18px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "aod")).join("")}</div>
       <div class="tiles" style="margin-top:18px">
@@ -782,6 +781,7 @@ class HapanelsStudioPanel extends HTMLElement {
           <div class="aod-settings-actions"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button><button class="small" data-save-aod data-device="${this._escape(device)}">Zapisz AOD</button></div>
         </div>
       </div>
+      <div class="aod-help" style="margin-top:18px">Wygaszacz ma dwa tryby: zegar z datą albo grid kafli. Presety ustawiają wygląd wygaszacza. Gdy dodasz kafle AOD, ekran przełączy się na układ grid.</div>
     `;
   }
 

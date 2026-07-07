@@ -22,4 +22,4 @@ PLATFORMS = ["sensor"]
 PANEL_URL_PATH = "hapanels"
 PANEL_ELEMENT = "hapanels-studio-panel"
 STATIC_URL_PATH = "/hapanels_static"
-FRONTEND_VERSION = "20260707-aod-help-text"
+FRONTEND_VERSION = "20260707-aod-help-bottom"

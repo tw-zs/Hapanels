@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-layout-order";
+const STUDIO_FRONTEND_VERSION = "20260707-aod-switch";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -438,6 +438,15 @@ class HapanelsStudioPanel extends HTMLElement {
           .appearance-error { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,83,56,.30); background: rgba(255,83,56,.10); color: #ff725d; }
           .appearance-actions { display: flex; gap: 10px; flex-wrap: wrap; }
           .aod-style-panel { display: grid; gap: 18px; margin-top: 18px; }
+          .aod-enable-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+          .aod-enable-copy { display: grid; gap: 4px; }
+          .aod-enable-copy strong { font-size: 18px; }
+          .aod-switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; color: var(--muted); font-weight: 900; }
+          .aod-switch input { position: absolute; opacity: 0; pointer-events: none; }
+          .aod-switch-track { width: 58px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); position: relative; transition: background .16s ease, border-color .16s ease; }
+          .aod-switch-track::after { content: ""; position: absolute; width: 24px; height: 24px; left: 3px; top: 3px; border-radius: 999px; background: var(--muted); transition: transform .16s ease, background .16s ease; }
+          .aod-switch input:checked + .aod-switch-track { background: color-mix(in srgb, var(--accent) 36%, var(--surface-2)); border-color: var(--accent); }
+          .aod-switch input:checked + .aod-switch-track::after { transform: translateX(26px); background: var(--accent); }
           .aod-style-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; }
           .aod-style-card { text-align: left; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); color: var(--text); padding: 12px; display: grid; gap: 10px; }
           .aod-style-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
@@ -680,7 +689,7 @@ class HapanelsStudioPanel extends HTMLElement {
         ${panel.status === "conflict" ? this._conflictView(panel) : ""}
         <div class="tabs">
           ${this._tab("tiles", "Kafle")}
-          ${this._tab("aod", "AOD")}
+          ${this._tab("aod", "Always On Display")}
           ${this._tab("settings", "Informacje")}
           ${this._tab("preview", "Podgląd")}
           ${this._tab("appearance", "Wygląd")}
@@ -743,8 +752,9 @@ class HapanelsStudioPanel extends HTMLElement {
     const tiles = (aod.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     const showClockStyles = !tiles.length && (aod.layout || "minimal_clock") !== "grid";
     return `
-      <div class="card" style="margin-bottom:18px">
-        <label style="display:flex;align-items:center;gap:10px;font-size:16px"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}>Włącz AOD</label>
+      <div class="card aod-enable-card">
+        <span class="aod-enable-copy"><strong>Always On Display</strong><span class="sub">Wygaszacz ekranu dla tabletu.</span></span>
+        <label class="aod-switch"><input id="aod-enabled" type="checkbox" ${aod.enabled ? "checked" : ""}><span class="aod-switch-track"></span><span>${aod.enabled ? "Włączony" : "Wyłączony"}</span></label>
       </div>
       ${showClockStyles ? this._aodClockStylePicker(device, config) : `<div class="sub" style="margin:12px 0 18px">Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.</div>`}
       <div class="toolbar"><button data-add-tile data-device="${this._escape(device)}" data-surface="aod">Dodaj kafel AOD +</button></div>

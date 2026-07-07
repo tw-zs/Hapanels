@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-clock-styles-label";
+const STUDIO_FRONTEND_VERSION = "20260707-copy-tiles";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -227,7 +227,7 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _panelLabel(panel) {
-    return panel?.panel_name || panel?.device || "panel";
+    return panel?.panel_name || this._configs?.[panel?.device]?.title || panel?.device || "panel";
   }
 
   _pickerPanels() {
@@ -303,8 +303,13 @@ class HapanelsStudioPanel extends HTMLElement {
         .card { border: 1px solid var(--line); border-radius: 22px; background: var(--surface); padding: 18px; box-shadow: 0 18px 50px rgba(0,0,0,.16); }
         .panel-card { text-align: left; color: inherit; width: 100%; }
         .name { display: flex; justify-content: space-between; gap: 12px; font-size: 19px; font-weight: 850; }
+        .panel-title { display: grid; gap: 3px; min-width: 0; }
+        .panel-title small { color: var(--muted); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
+        .panel-pills { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end; }
         .pill { border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 950; text-transform: uppercase; }
         .synced { background: rgba(68, 196, 119, .18); color: #48c97a; }
+        .visible { background: rgba(79,156,255,.16); color: #7cb4ff; }
+        .hidden { background: rgba(127,127,127,.12); color: var(--muted); }
         .conflict { background: rgba(255, 83, 56, .18); color: #ff725d; }
         .unknown, .invalid { background: rgba(127,127,127,.12); color: var(--muted); }
         dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 18px 0 0; }
@@ -638,11 +643,12 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _panelCard(panel) {
     const status = this._escape(panel.status || "unknown");
+    const hidden = this._hiddenDevices.has(panel.device);
     return `
       <button class="card panel-card" data-select-device="${this._escape(panel.device)}">
         <div class="name">
-          <span>${this._escape(this._panelLabel(panel))}</span>
-          <span class="pill ${status}">${this._statusLabel(panel.status)}</span>
+          <span class="panel-title"><span>${this._escape(this._panelLabel(panel))}</span><small>${this._escape(panel.device || "-")}</small></span>
+          <span class="panel-pills"><span class="pill ${hidden ? "hidden" : "visible"}">${hidden ? "NIEWIDOCZNY" : "WIDOCZNY"}</span><span class="pill ${status}">${this._statusLabel(panel.status)}</span></span>
         </div>
         <dl>
           <dt>Dashboard</dt><dd>${this._escape(panel.dashboard_id || "-")}</dd>
@@ -723,8 +729,8 @@ class HapanelsStudioPanel extends HTMLElement {
     const tiles = (config.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     return `
       <div class="toolbar">
-        <button class="add-button" data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Dodaj HA</button>
-        <button class="add-button secondary" data-pick-panel-tile data-target="tiles" data-device="${this._escape(device)}" data-surface="dashboard">Dodaj panel</button>
+        <button class="add-button" data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Kafel HA</button>
+        <button class="add-button secondary" data-pick-panel-tile data-target="tiles" data-device="${this._escape(device)}" data-surface="dashboard">Kafel panelu</button>
       </div>
       <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "dashboard")).join("")}</div>
     `;
@@ -844,8 +850,8 @@ class HapanelsStudioPanel extends HTMLElement {
               </select>
             </label>
             <div class="layout-buttons">
-              <button class="small add-button" data-layout-add-ha>Dodaj HA</button>
-              <button class="small add-button secondary" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Dodaj panel</button>
+              <button class="small add-button" data-layout-add-ha>Kafel HA</button>
+              <button class="small add-button secondary" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Kafel panelu</button>
               <button class="small secondary" data-layout-tray>Usuń kafelek</button>
             </div>
             <span class="sub">${this._escape(draft.tiles.length)}/${this._escape(grid.columns * grid.rows)}</span>
@@ -1208,7 +1214,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const tile = drag ? (draft.tiles.find((item) => item.id === drag.tileId) || draft.tray.find((item) => item.id === drag.tileId)) : null;
     if (!tile || !drag.ghost || drag.toTray) return "";
     const ghost = { ...tile, ...drag.ghost };
-    return `<div class="layout-cell-tile layout-ghost ${drag.ghost.valid ? "" : "invalid"}" style="grid-column:${this._escape(ghost.col)} / span ${this._escape(ghost.colSpan)};grid-row:${this._escape(ghost.row)} / span ${this._escape(ghost.rowSpan)}"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><span class="preview-meta">${this._escape(ghost.colSpan)}×${this._escape(ghost.rowSpan)}</span></div>`;
+    return `<div class="layout-cell-tile layout-ghost ${drag.ghost.valid ? "" : "invalid"}" style="grid-column:${this._escape(ghost.col)} / span ${this._escape(ghost.colSpan)};grid-row:${this._escape(ghost.row)} / span ${this._escape(ghost.rowSpan)}"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><span class="preview-meta">${drag.copy ? "Kopia · " : ""}${this._escape(ghost.colSpan)}×${this._escape(ghost.rowSpan)}</span></div>`;
   }
 
   _layoutSelectedPanel(tile) {
@@ -1328,6 +1334,16 @@ class HapanelsStudioPanel extends HTMLElement {
       popup: { id: `popup_${stamp}`, kind: "popup", size: "large", label: "Popup", short_label: "Popup", panel_id: `popup_${stamp}`, icon: "mdi:view-grid-plus", accent: "orange", colSpan: 2, rowSpan: 2 },
     };
     return templates[kind];
+  }
+
+  _uniqueTileId(base, draft) {
+    const slug = String(base || "tile").replace(/[^a-zA-Z0-9_-]/g, "_").replace(/^_+|_+$/g, "") || "tile";
+    const used = new Set([...draft.tiles, ...draft.tray].flatMap((tile) => [tile.id, tile.panel_id].filter(Boolean)));
+    for (let i = 1; i < 1000; i += 1) {
+      const id = `${slug}_copy${i === 1 ? "" : i}`;
+      if (!used.has(id)) return id;
+    }
+    return `${slug}_copy_${Date.now()}`;
   }
 
   _panelTileKindLabel(kind) {
@@ -1508,7 +1524,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const gridRect = this.shadowRoot.querySelector(".layout-grid")?.getBoundingClientRect();
     const grabCol = gridRect ? Math.min(tile.colSpan - 1, Math.max(0, Math.floor((event.clientX - rect.left) / (gridRect.width / draft.grid.columns)))) : 0;
     const grabRow = gridRect ? Math.min(tile.rowSpan - 1, Math.max(0, Math.floor((event.clientY - rect.top) / (gridRect.height / draft.grid.rows)))) : 0;
-    this._layoutDrag = { mode: "move", source: "grid", tileId, startX: event.clientX, startY: event.clientY, offsetX: 0, offsetY: 0, grabCol, grabRow, ghost: { col: tile.col, row: tile.row, colSpan: tile.colSpan, rowSpan: tile.rowSpan, valid: true }, toTray: false };
+    this._layoutDrag = { mode: "move", source: "grid", tileId, startX: event.clientX, startY: event.clientY, offsetX: 0, offsetY: 0, grabCol, grabRow, copy: event.altKey, ghost: { col: tile.col, row: tile.row, colSpan: tile.colSpan, rowSpan: tile.rowSpan, valid: true }, toTray: false };
     const move = (moveEvent) => this._moveLayoutGhost(moveEvent);
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -1572,6 +1588,7 @@ class HapanelsStudioPanel extends HTMLElement {
     if (!draft || !drag || !tile || !gridEl) return;
     const rect = gridEl.getBoundingClientRect();
     const trayRect = this.shadowRoot.querySelector("[data-layout-tray-zone]")?.getBoundingClientRect();
+    drag.copy = drag.mode === "move" && drag.source === "grid" && event.altKey;
     drag.toTray = drag.source === "grid" && trayRect && event.clientX >= trayRect.left && event.clientX <= trayRect.right && event.clientY >= trayRect.top && event.clientY <= trayRect.bottom;
     if (drag.mode === "move" && drag.source === "grid") {
       drag.offsetX = event.clientX - drag.startX;
@@ -1583,7 +1600,8 @@ class HapanelsStudioPanel extends HTMLElement {
     const col = Math.min(draft.grid.columns + 1 - tile.colSpan, Math.max(1, rawCol - (drag.grabCol || 0)));
     const row = Math.min(draft.grid.rows + 1 - tile.rowSpan, Math.max(1, rawRow - (drag.grabRow || 0)));
     const ghost = drag.mode === "resize" ? this._resizeGhost(tile, col, row, drag.edge || "se") : { ...tile, col, row };
-    drag.ghost = { col: ghost.col, row: ghost.row, colSpan: ghost.colSpan, rowSpan: ghost.rowSpan, valid: inGrid && !drag.toTray && !this._isOutsideGrid(ghost, draft.grid) };
+    const copyHasRoom = !drag.copy || !this._blockingTiles(draft, ghost).length;
+    drag.ghost = { col: ghost.col, row: ghost.row, colSpan: ghost.colSpan, rowSpan: ghost.rowSpan, valid: inGrid && !drag.toTray && !this._isOutsideGrid(ghost, draft.grid) && copyHasRoom };
     this._render();
   }
 
@@ -1608,10 +1626,22 @@ class HapanelsStudioPanel extends HTMLElement {
     const draft = this._currentLayoutDraft();
     const drag = this._layoutDrag;
     const tile = drag ? (draft?.tiles.find((item) => item.id === drag.tileId) || draft?.tray.find((item) => item.id === drag.tileId)) : null;
-    if (draft && drag?.toTray && drag.source === "grid" && tile) {
+    if (draft && drag?.toTray && !drag.copy && drag.source === "grid" && tile) {
       draft.tiles = draft.tiles.filter((item) => item.id !== tile.id);
       draft.tray.push(tile);
       draft.selectedTileId = draft.tiles[0]?.id || null;
+    } else if (draft && drag?.copy && drag.mode === "move" && drag.source === "grid" && drag.ghost?.valid && tile) {
+      const copy = structuredClone(tile);
+      copy.id = this._uniqueTileId(tile.id, draft);
+      if (copy.label) copy.label = `${copy.label} kopia`;
+      if (["folder", "popup"].includes(copy.kind)) copy.panel_id = this._uniqueTileId(copy.panel_id || copy.id, draft);
+      copy.col = drag.ghost.col;
+      copy.row = drag.ghost.row;
+      copy.colSpan = drag.ghost.colSpan;
+      copy.rowSpan = drag.ghost.rowSpan;
+      delete copy.order;
+      draft.tiles.push(copy);
+      draft.selectedTileId = copy.id;
     } else if (draft && drag?.ghost?.valid && tile) {
       const target = { ...tile, ...drag.ghost };
       const blockers = this._blockingTiles(draft, target, tile.id);

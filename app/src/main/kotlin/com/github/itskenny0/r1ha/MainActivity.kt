@@ -858,6 +858,41 @@ private fun AodClock(
         return
     }
 
+    if (style == HapanelsAodClockStyle.ITALIC_EDITORIAL) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            com.github.itskenny0.r1ha.ui.i18n.Text(
+                text = timeText,
+                style = R1.numeralXl.copy(
+                    fontFamily = playfairItalic,
+                    fontSize = 160.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = (-2).sp,
+                ),
+                color = Color(0xFFF7F1E8).copy(alpha = alpha),
+                maxLines = 1,
+            )
+            com.github.itskenny0.r1ha.ui.i18n.Text(
+                text = dateText,
+                style = R1.body.copy(
+                    fontFamily = playfairItalic,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontStyle = FontStyle.Italic,
+                    letterSpacing = 0.sp,
+                ),
+                color = Color(0xFFD8CABB).copy(alpha = 0.76f * alpha),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        return
+    }
+
     val (timeStyle, timeColor, dateColor) = when (style) {
         HapanelsAodClockStyle.CYBERPUNK_KORPO -> Triple(
             R1.numeralXl.copy(
@@ -880,17 +915,6 @@ private fun AodClock(
             ),
             Color(0xFFFFC66D).copy(alpha = alpha),
             Color(0xFFC34A36).copy(alpha = 0.82f * alpha),
-        )
-        HapanelsAodClockStyle.ITALIC_EDITORIAL -> Triple(
-            R1.numeralXl.copy(
-                fontFamily = playfairItalic,
-                fontSize = 80.sp,
-                fontWeight = FontWeight.Normal,
-                fontStyle = FontStyle.Italic,
-                letterSpacing = (-1).sp,
-            ),
-            Color(0xFFF7F1E8).copy(alpha = alpha),
-            Color(0xFFD8CABB).copy(alpha = 0.76f * alpha),
         )
         HapanelsAodClockStyle.MODERN -> Triple(
             R1.numeralXl.copy(
@@ -924,6 +948,7 @@ private fun AodClock(
         )
         HapanelsAodClockStyle.DEFAULT,
         HapanelsAodClockStyle.POPART_MULTIPLES,
+        HapanelsAodClockStyle.ITALIC_EDITORIAL,
         HapanelsAodClockStyle.FULLSCREEN_BOLD,
         HapanelsAodClockStyle.FULLSCREEN_HEAVY -> Triple(
             R1.numeralXl.copy(letterSpacing = 0.sp),

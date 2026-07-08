@@ -139,6 +139,7 @@ const STUDIO_TRANSLATIONS_EN = {
   "Wyłącz AOD": "Turn off AOD",
   "Bez wygaszacza ekranu": "No screensaver",
   "Motyw panelu": "Panel theme",
+  "Znajdź idealny wygląd swojego smart home.": "Find the perfect look for your smart home.",
   "Tryb jasny lub ciemny panelu": "Light or dark panel mode",
   "Jasny": "Light",
   "Ciemny": "Dark",
@@ -1150,12 +1151,9 @@ class HapanelsStudioPanel extends HTMLElement {
       return items;
     }, {});
     return `
-      <div class="appearance-panel">
-        <div class="appearance-toolbar">
-          <div>
-            <strong>Motyw panelu</strong>
-            <div class="sub">${this._escape(this._panelLabel(panel))} · dashboard ${this._escape(config.dashboard_id || "-")} · rewizja ${this._escape(config.revision ?? "-")}</div>
-          </div>
+        <div class="appearance-panel">
+        <div class="card aod-enable-card">
+          <span class="aod-enable-copy"><strong>Motyw panelu</strong><span class="sub">Znajdź idealny wygląd swojego smart home.</span></span>
           <div class="appearance-mode" aria-label="Tryb jasny lub ciemny panelu">
             <button class="small ${mode === "light" ? "active" : "secondary"}" data-panel-theme-mode="light" data-device="${this._escape(device)}">Jasny</button>
             <button class="small ${mode === "dark" ? "active" : "secondary"}" data-panel-theme-mode="dark" data-device="${this._escape(device)}">Ciemny</button>

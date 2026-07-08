@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260707-aod-help-bottom";
+const STUDIO_FRONTEND_VERSION = "20260708-language-toggle";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -34,6 +34,192 @@ const PANEL_THEME_PRESETS = [
   { id: "velvet_spectrum", name: "Velvet Spectrum", category: "Kolorowe abstrakcyjne", description: "Miękki, luksusowy miks śliwki, złota i indygo.", light: { bg: "#fff8f4", surface: "#ffffff", tile: "#f0ddea", text: "#251524", muted: "#735c6d", accent: "#c18a2a", border: "#ddc2d5", hover: "#ffeff8", active: "#f2d4e8", selected: "#ffe0a8" }, dark: { bg: "#100913", surface: "#211426", tile: "#35203c", text: "#fff0fa", muted: "#c7a8c4", accent: "#e4b65c", border: "#56355f", hover: "#2d1934", active: "#4b2758", selected: "#60481f" } },
 ];
 
+const STUDIO_TRANSLATIONS_EN = {
+  "Panele wykryte po MQTT i stan synchronizacji dashboardu/AOD.": "Panels discovered over MQTT and dashboard/AOD sync state.",
+  "Odśwież": "Refresh",
+  "Ustawienia": "Settings",
+  "Witaj w Hapanels Studio": "Welcome to Hapanels Studio",
+  "Hapanels łączy natywną aplikację na tablet z integracją Home Assistant. Tablet renderuje szybki panel Compose, a Studio zarządza konfiguracją przez MQTT.": "Hapanels connects a native tablet app with a Home Assistant integration. The tablet renders a fast Compose panel, while Studio manages its configuration over MQTT.",
+  "Pobierz aplikację Hapanels": "Download the Hapanels app",
+  "i uruchom MQTT, żeby tablet pojawił się tutaj automatycznie.": "and enable MQTT so the tablet appears here automatically.",
+  "Dodaj swój pierwszy tablet +": "Add your first tablet +",
+  "WIDOCZNY": "VISIBLE",
+  "NIEWIDOCZNY": "HIDDEN",
+  "ZSYNCHRONIZOWANE": "SYNCED",
+  "KONFLIKT": "CONFLICT",
+  "BŁĄD": "ERROR",
+  "NIEZNANY": "UNKNOWN",
+  "Dashboard": "Dashboard",
+  "Dashboard ID": "Dashboard ID",
+  "Rewizja": "Revision",
+  "Zmienił": "Changed by",
+  "Ostatnia zmiana": "Last change",
+  "Rozdzielczość": "Resolution",
+  "tablet": "tablet",
+  "projekt layoutu": "layout draft",
+  "← Tablety": "← Tablets",
+  "Usuń tablet": "Remove tablet",
+  "Kafle": "Tiles",
+  "Podgląd kafla": "Tile preview",
+  "Podstawowe": "Basics",
+  "Zaawansowane": "Advanced",
+  "Label": "Label",
+  "Źródło": "Source",
+  "Short (opcjonalnie)": "Short label (optional)",
+  "Typ": "Type",
+  "Rozmiar": "Size",
+  "Ikona (MDI)": "Icon (MDI)",
+  "Accent (kolor)": "Accent (color)",
+  "Panel (opcjonalnie)": "Panel (optional)",
+  "Order": "Order",
+  "Kolumna": "Column",
+  "Wiersz": "Row",
+  "Styl": "Style",
+  "Otwieranie": "Opening",
+  "Usuń": "Delete",
+  "Zapisz": "Save",
+  "Edytuj nazwę": "Edit name",
+  "Zwiń/rozwiń": "Collapse/expand",
+  "Informacje": "Info",
+  "Podgląd": "Preview",
+  "Wygląd": "Appearance",
+  "Konflikt synchronizacji": "Sync conflict",
+  "Oczekujące zmiany kafli:": "Pending tile changes:",
+  "Użyj wersji Studio": "Use Studio version",
+  "Użyj wersji tabletu": "Use tablet version",
+  "Brak pobranej konfiguracji dashboardu.": "No dashboard configuration loaded.",
+  "Kafel HA": "HA tile",
+  "Kafel panelu": "Panel tile",
+  "Always On Display": "Always On Display",
+  "Wygaszacz ekranu dla tabletu.": "Tablet screensaver.",
+  "Włączony": "On",
+  "Wyłączony": "Off",
+  "Style zegara AOD działają tylko dla zegara bez kafli, nie dla AOD Grid.": "AOD clock styles apply only to the clock without tiles, not to AOD Grid.",
+  "Ustawienia AOD": "AOD settings",
+  "Presety i ustawienia zaawansowane": "Presets and advanced settings",
+  "Zmień tu timeout, jasność, tło albo przełącz AOD w tryb grid z kaflami.": "Change timeout, brightness, background, or switch AOD into tile grid mode here.",
+  "Układ": "Layout",
+  "Jasność %": "Brightness %",
+  "Tło": "Background",
+  "Kolumny L": "Landscape columns",
+  "Kolumny P": "Portrait columns",
+  "Dodaj kafel AOD +": "Add AOD tile +",
+  "Zapisz AOD": "Save AOD",
+  "Wygaszacz ma dwa tryby: zegar z datą albo grid kafli. Presety ustawiają wygląd wygaszacza. Gdy dodasz kafle AOD, ekran przełączy się na układ grid.": "The screensaver has two modes: clock with date, or a tile grid. Presets configure the screensaver look. When you add AOD tiles, the screen switches to grid layout.",
+  "Styl zegara AOD": "AOD clock style",
+  "Tylko ekran AOD bez kafli. Nie zmienia motywu panelu.": "Only for AOD without tiles. Does not change the panel theme.",
+  "Aktywny": "Active",
+  "Wygląd domyślny": "Default look",
+  "Wyglądy standardowe": "Standard looks",
+  "Polskie inspiracje": "Polish inspirations",
+  "Kolorowe abstrakcje": "Colorful abstractions",
+  "Domyślny": "Default",
+  "Czytelny, spokojny zegar AOD.": "Readable, calm AOD clock.",
+  "Lekki font, klasyczny układ godziny i daty.": "Light font, classic time and date layout.",
+  "Pełnoekranowy, smukły zegar z dużym oddechem.": "Fullscreen slim clock with generous spacing.",
+  "Cienkie cyfry i mała data pod spodem.": "Thin digits and a small date below.",
+  "Szeroki": "Wide",
+  "Maksymalna godzina widoczna z daleka.": "Maximum-size time visible from far away.",
+  "Większe, optycznie pogrubione cyfry wypełniają ekran.": "Larger, optically bold digits fill the screen.",
+  "Warszawski Zakład": "Warsaw Zakład",
+  "Miejski zegar z charakterem szyldu.": "Urban clock with signboard character.",
+  "Kondensowany font, ramka i techniczny klimat tablicy.": "Condensed font, frame, and a technical sign-board feel.",
+  "Nowoczesny": "Modern",
+  "Czysty, minimalistyczny ekran nocny.": "Clean, minimalist night screen.",
+  "Smukłe cyfry, szeroki oddech i miękki kontrast.": "Slim digits, generous spacing, and soft contrast.",
+  "Popart": "Pop art",
+  "Kolorowy, graficzny akcent na AOD.": "Colorful graphic AOD accent.",
+  "Grube cyfry, mocny cień i plakatowe plamy koloru.": "Bold digits, strong shadow, and poster-like color spots.",
+  "Nocny zegar": "Night clock",
+  "Ciemno, 1% jasności, sam zegar": "Dark, 1% brightness, clock only",
+  "Status dom": "Home status",
+  "Cichy pasek statusu i osoby": "Quiet status strip and people",
+  "Kafle nocne": "Night tiles",
+  "Siatka AOD dla kilku encji": "AOD grid for a few entities",
+  "Wyłącz AOD": "Turn off AOD",
+  "Bez wygaszacza ekranu": "No screensaver",
+  "Motyw panelu": "Panel theme",
+  "Tryb jasny lub ciemny panelu": "Light or dark panel mode",
+  "Jasny": "Light",
+  "Ciemny": "Dark",
+  "Wygląd monochromatyczny": "Monochrome looks",
+  "Kolorowe abstrakcyjne": "Colorful abstracts",
+  "Aktualny wygląd panelu Hapanels.": "Current Hapanels panel look.",
+  "Chłodny, jasny błękit z lekkim kontrastem.": "Cool, bright blue with light contrast.",
+  "Ciepły piasek i bursztyn.": "Warm sand and amber.",
+  "Zielenie lasu, spokojne i kontrastowe.": "Calm, contrasted forest greens.",
+  "Morski błękit, mgła i różowy świt.": "Sea blue, mist, and pink dawn.",
+  "Ciepły zachód nad połoninami.": "Warm sunset over mountain meadows.",
+  "Granat jezior i nocne światło.": "Lake navy and night light.",
+  "Szklany gradient zorzy z chłodnym fioletem i cyjanem.": "Glass aurora gradient with cool violet and cyan.",
+  "Ciemny premium look z neonowym magenta i elektrycznym błękitem.": "Dark premium look with neon magenta and electric blue.",
+  "Miękki, luksusowy miks śliwki, złota i indygo.": "Soft luxury mix of plum, gold, and indigo.",
+  "Kontekst": "Context",
+  "Panel główny": "Main panel",
+  "Usuń kafelek": "Remove tile",
+  "Zastosuj": "Apply",
+  "Reset draftu": "Reset draft",
+  "Układ panelu": "Panel layout",
+  "Zapisz układ": "Save layout",
+  "Ustawienia grida": "Grid settings",
+  "Kafle poziomo": "Tiles across",
+  "Kafle pionowo": "Tiles down",
+  "Szerokość": "Width",
+  "Wysokość": "Height",
+  "Proporcje": "Aspect ratio",
+  "Zasobnik": "Tray",
+  "Wyczyść zasobnik": "Clear tray",
+  "Pusty.": "Empty.",
+  "Rozdzielczość ustawiana automatycznie z wykrytego urządzenia.": "Resolution is set automatically from the detected device.",
+  "Kopia": "Copy",
+  "Ustawienia kafla": "Tile settings",
+  "Nazwa": "Name",
+  "Podpis": "Subtitle",
+  "Ikona": "Icon",
+  "Widoczne informacje kafla": "Visible tile information",
+  "Zawartość popupu": "Popup contents",
+  "Zawartość folderu": "Folder contents",
+  "Brak kafli. Dodaj pierwszy kafel Home Assistant.": "No tiles. Add the first Home Assistant tile.",
+  "Dodaj kafel HA do zawartości +": "Add HA tile to contents +",
+  "Ustawienia Studio": "Studio settings",
+  "Zamknij": "Close",
+  "Motyw": "Theme",
+  "Auto z HA": "Auto from HA",
+  "Dodaj tablet": "Add tablet",
+  "Pokaż ukryte tablety": "Show hidden tablets",
+  "Tablety dodają się automatycznie po uruchomieniu aplikacji Hapanels z MQTT. Usunięcie w Studio ukrywa tablet lokalnie, nie kasuje urządzenia w HA.": "Tablets are added automatically when the Hapanels app starts with MQTT. Removing in Studio hides the tablet locally; it does not delete the HA device.",
+  "Wybierz wykryty tablet": "Choose detected tablet",
+  "Aktywne": "Active",
+  "Ukryte": "Hidden",
+  "Wszystkie": "All",
+  "Brak wykrytych tabletów. Uruchom aplikację Hapanels z MQTT.": "No tablets detected. Start the Hapanels app with MQTT.",
+  "Tak": "Yes",
+  "Anuluj": "Cancel",
+  "Dodaj kafel panelu": "Add panel tile",
+  "Wybierz typ kafla. Podgląd pokazuje domyślny wygląd i zachowanie.": "Choose tile type. The preview shows default look and behavior.",
+  "Zegar": "Clock",
+  "Folder / następny panel": "Folder / next panel",
+  "Duży kafel zegara na panelu.": "Large clock tile on the panel.",
+  "Otwiera następny panel po panel_id.": "Opens the next panel by panel_id.",
+  "Otwiera popup z kaflami o tym samym panel_id.": "Opens a popup with tiles using the same panel_id.",
+  "Klasyczny": "Classic",
+  "Kompakt": "Compact",
+  "Data u góry": "Date on top",
+  "Roleta": "Roller blind",
+  "Żaluzja": "Venetian blind",
+  "Zasłony": "Curtains",
+  "Brama": "Gate",
+  "Od góry": "From top",
+  "Od dołu": "From bottom",
+  "Od lewej": "From left",
+  "Od prawej": "From right",
+  "Z góry/lewej": "Top/left",
+  "Z góry/prawej": "Top/right",
+  "Z dołu/lewej": "Bottom/left",
+  "Z dołu/prawej": "Bottom/right",
+  "środa, 01 lipca": "Wednesday, July 1",
+};
+
 class HapanelsStudioPanel extends HTMLElement {
   connectedCallback() {
     this.attachShadow({ mode: "open" });
@@ -56,6 +242,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this._aodClockStyleError = null;
     this._layoutGridCollapsed = localStorage.getItem("hapanels_layout_grid_collapsed") === "1";
     this._themeMode = localStorage.getItem("hapanels_studio_theme") || "auto";
+    this._language = localStorage.getItem("hapanels_studio_language") || "pl";
     this._hiddenDevices = new Set(JSON.parse(localStorage.getItem("hapanels_hidden_devices") || "[]"));
     this._expandedTiles = new Set(JSON.parse(localStorage.getItem("hapanels_expanded_tiles") || "[]"));
     this._render();
@@ -245,6 +432,12 @@ class HapanelsStudioPanel extends HTMLElement {
     this._render();
   }
 
+  _setLanguage(language) {
+    this._language = language === "en" ? "en" : "pl";
+    localStorage.setItem("hapanels_studio_language", this._language);
+    this._render();
+  }
+
   _hideDevice(device) {
     if (!device) return;
     this._hiddenDevices.add(device);
@@ -300,6 +493,9 @@ class HapanelsStudioPanel extends HTMLElement {
         button.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
         button.danger { background: rgba(255,83,56,.14); color: #ff725d; border: 1px solid rgba(255,83,56,.30); }
         .iconbtn { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; font-size: 20px; }
+        .language-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); padding: 3px; gap: 3px; }
+        .language-toggle button { padding: 7px 9px; border-radius: 999px; background: transparent; color: var(--muted); font-size: 12px; }
+        .language-toggle button.active { background: var(--accent); color: #1a0d03; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         .card { border: 1px solid var(--line); border-radius: 22px; background: var(--surface); padding: 18px; box-shadow: 0 18px 50px rgba(0,0,0,.16); }
         .panel-card { text-align: left; color: inherit; width: 100%; }
@@ -612,7 +808,25 @@ class HapanelsStudioPanel extends HTMLElement {
         ${this._confirm ? this._confirmDialog() : ""}
         ${this._panelTilePicker ? this._panelTilePickerView() : ""}
     `;
+    this._applyLanguage();
     this._bindEvents();
+  }
+
+  _applyLanguage() {
+    if (this._language !== "en" || !this.shadowRoot) return;
+    const walker = document.createTreeWalker(this.shadowRoot, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => {
+      const text = node.nodeValue.trim();
+      if (STUDIO_TRANSLATIONS_EN[text]) node.nodeValue = node.nodeValue.replace(text, STUDIO_TRANSLATIONS_EN[text]);
+    });
+    this.shadowRoot.querySelectorAll("[title], [aria-label]").forEach((element) => {
+      ["title", "aria-label"].forEach((attr) => {
+        const value = element.getAttribute(attr);
+        if (STUDIO_TRANSLATIONS_EN[value]) element.setAttribute(attr, STUDIO_TRANSLATIONS_EN[value]);
+      });
+    });
   }
 
   _header() {
@@ -627,6 +841,10 @@ class HapanelsStudioPanel extends HTMLElement {
           ${this._error ? `<div class="error">${this._escape(this._error)}</div>` : ""}
         </div>
         <div class="actions">
+          <span class="language-toggle" aria-label="Language">
+            <button class="${this._language === "pl" ? "active" : ""}" data-language="pl">PL</button>
+            <button class="${this._language === "en" ? "active" : ""}" data-language="en">EN</button>
+          </span>
           <button id="refresh">Odśwież</button>
           <button id="settings" class="secondary iconbtn" title="Ustawienia">⚙</button>
         </div>
@@ -2052,6 +2270,9 @@ class HapanelsStudioPanel extends HTMLElement {
     this._bindDialog("panel-tile-picker-dialog", () => this._closePanelTilePicker());
     this.shadowRoot.getElementById("refresh")?.addEventListener("click", () => this._load());
     this.shadowRoot.getElementById("settings")?.addEventListener("click", () => { this._settingsOpen = true; this._render(); });
+    this.shadowRoot.querySelectorAll("[data-language]").forEach((button) => {
+      button.addEventListener("click", () => this._setLanguage(button.dataset.language));
+    });
     this.shadowRoot.getElementById("close-settings")?.addEventListener("click", () => { this._settingsOpen = false; this._render(); });
     this.shadowRoot.getElementById("theme-mode")?.addEventListener("change", (event) => this._setThemeMode(event.target.value));
     this.shadowRoot.getElementById("add-tablet")?.addEventListener("click", () => this._showTabletPicker());

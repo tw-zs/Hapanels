@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hapanels",
+        "description": "Connect Hapanels tablets through MQTT. The base topic is the MQTT root used by the Android app and the Home Assistant integration.",
+        "data": {
+          "base_topic": "MQTT base topic"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Hapanels is already configured."
+    }
+  },
+  "services": {
+    "set_dashboard_config": {
+      "name": "Set dashboard config",
+      "description": "Replace the full dashboard configuration for one Hapanels tablet.",
+      "fields": {
+        "device": {
+          "name": "Device",
+          "description": "Tablet MQTT device id."
+        },
+        "config": {
+          "name": "Dashboard config",
+          "description": "Full dashboard configuration object to publish to the tablet."
+        }
+      }
+    },
+    "patch_dashboard_config": {
+      "name": "Patch dashboard config",
+      "description": "Apply a revision-based patch to a Hapanels tablet dashboard configuration.",
+      "fields": {
+        "device": {
+          "name": "Device",
+          "description": "Tablet MQTT device id."
+        },
+        "patch": {
+          "name": "Dashboard patch",
+          "description": "Patch object containing the base revision, update source, and tile/theme/AOD changes."
+        }
+      }
+    },
+    "accept_tablet_config": {
+      "name": "Accept tablet config",
+      "description": "Resolve a Studio/tablet sync conflict by accepting the tablet's current dashboard configuration.",
+      "fields": {
+        "device": {
+          "name": "Device",
+          "description": "Tablet MQTT device id."
+        }
+      }
+    }
+  }
+}

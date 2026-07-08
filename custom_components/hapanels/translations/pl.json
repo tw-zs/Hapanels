@@ -1,0 +1,56 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Hapanels",
+        "description": "Połącz tablety Hapanels przez MQTT. Temat bazowy to główny prefix MQTT używany przez aplikację Android i integrację Home Assistant.",
+        "data": {
+          "base_topic": "Temat bazowy MQTT"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Hapanels jest już skonfigurowany."
+    }
+  },
+  "services": {
+    "set_dashboard_config": {
+      "name": "Ustaw konfigurację dashboardu",
+      "description": "Zastępuje całą konfigurację dashboardu dla jednego tabletu Hapanels.",
+      "fields": {
+        "device": {
+          "name": "Urządzenie",
+          "description": "Identyfikator tabletu w MQTT."
+        },
+        "config": {
+          "name": "Konfiguracja dashboardu",
+          "description": "Pełny obiekt konfiguracji dashboardu do wysłania na tablet."
+        }
+      }
+    },
+    "patch_dashboard_config": {
+      "name": "Zmień konfigurację dashboardu",
+      "description": "Nakłada patch zależny od rewizji na konfigurację dashboardu tabletu Hapanels.",
+      "fields": {
+        "device": {
+          "name": "Urządzenie",
+          "description": "Identyfikator tabletu w MQTT."
+        },
+        "patch": {
+          "name": "Patch dashboardu",
+          "description": "Obiekt patcha z rewizją bazową, źródłem zmiany oraz zmianami kafli, motywu albo AOD."
+        }
+      }
+    },
+    "accept_tablet_config": {
+      "name": "Zaakceptuj konfigurację tabletu",
+      "description": "Rozwiązuje konflikt synchronizacji Studio/tablet przez przyjęcie aktualnej konfiguracji dashboardu z tabletu.",
+      "fields": {
+        "device": {
+          "name": "Urządzenie",
+          "description": "Identyfikator tabletu w MQTT."
+        }
+      }
+    }
+  }
+}

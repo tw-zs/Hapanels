@@ -749,8 +749,8 @@ private fun AodClock(
 
     if (style == HapanelsAodClockStyle.FULLSCREEN_HEAVY) {
         BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-            val timeSize = minOf(maxWidth.value / 1.95f, maxHeight.value / 1.43f).sp
-            val dateSize = minOf(maxWidth.value / 12.5f, maxHeight.value / 10.2f).sp
+            val timeSize = minOf(maxWidth.value / 2.2f, maxHeight.value / 1.62f).sp
+            val dateSize = minOf(maxWidth.value / 13.2f, maxHeight.value / 11f).sp
             com.github.itskenny0.r1ha.ui.i18n.Text(
                 text = timeText,
                 style = R1.numeralXl.copy(

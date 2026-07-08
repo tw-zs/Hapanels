@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -746,6 +747,9 @@ private fun AodClock(
     val bangers = FontFamily(Font(R.font.bangers_regular))
     val bigShoulders = FontFamily(Font(R.font.big_shoulders_display_wght, FontWeight.Black))
     val anton = FontFamily(Font(R.font.anton_regular))
+    val orbitron = FontFamily(Font(R.font.orbitron_wght, FontWeight.SemiBold))
+    val cinzel = FontFamily(Font(R.font.cinzel_wght, FontWeight.Bold))
+    val playfairItalic = FontFamily(Font(R.font.playfair_display_italic_wght, FontWeight.Normal, FontStyle.Italic))
 
     if (style == HapanelsAodClockStyle.FULLSCREEN_HEAVY) {
         BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -817,7 +821,77 @@ private fun AodClock(
         return
     }
 
+    if (style == HapanelsAodClockStyle.POPART_MULTIPLES) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            val timeSize = minOf(maxWidth.value / 7.2f, maxHeight.value / 4.4f).sp
+            val dateSize = minOf(maxWidth.value / 30f, maxHeight.value / 17f).sp
+            val colors = listOf(Color(0xFFFF4EC8), Color(0xFF00D9FF), Color(0xFFFFF13A), Color(0xFF42FF5B))
+            Column(modifier = Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.Center) {
+                colors.chunked(2).forEach { rowColors ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        rowColors.forEach { color ->
+                            Column(modifier = Modifier.weight(1f), horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                                com.github.itskenny0.r1ha.ui.i18n.Text(
+                                    text = timeText,
+                                    style = R1.numeralXl.copy(
+                                        fontFamily = bangers,
+                                        fontSize = timeSize,
+                                        letterSpacing = 1.sp,
+                                        shadow = Shadow(Color.Black.copy(alpha = 0.9f * alpha), Offset(4f, 4f), 0f),
+                                    ),
+                                    color = color.copy(alpha = alpha),
+                                    maxLines = 1,
+                                )
+                                com.github.itskenny0.r1ha.ui.i18n.Text(
+                                    text = dateText,
+                                    style = R1.body.copy(fontSize = dateSize, fontWeight = FontWeight.Bold),
+                                    color = Color.White.copy(alpha = 0.72f * alpha),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     val (timeStyle, timeColor, dateColor) = when (style) {
+        HapanelsAodClockStyle.CYBERPUNK_KORPO -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = orbitron,
+                fontSize = 78.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 2.sp,
+                shadow = Shadow(Color(0xFF00FFC6).copy(alpha = 0.55f * alpha), Offset(0f, 0f), 14f),
+            ),
+            Color(0xFFE2FFF9).copy(alpha = alpha),
+            Color(0xFF62FFD7).copy(alpha = 0.76f * alpha),
+        )
+        HapanelsAodClockStyle.ZEW_PUSZCZY -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = cinzel,
+                fontSize = 80.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                shadow = Shadow(Color(0xFF711711).copy(alpha = 0.68f * alpha), Offset(3f, 3f), 8f),
+            ),
+            Color(0xFFFFC66D).copy(alpha = alpha),
+            Color(0xFFC34A36).copy(alpha = 0.82f * alpha),
+        )
+        HapanelsAodClockStyle.ITALIC_EDITORIAL -> Triple(
+            R1.numeralXl.copy(
+                fontFamily = playfairItalic,
+                fontSize = 80.sp,
+                fontWeight = FontWeight.Normal,
+                fontStyle = FontStyle.Italic,
+                letterSpacing = (-1).sp,
+            ),
+            Color(0xFFF7F1E8).copy(alpha = alpha),
+            Color(0xFFD8CABB).copy(alpha = 0.76f * alpha),
+        )
         HapanelsAodClockStyle.MODERN -> Triple(
             R1.numeralXl.copy(
                 fontFamily = monoton,
@@ -849,6 +923,7 @@ private fun AodClock(
             Color(0xFFFF4EC8).copy(alpha = 0.86f * alpha),
         )
         HapanelsAodClockStyle.DEFAULT,
+        HapanelsAodClockStyle.POPART_MULTIPLES,
         HapanelsAodClockStyle.FULLSCREEN_BOLD,
         HapanelsAodClockStyle.FULLSCREEN_HEAVY -> Triple(
             R1.numeralXl.copy(letterSpacing = 0.sp),
@@ -861,6 +936,16 @@ private fun AodClock(
         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        if (style == HapanelsAodClockStyle.CYBERPUNK_KORPO) {
+            Canvas(Modifier.size(260.dp, 72.dp)) {
+                for (y in 0..6) {
+                    drawLine(Color(0xFF00FFC6).copy(alpha = 0.08f * alpha), Offset(0f, y * 12f), Offset(size.width, y * 12f))
+                }
+                for (x in 0..8) {
+                    drawLine(Color(0xFF4DFF7A).copy(alpha = 0.06f * alpha), Offset(x * 32f, 0f), Offset(x * 32f, size.height))
+                }
+            }
+        }
         if (style == HapanelsAodClockStyle.POPART) {
             Canvas(Modifier.size(210.dp, 38.dp)) {
                 for (x in 0..8) for (y in 0..1) {

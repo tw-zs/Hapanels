@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260708-language-toggle";
+const STUDIO_FRONTEND_VERSION = "20260708-aod-style-pack";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -17,9 +17,13 @@ const AOD_CLOCK_STYLES = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", desc: "Czytelny, spokojny zegar AOD.", treatment: "Lekki font, klasyczny układ godziny i daty." },
   { id: "fullscreen_bold", name: "Slim modern", category: "Wyglądy standardowe", desc: "Pełnoekranowy, smukły zegar z dużym oddechem.", treatment: "Cienkie cyfry i mała data pod spodem." },
   { id: "fullscreen_heavy", name: "Szeroki", category: "Wyglądy standardowe", desc: "Maksymalna godzina widoczna z daleka.", treatment: "Większe, optycznie pogrubione cyfry wypełniają ekran." },
+  { id: "italic_editorial", name: "Italic Editorial", category: "Wyglądy standardowe", desc: "Elegancki zegar w stylu magazynowej typografii.", treatment: "Pochylone cyfry, lekki kontrast i spokojny redakcyjny rytm." },
   { id: "warsaw_zaklad", name: "Warszawski Zakład", category: "Polskie inspiracje", desc: "Miejski zegar z charakterem szyldu.", treatment: "Kondensowany font, ramka i techniczny klimat tablicy." },
+  { id: "cyberpunk_korpo", name: "Cyberpunk Korpo", category: "Polskie inspiracje", desc: "Mroczny zegar z biurowym chłodem megakorporacji.", treatment: "Techniczne cyfry, scanlines i zimny cyjan na czerni." },
+  { id: "zew_puszczy", name: "Zew Puszczy", category: "Polskie inspiracje", desc: "Leśny, słowiański klimat nocnej wyprawy.", treatment: "Kamienna typografia, bursztynowa poświata i krwisty cień." },
   { id: "modern", name: "Nowoczesny", category: "Kolorowe abstrakcje", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
   { id: "popart", name: "Popart", category: "Kolorowe abstrakcje", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
+  { id: "popart_multiples", name: "Fabryka Koloru", category: "Kolorowe abstrakcje", desc: "Popartowy zegar z powielonymi warstwami koloru.", treatment: "Multiplikowane cyfry, mocne przesunięcia i plakatowa energia." },
 ];
 const PANEL_THEME_PRESETS = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
@@ -121,15 +125,27 @@ const STUDIO_TRANSLATIONS_EN = {
   "Szeroki": "Wide",
   "Maksymalna godzina widoczna z daleka.": "Maximum-size time visible from far away.",
   "Większe, optycznie pogrubione cyfry wypełniają ekran.": "Larger, optically bold digits fill the screen.",
+  "Italic Editorial": "Italic Editorial",
+  "Elegancki zegar w stylu magazynowej typografii.": "Elegant clock in magazine typography style.",
+  "Pochylone cyfry, lekki kontrast i spokojny redakcyjny rytm.": "Italic digits, light contrast, and calm editorial rhythm.",
   "Warszawski Zakład": "Warsaw Zakład",
   "Miejski zegar z charakterem szyldu.": "Urban clock with signboard character.",
   "Kondensowany font, ramka i techniczny klimat tablicy.": "Condensed font, frame, and a technical sign-board feel.",
+  "Cyberpunk Korpo": "Cyberpunk Corpo",
+  "Mroczny zegar z biurowym chłodem megakorporacji.": "Dark clock with megacorporate office coolness.",
+  "Techniczne cyfry, scanlines i zimny cyjan na czerni.": "Technical digits, scanlines, and cold cyan on black.",
+  "Zew Puszczy": "Call of the Forest",
+  "Leśny, słowiański klimat nocnej wyprawy.": "Forest Slavic mood of a night expedition.",
+  "Kamienna typografia, bursztynowa poświata i krwisty cień.": "Stone-cut typography, amber glow, and blood-red shadow.",
   "Nowoczesny": "Modern",
   "Czysty, minimalistyczny ekran nocny.": "Clean, minimalist night screen.",
   "Smukłe cyfry, szeroki oddech i miękki kontrast.": "Slim digits, generous spacing, and soft contrast.",
   "Popart": "Pop art",
   "Kolorowy, graficzny akcent na AOD.": "Colorful graphic AOD accent.",
   "Grube cyfry, mocny cień i plakatowe plamy koloru.": "Bold digits, strong shadow, and poster-like color spots.",
+  "Fabryka Koloru": "Color Factory",
+  "Popartowy zegar z powielonymi warstwami koloru.": "Pop art clock with repeated layers of color.",
+  "Multiplikowane cyfry, mocne przesunięcia i plakatowa energia.": "Multiplied digits, strong offsets, and poster-like energy.",
   "Nocny zegar": "Night clock",
   "Ciemno, 1% jasności, sam zegar": "Dark, 1% brightness, clock only",
   "Status dom": "Home status",
@@ -660,8 +676,16 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-clock-preview.modern .time { font-weight: 200; letter-spacing: .08em; }
           .aod-clock-preview.warsaw_zaklad { border-color: #c6a15b; color: #f3d28a; font-family: Georgia, serif; text-transform: uppercase; }
           .aod-clock-preview.warsaw_zaklad .time { border: 1px solid #c6a15b; padding: 6px 10px; font-weight: 800; }
+          .aod-clock-preview.cyberpunk_korpo { color: #d8fff7; background: repeating-linear-gradient(0deg, rgba(0,255,198,.11) 0 1px, transparent 1px 10px), #020405; border-color: rgba(0,255,198,.42); }
+          .aod-clock-preview.cyberpunk_korpo .time { letter-spacing: .08em; text-shadow: 0 0 12px #00ffc6; }
+          .aod-clock-preview.zew_puszczy { color: #ffc66d; background: radial-gradient(circle at 50% 20%, rgba(113,23,17,.36), transparent 45%), #080403; border-color: rgba(255,198,109,.34); font-family: Georgia, serif; }
+          .aod-clock-preview.zew_puszczy .time { text-shadow: 3px 3px 8px #711711; }
           .aod-clock-preview.popart { background: radial-gradient(circle at 80% 20%, #ffcf33 0 18%, transparent 19%), radial-gradient(circle at 12% 85%, #31d1ff 0 18%, transparent 19%), #120713; color: #ff5aa5; }
           .aod-clock-preview.popart .time { font-weight: 950; text-shadow: 3px 3px 0 #111; }
+          .aod-clock-preview.popart_multiples { background: linear-gradient(90deg, #ff4ec8 0 25%, #00d9ff 25% 50%, #fff13a 50% 75%, #42ff5b 75%); color: #050505; }
+          .aod-clock-preview.popart_multiples .time { font-weight: 950; text-shadow: 2px 2px 0 #fff; }
+          .aod-clock-preview.italic_editorial { color: #f7f1e8; background: #0d0c0b; font-family: Georgia, serif; font-style: italic; }
+          .aod-clock-preview.italic_editorial .time { font-weight: 400; letter-spacing: -.04em; }
           .aod-clock-preview.fullscreen_bold .time { font-size: 44px; font-weight: 950; letter-spacing: -.08em; }
           .aod-clock-preview.fullscreen_heavy .time { font-size: 52px; font-weight: 950; letter-spacing: -.12em; text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff; }
         @keyframes spin { to { transform: rotate(360deg); } }

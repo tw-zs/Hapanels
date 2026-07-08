@@ -57,7 +57,11 @@ enum class HapanelsAodClockStyle {
     @SerialName("default") DEFAULT,
     @SerialName("modern") MODERN,
     @SerialName("warsaw_zaklad") WARSAW_ZAKLAD,
+    @SerialName("cyberpunk_korpo") CYBERPUNK_KORPO,
+    @SerialName("zew_puszczy") ZEW_PUSZCZY,
     @SerialName("popart") POPART,
+    @SerialName("popart_multiples") POPART_MULTIPLES,
+    @SerialName("italic_editorial") ITALIC_EDITORIAL,
     @SerialName("fullscreen_bold") FULLSCREEN_BOLD,
     @SerialName("fullscreen_heavy") FULLSCREEN_HEAVY,
 }

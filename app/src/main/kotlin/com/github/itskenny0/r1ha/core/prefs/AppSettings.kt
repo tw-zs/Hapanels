@@ -158,6 +158,17 @@ data class UiOptions(
 )
 
 @Stable
+enum class StartView {
+    PANEL_GRID,
+    CARDS,
+}
+
+fun persistedStartView(value: String?, legacyStartOnDashboard: Boolean?): StartView =
+    value?.let { runCatching { StartView.valueOf(it) }.getOrNull() }
+        ?: legacyStartOnDashboard?.let { if (it) StartView.PANEL_GRID else StartView.CARDS }
+        ?: StartView.PANEL_GRID
+
+@Stable
 data class Behavior(
     val haptics: Boolean = true,
     val keepScreenOn: Boolean = true,
@@ -195,14 +206,8 @@ data class Behavior(
      * Meant for wall panels where leaving app should be hard, not a tap away.
      */
     val kioskMode: Boolean = false,
-    /**
-     * When on, the app opens on the TODAY dashboard rather than the
-     * card stack. Useful for wall-mounted / kiosk panel setups where the
-     * device's primary purpose is information radiation (weather,
-     * who's home, calendar) rather than active control. Defaults to on
-     * for the tablet-first Hapanels shell.
-     */
-    val startOnDashboard: Boolean = true,
+    /** Surface opened after startup. */
+    val startView: StartView = StartView.PANEL_GRID,
     /**
      * When on, the app reopens itself after boot. Useful for kiosk tablets
      * and wall panels that should come back automatically after power loss.

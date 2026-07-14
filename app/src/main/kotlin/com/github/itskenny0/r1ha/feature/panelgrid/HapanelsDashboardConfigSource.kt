@@ -4,10 +4,13 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 private const val DASHBOARD_CACHE_FILE = "hapanels_dashboard_config.json"
 
@@ -30,8 +33,15 @@ class HapanelsDashboardConfigSource(
 ) {
     private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val changes = _changes.asSharedFlow()
+    private val fileMutex by lazy {
+        fileMutexes.computeIfAbsent(dashboardFile().canonicalPath) { Mutex() }
+    }
 
-    suspend fun loadOrSeed(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
+    suspend fun loadOrSeed(): HapanelsDashboardConfig = fileMutex.withLock {
+        withContext(Dispatchers.IO) { loadOrSeedLocked() }
+    }
+
+    private fun loadOrSeedLocked(): HapanelsDashboardConfig {
         val file = dashboardFile()
         val raw = if (file.exists()) {
             file.readText()
@@ -39,7 +49,7 @@ class HapanelsDashboardConfigSource(
             file.writeText(SAMPLE_HAPANELS_DASHBOARD_JSON.trimIndent())
             SAMPLE_HAPANELS_DASHBOARD_JSON
         }
-        runCatching { configJson.decodeFromString<HapanelsDashboardConfig>(raw) }
+        return runCatching { configJson.decodeFromString<HapanelsDashboardConfig>(raw) }
             .getOrElse {
                 val fallback = sampleHapanelsDashboardConfig()
                 file.writeText(configJson.encodeToString(fallback))
@@ -54,44 +64,48 @@ class HapanelsDashboardConfigSource(
 
     suspend fun importRaw(raw: String): HapanelsDashboardConfig {
         val config = configJson.decodeFromString<HapanelsDashboardConfig>(raw)
-        return withContext(Dispatchers.IO) {
-            dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
-            _changes.tryEmit(Unit)
-            config
+        return fileMutex.withLock {
+            withContext(Dispatchers.IO) {
+                dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+                _changes.tryEmit(Unit)
+                config
+            }
         }
     }
 
-    suspend fun applyPatch(patch: HapanelsDashboardPatch): HapanelsDashboardPatchResult = withContext(Dispatchers.IO) {
-        val current = loadOrSeed()
-        if (current.revision != patch.baseRevision) {
-            return@withContext HapanelsDashboardPatchResult.Conflict(
-                currentRevision = current.revision,
-                attemptedBaseRevision = patch.baseRevision,
-                currentConfig = current,
-            )
+    suspend fun applyPatch(patch: HapanelsDashboardPatch): HapanelsDashboardPatchResult = fileMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val current = loadOrSeedLocked()
+            if (current.revision != patch.baseRevision) {
+                return@withContext HapanelsDashboardPatchResult.Conflict(
+                    currentRevision = current.revision,
+                    attemptedBaseRevision = patch.baseRevision,
+                    currentConfig = current,
+                )
+            }
+            val updatesById = patch.tileUpdates.associateBy { it.id }
+            val patchedTheme = patch.theme ?: current.theme
+            val next = when (patch.surface) {
+                HapanelsDashboardSurface.DASHBOARD -> current.copy(
+                    revision = current.revision + 1,
+                    updatedBy = patch.updatedBy,
+                    theme = patchedTheme,
+                    tiles = current.tiles.applyPatches(updatesById),
+                )
+                HapanelsDashboardSurface.AOD -> current.copy(
+                    revision = current.revision + 1,
+                    updatedBy = patch.updatedBy,
+                    theme = patchedTheme,
+                    alwaysOnDisplay = current.alwaysOnDisplay.copy(
+                        clockStyle = patch.aodClockStyle ?: current.alwaysOnDisplay.clockStyle,
+                        tiles = current.alwaysOnDisplay.tiles.applyPatches(updatesById),
+                    ),
+                )
+            }
+            dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
+            _changes.tryEmit(Unit)
+            HapanelsDashboardPatchResult.Applied(next)
         }
-        val updatesById = patch.tileUpdates.associateBy { it.id }
-        val patchedTheme = patch.theme ?: current.theme
-        val next = when (patch.surface) {
-            HapanelsDashboardSurface.DASHBOARD -> current.copy(
-                revision = current.revision + 1,
-                updatedBy = patch.updatedBy,
-                theme = patchedTheme,
-                tiles = current.tiles.applyPatches(updatesById),
-            )
-            HapanelsDashboardSurface.AOD -> current.copy(
-                revision = current.revision + 1,
-                updatedBy = patch.updatedBy,
-                theme = patchedTheme,
-                alwaysOnDisplay = current.alwaysOnDisplay.copy(
-                    clockStyle = patch.aodClockStyle ?: current.alwaysOnDisplay.clockStyle,
-                    tiles = current.alwaysOnDisplay.tiles.applyPatches(updatesById),
-                ),
-            )
-        }
-        dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
-        _changes.tryEmit(Unit)
-        HapanelsDashboardPatchResult.Applied(next)
     }
 
     suspend fun applyPatchRaw(raw: String): HapanelsDashboardPatchResult {
@@ -99,14 +113,20 @@ class HapanelsDashboardConfigSource(
         return applyPatch(patch)
     }
 
-    suspend fun resetToSample(): HapanelsDashboardConfig = withContext(Dispatchers.IO) {
-        val config = sampleHapanelsDashboardConfig()
-        dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
-        _changes.tryEmit(Unit)
-        config
+    suspend fun resetToSample(): HapanelsDashboardConfig = fileMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val config = sampleHapanelsDashboardConfig()
+            dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+            _changes.tryEmit(Unit)
+            config
+        }
     }
 
     private fun dashboardFile(): File = File(context.filesDir, cacheFileName)
+
+    private companion object {
+        val fileMutexes = ConcurrentHashMap<String, Mutex>()
+    }
 }
 
 private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTileConfig = copy(

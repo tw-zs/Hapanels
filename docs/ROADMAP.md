@@ -119,11 +119,11 @@ Done:
 Next:
 - Add Home Assistant device metadata refinements if HA UI naming needs polish.
 
-## Milestone 6: Proximity, Brightness, Screensaver
+## Milestone 6: Proximity, Brightness, AOD
 
 Goal: make Hapanels useful as an always-mounted wall panel.
 
-Status: foundation started; brightness and screen diagnostics are usable, full AOD/screensaver UX remains pending.
+Status: done for practical proximity, brightness, and native AOD foundation.
 
 Done:
 - `PanelScreenManager` lifecycle is wired from app startup.
@@ -131,13 +131,15 @@ Done:
 - Auto-brightness settings, smoothing, hysteresis, and HA/MQTT switch control are in place.
 - Screen mode, target brightness, and applied brightness are published as MQTT diagnostics.
 - `WRITE_SETTINGS` is requested/allowed for Shelly so Android does not override hardware brightness writes.
-- AOD configuration placeholder exists in the dashboard config model as `always_on_display`.
+- Proximity wake settings and threshold handling are wired through `PanelScreenManager`.
+- Screensaver/AOD timeout, mode state, user activity wake, and last wake/sleep reasons are tracked.
+- Native AOD renderer supports clock-only mode and AOD tile mode through the dashboard config model.
+- AOD clock style selection is persisted as `always_on_display.clock_style` and can be patched over MQTT/Studio.
+- AOD clock style pack is available in-app and in Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, and wide bold.
 
 Next:
-- Proximity wake.
-- Screensaver modes.
-- Wake/sleep reason tracking.
-- AOD/screensaver research: evaluate which ideas from `j-a-n/lovelace-wallpanel` can map to native Hapanels, especially idle timeout, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlaying selected HA cards or status widgets. Reuse concepts/config shape where useful, but do not make Hapanels depend on Lovelace/WebView for the AOD renderer.
+- Optional polish: tune proximity and idle behavior on real mounted Shelly hardware after longer use.
+- Optional polish: add richer AOD sources later, such as photo/video slideshow or selected native status widgets, without making Hapanels depend on Lovelace/WebView.
 
 ## Milestone 7: Production Hardening
 
@@ -172,13 +174,15 @@ Done:
 - Hapanels Studio can edit tiles/AOD, show an approximate HTML preview, resize tiles from the preview, apply AOD presets, and resolve basic config conflicts.
 - Hapanels Studio tile editor uses Home Assistant's lazy `ha-entity-picker` instead of rendering every entity as `<option>`.
 - Native dashboard tile taps dispatch Home Assistant actions through the existing domain-aware `ServiceCall.tapAction` path.
+- Dashboard theme presets are persisted in dashboard config and rendered by the native Compose panel.
+- Hapanels Studio includes an Appearance tab for panel theme presets and light/dark mode selection.
+- Hapanels Studio can select AOD clock styles and apply them via dashboard patch commands.
 
 Next:
 - Add drilldown panels: `panel_id` opens a native panel, backed by a persisted panel/card schema in dashboard config.
 - Continue Hapanels Studio layout polish after the editor rebuild, especially icon picker sizing and mobile wrapping.
 - Improve Hapanels Studio preview fidelity: match the Compose tablet renderer more closely for tile geometry, clock/person section, camera/action tiles, spacing, typography, and responsive behavior. Current HTML preview is useful for editing but not pixel-perfect.
 - Add fuller conflict resolution: compare tablet/current config vs Studio pending patch, show changed fields, and support per-tile/per-field merge instead of only “Studio wins” / “tablet wins”.
-- Add dashboard theme selection and persist theme presets in dashboard config.
 - Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
 
 ## Milestone 9: Camera Support
@@ -207,15 +211,41 @@ Maybe later:
 
 Goal: make first launch feel like a real device onboarding flow instead of a raw app start.
 
+Status: done for the production onboarding foundation.
+
+Done:
+- Guided first-run welcome, Home Assistant connection, authorization, and personalization screens.
+- Home Assistant OAuth sign-in with server probing and token exchange.
+- Long-lived access token setup remains available as an onboarding alternative to OAuth.
+- Tablet name persists into app settings and HA/MQTT-facing panel identity.
+- Panel Grid theme preset selection patches the persisted dashboard config without replacing its light/dark mode, AOD configuration, or tiles.
+- Startup choice is limited to `GRID` and `CARDS`, persists across restart, and replaces legacy Today/dashboard startup preferences and launcher links.
+
+Verification:
+- Startup stays in onboarding until both a server and non-blank access token are present.
+- OAuth and long-lived token paths can complete setup.
+- Tablet name, Panel Grid theme, and `GRID` / `CARDS` start view persist after restart.
+- Legacy start-view settings and backups migrate compatibly; startup and launcher shortcuts never open Today.
+- Onboarding strings have focused Polish localization coverage.
+
+## Milestone 11: Secure MQTT And Studio Onboarding
+
+Goal: include real MQTT and Hapanels Studio setup in first-run onboarding without storing credentials insecurely or showing simulated connection states.
+
 Status: planned.
 
 Tasks:
-- First-run screen with a tablet name field.
-- Initial setup hints for the most important panel settings.
-- Save the chosen tablet name into app and HA-facing identity surfaces.
-- Small UX polish for the first-launch flow so it feels guided and not technical.
+- Move MQTT credentials from regular DataStore into encrypted storage.
+- Migrate existing MQTT credentials and remove plaintext values after successful migration.
+- Add MQTT onboarding for host, port, TLS, username, password, connection test, and optional skip.
+- Report real broker connection status and actionable connection errors.
+- Add Hapanels Studio setup based on actual MQTT/config-sync availability.
+- Detect and display real Studio readiness instead of a simulated connected state.
+- Add MQTT and Studio results to the final onboarding checklist.
 
 Verification:
-- Fresh install shows onboarding before the main dashboard.
-- Tablet name can be entered and persists after restart.
-- Onboarding completes cleanly into normal panel use.
+- MQTT password never persists in plaintext settings.
+- Valid broker credentials establish a real connection.
+- Invalid credentials and unreachable brokers show useful errors.
+- Studio status reflects actual configuration-sync availability.
+- Both steps can be skipped without blocking onboarding.

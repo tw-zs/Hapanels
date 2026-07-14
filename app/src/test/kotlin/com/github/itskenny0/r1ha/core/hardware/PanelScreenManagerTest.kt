@@ -20,6 +20,29 @@ class PanelScreenManagerTest {
     }
 
     @Test
+    fun aodWakeFadeMovesFromAodBrightnessToNormalBrightness() {
+        val values = PanelBrightnessFade.values(fromPercent = 3, toPercent = 100, durationMillis = 500)
+
+        assertThat(values).hasSize(10)
+        assertThat(values.first()).isGreaterThan(3)
+        assertThat(values.last()).isEqualTo(100)
+        assertThat(values).isInOrder()
+    }
+
+    @Test
+    fun aodWakeFadeCanApplyTargetImmediately() {
+        assertThat(PanelBrightnessFade.values(fromPercent = 3, toPercent = 80, durationMillis = 0))
+            .containsExactly(80)
+    }
+
+    @Test
+    fun aodWakeFadeUsesLatestNormalBrightness() {
+        assertThat(PanelBrightnessFade.normalTarget(latestPercent = 60, preAodPercent = 90)).isEqualTo(60)
+        assertThat(PanelBrightnessFade.normalTarget(latestPercent = 75, preAodPercent = 90)).isEqualTo(75)
+        assertThat(PanelBrightnessFade.normalTarget(latestPercent = null, preAodPercent = 90)).isEqualTo(90)
+    }
+
+    @Test
     fun idleTimeoutMovesToScreensaverAndTouchWakes() {
         val engine = PanelScreenEngine(
             initialNowMillis = 1_000L,

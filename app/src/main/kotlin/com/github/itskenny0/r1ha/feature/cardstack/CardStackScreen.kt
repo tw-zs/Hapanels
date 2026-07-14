@@ -83,10 +83,6 @@ fun CardStackScreen(
     panelHardware: PanelHardware,
     onOpenFavoritesPicker: () -> Unit,
     onOpenSettings: () -> Unit,
-    /** Surfaced from the QuickActions sheet (long-press hamburger →
-     *  TODAY). Lets the user jump to the at-a-glance dashboard without
-     *  going through Settings. */
-    onOpenDashboard: () -> Unit = {},
     /** Surfaced via long-press on the chrome's settings gear. Jumps
      *  to the Universal Quick Search dialog from anywhere on the
      *  card stack. */
@@ -1116,10 +1112,6 @@ fun CardStackScreen(
                     ?: "this page",
                 cardCount = state.cards.size,
                 playingMediaCount = playingMediaCount,
-                onOpenDashboard = {
-                    quickActionsOpen.value = false
-                    onOpenDashboard()
-                },
                 onOpenAssist = {
                     quickActionsOpen.value = false
                     onOpenAssist()
@@ -2348,8 +2340,8 @@ private fun DrawerGlyph(
 /**
  * Quick-actions sheet — opened by long-pressing the chrome hamburger.
  * Doubles as the app's navigation drawer in the HA-Companion idiom:
- *   - BROWSE grid (2×4) of major-surface shortcuts (Today, Assist,
- *     Search, Scenes, Automations, Energy, Alerts)
+ *   - BROWSE grid of major-surface shortcuts (Assist, Search, Scenes,
+ *     Automations, Energy, Alerts, Panel Grid)
  *   - ACTIONS list of one-tap operations against the active page
  *     (Turn All On, Pause N media, Turn All Off with confirm)
  */
@@ -2358,7 +2350,6 @@ private fun QuickActionsSheet(
     activePageName: String,
     cardCount: Int,
     playingMediaCount: Int,
-    onOpenDashboard: () -> Unit,
     onOpenAssist: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenAutomations: () -> Unit,
@@ -2417,7 +2408,7 @@ private fun QuickActionsSheet(
             )
             Spacer(Modifier.height(12.dp))
 
-            // ── BROWSE row — 2×4 grid of icon-glyph nav shortcuts ──
+            // ── BROWSE rows of icon-glyph nav shortcuts ──
             // These doubles as the HA-Companion-style 'drawer'
             // navigation: every major surface is reachable from one
             // long-press on the chrome hamburger. Two rows of four so
@@ -2430,9 +2421,9 @@ private fun QuickActionsSheet(
             ) {
                 // Monochrome typographic glyphs only; the previous emoji set rendered
                 // multi-colour on most fonts and visibly broke the otherwise hairline
-                // chrome aesthetic. ⌂ ◉ ⌕ ▸ are all single-codepoint and share the
+                // chrome aesthetic. ▦ ◉ ⌕ ▸ are all single-codepoint and share the
                 // chrome ink colour through their parent Text style.
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⌂", label = "TODAY", onClick = onOpenDashboard)
+                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▦", label = "GRID", onClick = onOpenPanelGridMockup)
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "◉", label = "ASSIST", onClick = onOpenAssist)
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "⌕", label = "SEARCH", onClick = onOpenSearch)
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▸", label = "SCENES", onClick = onOpenScenes)
@@ -2448,16 +2439,14 @@ private fun QuickActionsSheet(
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▭", label = "DEVICE", onClick = onOpenDevice)
             }
             Spacer(Modifier.height(6.dp))
-            // Third row — just the ALERTS tile for now (single-wide
-            // since BROWSE grew past the two-row 2×4 layout). Future
-            // tiles can fill the remaining three slots.
+            // Third row — just the ALERTS tile for now. Future tiles can
+            // fill the remaining three slots.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 DrawerGlyph(modifier = Modifier.weight(1f), glyph = "!", label = "ALERTS", onClick = onOpenNotifications)
-                DrawerGlyph(modifier = Modifier.weight(1f), glyph = "▦", label = "GRID", onClick = onOpenPanelGridMockup)
-                Spacer(Modifier.weight(2f))
+                Spacer(Modifier.weight(3f))
             }
             Spacer(Modifier.height(14.dp))
             // 'Turn all on' — one-tap fire. Lights/switches/fans coming on

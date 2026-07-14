@@ -42,16 +42,16 @@
     </shortcut>
 
     <shortcut
-        android:shortcutId="today"
+        android:shortcutId="panel_grid"
         android:enabled="true"
         android:icon="@mipmap/ic_launcher"
-        android:shortcutShortLabel="@string/shortcut_today_short"
-        android:shortcutLongLabel="@string/shortcut_today_long">
+        android:shortcutShortLabel="@string/shortcut_panel_grid_short"
+        android:shortcutLongLabel="@string/shortcut_panel_grid_long">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.github.twzs.hapanels"
             android:targetClass="com.github.itskenny0.r1ha.MainActivity">
-            <extra android:name="initial_route" android:value="dashboard" />
+            <extra android:name="initial_route" android:value="panel_grid" />
         </intent>
     </shortcut>
 

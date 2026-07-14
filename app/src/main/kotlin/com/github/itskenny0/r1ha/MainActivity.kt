@@ -77,12 +77,14 @@ import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileKind
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileSize
 import com.github.itskenny0.r1ha.feature.panelgrid.PanelIcons
 import com.github.itskenny0.r1ha.nav.AppNavGraph
-import com.github.itskenny0.r1ha.nav.Routes
+import com.github.itskenny0.r1ha.nav.startupDestination
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+
+private data class StartupState(val settings: AppSettings, val destination: String)
 
 class MainActivity : ComponentActivity() {
 
@@ -114,13 +116,28 @@ class MainActivity : ComponentActivity() {
         handleOAuthCallback(intent)
 
         setContent {
-            // Load the FIRST settings value synchronously (suspending) before we render the
-            // NavHost. Otherwise we'd mount Onboarding briefly (initialValue.server is null)
-            // and then jarringly switch to CardStack once the Flow emitted. produceState
-            // returns null until the coroutine assigns the first value.
-            val initialSettings by produceState<AppSettings?>(initialValue = null) {
-                value = graph.settings.settings.first()
+            // Load first settings and encrypted token before rendering NavHost. Retain only
+            // derived destination, never token value, in Compose state.
+            val startup by produceState<StartupState?>(initialValue = null) {
+                val initialSettings = graph.settings.settings.first()
+                val initialTokens = try {
+                    graph.tokens.load()
+                } catch (t: kotlinx.coroutines.CancellationException) {
+                    throw t
+                } catch (t: Throwable) {
+                    R1Log.e(
+                        "MainActivity.startup",
+                        "Token load failed; routing to onboarding instead of blocking startup",
+                        t,
+                    )
+                    null
+                }
+                value = StartupState(
+                    settings = initialSettings,
+                    destination = startupDestination(initialSettings, initialTokens),
+                )
             }
+            val initialSettings = startup?.settings
             val settings by graph.settings.settings.collectAsStateWithLifecycle(
                 initialValue = initialSettings ?: AppSettings(),
             )
@@ -153,17 +170,8 @@ class MainActivity : ComponentActivity() {
             }
 
             // Lock the start destination to the FIRST loaded value so theme changes, server
-            // changes, etc. don't re-graph the NavHost mid-session. Two paths:
-            //   - server == null         → ONBOARDING
-            //   - server + startOnDashboard → DASHBOARD (wall-mounted / kiosk panel path)
-            //   - server + default        → CARD_STACK (manual control path)
-            val startDestination = remember(initial) {
-                when {
-                    initial.server == null -> Routes.ONBOARDING
-                    initial.behavior.startOnDashboard -> Routes.DASHBOARD
-                    else -> Routes.CARD_STACK
-                }
-            }
+            // changes, etc. don't re-graph NavHost mid-session.
+            val startDestination = remember(startup) { requireNotNull(startup).destination }
             val navController = rememberNavController()
             R1Log.d("MainActivity.setContent", "startDestination=$startDestination server=${initial.server?.url ?: "null"}")
 
@@ -614,9 +622,9 @@ private fun PanelScreensaverOverlay(
         val brightnessPercent = aod?.brightnessPercent ?: 100
         val contentAlpha = (0.35f + (brightnessPercent.coerceIn(0, 100) / 100f) * 0.65f)
             .coerceIn(0.35f, 1f)
-        androidx.compose.runtime.LaunchedEffect(mode, aod?.brightnessPercent, panelScreenManager) {
+        androidx.compose.runtime.LaunchedEffect(mode, aod?.brightnessPercent, aod?.wakeFadeMillis, panelScreenManager) {
             if (mode == PanelScreenMode.SCREENSAVER && aod != null) {
-                panelScreenManager.setAodBrightnessOverride(aod.brightnessPercent)
+                panelScreenManager.setAodBrightnessOverride(aod.brightnessPercent, aod.wakeFadeMillis)
             }
         }
         DisposableEffect(mode, panelScreenManager) {

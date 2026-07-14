@@ -11,8 +11,11 @@ import com.github.itskenny0.r1ha.core.prefs.Tokens
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -136,23 +139,34 @@ class OnboardingViewModel(
                     }
                 }
                 R1Log.i("Onboarding.exchange", "token POST OK; saving")
+                val previousTokens = tokens.load()
+                val previousServer = settings.settings.first().server
                 val expiresAtMillis = System.currentTimeMillis() + tokenResponse.expires_in * 1_000L
-                tokens.save(
-                    Tokens(
-                        accessToken = tokenResponse.access_token,
-                        refreshToken = tokenResponse.refresh_token,
-                        expiresAtMillis = expiresAtMillis,
-                    )
+                val savedTokens = Tokens(
+                    accessToken = tokenResponse.access_token,
+                    refreshToken = tokenResponse.refresh_token,
+                    expiresAtMillis = expiresAtMillis,
                 )
-                R1Log.i("Onboarding.exchange", "tokens.save returned")
-                // Re-persist the server URL alongside the tokens. probe() also writes this,
-                // but doubling up means a successful login always lands a usable server config
-                // even if the probe-time write was lost for any reason.
-                R1Log.i("Onboarding.exchange", "calling settings.update(server=$serverUrl)")
-                settings.update { it.copy(server = ServerConfig(url = serverUrl)) }
+                try {
+                    tokens.save(savedTokens)
+                    check(tokens.load() == savedTokens) { "Token verification failed after save" }
+                    R1Log.i("Onboarding.exchange", "tokens.save returned")
+                    R1Log.i("Onboarding.exchange", "calling settings.update(server=$serverUrl)")
+                    settings.update { it.copy(server = ServerConfig(url = serverUrl)) }
+                    check(settings.settings.first().server?.url == serverUrl) {
+                        "Server verification failed after save"
+                    }
+                } catch (t: Throwable) {
+                    withContext(NonCancellable) {
+                        restoreCredentials(previousTokens, previousServer)
+                    }
+                    throw t
+                }
                 R1Log.i("Onboarding.exchange", "settings.update returned")
                 _state.value = State.Done
                 Toaster.show("Sign-in complete")
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 R1Log.e("Onboarding.exchange", "failed", e)
                 Toaster.error("Token exchange FAILED: ${e.message}")
@@ -173,6 +187,19 @@ class OnboardingViewModel(
      */
     fun failOnboarding(message: String) {
         _state.value = State.Error(message)
+    }
+
+    private suspend fun restoreCredentials(previousTokens: Tokens?, previousServer: ServerConfig?) {
+        runCatching {
+            if (previousTokens == null) tokens.clear() else tokens.save(previousTokens)
+            check(tokens.load() == previousTokens) { "Token rollback verification failed" }
+        }.onFailure { R1Log.e("Onboarding.exchange", "token rollback failed", it) }
+        runCatching {
+            settings.update { it.copy(server = previousServer) }
+            check(settings.settings.first().server == previousServer) {
+                "Server rollback verification failed"
+            }
+        }.onFailure { R1Log.e("Onboarding.exchange", "server rollback failed", it) }
     }
 
     companion object {

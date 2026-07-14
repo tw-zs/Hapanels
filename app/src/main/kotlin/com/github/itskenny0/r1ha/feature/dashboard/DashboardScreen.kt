@@ -65,15 +65,10 @@ fun DashboardScreen(
      *  (brightness, volume, flashlight). Only fires when the
      *  indicator is visible (hideStatusBar + opt-in). */
     onOpenDevice: () -> Unit = {},
-    /** Cards icon — opens the card stack from anywhere on the
-     *  dashboard. Critical for the kiosk-mode 'Start on Dashboard'
-     *  path where the back button has no card stack on the back
-     *  stack to pop to. */
+    /** Cards icon — opens the card stack from anywhere on the dashboard. */
     onOpenCardStack: () -> Unit = {},
     onOpenPanelGridMockup: () -> Unit = {},
-    /** Settings icon — same rationale: when Dashboard is the start
-     *  destination, the only way to reach Settings is via this
-     *  explicit affordance. */
+    /** Settings icon — explicit path from dashboard to Settings. */
     onOpenSettings: () -> Unit = {},
     /** Mic glyph — opens HA Assist directly. Same affordance as the
      *  card stack chrome so the action is consistent across surfaces. */
@@ -115,10 +110,8 @@ fun DashboardScreen(
             .systemBarsPadding(),
     ) {
         // Custom top bar — instead of R1TopBar's bare back+title, this
-        // dashboard surface needs explicit CARDS + SETTINGS entries so a
-        // kiosk-mode 'Start on Dashboard' user isn't trapped. The
-        // chevron-back hides entirely when canGoBack is false (the
-        // start-destination path).
+        // Dashboard surface keeps explicit CARDS + SETTINGS entries. Chevron-back
+        // hides when there is no previous destination.
         DashboardTopBar(
             onBack = onBack,
             canGoBack = canGoBack,
@@ -511,10 +504,7 @@ private fun DashboardTopBar(
                 .padding(start = 4.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         ) {
             // Chevron-back tile — only rendered when canGoBack is true.
-            // On the kiosk 'Start on Dashboard' path the back stack is
-            // empty, so the chevron would be inert; hiding it removes
-            // the dead affordance + makes the CARDS / SETTINGS shortcuts
-            // the obvious escape paths.
+            // Hide inert back affordance when this is the only destination.
             if (canGoBack) {
                 com.github.itskenny0.r1ha.ui.components.ChevronBack(onClick = onBack)
                 Spacer(Modifier.width(4.dp))

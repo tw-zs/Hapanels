@@ -64,7 +64,9 @@ data class AppBackup(
     val behaviorHideStatusBar: Boolean = false,
     val behaviorShowBatteryWhenStatusBarHidden: Boolean = false,
     val behaviorKioskMode: Boolean = false,
-    val behaviorStartOnDashboard: Boolean = false,
+    val behaviorStartView: StartView? = null,
+    /** v1 compatibility. New backups use [behaviorStartView]. */
+    val behaviorStartOnDashboard: Boolean? = null,
     val behaviorStartOnBoot: Boolean = false,
     val mqttPanelDeviceId: String = "",
     val tabletFriendlyName: String = "",
@@ -135,7 +137,8 @@ fun AppSettings.toBackup(createdAt: String): AppBackup = AppBackup(
     behaviorHideStatusBar = behavior.hideStatusBar,
     behaviorShowBatteryWhenStatusBarHidden = behavior.showBatteryWhenStatusBarHidden,
     behaviorKioskMode = behavior.kioskMode,
-    behaviorStartOnDashboard = behavior.startOnDashboard,
+    behaviorStartView = behavior.startView,
+    behaviorStartOnDashboard = behavior.startView == StartView.PANEL_GRID,
     behaviorStartOnBoot = behavior.startOnBoot,
     mqttPanelDeviceId = mqttPanelDeviceId,
     tabletFriendlyName = tabletFriendlyName,
@@ -198,7 +201,9 @@ fun AppBackup.applyOnto(prev: AppSettings): AppSettings {
             hideStatusBar = behaviorHideStatusBar,
             showBatteryWhenStatusBarHidden = behaviorShowBatteryWhenStatusBarHidden,
             kioskMode = behaviorKioskMode,
-            startOnDashboard = behaviorStartOnDashboard,
+            startView = behaviorStartView
+                ?: behaviorStartOnDashboard?.let { if (it) StartView.PANEL_GRID else StartView.CARDS }
+                ?: StartView.PANEL_GRID,
             startOnBoot = behaviorStartOnBoot,
             wheelTogglesSwitches = behaviorWheelTogglesSwitches,
             toastLogLevel = behaviorToastLogLevel,

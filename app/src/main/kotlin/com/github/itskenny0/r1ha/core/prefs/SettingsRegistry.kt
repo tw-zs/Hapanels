@@ -328,12 +328,12 @@ val SETTINGS_REGISTRY: List<SettingEntry> = listOf(
         currentDisplay = { if (it.behavior.kioskMode) "ON" else "OFF" },
     ),
     SettingEntry(
-        id = "behavior.startOnDashboard",
+        id = "behavior.startView",
         category = SettingCategory.BEHAVIOUR,
-        label = "Start on dashboard",
-        description = "Open on the TODAY dashboard rather than the card stack",
-        isDefault = { it.behavior.startOnDashboard == defaults.behavior.startOnDashboard },
-        currentDisplay = { if (it.behavior.startOnDashboard) "ON" else "OFF" },
+        label = "Start view",
+        description = "Choose panel grid or cards as the startup surface",
+        isDefault = { it.behavior.startView == defaults.behavior.startView },
+        currentDisplay = { it.behavior.startView.name },
     ),
     SettingEntry(
         id = "behavior.startOnBoot",

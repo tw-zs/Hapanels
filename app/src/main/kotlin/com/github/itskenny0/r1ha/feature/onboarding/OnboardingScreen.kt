@@ -1,10 +1,12 @@
 package com.github.itskenny0.r1ha.feature.onboarding
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -13,33 +15,50 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.platform.LocalDensity
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
+import com.github.itskenny0.r1ha.core.prefs.StartView
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
+import com.github.itskenny0.r1ha.core.theme.R1
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatch
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsThemePreset
+import com.github.itskenny0.r1ha.feature.panelgrid.hapanelsThemeDefinitions
+import com.github.itskenny0.r1ha.ui.components.R1Button
+import com.github.itskenny0.r1ha.ui.components.R1ButtonVariant
+import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.i18n.Text
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
@@ -47,7 +66,9 @@ import okhttp3.OkHttpClient
 fun OnboardingScreen(
     settings: SettingsRepository,
     tokens: TokenStore,
-    onComplete: () -> Unit,
+    haRepository: HaRepository,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
+    onComplete: (StartView) -> Unit,
     /** Optional escape hatch — when set, the URL entry form shows a
      *  small "Use long-lived token instead" link below CONNECT that
      *  jumps to the LLAT setup screen. Lets kiosk-style installs skip
@@ -60,10 +81,29 @@ fun OnboardingScreen(
         factory = OnboardingViewModel.factory(http = http, settings = settings, tokens = tokens),
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    val appSettings by settings.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
+    var step by rememberSaveable { mutableStateOf(0) }
+    var credentialsReady by remember { mutableStateOf<Boolean?>(null) }
 
-    // Navigate away as soon as tokens are stored.
+    // Authentication is only the middle of onboarding. Keep the user here long enough to
+    // name the panel and choose its initial presentation before entering the app.
     LaunchedEffect(state) {
-        if (state is OnboardingViewModel.State.Done) onComplete()
+        if (state is OnboardingViewModel.State.Done) {
+            haRepository.reconnectNow()
+            step = 2
+        }
+    }
+
+    LaunchedEffect(step, state) {
+        if (step == 2) {
+            val persistedSettings = settings.settings.first()
+            val persistedTokens = tokens.load()
+            val ready = persistedSettings.server != null && !persistedTokens?.accessToken.isNullOrBlank()
+            credentialsReady = ready
+            if (!ready) step = 1
+        } else {
+            credentialsReady = null
+        }
     }
 
     // The LLAT escape hatch saves directly to TokenStore without
@@ -78,12 +118,36 @@ fun OnboardingScreen(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                 resumeScope.launch {
-                    if (tokens.load() != null) onComplete()
+                    if (!tokens.load()?.accessToken.isNullOrBlank() &&
+                        settings.settings.first().server != null
+                    ) {
+                        step = 2
+                    }
                 }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    when (step) {
+        0 -> {
+            WelcomeScreen(onStart = { step = 1 })
+            return
+        }
+        2 -> {
+            if (credentialsReady != true) {
+                Box(modifier = Modifier.fillMaxSize().background(R1.Bg))
+                return
+            }
+            PersonalizeScreen(
+                initialSettings = appSettings,
+                settings = settings,
+                dashboardConfigSource = dashboardConfigSource,
+                onComplete = onComplete,
+            )
+            return
+        }
     }
 
     when (val s = state) {
@@ -165,6 +229,241 @@ fun OnboardingScreen(
                 onUseLongLivedToken = onOpenLongLivedToken,
             )
         }
+    }
+}
+
+@Composable
+private fun WelcomeScreen(onStart: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(R1.Bg)
+            .systemBarsPadding()
+            .padding(horizontal = 22.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.widthIn(max = 560.dp),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Text(text = "HAPANELS", style = R1.labelMicro, color = R1.AccentWarm)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Your home.\nOne simple panel.",
+                style = R1.screenTitle,
+                color = R1.Ink,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Connect Home Assistant, name this tablet, and choose what opens first.",
+                style = R1.body,
+                color = R1.InkMuted,
+            )
+            Spacer(Modifier.height(32.dp))
+            R1Button(
+                text = "START SETUP",
+                onClick = onStart,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PersonalizeScreen(
+    initialSettings: AppSettings,
+    settings: SettingsRepository,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
+    onComplete: (StartView) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var tabletName by rememberSaveable {
+        mutableStateOf(
+            initialSettings.tabletFriendlyName.ifBlank {
+                android.os.Build.MODEL?.takeIf(String::isNotBlank) ?: "Hapanels tablet"
+            },
+        )
+    }
+    var dashboardConfig by remember { mutableStateOf<HapanelsDashboardConfig?>(null) }
+    var selectedPresetName by rememberSaveable { mutableStateOf<String?>(null) }
+    var startViewName by rememberSaveable { mutableStateOf(initialSettings.behavior.startView.name) }
+    var saving by remember { mutableStateOf(false) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedPreset = selectedPresetName?.let { name ->
+        runCatching { HapanelsThemePreset.valueOf(name) }.getOrNull()
+    }
+    val startView = runCatching { StartView.valueOf(startViewName) }
+        .getOrDefault(StartView.PANEL_GRID)
+
+    LaunchedEffect(dashboardConfigSource) {
+        try {
+            val loaded = dashboardConfigSource.loadOrSeed()
+            dashboardConfig = loaded
+            if (selectedPresetName == null) selectedPresetName = loaded.theme.preset.name
+        } catch (t: CancellationException) {
+            throw t
+        } catch (t: Throwable) {
+            error = t.message ?: "Could not load panel theme."
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(R1.Bg)
+            .systemBarsPadding(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 560.dp)
+                .fillMaxHeight()
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
+                .padding(horizontal = 22.dp, vertical = 32.dp),
+        ) {
+            Text(text = "03 · PERSONALISE", style = R1.labelMicro, color = R1.AccentWarm)
+            Spacer(Modifier.height(8.dp))
+            Text(text = "Make it yours.", style = R1.screenTitle, color = R1.Ink)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Connection saved. These choices can be changed later in Settings.",
+                style = R1.body,
+                color = R1.InkMuted,
+            )
+            Spacer(Modifier.height(24.dp))
+
+            Text(text = "TABLET NAME", style = R1.labelMicro, color = R1.InkSoft)
+            Spacer(Modifier.height(8.dp))
+            R1TextField(
+                value = tabletName,
+                onValueChange = { tabletName = it },
+                placeholder = "Kitchen panel",
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Text(text = "START VIEW", style = R1.labelMicro, color = R1.InkSoft)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                R1Button(
+                    text = "GRID",
+                    onClick = { startViewName = StartView.PANEL_GRID.name },
+                    modifier = Modifier.weight(1f),
+                    variant = if (startView == StartView.PANEL_GRID) R1ButtonVariant.Filled else R1ButtonVariant.Outlined,
+                )
+                R1Button(
+                    text = "CARDS",
+                    onClick = { startViewName = StartView.CARDS.name },
+                    modifier = Modifier.weight(1f),
+                    variant = if (startView == StartView.CARDS) R1ButtonVariant.Filled else R1ButtonVariant.Outlined,
+                )
+            }
+
+            if (startView == StartView.PANEL_GRID) {
+                Spacer(Modifier.height(24.dp))
+                Text(text = "PANEL GRID THEME", style = R1.labelMicro, color = R1.InkSoft)
+                Spacer(Modifier.height(8.dp))
+                hapanelsThemeDefinitions.forEach { definition ->
+                    ChoiceRow(
+                        title = definition.name,
+                        selected = selectedPreset == definition.preset,
+                        onClick = { selectedPresetName = definition.preset.name },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            if (error != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(text = error.orEmpty(), style = R1.body, color = R1.StatusRed)
+            }
+            Spacer(Modifier.height(28.dp))
+            R1Button(
+                text = if (saving) "SAVING..." else "OPEN HAPANELS",
+                enabled = !saving && tabletName.isNotBlank() &&
+                    (startView != StartView.PANEL_GRID || selectedPreset != null && dashboardConfig != null),
+                onClick = {
+                    saving = true
+                    error = null
+                    scope.launch {
+                        try {
+                            if (startView == StartView.PANEL_GRID) {
+                                val current = requireNotNull(dashboardConfig)
+                                when (
+                                    val patchResult = dashboardConfigSource.applyPatch(
+                                        HapanelsDashboardPatch(
+                                            baseRevision = current.revision,
+                                            updatedBy = "hapanels:onboarding",
+                                            theme = current.theme.copy(preset = requireNotNull(selectedPreset)),
+                                        ),
+                                    )
+                                ) {
+                                    is HapanelsDashboardPatchResult.Applied -> dashboardConfig = patchResult.config
+                                    is HapanelsDashboardPatchResult.Conflict -> {
+                                        dashboardConfig = patchResult.currentConfig
+                                        error = "Panel theme changed elsewhere. Retry to apply your selection."
+                                        saving = false
+                                        return@launch
+                                    }
+                                }
+                            }
+                            val expectedTabletName = tabletName.trim()
+                            settings.update { current ->
+                                current.copy(
+                                    tabletFriendlyName = expectedTabletName,
+                                    behavior = current.behavior.copy(startView = startView),
+                                )
+                            }
+                            val persisted = settings.settings.first()
+                            check(
+                                persisted.tabletFriendlyName == expectedTabletName &&
+                                    persisted.behavior.startView == startView
+                            ) { "Personalization verification failed after save" }
+                            onComplete(startView)
+                        } catch (t: CancellationException) {
+                            throw t
+                        } catch (t: Throwable) {
+                            error = t.message ?: "Could not save setup."
+                            saving = false
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChoiceRow(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(R1.ShapeM)
+            .background(if (selected) R1.AccentWarm.copy(alpha = 0.14f) else R1.SurfaceMuted)
+            .border(1.dp, if (selected) R1.AccentWarm else R1.Hairline, R1.ShapeM)
+            .r1Pressable(onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(14.dp)
+                .height(14.dp)
+                .clip(R1.ShapeS)
+                .background(if (selected) R1.AccentWarm else R1.Bg)
+                .border(1.dp, if (selected) R1.AccentWarm else R1.InkMuted, R1.ShapeS),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(
+            text = title.uppercase(),
+            style = R1.labelMicro,
+            color = if (selected) R1.AccentWarm else R1.InkSoft,
+        )
     }
 }
 

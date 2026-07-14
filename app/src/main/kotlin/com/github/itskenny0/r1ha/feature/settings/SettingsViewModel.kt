@@ -90,8 +90,8 @@ class SettingsViewModel(
         it.copy(behavior = it.behavior.copy(showBatteryWhenStatusBarHidden = enabled))
     }
     fun setKioskMode(enabled: Boolean) = update { it.copy(behavior = it.behavior.copy(kioskMode = enabled)) }
-    fun setStartOnDashboard(enabled: Boolean) = update {
-        it.copy(behavior = it.behavior.copy(startOnDashboard = enabled))
+    fun setStartView(startView: com.github.itskenny0.r1ha.core.prefs.StartView) = update {
+        it.copy(behavior = it.behavior.copy(startView = startView))
     }
     fun setStartOnBoot(enabled: Boolean) = update {
         it.copy(behavior = it.behavior.copy(startOnBoot = enabled))

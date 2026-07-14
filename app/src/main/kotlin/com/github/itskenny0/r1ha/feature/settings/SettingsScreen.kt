@@ -88,7 +88,7 @@ private val SECTION_CATEGORY: Map<String, SettingsCategory> = mapOf(
     "DASHBOARD" to SettingsCategory.APPEARANCE,
     "BEHAVIOUR" to SettingsCategory.BEHAVIOUR,
     "INTEGRATIONS" to SettingsCategory.INTEGRATIONS,
-    "TODAY" to SettingsCategory.BROWSE,
+    "DISCOVER" to SettingsCategory.BROWSE,
     "TALK & FIRE" to SettingsCategory.BROWSE,
     "STATUS VIEWS" to SettingsCategory.BROWSE,
     "POWER TOOLS" to SettingsCategory.BROWSE,
@@ -116,6 +116,7 @@ fun SettingsScreen(
     haRepository: com.github.itskenny0.r1ha.core.ha.HaRepository,
     wheelInput: WheelInput,
     panelHardware: PanelHardware,
+    dashboardConfigSource: com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource,
     /** Which category subpage to display. [SettingsCategory.ROOT] shows the
      *  group-cards landing page; other values scope rendering to only the
      *  sections belonging to that category. */
@@ -140,7 +141,6 @@ fun SettingsScreen(
     onOpenLongLivedToken: () -> Unit,
     onOpenSystemHealth: () -> Unit,
     onOpenPanelDiagnostics: () -> Unit,
-    onOpenDashboard: () -> Unit,
     onOpenAreas: () -> Unit,
     onOpenLabels: () -> Unit,
     onOpenFloors: () -> Unit,
@@ -187,7 +187,7 @@ fun SettingsScreen(
     // Per-section modified count — used as a small badge on each Section
     // header so the user can spot 'where did I change things?' even in
     // collapsed/tiered view. Categories without a 1:1 section mapping
-    // (TODAY / TALK & FIRE / STATUS VIEWS / POWER TOOLS) won't appear in
+    // (DISCOVER / TALK & FIRE / STATUS VIEWS / POWER TOOLS) won't appear in
     // this map; their headers stay badge-less.
     val sectionModifiedCount: Map<String, Int> =
         androidx.compose.runtime.remember(s) {
@@ -205,7 +205,7 @@ fun SettingsScreen(
     val allSectionNames = listOf(
         "SERVER", "CARD UI", "BEHAVIOUR",
         "BACKUP & RESTORE", "SECURITY", "DASHBOARD", "INTEGRATIONS", "APPEARANCE",
-        "TODAY", "TALK & FIRE", "STATUS VIEWS", "POWER TOOLS",
+        "DISCOVER", "TALK & FIRE", "STATUS VIEWS", "POWER TOOLS",
     )
     var expandedSections by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(allSectionNames.toSet())
@@ -305,9 +305,6 @@ fun SettingsScreen(
                 )
             },
         )
-    }
-    val dashboardConfigSource = remember(context) {
-        com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource(context.applicationContext)
     }
     val pendingDashboardConfigBlob = androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<String?>(null)
@@ -477,7 +474,7 @@ fun SettingsScreen(
             // Android-Settings-style top-level grouping. Each card opens its
             // own subpage via the [onOpenCategory] callback (wired by
             // AppNavGraph to a settings/<category> route). Browse is a special
-            // case that wraps the navigation rows (TODAY / TALK & FIRE /
+            // case that wraps the navigation rows (DISCOVER / TALK & FIRE /
             // STATUS VIEWS / POWER TOOLS) so they stay reachable from
             // Settings without polluting the config-only group list.
             if (currentCategory == SettingsCategory.ROOT) {
@@ -528,7 +525,7 @@ fun SettingsScreen(
                 item {
                     GroupCard(
                         title = "Przeglądaj",
-                        subtitle = "Dashboard, Assist, sceny i narzędzia",
+                        subtitle = "Wyszukiwanie, Assist, sceny i narzędzia",
                         modifiedCount = 0,
                         onClick = { onOpenCategory(SettingsCategory.BROWSE) },
                     )
@@ -952,12 +949,25 @@ fun SettingsScreen(
                 )
             }
             item {
-                SwitchRow(
-                    label = "Startuj od dashboardu",
-                    subtitle = "Po uruchomieniu pokaż dashboard zamiast stosu kafli. Działa od następnego startu aplikacji.",
-                    checked = s.behavior.startOnDashboard,
-                    onCheckedChange = { vm.setStartOnDashboard(it) },
-                )
+                LabeledControl(label = "Widok startowy") {
+                    SegmentedEnumPicker(
+                        options = com.github.itskenny0.r1ha.core.prefs.StartView.entries,
+                        selected = s.behavior.startView,
+                        label = {
+                            when (it) {
+                                com.github.itskenny0.r1ha.core.prefs.StartView.PANEL_GRID -> "PANEL"
+                                com.github.itskenny0.r1ha.core.prefs.StartView.CARDS -> "KARTY"
+                            }
+                        },
+                        onSelect = { vm.setStartView(it) },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Wybierz siatkę panelu albo stos kart. Zmiana działa od następnego startu aplikacji.",
+                        style = R1.labelMicro,
+                        color = R1.InkMuted,
+                    )
+                }
             }
             item {
                 SwitchRow(
@@ -1731,13 +1741,10 @@ fun SettingsScreen(
             item { SectionDivider() }
             }
 
-            if (shouldShow("TODAY")) {
-            // ── Today — at-a-glance dashboard + quick search ──────────────
-            item { Section("TODAY", expanded = "TODAY" in expandedSections, onToggle = { toggleSection("TODAY") }, modifiedCount = sectionModifiedCount["TODAY"] ?: 0) }
-            if ("TODAY" in expandedSections) {
-            item {
-                NavRow(label = "Dashboard", value = "Weather · People · Next event", onClick = onOpenDashboard)
-            }
+            if (shouldShow("DISCOVER")) {
+            // ── Discover — quick entity search ────────────────────────────
+            item { Section("DISCOVER", expanded = "DISCOVER" in expandedSections, onToggle = { toggleSection("DISCOVER") }, modifiedCount = sectionModifiedCount["DISCOVER"] ?: 0) }
+            if ("DISCOVER" in expandedSections) {
             item {
                 NavRow(label = "Quick Search", value = "Find any entity", onClick = onOpenSearch)
             }

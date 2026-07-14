@@ -8,10 +8,10 @@ const CLOCK_STYLES = ["classic", "compact", "date_top"];
 const COVER_VISUALS = ["blind", "shade", "curtain", "gate"];
 const COVER_DIRECTIONS = ["top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"];
 const AOD_PRESETS = [
-  { id: "night", name: "Nocny zegar", desc: "Ciemno, 1% jasności, sam zegar", aod: { enabled: true, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 1, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
-  { id: "status", name: "Status dom", desc: "Cichy pasek statusu i osoby", aod: { enabled: true, layout: "status_strip", timeout_sec: 180, brightness_percent: 3, background: "#05070a", grid_layout: { type: "fixed_grid", columns_landscape: 4, columns_portrait: 2, gap: "small" } } },
-  { id: "grid", name: "Kafle nocne", desc: "Siatka AOD dla kilku encji", aod: { enabled: true, layout: "grid", timeout_sec: 300, brightness_percent: 4, background: "#080b0f", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "medium" } } },
-  { id: "off", name: "Wyłącz AOD", desc: "Bez wygaszacza ekranu", aod: { enabled: false, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 3, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
+  { id: "night", name: "Nocny zegar", desc: "Ciemno, 1% jasności, sam zegar", aod: { enabled: true, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 1, wake_fade_ms: 500, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
+  { id: "status", name: "Status dom", desc: "Cichy pasek statusu i osoby", aod: { enabled: true, layout: "status_strip", timeout_sec: 180, brightness_percent: 3, wake_fade_ms: 500, background: "#05070a", grid_layout: { type: "fixed_grid", columns_landscape: 4, columns_portrait: 2, gap: "small" } } },
+  { id: "grid", name: "Kafle nocne", desc: "Siatka AOD dla kilku encji", aod: { enabled: true, layout: "grid", timeout_sec: 300, brightness_percent: 4, wake_fade_ms: 500, background: "#080b0f", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "medium" } } },
+  { id: "off", name: "Wyłącz AOD", desc: "Bez wygaszacza ekranu", aod: { enabled: false, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 3, wake_fade_ms: 500, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
 ];
 const AOD_CLOCK_STYLES = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", desc: "Czytelny, spokojny zegar AOD.", treatment: "Lekki font, klasyczny układ godziny i daty." },
@@ -378,6 +378,8 @@ class HapanelsStudioPanel extends HTMLElement {
     aod.layout = this.shadowRoot.getElementById("aod-layout")?.value || aod.layout;
     aod.timeout_sec = Number(this.shadowRoot.getElementById("aod-timeout")?.value) || aod.timeout_sec;
     aod.brightness_percent = Number(this.shadowRoot.getElementById("aod-brightness")?.value) || aod.brightness_percent;
+    const wakeFade = Number(this.shadowRoot.getElementById("aod-wake-fade")?.value ?? aod.wake_fade_ms ?? 500);
+    aod.wake_fade_ms = Number.isFinite(wakeFade) ? Math.min(2000, Math.max(0, Math.round(wakeFade))) : 500;
     aod.background = this.shadowRoot.getElementById("aod-background")?.value?.trim() || aod.background;
     aod.entity_ids = (this.shadowRoot.getElementById("aod-entities")?.value || "").split(",").map((value) => value.trim()).filter(Boolean);
     const grid = aod.grid_layout ||= {};
@@ -1015,6 +1017,7 @@ class HapanelsStudioPanel extends HTMLElement {
             ${this._selectField("aod-layout", "Układ", ["minimal_clock", "status_strip", "grid"], aod.layout || "minimal_clock")}
             ${this._inputField("aod-timeout", "Timeout s", aod.timeout_sec ?? 300, "number")}
             ${this._inputField("aod-brightness", "Jasność %", aod.brightness_percent ?? 3, "number")}
+            ${this._inputField("aod-wake-fade", "Rozjaśnianie ms", aod.wake_fade_ms ?? 500, "number")}
             ${this._inputField("aod-background", "Tło", aod.background || "#000000")}
             ${this._inputField("aod-entities", "Entity IDs", (aod.entity_ids || []).join(", "))}
             ${this._inputField("aod-columns-landscape", "Kolumny L", aod.grid_layout?.columns_landscape ?? 3, "number")}

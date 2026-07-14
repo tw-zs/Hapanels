@@ -29,8 +29,8 @@
     <string name="shortcut_search_long">Quick Search across HA entities</string>
     <string name="shortcut_assist_short">Assist</string>
     <string name="shortcut_assist_long">Talk to Home Assistant</string>
-    <string name="shortcut_today_short">Today</string>
-    <string name="shortcut_today_long">Open the TODAY dashboard</string>
+    <string name="shortcut_panel_grid_short">Panel grid</string>
+    <string name="shortcut_panel_grid_long">Open the Hapanels panel grid</string>
     <string name="shortcut_automations_short">Automations</string>
     <string name="shortcut_automations_long">Browse and trigger automations</string>
 

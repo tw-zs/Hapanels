@@ -23,6 +23,7 @@ class SettingsRepositoryTest {
             assertThat(s.theme).isEqualTo(ThemeId.PRAGMATIC_HYBRID)
             assertThat(s.wheel.stepPercent).isEqualTo(2)
             assertThat(s.favorites).isEmpty()
+            assertThat(s.behavior.startView).isEqualTo(StartView.PANEL_GRID)
             cancelAndConsumeRemainingEvents()
         }
     }
@@ -43,6 +44,25 @@ class SettingsRepositoryTest {
             val w = awaitItem().wheel
             assertThat(w.stepPercent).isEqualTo(10)
             assertThat(w.acceleration).isFalse()
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
+    @Test fun onboardingPreferencesPersist() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val repo = SettingsRepository(context)
+        repo.update {
+            it.copy(
+                tabletFriendlyName = "Kitchen panel",
+                theme = ThemeId.MINIMAL_DARK,
+                behavior = it.behavior.copy(startView = StartView.CARDS),
+            )
+        }
+        SettingsRepository(context).settings.test {
+            val settings = awaitItem()
+            assertThat(settings.tabletFriendlyName).isEqualTo("Kitchen panel")
+            assertThat(settings.theme).isEqualTo(ThemeId.MINIMAL_DARK)
+            assertThat(settings.behavior.startView).isEqualTo(StartView.CARDS)
             cancelAndConsumeRemainingEvents()
         }
     }

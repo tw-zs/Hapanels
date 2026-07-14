@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.roundToInt
@@ -70,6 +71,22 @@ object PanelBrightnessCurve {
         val ratio = (ln(clampedLux + 1f) / ln(1_001f)).coerceIn(0f, 1f)
         return (low + ((high - low) * ratio)).roundToInt().coerceIn(low, high)
     }
+}
+
+object PanelBrightnessFade {
+    private const val STEP_MILLIS = 50
+
+    fun values(fromPercent: Int, toPercent: Int, durationMillis: Int): List<Int> {
+        val from = fromPercent.coerceIn(1, 100)
+        val to = toPercent.coerceIn(1, 100)
+        if (from == to || durationMillis <= 0) return listOf(to)
+        val steps = (durationMillis / STEP_MILLIS).coerceIn(1, 20)
+        return (1..steps)
+            .map { step -> from + ((to - from) * step.toFloat() / steps).roundToInt() }
+            .distinct()
+    }
+
+    fun normalTarget(latestPercent: Int?, preAodPercent: Int?): Int? = latestPercent ?: preAodPercent
 }
 
 class PanelScreenEngine(
@@ -245,9 +262,13 @@ class PanelScreenManager(
     @Volatile
     private var window: Window? = null
     @Volatile
-    private var aodMinBrightnessPercent: Int? = null
+    private var aodBrightnessPercent: Int? = null
+    @Volatile
+    private var aodWakeFadeMillis: Int = 500
     private var aodRestoreBrightnessPercent: Int? = null
-    private var lastAppliedAodBrightnessPercent: Int? = null
+    private val brightnessRequestId = AtomicLong()
+    @Volatile
+    private var brightnessFadeJob: Job? = null
 
     fun attachWindow(window: Window) {
         this.window = window
@@ -285,7 +306,9 @@ class PanelScreenManager(
             state
                 .distinctUntilChanged { a, b -> a.targetBrightnessPercent == b.targetBrightnessPercent }
                 .collect {
-                    if (aodMinBrightnessPercent == null) applyBrightness(it.targetBrightnessPercent)
+                    if (aodBrightnessPercent == null && brightnessFadeJob?.isActive != true) {
+                        applyBrightness(it.targetBrightnessPercent)
+                    }
                 }
         }
     }
@@ -294,60 +317,94 @@ class PanelScreenManager(
         mutableState.value = engine.onUserActivity(reason)
     }
 
-    fun setAodBrightnessOverride(percent: Int?) {
+    fun setAodBrightnessOverride(percent: Int?, wakeFadeMillis: Int = 500) {
         val safePercent = percent?.coerceIn(1, 100)
         if (safePercent != null) {
-            if (aodMinBrightnessPercent == null) {
+            if (aodBrightnessPercent == null) {
                 aodRestoreBrightnessPercent = mutableState.value.targetBrightnessPercent
                     ?: hardware.runtimeState.value.screenBrightnessPercent
             }
-            aodMinBrightnessPercent = safePercent
-            applyAodBrightness(hardware.runtimeState.value.ambientLightLux)
+            aodBrightnessPercent = safePercent
+            aodWakeFadeMillis = wakeFadeMillis.coerceIn(0, 2_000)
+            applyBrightness(safePercent)
             return
         }
-        if (aodMinBrightnessPercent == null) return
-        aodMinBrightnessPercent = null
-        lastAppliedAodBrightnessPercent = null
-        applyBrightness(aodRestoreBrightnessPercent ?: mutableState.value.targetBrightnessPercent)
+        val aodBrightness = aodBrightnessPercent ?: return
+        aodBrightnessPercent = null
+        val preAodBrightness = aodRestoreBrightnessPercent
+        fadeBrightness(
+            fromPercent = aodBrightness,
+            toPercent = PanelBrightnessFade.normalTarget(mutableState.value.targetBrightnessPercent, preAodBrightness),
+            preAodPercent = preAodBrightness,
+            durationMillis = aodWakeFadeMillis,
+        )
         aodRestoreBrightnessPercent = null
     }
 
     private suspend fun publish(next: PanelScreenState) {
         mutableState.value = next
-        if (next.mode == PanelScreenMode.SCREENSAVER && aodMinBrightnessPercent != null) {
-            applyAodBrightness(hardware.runtimeState.value.ambientLightLux)
+    }
+
+    private fun fadeBrightness(fromPercent: Int, toPercent: Int?, preAodPercent: Int?, durationMillis: Int) {
+        val target = toPercent ?: return applyBrightness(null)
+        val values = PanelBrightnessFade.values(fromPercent, target, durationMillis)
+        brightnessFadeJob?.cancel()
+        val requestId = brightnessRequestId.incrementAndGet()
+        val stepDelayMillis = (durationMillis / values.size).toLong()
+        val job = scope.launch {
+            for (percent in values) {
+                if (stepDelayMillis > 0) delay(stepDelayMillis)
+                if (brightnessRequestId.get() != requestId) return@launch
+                applyBrightnessNow(percent)
+            }
+        }
+        brightnessFadeJob = job
+        job.invokeOnCompletion { cause ->
+            if (brightnessFadeJob !== job) return@invokeOnCompletion
+            brightnessFadeJob = null
+            if (
+                cause == null &&
+                aodBrightnessPercent == null &&
+                brightnessRequestId.compareAndSet(requestId, requestId + 1)
+            ) {
+                val completionId = requestId + 1
+                val latestTarget = PanelBrightnessFade.normalTarget(
+                    mutableState.value.targetBrightnessPercent,
+                    preAodPercent,
+                )
+                scope.launch {
+                    if (brightnessRequestId.get() == completionId) applyBrightnessNow(latestTarget)
+                }
+            }
         }
     }
 
-    private fun applyAodBrightness(lux: Float?) {
-        val min = aodMinBrightnessPercent ?: return
-        val max = mutableState.value.targetBrightnessPercent
-            ?: hardware.runtimeState.value.screenBrightnessPercent
-            ?: 100
-        val next = PanelBrightnessCurve.percentForLux(lux, min, max.coerceAtLeast(min))
-        if (next == lastAppliedAodBrightnessPercent) return
-        lastAppliedAodBrightnessPercent = next
-        applyBrightness(next)
+    private fun applyBrightness(percent: Int?) {
+        val requestId = brightnessRequestId.incrementAndGet()
+        val fadeJob = brightnessFadeJob
+        brightnessFadeJob = null
+        fadeJob?.cancel()
+        scope.launch {
+            if (brightnessRequestId.get() == requestId) applyBrightnessNow(percent)
+        }
     }
 
-    private fun applyBrightness(percent: Int?) {
-        scope.launch {
-            if (percent != null && hardware.capabilities.value.supportsScreenBrightness) {
-                hardware.setScreenBrightness(percent)
-                mutableState.value = engine.markAppliedBrightness(percent)
-                return@launch
-            }
-            val targetWindow = window ?: run {
-                mutableState.value = engine.markAppliedBrightness(percent)
-                return@launch
-            }
-            withContext(Dispatchers.Main.immediate) {
-                val attrs = targetWindow.attributes
-                attrs.screenBrightness = percent?.let { it.coerceIn(1, 100) / 100f }
-                    ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-                targetWindow.attributes = attrs
-                mutableState.value = engine.markAppliedBrightness(percent)
-            }
+    private suspend fun applyBrightnessNow(percent: Int?) {
+        if (percent != null && hardware.capabilities.value.supportsScreenBrightness) {
+            hardware.setScreenBrightness(percent)
+            mutableState.value = engine.markAppliedBrightness(percent)
+            return
+        }
+        val targetWindow = window ?: run {
+            mutableState.value = engine.markAppliedBrightness(percent)
+            return
+        }
+        withContext(Dispatchers.Main.immediate) {
+            val attrs = targetWindow.attributes
+            attrs.screenBrightness = percent?.let { it.coerceIn(1, 100) / 100f }
+                ?: WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            targetWindow.attributes = attrs
+            mutableState.value = engine.markAppliedBrightness(percent)
         }
     }
 }

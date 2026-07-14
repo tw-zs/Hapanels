@@ -40,6 +40,7 @@ data class HapanelsAlwaysOnDisplayConfig(
     ),
     @SerialName("timeout_sec") val timeoutSec: Int = 300,
     @SerialName("brightness_percent") val brightnessPercent: Int = 3,
+    @SerialName("wake_fade_ms") val wakeFadeMillis: Int = 500,
     val background: String = "#000000",
     @SerialName("entity_ids") val entityIds: List<String> = emptyList(),
     val tiles: List<HapanelsTileConfig> = emptyList(),
@@ -253,6 +254,7 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     "layout": "grid",
     "timeout_sec": 300,
     "brightness_percent": 3,
+    "wake_fade_ms": 500,
     "background": "#000000",
     "grid_layout": {
       "type": "fixed_grid",

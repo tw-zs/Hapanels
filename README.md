@@ -22,6 +22,7 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
 - Shelly relay, ambient light, brightness, button, and proximity presence support where the hardware exposes it.
 - MQTT discovery/state/command topics for panel controls and diagnostics.
 - Proximity wake, touch wake, auto-brightness, and a native AOD/screensaver.
+- Guided Home Assistant onboarding with OAuth or long-lived token setup, tablet naming, and native start-view/theme choices.
 - Polish-first panel UI for the tablet/Shelly use case.
 
 ## Project Direction

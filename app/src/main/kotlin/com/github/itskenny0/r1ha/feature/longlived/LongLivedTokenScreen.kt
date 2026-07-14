@@ -43,7 +43,10 @@ import com.github.itskenny0.r1ha.ui.components.R1TextField
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.layout.AdaptiveContent
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Long-lived access token setup — alternative to the OAuth flow for
@@ -235,19 +238,44 @@ fun LongLivedTokenScreen(
                                 val newServer = ServerConfig(url = normalisedUrl, haVersion = null)
                                 val cleanedToken = token.filterNot { it.isWhitespace() }
                                 require(cleanedToken.isNotBlank()) { "Empty token" }
-                                settings.update { it.copy(server = newServer) }
-                                tokens.save(
-                                    Tokens(
-                                        accessToken = cleanedToken,
-                                        refreshToken = "",
-                                        // Far-future expiry so ensureFresh's
-                                        // skew check is always satisfied — the
-                                        // empty refreshToken is the real
-                                        // 'don't refresh' signal but a Long.MAX
-                                        // expiry is good documentation too.
-                                        expiresAtMillis = Long.MAX_VALUE,
-                                    ),
+                                val savedTokens = Tokens(
+                                    accessToken = cleanedToken,
+                                    refreshToken = "",
+                                    // Far-future expiry so ensureFresh's
+                                    // skew check is always satisfied — the
+                                    // empty refreshToken is the real
+                                    // 'don't refresh' signal but a Long.MAX
+                                    // expiry is good documentation too.
+                                    expiresAtMillis = Long.MAX_VALUE,
                                 )
+                                val previousTokens = tokens.load()
+                                val previousServer = settings.settings.first().server
+                                try {
+                                    tokens.save(savedTokens)
+                                    check(tokens.load() == savedTokens) {
+                                        "Token verification failed after save"
+                                    }
+                                    settings.update { it.copy(server = newServer) }
+                                    check(settings.settings.first().server?.url == normalisedUrl) {
+                                        "Server verification failed after save"
+                                    }
+                                } catch (t: Throwable) {
+                                    withContext(NonCancellable) {
+                                        runCatching {
+                                            if (previousTokens == null) tokens.clear() else tokens.save(previousTokens)
+                                            check(tokens.load() == previousTokens) {
+                                                "Token rollback verification failed"
+                                            }
+                                        }.onFailure { R1Log.e("LLAT", "token rollback failed", it) }
+                                        runCatching {
+                                            settings.update { it.copy(server = previousServer) }
+                                            check(settings.settings.first().server == previousServer) {
+                                                "Server rollback verification failed"
+                                            }
+                                        }.onFailure { R1Log.e("LLAT", "server rollback failed", it) }
+                                    }
+                                    throw t
+                                }
                                 R1Log.i("LLAT", "saved long-lived token for $normalisedUrl")
                                 // Kick off the connection — the repository
                                 // will pick up the new server + token on the
@@ -257,6 +285,8 @@ fun LongLivedTokenScreen(
                                 haRepository.reconnectNow()
                                 Toaster.show("Long-lived token saved · connecting…")
                                 onBack()
+                            } catch (t: CancellationException) {
+                                throw t
                             } catch (t: Throwable) {
                                 R1Log.w("LLAT", "save failed: ${t.message}")
                                 error = t.message ?: "Save failed"

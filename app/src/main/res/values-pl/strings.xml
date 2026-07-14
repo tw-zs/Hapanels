@@ -4,8 +4,8 @@
     <string name="shortcut_search_long">Szybkie wyszukiwanie encji HA</string>
     <string name="shortcut_assist_short">Asystent</string>
     <string name="shortcut_assist_long">Rozmawiaj z Home Assistant</string>
-    <string name="shortcut_today_short">Dzisiaj</string>
-    <string name="shortcut_today_long">Otwórz panel DZISIAJ</string>
+    <string name="shortcut_panel_grid_short">Panel</string>
+    <string name="shortcut_panel_grid_long">Otwórz siatkę panelu Hapanels</string>
     <string name="shortcut_automations_short">Automatyzacje</string>
     <string name="shortcut_automations_long">Przeglądaj i uruchamiaj automatyzacje</string>
 

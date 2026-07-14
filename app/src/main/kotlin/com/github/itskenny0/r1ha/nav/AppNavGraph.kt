@@ -39,20 +39,8 @@ fun AppNavGraph(
     // they were, exactly like any other in-app nav).
     androidx.compose.runtime.LaunchedEffect(navController) {
         com.github.itskenny0.r1ha.core.util.ShortcutBus.requests.collect { route ->
-            val target = when (route) {
-                "search" -> Routes.SEARCH
-                "assist" -> Routes.ASSIST
-                "dashboard" -> Routes.DASHBOARD
-                "automations" -> Routes.AUTOMATIONS
-                "helpers" -> Routes.HELPERS
-                "energy" -> Routes.ENERGY
-                "zones" -> Routes.ZONES
-                "scenes" -> Routes.SCENES
-                "notifications" -> Routes.NOTIFICATIONS
-                "cameras" -> Routes.CAMERAS
-                "logbook" -> Routes.LOGBOOK
-                else -> null
-            }
+            val currentRoute = navController.currentDestination?.route ?: startDestination
+            val target = shortcutRoute(route, currentRoute)
             if (target != null) {
                 navController.navigate(target) { launchSingleTop = true }
             }
@@ -63,8 +51,10 @@ fun AppNavGraph(
             OnboardingScreen(
                 settings = settings,
                 tokens = tokens,
-                onComplete = {
-                    navController.navigate(Routes.CARD_STACK) {
+                haRepository = haRepository,
+                dashboardConfigSource = dashboardConfigSource,
+                onComplete = { startView ->
+                    navController.navigate(startView.route()) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
                     }
                 },
@@ -109,11 +99,8 @@ fun AppNavGraph(
                 onOpenSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
                 },
-                onOpenDashboard = {
-                    navController.navigate(Routes.DASHBOARD) { launchSingleTop = true }
-                },
                 onOpenPanelGridMockup = {
-                    navController.navigate(Routes.PANEL_GRID_MOCKUP) { launchSingleTop = true }
+                    navController.navigate(Routes.PANEL_GRID) { launchSingleTop = true }
                 },
                 onOpenSearch = {
                     navController.navigate(Routes.SEARCH) { launchSingleTop = true }
@@ -150,7 +137,7 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable(Routes.PANEL_GRID_MOCKUP) {
+        composable(Routes.PANEL_GRID) {
             PanelGridMockupScreen(
                 haRepository = haRepository,
                 dashboardConfigSource = dashboardConfigSource,
@@ -165,6 +152,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ROOT,
             )
         }
@@ -176,6 +164,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.CONNECTION,
             )
         }
@@ -187,6 +176,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.APPEARANCE,
             )
         }
@@ -198,6 +188,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BEHAVIOUR,
             )
         }
@@ -209,6 +200,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.INTEGRATIONS,
             )
         }
@@ -220,6 +212,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.ADVANCED,
             )
         }
@@ -231,6 +224,7 @@ fun AppNavGraph(
                 haRepository = haRepository,
                 wheelInput = wheelInput,
                 panelHardware = panelHardware,
+                dashboardConfigSource = dashboardConfigSource,
                 category = com.github.itskenny0.r1ha.feature.settings.SettingsCategory.BROWSE,
             )
         }
@@ -593,7 +587,7 @@ fun AppNavGraph(
                     navController.navigate(Routes.CARD_STACK) { launchSingleTop = true }
                 },
                 onOpenPanelGridMockup = {
-                    navController.navigate(Routes.PANEL_GRID_MOCKUP) { launchSingleTop = true }
+                    navController.navigate(Routes.PANEL_GRID) { launchSingleTop = true }
                 },
                 onOpenSettings = {
                     navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
@@ -623,6 +617,7 @@ private fun SettingsRouteContent(
     haRepository: HaRepository,
     wheelInput: WheelInput,
     panelHardware: PanelHardware,
+    dashboardConfigSource: HapanelsDashboardConfigSource,
     category: com.github.itskenny0.r1ha.feature.settings.SettingsCategory,
 ) {
     com.github.itskenny0.r1ha.feature.settings.SettingsScreen(
@@ -631,6 +626,7 @@ private fun SettingsRouteContent(
         haRepository = haRepository,
         wheelInput = wheelInput,
         panelHardware = panelHardware,
+        dashboardConfigSource = dashboardConfigSource,
         currentCategory = category,
         onOpenCategory = { target ->
             val route = when (target) {
@@ -660,7 +656,6 @@ private fun SettingsRouteContent(
         onOpenLongLivedToken = { navController.navigate(Routes.LONG_LIVED_TOKEN) { launchSingleTop = true } },
         onOpenSystemHealth = { navController.navigate(Routes.SYSTEM_HEALTH) { launchSingleTop = true } },
         onOpenPanelDiagnostics = { navController.navigate(Routes.PANEL_DIAGNOSTICS) { launchSingleTop = true } },
-        onOpenDashboard = { navController.navigate(Routes.DASHBOARD) { launchSingleTop = true } },
         onOpenAreas = { navController.navigate(Routes.AREAS) { launchSingleTop = true } },
         onOpenLabels = { navController.navigate(Routes.LABELS) { launchSingleTop = true } },
         onOpenFloors = { navController.navigate(Routes.FLOORS) { launchSingleTop = true } },

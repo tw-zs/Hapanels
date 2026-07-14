@@ -133,7 +133,8 @@ class SettingsRepository private constructor(
         val behaviorHideStatus = booleanPreferencesKey("behavior.hide_status_bar")
         val behaviorShowBatteryWhenHidden = booleanPreferencesKey("behavior.show_battery_when_status_bar_hidden")
         val behaviorKioskMode = booleanPreferencesKey("behavior.kiosk_mode")
-        val behaviorStartOnDashboard = booleanPreferencesKey("behavior.start_on_dashboard")
+        val behaviorStartView = stringPreferencesKey("behavior.start_view")
+        val legacyBehaviorStartOnDashboard = booleanPreferencesKey("behavior.start_on_dashboard")
         val behaviorStartOnBoot = booleanPreferencesKey("behavior.start_on_boot")
         val behaviorHardwareProviderMode = stringPreferencesKey("behavior.hardware_provider_mode")
         val behaviorWheelTogglesSwitches = booleanPreferencesKey("behavior.wheel_toggles_switches")
@@ -259,7 +260,10 @@ class SettingsRepository private constructor(
                     hideStatusBar = p[K.behaviorHideStatus] ?: false,
                     showBatteryWhenStatusBarHidden = p[K.behaviorShowBatteryWhenHidden] ?: false,
                     kioskMode = p[K.behaviorKioskMode] ?: false,
-                    startOnDashboard = p[K.behaviorStartOnDashboard] ?: true,
+                    startView = persistedStartView(
+                        value = p[K.behaviorStartView],
+                        legacyStartOnDashboard = p[K.legacyBehaviorStartOnDashboard],
+                    ),
                     startOnBoot = p[K.behaviorStartOnBoot] ?: false,
                     hardwareProviderMode = p[K.behaviorHardwareProviderMode]
                         ?.let { runCatching { HardwareProviderMode.valueOf(it) }.getOrNull() }
@@ -398,7 +402,8 @@ class SettingsRepository private constructor(
                 p[K.behaviorHideStatus] = next.behavior.hideStatusBar
                 p[K.behaviorShowBatteryWhenHidden] = next.behavior.showBatteryWhenStatusBarHidden
                 p[K.behaviorKioskMode] = next.behavior.kioskMode
-                p[K.behaviorStartOnDashboard] = next.behavior.startOnDashboard
+                p[K.behaviorStartView] = next.behavior.startView.name
+                p.remove(K.legacyBehaviorStartOnDashboard)
                 p[K.behaviorStartOnBoot] = next.behavior.startOnBoot
                 p[K.behaviorHardwareProviderMode] = next.behavior.hardwareProviderMode.name
                 p[K.behaviorWheelTogglesSwitches] = next.behavior.wheelTogglesSwitches

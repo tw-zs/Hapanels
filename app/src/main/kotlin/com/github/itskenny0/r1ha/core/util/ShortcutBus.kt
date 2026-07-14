@@ -1,9 +1,8 @@
 package com.github.itskenny0.r1ha.core.util
 
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 
 /**
  * One-way channel from [com.github.itskenny0.r1ha.MainActivity]'s
@@ -18,28 +17,18 @@ import kotlinx.coroutines.flow.asSharedFlow
  *   - Warm start (MainActivity.onNewIntent → AppNavGraph already in
  *     composition).
  *
- * A `SharedFlow` with `extraBufferCapacity = 1` + DROP_OLDEST is
- * exactly the right shape: if the nav graph hasn't subscribed yet
- * (cold start before first compose), the single buffered emission
- * sits waiting; if the user mashes a shortcut twice quickly, the
- * second tap replaces the first rather than queuing both.
- *
- * We do NOT use a replay buffer because the nav graph's
- * LaunchedEffect re-collects across recomposition; a replay buffer
- * would cause the same route to be pushed onto the back stack on
- * every recomposition, which is exactly the bug we want to avoid.
+ * A conflated channel retains the latest route before the nav graph
+ * subscribes and delivers each route to one collector exactly once.
+ * If the user mashes shortcuts before delivery, the latest wins.
  */
 object ShortcutBus {
-    private val _requests = MutableSharedFlow<String>(
-        extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
-    val requests: SharedFlow<String> = _requests.asSharedFlow()
+    private val channel = Channel<String>(Channel.CONFLATED)
+    val requests: Flow<String> = channel.receiveAsFlow()
 
     /** Push a route name onto the bus. Called from
      *  [com.github.itskenny0.r1ha.MainActivity] on app-shortcut
      *  intent delivery. */
     fun request(route: String) {
-        _requests.tryEmit(route)
+        channel.trySend(route)
     }
 }

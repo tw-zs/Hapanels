@@ -20,7 +20,7 @@ import com.github.itskenny0.r1ha.R
  *
  * Tap target: the whole tile fires a single PendingIntent to MainActivity.
  * Future expansion: a configuration activity could let the user pick an
- * initial_route (assist / search / dashboard / today) — for now we always
+ * initial_route (assist / search / panel grid) — for now we always
  * launch the default screen so the widget is a clean app shortcut.
  */
 class R1haWidgetProvider : AppWidgetProvider() {

@@ -1,5 +1,41 @@
 package com.github.itskenny0.r1ha.nav
 
+import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.prefs.StartView
+import com.github.itskenny0.r1ha.core.prefs.Tokens
+
+fun StartView.route(): String = when (this) {
+    StartView.PANEL_GRID -> Routes.PANEL_GRID
+    StartView.CARDS -> Routes.CARD_STACK
+}
+
+fun startupDestination(settings: AppSettings, tokens: Tokens?): String =
+    if (settings.server == null || tokens?.accessToken.isNullOrBlank()) {
+        Routes.ONBOARDING
+    } else {
+        settings.behavior.startView.route()
+    }
+
+fun shortcutRoute(value: String): String? = when (value) {
+    "search" -> Routes.SEARCH
+    "assist" -> Routes.ASSIST
+    "panel_grid" -> Routes.PANEL_GRID
+    // Cached pre-migration launcher shortcuts must open grid, never Today.
+    "dashboard", "today" -> Routes.PANEL_GRID
+    "automations" -> Routes.AUTOMATIONS
+    "helpers" -> Routes.HELPERS
+    "energy" -> Routes.ENERGY
+    "zones" -> Routes.ZONES
+    "scenes" -> Routes.SCENES
+    "notifications" -> Routes.NOTIFICATIONS
+    "cameras" -> Routes.CAMERAS
+    "logbook" -> Routes.LOGBOOK
+    else -> null
+}
+
+fun shortcutRoute(value: String, currentDestination: String?): String? =
+    if (currentDestination == Routes.ONBOARDING) null else shortcutRoute(value)
+
 /** All top-level navigation destinations as stable string routes. */
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -34,7 +70,7 @@ object Routes {
     const val SYSTEM_HEALTH = "system_health"
     const val PANEL_DIAGNOSTICS = "panel_diagnostics"
     const val DASHBOARD = "dashboard"
-    const val PANEL_GRID_MOCKUP = "panel_grid_mockup"
+    const val PANEL_GRID = "panel_grid"
     const val AREAS = "areas"
     const val LABELS = "labels"
     const val FLOORS = "floors"

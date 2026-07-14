@@ -249,3 +249,25 @@ Verification:
 - Invalid credentials and unreachable brokers show useful errors.
 - Studio status reflects actual configuration-sync availability.
 - Both steps can be skipped without blocking onboarding.
+
+## Milestone 12: Adaptive Display Brightness
+
+Goal: keep AOD readable during the day and keep both AOD and the active panel comfortable at night.
+
+Status: planned.
+
+Tasks:
+- Replace separate AOD and panel brightness behavior with one ambient-light controller.
+- Add independently tunable AOD and active-panel brightness curves with calibrated minimum and maximum levels.
+- Smooth noisy lux readings and use hysteresis, dwell time, and gradual transitions to prevent visible brightness jumps.
+- Prevent feedback where screen brightness changes alter the panel's own ambient-light reading.
+- Preserve manual brightness as an explicit override with a clear path back to adaptive mode.
+- Expose calibration and diagnostics in Hapanels Studio, including lux, filtered lux, target brightness, applied brightness, and active override source.
+- Tune day, evening, and night behavior on mounted Shelly Wall Display hardware.
+
+Verification:
+- AOD remains readable in a bright room without running at unnecessary full brightness.
+- AOD and the active panel do not dazzle in a dark room.
+- Walking toward the panel and leaving AOD produces no flash, dip, or oscillation.
+- Rapid or screen-induced lux changes do not cause repeated brightness writes.
+- Behavior remains predictable with auto-brightness disabled or the ambient-light sensor unavailable.

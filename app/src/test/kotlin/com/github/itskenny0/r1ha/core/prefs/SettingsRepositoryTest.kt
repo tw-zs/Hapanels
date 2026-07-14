@@ -49,8 +49,7 @@ class SettingsRepositoryTest {
     }
 
     @Test fun onboardingPreferencesPersist() = runTest {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val repo = SettingsRepository(context)
+        val repo = newRepo()
         repo.update {
             it.copy(
                 tabletFriendlyName = "Kitchen panel",
@@ -58,7 +57,7 @@ class SettingsRepositoryTest {
                 behavior = it.behavior.copy(startView = StartView.CARDS),
             )
         }
-        SettingsRepository(context).settings.test {
+        repo.settings.test {
             val settings = awaitItem()
             assertThat(settings.tabletFriendlyName).isEqualTo("Kitchen panel")
             assertThat(settings.theme).isEqualTo(ThemeId.MINIMAL_DARK)

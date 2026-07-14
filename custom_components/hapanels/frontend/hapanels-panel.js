@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260708-aod-style-pack";
+const STUDIO_FRONTEND_VERSION = "20260714-aod-preview-styles";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
 const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
@@ -24,6 +24,9 @@ const AOD_CLOCK_STYLES = [
   { id: "modern", name: "Nowoczesny", category: "Kolorowe abstrakcje", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
   { id: "popart", name: "Popart", category: "Kolorowe abstrakcje", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
   { id: "popart_multiples", name: "Fabryka Koloru", category: "Kolorowe abstrakcje", desc: "Popartowy zegar z powielonymi warstwami koloru.", treatment: "Multiplikowane cyfry, mocne przesunięcia i plakatowa energia." },
+  { id: "neon_baltic", name: "Neon Bałtyk", category: "Kolorowe abstrakcje", desc: "Neonowy zegar inspirowany światłami nad Bałtykiem.", treatment: "Gradientowe cyfry, świetlna poświata i kolorowe smugi." },
+  { id: "electric_stained_glass", name: "Elektryczny Witraż", category: "Kolorowe abstrakcje", desc: "Zegar z energią kolorowego szkła.", treatment: "Wielobarwne cyfry i geometryczne tafle na czarnym tle." },
+  { id: "poznan_goats", name: "Poznańskie Koziołki", category: "Polskie inspiracje", desc: "Poznański zegar z koziołkami ratuszowymi.", treatment: "Bursztynowa typografia i sylwetki koziołków nad godziną." },
 ];
 const PANEL_THEME_PRESETS = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
@@ -688,6 +691,11 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-clock-preview.italic_editorial .time { font-weight: 400; letter-spacing: -.04em; }
           .aod-clock-preview.fullscreen_bold .time { font-size: 44px; font-weight: 950; letter-spacing: -.08em; }
           .aod-clock-preview.fullscreen_heavy .time { font-size: 52px; font-weight: 950; letter-spacing: -.12em; text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff; }
+          .aod-clock-preview.neon_baltic { background: linear-gradient(160deg, rgba(0,229,255,.18), transparent 45%, rgba(255,60,172,.18)), #02030a; color: #83dfff; }
+          .aod-clock-preview.neon_baltic .time { color: #7effff; text-shadow: 0 0 12px #438cff; }
+          .aod-clock-preview.electric_stained_glass { background: linear-gradient(110deg, rgba(255,60,172,.28) 0 33%, rgba(0,229,255,.24) 33% 66%, rgba(255,214,0,.25) 66%), #050505; color: #ffd600; }
+          .aod-clock-preview.electric_stained_glass .time { text-shadow: 3px 3px 0 #111; }
+          .aod-clock-preview.poznan_goats { background: radial-gradient(circle at 50% 12%, rgba(255,190,24,.26), transparent 34%), #05080a; color: #ffbe18; font-family: Georgia, serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
         .picker-filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }

@@ -14,15 +14,18 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,8 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -750,6 +756,8 @@ private fun AodClock(
     val orbitron = FontFamily(Font(R.font.orbitron_wght, FontWeight.SemiBold))
     val cinzel = FontFamily(Font(R.font.cinzel_wght, FontWeight.Bold))
     val playfairItalic = FontFamily(Font(R.font.playfair_display_italic_wght, FontWeight.Normal, FontStyle.Italic))
+    val poltawski = FontFamily(Font(R.font.poltawski_nowy_wght, FontWeight.Normal))
+    val glassAntiqua = FontFamily(Font(R.font.glass_antiqua_regular, FontWeight.Normal))
 
     if (style == HapanelsAodClockStyle.FULLSCREEN_HEAVY) {
         BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -935,6 +943,110 @@ private fun AodClock(
         return
     }
 
+    if (style == HapanelsAodClockStyle.NEON_BALTIC) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            val timeSize = minOf(maxWidth.value / 3.4f, maxHeight.value / 2.1f).sp
+            val dateSize = minOf(maxWidth.value / 28f, maxHeight.value / 15f).sp
+            Canvas(Modifier.fillMaxSize()) {
+                listOf(Color(0xFF00E5FF), Color(0xFF2979FF), Color(0xFFFF3CAC)).forEachIndexed { index, color ->
+                    val y = size.height * (0.34f + index * 0.16f)
+                    drawLine(
+                        color.copy(alpha = 0.12f * alpha),
+                        Offset(size.width * 0.12f, y),
+                        Offset(size.width * 0.88f, y + size.height * 0.035f),
+                        strokeWidth = size.height * 0.018f,
+                    )
+                }
+            }
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = timeText,
+                    style = R1.numeralXl.copy(
+                        fontFamily = bigShoulders,
+                        fontSize = timeSize,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        brush = Brush.linearGradient(
+                            listOf(Color(0xFF7EFFFF), Color(0xFF438CFF), Color(0xFFFF4FCB)).map { it.copy(alpha = alpha) },
+                        ),
+                        shadow = Shadow(Color(0xFF00D9FF).copy(alpha = 0.67f * alpha), blurRadius = 24f),
+                    ),
+                    color = Color.Unspecified,
+                    maxLines = 1,
+                )
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = dateText,
+                    style = R1.body.copy(fontSize = dateSize, fontWeight = FontWeight.SemiBold, letterSpacing = 4.sp),
+                    color = Color(0xFF83DFFF).copy(alpha = alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        return
+    }
+
+    if (style == HapanelsAodClockStyle.ELECTRIC_STAINED_GLASS) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            val timeSize = minOf(maxWidth.value / 4.1f, maxHeight.value / 1.9f).sp
+            val dateSize = minOf(maxWidth.value / 30f, maxHeight.value / 17f).sp
+            Canvas(Modifier.fillMaxSize()) {
+                drawRect(Color(0xFFFF3CAC).copy(alpha = 0.13f * alpha), Offset(size.width * 0.08f, size.height * 0.18f), androidx.compose.ui.geometry.Size(size.width * 0.31f, size.height * 0.57f))
+                drawRect(Color(0xFF00E5FF).copy(alpha = 0.13f * alpha), Offset(size.width * 0.34f, size.height * 0.09f), androidx.compose.ui.geometry.Size(size.width * 0.28f, size.height * 0.74f))
+                drawRect(Color(0xFFFFD600).copy(alpha = 0.13f * alpha), Offset(size.width * 0.58f, size.height * 0.22f), androidx.compose.ui.geometry.Size(size.width * 0.34f, size.height * 0.53f))
+                for (x in 1..5) {
+                    drawLine(Color.Black.copy(alpha = 0.4f * alpha), Offset(size.width * x / 6f, size.height * 0.12f), Offset(size.width * (x - 1) / 6f, size.height * 0.88f), strokeWidth = 8f)
+                }
+            }
+            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                ElectricAodTime(timeText, timeSize, glassAntiqua, alpha)
+                Box(modifier = Modifier.background(Color(0xFFE93391).copy(alpha = alpha)).padding(horizontal = 22.dp, vertical = 5.dp)) {
+                    com.github.itskenny0.r1ha.ui.i18n.Text(
+                        text = dateText.uppercase(Locale("pl", "PL")),
+                        style = R1.body.copy(fontSize = dateSize, fontWeight = FontWeight.Black, letterSpacing = 2.sp),
+                        color = Color.Black.copy(alpha = alpha),
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+        return
+    }
+
+    if (style == HapanelsAodClockStyle.POZNAN_GOATS) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+            val timeSize = minOf(maxWidth.value / 4.5f, maxHeight.value / 3.2f).sp
+            val dateSize = minOf(maxWidth.value / 31f, maxHeight.value / 18f).sp
+            Column(
+                modifier = Modifier.fillMaxSize().offset(y = (-24).dp).padding(top = 30.dp),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.hapanels_aod_poznan_cropped),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxWidth(0.30f).aspectRatio(1536f / 700f),
+                    contentScale = ContentScale.Fit,
+                    alpha = alpha,
+                )
+                Spacer(Modifier.height(5.dp))
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = timeText,
+                    style = R1.numeralXl.copy(fontFamily = poltawski, fontSize = timeSize, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp, shadow = Shadow(Color(0xFFFF9F00).copy(alpha = 0.67f * alpha), blurRadius = 18f)),
+                    color = Color(0xFFFFBE18).copy(alpha = alpha),
+                    maxLines = 1,
+                )
+                com.github.itskenny0.r1ha.ui.i18n.Text(
+                    text = dateText,
+                    style = R1.body.copy(fontFamily = poltawski, fontSize = dateSize, fontWeight = FontWeight.Normal, letterSpacing = 1.sp),
+                    color = Color(0xFFA9C7D8).copy(alpha = alpha),
+                    maxLines = 1,
+                )
+            }
+        }
+        return
+    }
+
     val (timeStyle, timeColor, dateColor) = when (style) {
         HapanelsAodClockStyle.ZEW_PUSZCZY -> Triple(
             R1.numeralXl.copy(
@@ -981,6 +1093,9 @@ private fun AodClock(
         HapanelsAodClockStyle.CYBERPUNK_KORPO,
         HapanelsAodClockStyle.POPART_MULTIPLES,
         HapanelsAodClockStyle.ITALIC_EDITORIAL,
+        HapanelsAodClockStyle.NEON_BALTIC,
+        HapanelsAodClockStyle.ELECTRIC_STAINED_GLASS,
+        HapanelsAodClockStyle.POZNAN_GOATS,
         HapanelsAodClockStyle.FULLSCREEN_BOLD,
         HapanelsAodClockStyle.FULLSCREEN_HEAVY -> Triple(
             R1.numeralXl.copy(letterSpacing = 0.sp),
@@ -1016,6 +1131,27 @@ private fun AodClock(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun ElectricAodTime(time: String, fontSize: androidx.compose.ui.unit.TextUnit, fontFamily: FontFamily, alpha: Float) {
+    val colors = listOf(Color(0xFFFFD600), Color(0xFFFF3CAC), Color(0xFF00E5FF), Color(0xFFFF7A00), Color(0xFF7CFF6B))
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        time.forEachIndexed { index, character ->
+            com.github.itskenny0.r1ha.ui.i18n.Text(
+                text = character.toString(),
+                style = androidx.compose.ui.text.TextStyle(
+                    fontFamily = fontFamily,
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = (-4).sp,
+                    shadow = Shadow(Color.Black.copy(alpha = alpha), Offset(5f, 5f), 0f),
+                ),
+                color = colors[index % colors.size].copy(alpha = alpha),
+                maxLines = 1,
+            )
+        }
     }
 }
 

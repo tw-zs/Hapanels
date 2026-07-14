@@ -64,6 +64,9 @@ enum class HapanelsAodClockStyle {
     @SerialName("italic_editorial") ITALIC_EDITORIAL,
     @SerialName("fullscreen_bold") FULLSCREEN_BOLD,
     @SerialName("fullscreen_heavy") FULLSCREEN_HEAVY,
+    @SerialName("neon_baltic") NEON_BALTIC,
+    @SerialName("electric_stained_glass") ELECTRIC_STAINED_GLASS,
+    @SerialName("poznan_goats") POZNAN_GOATS,
 }
 
 @Serializable

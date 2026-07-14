@@ -9,5 +9,7 @@ Fonts added for AOD clock styles:
 - Orbitron variable weight: SIL Open Font License 1.1, from Google Fonts `ofl/orbitron`.
 - Cinzel variable weight: SIL Open Font License 1.1, from Google Fonts `ofl/cinzel`.
 - Playfair Display Italic variable weight: SIL Open Font License 1.1, from Google Fonts `ofl/playfairdisplay`.
+- Glass Antiqua Regular: SIL Open Font License 1.1, from Google Fonts `ofl/glassantiqua`.
+- Poltawski Nowy variable weight: SIL Open Font License 1.1, from Google Fonts `ofl/poltawskinowy`.
 
 - Zaklad Regular: repository README says "SIL Open Font"; added from `warszawskie-kroje/zaklad` after project owner confirmation that Warszawskie Kroje are SIL licensed. Repository has no root `LICENSE` file as of 2026-07-07.

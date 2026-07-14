@@ -319,6 +319,16 @@ class PanelScreenManager(
 
     fun setAodBrightnessOverride(percent: Int?, wakeFadeMillis: Int = 500) {
         val safePercent = percent?.coerceIn(1, 100)
+        if (safePercent == 100) {
+            if (aodBrightnessPercent == null) return
+            aodBrightnessPercent = null
+            val preAodBrightness = aodRestoreBrightnessPercent
+            aodRestoreBrightnessPercent = null
+            applyBrightness(
+                PanelBrightnessFade.normalTarget(mutableState.value.targetBrightnessPercent, preAodBrightness),
+            )
+            return
+        }
         if (safePercent != null) {
             if (aodBrightnessPercent == null) {
                 aodRestoreBrightnessPercent = mutableState.value.targetBrightnessPercent

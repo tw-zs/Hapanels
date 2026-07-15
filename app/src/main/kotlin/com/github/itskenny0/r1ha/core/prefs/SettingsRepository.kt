@@ -14,7 +14,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -100,10 +102,12 @@ class SettingsRepository private constructor(
             context: Context,
             datastoreName: String,
             shadowName: String = "${datastoreName}_shadow",
+            scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
         ): SettingsRepository {
             val appContext = context.applicationContext
             return SettingsRepository(
                 store = PreferenceDataStoreFactory.create(
+                    scope = scope,
                     produceFile = { appContext.preferencesDataStoreFile(datastoreName) },
                 ),
                 shadow = appContext.getSharedPreferences(shadowName, Context.MODE_PRIVATE),

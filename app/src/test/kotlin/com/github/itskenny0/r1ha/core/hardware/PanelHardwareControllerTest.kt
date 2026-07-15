@@ -19,10 +19,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class PanelHardwareControllerTest {
 
-    private fun newRepo(): SettingsRepository =
+    private fun TestScope.newRepo(): SettingsRepository =
         SettingsRepository.forTesting(
             ApplicationProvider.getApplicationContext(),
             datastoreName = "panel_hardware_${System.nanoTime()}",
+            scope = backgroundScope,
         )
 
     @Test fun sanitizePanelSensorReadingDropsInvalidValues() {

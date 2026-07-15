@@ -53,6 +53,7 @@ class PanelScreenManagerAodTest {
             settingsRepository = SettingsRepository.forTesting(
                 context = ApplicationProvider.getApplicationContext(),
                 datastoreName = "panel_screen_${System.nanoTime()}",
+                scope = backgroundScope,
             ),
             hardware = hardware,
             scope = backgroundScope,

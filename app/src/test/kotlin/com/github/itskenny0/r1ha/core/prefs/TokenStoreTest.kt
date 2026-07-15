@@ -2,6 +2,7 @@ package com.github.itskenny0.r1ha.core.prefs
 
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -12,12 +13,13 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class TokenStoreTest {
     // Each test gets its own shared SoftwareKeyProvider so save/load use the same key instance.
-    private fun newStore(keyProvider: TokenStore.KeyProvider = SoftwareKeyProvider()) =
+    private fun TestScope.newStore(keyProvider: TokenStore.KeyProvider = SoftwareKeyProvider()) =
         TokenStore(
             context = ApplicationProvider.getApplicationContext(),
             datastoreName = "test_tokens_${System.nanoTime()}",
             keyAlias = "test_alias_${System.nanoTime()}",
             keystoreProvider = keyProvider,
+            storeScope = backgroundScope,
         )
 
     @Test fun roundtripStoresAndRetrievesTokens() = runTest {

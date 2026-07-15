@@ -3,6 +3,7 @@ package com.github.itskenny0.r1ha.core.prefs
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,8 +14,12 @@ import org.robolectric.annotation.Config
 @Config(sdk = [33])
 class SettingsRepositoryTest {
 
-    private fun newRepo(): SettingsRepository =
-        SettingsRepository.forTesting(ApplicationProvider.getApplicationContext(), datastoreName = "test_settings_${System.nanoTime()}")
+    private fun TestScope.newRepo(): SettingsRepository =
+        SettingsRepository.forTesting(
+            ApplicationProvider.getApplicationContext(),
+            datastoreName = "test_settings_${System.nanoTime()}",
+            scope = backgroundScope,
+        )
 
     @Test fun defaults() = runTest {
         val repo = newRepo()

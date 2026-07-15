@@ -7,6 +7,10 @@ import com.github.itskenny0.r1ha.core.prefs.SoftwareKeyProvider
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
 import com.github.itskenny0.r1ha.core.prefs.Tokens
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -25,24 +29,31 @@ class TokenRefresherTest {
     private lateinit var server: MockWebServer
     private lateinit var settings: SettingsRepository
     private lateinit var tokens: TokenStore
+    private lateinit var dataStoreScope: CoroutineScope
 
     @Before fun setUp() {
         server = MockWebServer().apply { start() }
+        dataStoreScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         settings = SettingsRepository.forTesting(
             context = context,
             datastoreName = "tr_settings_${System.nanoTime()}",
             shadowName = "tr_shadow_${System.nanoTime()}",
+            scope = dataStoreScope,
         )
         tokens = TokenStore(
             context = context,
             datastoreName = "tr_tokens_${System.nanoTime()}",
             keyAlias = "tr_key_${System.nanoTime()}",
             keystoreProvider = SoftwareKeyProvider(),
+            storeScope = dataStoreScope,
         )
     }
 
-    @After fun tearDown() { server.shutdown() }
+    @After fun tearDown() {
+        dataStoreScope.cancel()
+        server.shutdown()
+    }
 
     private fun newRefresher() = TokenRefresher(
         http = OkHttpClient(),

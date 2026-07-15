@@ -12,6 +12,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -42,12 +43,18 @@ class DefaultHaRepositoryTest {
         server.start()
 
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val prefs = SettingsRepository.forTesting(ctx, datastoreName = "t_${System.nanoTime()}")
+        val dataStoreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val prefs = SettingsRepository.forTesting(
+            ctx,
+            datastoreName = "t_${System.nanoTime()}",
+            scope = dataStoreScope,
+        )
         val tokens = TokenStore(
             ctx,
             datastoreName = "tk_${System.nanoTime()}",
             keyAlias = "ta_${System.nanoTime()}",
             keystoreProvider = SoftwareKeyProvider(),
+            storeScope = dataStoreScope,
         )
         val baseUrl = server.url("/").toString().trimEnd('/')
         prefs.update { it.copy(server = ServerConfig(url = baseUrl), favorites = listOf("light.kitchen")) }
@@ -58,6 +65,7 @@ class DefaultHaRepositoryTest {
             .build()
         // Use a real scope for the WS client so OkHttp callbacks fire on its threads
         val wsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         val ws = HaWebSocketClient(http = http, scope = wsScope)
 
         // Connect the WS directly — bypasses DataStore so no main-looper deadlock
@@ -79,8 +87,7 @@ class DefaultHaRepositoryTest {
         Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
 
         // Now start the repo — WS is already Connected so connectFromSettings() is a no-op
-        val repo = DefaultHaRepository(ws, http, prefs, tokens,
-            scope = CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        val repo = DefaultHaRepository(ws, http, prefs, tokens, scope = repoScope)
         repo.start()
 
         // repo's state listener sees Connected → resubscribe() fires; DataStore is pre-populated
@@ -113,6 +120,9 @@ class DefaultHaRepositoryTest {
         }
 
         repo.stop()
+        repoScope.cancel()
+        wsScope.cancel()
+        dataStoreScope.cancel()
         server.shutdown()
         http.dispatcher.executorService.shutdown()
         http.connectionPool.evictAll()

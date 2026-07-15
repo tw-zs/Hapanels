@@ -14,7 +14,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.security.KeyStore
@@ -42,6 +44,7 @@ class TokenStore(
     private val keyAlias: String = "r1ha_token_key",
     /** Override in tests to "PKCS12" or similar when AndroidKeyStore is unavailable. */
     private val keystoreProvider: KeyProvider = AndroidKeyProvider,
+    storeScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) {
     interface KeyProvider {
         fun getOrCreateKey(alias: String): SecretKey
@@ -64,6 +67,7 @@ class TokenStore(
     }
 
     private val store: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+        scope = storeScope,
         produceFile = { context.preferencesDataStoreFile(datastoreName) },
     )
 

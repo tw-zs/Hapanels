@@ -3,6 +3,7 @@ package com.github.itskenny0.r1ha.feature.onboarding
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,9 +36,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
@@ -221,12 +229,19 @@ fun OnboardingScreen(
 
         else -> {
             // Idle / Probing / Error all show the URL entry form.
+            if (s !is OnboardingViewModel.State.Probing) {
+                BackHandler {
+                    vm.resetError()
+                    step = 0
+                }
+            }
             UrlEntryForm(
                 isProbing = s is OnboardingViewModel.State.Probing,
                 error = (s as? OnboardingViewModel.State.Error)?.message,
                 onProbe = { vm.probe(it) },
                 onErrorDismiss = { vm.resetError() },
                 onUseLongLivedToken = onOpenLongLivedToken,
+                onBack = { step = 0 },
             )
         }
     }
@@ -239,31 +254,50 @@ private fun WelcomeScreen(onStart: () -> Unit) {
             .fillMaxSize()
             .background(R1.Bg)
             .systemBarsPadding()
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = 32.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 560.dp),
-            horizontalAlignment = Alignment.Start,
+            modifier = Modifier
+                .widthIn(max = 800.dp)
+                .fillMaxHeight()
+                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Text(text = "HAPANELS", style = R1.labelMicro, color = R1.AccentWarm)
-            Spacer(Modifier.height(12.dp))
+            Image(
+                painter = painterResource(com.github.itskenny0.r1ha.R.drawable.hapanels_logo),
+                contentDescription = "Hapanels",
+                modifier = Modifier.width(190.dp).height(190.dp),
+            )
             Text(
-                text = "Your home.\nOne simple panel.",
-                style = R1.screenTitle,
+                text = "Welcome to Hapanels!",
+                style = R1.screenTitle.copy(fontSize = 40.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold),
                 color = R1.Ink,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
-                text = "Connect Home Assistant, name this tablet, and choose what opens first.",
-                style = R1.body,
-                color = R1.InkMuted,
+                text = "Your home. One simple panel.",
+                style = R1.body.copy(fontSize = 21.sp),
+                color = R1.InkSoft,
             )
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(34.dp))
+            Text(
+                text = "Control lights, temperature, blinds, and other devices from one screen.",
+                style = R1.body.copy(fontSize = 17.sp),
+                color = R1.Ink,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Next, connect this panel to your home and choose what it should display.",
+                style = R1.body.copy(fontSize = 16.sp),
+                color = R1.InkSoft,
+            )
+            Spacer(Modifier.height(38.dp))
             R1Button(
                 text = "START SETUP",
                 onClick = onStart,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
             )
         }
     }
@@ -287,6 +321,7 @@ private fun PersonalizeScreen(
     var dashboardConfig by remember { mutableStateOf<HapanelsDashboardConfig?>(null) }
     var selectedPresetName by rememberSaveable { mutableStateOf<String?>(null) }
     var startViewName by rememberSaveable { mutableStateOf(initialSettings.behavior.startView.name) }
+    var personalizePage by rememberSaveable { mutableStateOf(0) }
     var saving by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     val selectedPreset = selectedPresetName?.let { name ->
@@ -294,6 +329,8 @@ private fun PersonalizeScreen(
     }
     val startView = runCatching { StartView.valueOf(startViewName) }
         .getOrDefault(StartView.PANEL_GRID)
+
+    BackHandler(enabled = personalizePage == 1) { personalizePage = 0 }
 
     LaunchedEffect(dashboardConfigSource) {
         try {
@@ -316,120 +353,159 @@ private fun PersonalizeScreen(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 560.dp)
+                .widthIn(max = 800.dp)
                 .fillMaxHeight()
                 .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                .padding(horizontal = 22.dp, vertical = 32.dp),
+                .padding(horizontal = 24.dp, vertical = 28.dp),
         ) {
-            Text(text = "03 · PERSONALISE", style = R1.labelMicro, color = R1.AccentWarm)
-            Spacer(Modifier.height(8.dp))
-            Text(text = "Make it yours.", style = R1.screenTitle, color = R1.Ink)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Connection saved. These choices can be changed later in Settings.",
-                style = R1.body,
-                color = R1.InkMuted,
-            )
-            Spacer(Modifier.height(24.dp))
-
-            Text(text = "TABLET NAME", style = R1.labelMicro, color = R1.InkSoft)
-            Spacer(Modifier.height(8.dp))
-            R1TextField(
-                value = tabletName,
-                onValueChange = { tabletName = it },
-                placeholder = "Kitchen panel",
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(Modifier.height(24.dp))
-            Text(text = "START VIEW", style = R1.labelMicro, color = R1.InkSoft)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                R1Button(
-                    text = "GRID",
-                    onClick = { startViewName = StartView.PANEL_GRID.name },
-                    modifier = Modifier.weight(1f),
-                    variant = if (startView == StartView.PANEL_GRID) R1ButtonVariant.Filled else R1ButtonVariant.Outlined,
-                )
-                R1Button(
-                    text = "CARDS",
-                    onClick = { startViewName = StartView.CARDS.name },
-                    modifier = Modifier.weight(1f),
-                    variant = if (startView == StartView.CARDS) R1ButtonVariant.Filled else R1ButtonVariant.Outlined,
-                )
-            }
-
-            if (startView == StartView.PANEL_GRID) {
-                Spacer(Modifier.height(24.dp))
-                Text(text = "PANEL GRID THEME", style = R1.labelMicro, color = R1.InkSoft)
+            if (personalizePage == 0) {
+                Text(text = "03 · PANEL NAME", style = R1.labelMicro.copy(fontSize = 13.sp), color = R1.AccentWarm)
                 Spacer(Modifier.height(8.dp))
-                hapanelsThemeDefinitions.forEach { definition ->
-                    ChoiceRow(
-                        title = definition.name,
-                        selected = selectedPreset == definition.preset,
-                        onClick = { selectedPresetName = definition.preset.name },
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-
-            if (error != null) {
+                Text(
+                    text = "What should this tablet be called?",
+                    style = R1.screenTitle.copy(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
+                    color = R1.Ink,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio.",
+                    style = R1.body.copy(fontSize = 16.sp),
+                    color = R1.InkSoft,
+                )
+                Spacer(Modifier.height(72.dp))
+                Text(text = "DEVICE NAME", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
+                Spacer(Modifier.height(8.dp))
+                R1TextField(
+                    value = tabletName,
+                    onValueChange = { tabletName = it },
+                    placeholder = "Kitchen panel",
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Spacer(Modifier.height(12.dp))
-                Text(text = error.orEmpty(), style = R1.body, color = R1.StatusRed)
-            }
-            Spacer(Modifier.height(28.dp))
-            R1Button(
-                text = if (saving) "SAVING..." else "OPEN HAPANELS",
-                enabled = !saving && tabletName.isNotBlank() &&
-                    (startView != StartView.PANEL_GRID || selectedPreset != null && dashboardConfig != null),
-                onClick = {
-                    saving = true
-                    error = null
-                    scope.launch {
-                        try {
-                            if (startView == StartView.PANEL_GRID) {
-                                val current = requireNotNull(dashboardConfig)
-                                when (
-                                    val patchResult = dashboardConfigSource.applyPatch(
-                                        HapanelsDashboardPatch(
-                                            baseRevision = current.revision,
-                                            updatedBy = "hapanels:onboarding",
-                                            theme = current.theme.copy(preset = requireNotNull(selectedPreset)),
-                                        ),
-                                    )
-                                ) {
-                                    is HapanelsDashboardPatchResult.Applied -> dashboardConfig = patchResult.config
-                                    is HapanelsDashboardPatchResult.Conflict -> {
-                                        dashboardConfig = patchResult.currentConfig
-                                        error = "Panel theme changed elsewhere. Retry to apply your selection."
-                                        saving = false
-                                        return@launch
+                Text(
+                    text = "Android identified this device as: ${android.os.Build.MODEL}",
+                    style = R1.body.copy(fontSize = 14.sp),
+                    color = R1.InkMuted,
+                )
+                Spacer(Modifier.height(72.dp))
+                R1Button(
+                    text = "SAVE NAME AND CONTINUE",
+                    enabled = tabletName.isNotBlank(),
+                    onClick = { personalizePage = 1 },
+                    modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
+                )
+                Spacer(Modifier.height(18.dp))
+                Text(
+                    text = "You can change the name later in Settings.",
+                    style = R1.body,
+                    color = R1.InkMuted,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                )
+            } else {
+                PrototypeBackButton(onClick = { personalizePage = 0 })
+                Spacer(Modifier.height(18.dp))
+                Text(text = "04 · APPEARANCE", style = R1.labelMicro.copy(fontSize = 13.sp), color = R1.AccentWarm)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Make the panel yours",
+                    style = R1.screenTitle.copy(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
+                    color = R1.Ink,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Nothing is permanent. You can change every choice later in Settings.",
+                    style = R1.body.copy(fontSize = 16.sp),
+                    color = R1.InkSoft,
+                )
+                Spacer(Modifier.height(32.dp))
+                Text(text = "DEFAULT APP VIEW", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ChoiceRow(
+                        title = "Hapanels Grid",
+                        selected = startView == StartView.PANEL_GRID,
+                        onClick = { startViewName = StartView.PANEL_GRID.name },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ChoiceRow(
+                        title = "Cards",
+                        selected = startView == StartView.CARDS,
+                        onClick = { startViewName = StartView.CARDS.name },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                if (startView == StartView.PANEL_GRID) {
+                    Spacer(Modifier.height(28.dp))
+                    Text(text = "PANEL GRID THEME", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
+                    Spacer(Modifier.height(8.dp))
+                    hapanelsThemeDefinitions.forEach { definition ->
+                        ChoiceRow(
+                            title = definition.name,
+                            selected = selectedPreset == definition.preset,
+                            onClick = { selectedPresetName = definition.preset.name },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                if (error != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Text(text = error.orEmpty(), style = R1.body, color = R1.StatusRed)
+                }
+                Spacer(Modifier.height(28.dp))
+                R1Button(
+                    text = if (saving) "SAVING..." else "SAVE AND CONTINUE",
+                    enabled = !saving && tabletName.isNotBlank() &&
+                        (startView != StartView.PANEL_GRID || selectedPreset != null && dashboardConfig != null),
+                    onClick = {
+                        saving = true
+                        error = null
+                        scope.launch {
+                            try {
+                                if (startView == StartView.PANEL_GRID) {
+                                    val current = requireNotNull(dashboardConfig)
+                                    when (
+                                        val patchResult = dashboardConfigSource.applyPatch(
+                                            HapanelsDashboardPatch(
+                                                baseRevision = current.revision,
+                                                updatedBy = "hapanels:onboarding",
+                                                theme = current.theme.copy(preset = requireNotNull(selectedPreset)),
+                                            ),
+                                        )
+                                    ) {
+                                        is HapanelsDashboardPatchResult.Applied -> dashboardConfig = patchResult.config
+                                        is HapanelsDashboardPatchResult.Conflict -> {
+                                            dashboardConfig = patchResult.currentConfig
+                                            error = "Panel theme changed elsewhere. Retry to apply your selection."
+                                            saving = false
+                                            return@launch
+                                        }
                                     }
                                 }
+                                val expectedTabletName = tabletName.trim()
+                                settings.update { current ->
+                                    current.copy(
+                                        tabletFriendlyName = expectedTabletName,
+                                        behavior = current.behavior.copy(startView = startView),
+                                    )
+                                }
+                                val persisted = settings.settings.first()
+                                check(
+                                    persisted.tabletFriendlyName == expectedTabletName &&
+                                        persisted.behavior.startView == startView
+                                ) { "Personalization verification failed after save" }
+                                onComplete(startView)
+                            } catch (t: CancellationException) {
+                                throw t
+                            } catch (t: Throwable) {
+                                error = t.message ?: "Could not save setup."
+                                saving = false
                             }
-                            val expectedTabletName = tabletName.trim()
-                            settings.update { current ->
-                                current.copy(
-                                    tabletFriendlyName = expectedTabletName,
-                                    behavior = current.behavior.copy(startView = startView),
-                                )
-                            }
-                            val persisted = settings.settings.first()
-                            check(
-                                persisted.tabletFriendlyName == expectedTabletName &&
-                                    persisted.behavior.startView == startView
-                            ) { "Personalization verification failed after save" }
-                            onComplete(startView)
-                        } catch (t: CancellationException) {
-                            throw t
-                        } catch (t: Throwable) {
-                            error = t.message ?: "Could not save setup."
-                            saving = false
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
+                    },
+                    modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
+                )
+            }
         }
     }
 }
@@ -439,13 +515,18 @@ private fun ChoiceRow(
     title: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(R1.ShapeM)
             .background(if (selected) R1.AccentWarm.copy(alpha = 0.14f) else R1.SurfaceMuted)
             .border(1.dp, if (selected) R1.AccentWarm else R1.Hairline, R1.ShapeM)
+            .semantics {
+                this.selected = selected
+                role = Role.RadioButton
+            }
             .r1Pressable(onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -468,12 +549,34 @@ private fun ChoiceRow(
 }
 
 @Composable
+private fun PrototypeBackButton(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .width(128.dp)
+            .height(54.dp)
+            .clip(R1.ShapeM)
+            .background(R1.Surface)
+            .border(1.dp, R1.Hairline, R1.ShapeM)
+            .r1Pressable(onClick)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "‹  BACK",
+            style = R1.bodyEmph.copy(fontSize = 16.sp),
+            color = R1.Ink,
+        )
+    }
+}
+
+@Composable
 private fun UrlEntryForm(
     isProbing: Boolean,
     error: String?,
     onProbe: (String) -> Unit,
     onErrorDismiss: () -> Unit,
     onUseLongLivedToken: (() -> Unit)? = null,
+    onBack: () -> Unit,
 ) {
     // Start empty so the placeholder ("http://homeassistant.local:8123") is what the
     // user sees first — they can type a bare host like "192.168.1.10" and let the
@@ -497,37 +600,39 @@ private fun UrlEntryForm(
     ) {
     Column(
         modifier = Modifier
-            .widthIn(max = 560.dp)
+            .widthIn(max = 800.dp)
             .fillMaxHeight()
             .verticalScroll(scrollState)
-            .padding(horizontal = 22.dp, vertical = 32.dp),
+            .padding(horizontal = 24.dp, vertical = 28.dp),
         horizontalAlignment = Alignment.Start,
     ) {
+        PrototypeBackButton(onClick = onBack)
+        Spacer(Modifier.height(18.dp))
         // ── Headline ───────────────────────────────────────────────────────────────
         // Tiny callout above the screen title — "SECTION/01 · LINK".
         Text(
-            text = "01 · LINK",
-            style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
+            text = "01 · CONNECTION",
+            style = R1.labelMicro.copy(fontSize = 13.sp),
             color = com.github.itskenny0.r1ha.core.theme.R1.AccentWarm,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Point me at\nHome Assistant.",
-            style = com.github.itskenny0.r1ha.core.theme.R1.screenTitle,
+            text = "Connect the panel to Home Assistant",
+            style = R1.screenTitle.copy(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
             color = com.github.itskenny0.r1ha.core.theme.R1.Ink,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Examples:\n• 192.168.1.10\n• homeassistant.local\n• ha.mydomain.com\n\nProtocol and port are optional. Local hosts default to http:// :8123; public domains default to https:// :443.",
-            style = com.github.itskenny0.r1ha.core.theme.R1.body,
+            text = "Enter the server address. Protocol and port are optional.",
+            style = R1.body.copy(fontSize = 16.sp),
             color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
         )
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(42.dp))
 
         // ── Field ──────────────────────────────────────────────────────────────────
         Text(
             text = "URL",
-            style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
+            style = R1.labelMicro.copy(fontSize = 12.sp),
             color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
         )
         Spacer(Modifier.height(8.dp))
@@ -609,10 +714,10 @@ private fun UrlEntryForm(
             )
         }
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(24.dp))
 
         com.github.itskenny0.r1ha.ui.components.R1Button(
-            text = if (isProbing) "PROBING…" else "CONNECT",
+            text = if (isProbing) "PROBING…" else "CONNECT WITH HOME ASSISTANT",
             onClick = { onProbe(urlText) },
             enabled = !isProbing,
             modifier = Modifier.fillMaxWidth(),
@@ -635,22 +740,13 @@ private fun UrlEntryForm(
         // want OAuth in the first place. The link is muted so it doesn't
         // compete with CONNECT as the primary action.
         if (onUseLongLivedToken != null) {
-            Spacer(Modifier.height(18.dp))
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-            ) {
-                Text(
-                    text = "Use a long-lived token instead",
-                    style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.AccentWarm,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .r1Pressable(onClick = onUseLongLivedToken)
-                        .padding(8.dp),
-                )
-            }
+            Spacer(Modifier.height(12.dp))
+            R1Button(
+                text = "CONNECT WITH LONG-LIVED TOKEN",
+                onClick = onUseLongLivedToken,
+                modifier = Modifier.fillMaxWidth(),
+                variant = R1ButtonVariant.Outlined,
+            )
         }
     }
     } // centering Box

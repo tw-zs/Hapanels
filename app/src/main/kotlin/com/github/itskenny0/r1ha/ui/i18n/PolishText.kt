@@ -74,12 +74,35 @@ fun translateUiText(text: String, language: String = Locale.current.language): S
 }
 
 private val polishExact = mapOf(
+    "Welcome to Hapanels!" to "Witaj w Hapanels!",
+    "Your home. One simple panel." to "Twój dom. Jeden prosty panel.",
+    "Control lights, temperature, blinds, and other devices from one screen." to "Steruj światłem, temperaturą, roletami i innymi urządzeniami z jednego ekranu.",
+    "Next, connect this panel to your home and choose what it should display." to "Za chwilę połączysz panel ze swoim domem i wybierzesz, co ma się na nim wyświetlać.",
     "Your home.\nOne simple panel." to "Twój dom.\nJeden prosty panel.",
     "Connect Home Assistant, name this tablet, and choose what opens first." to "Połącz Home Assistant, nazwij tablet i wybierz ekran startowy.",
     "START SETUP" to "ROZPOCZNIJ KONFIGURACJĘ",
+    "‹  BACK" to "‹  COFNIJ",
+    "01 · CONNECTION" to "01 · POŁĄCZENIE",
+    "Connect the panel to Home Assistant" to "Połącz panel z Home Assistant",
+    "Enter the server address. Protocol and port are optional." to "Wpisz adres serwera. Protokół i port są opcjonalne.",
+    "CONNECT WITH HOME ASSISTANT" to "POŁĄCZ Z HOME ASSISTANT",
+    "CONNECT WITH LONG-LIVED TOKEN" to "POŁĄCZ TOKENEM DŁUGOTERMINOWYM",
     "01 · LINK" to "01 · POŁĄCZENIE",
     "02 · AUTHORISE" to "02 · AUTORYZACJA",
     "03 · PERSONALISE" to "03 · PERSONALIZACJA",
+    "03 · PANEL NAME" to "03 · NAZWA PANELU",
+    "What should this tablet be called?" to "Jak nazwać ten tablet?",
+    "This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio." to "Nazwa pomoże rozpoznać panel w Home Assistant, MQTT i Hapanels Studio.",
+    "DEVICE NAME" to "NAZWA URZĄDZENIA",
+    "SAVE NAME AND CONTINUE" to "ZAPISZ NAZWĘ I KONTYNUUJ",
+    "You can change the name later in Settings." to "Nazwę można później zmienić w ustawieniach.",
+    "04 · APPEARANCE" to "04 · WYGLĄD",
+    "Make the panel yours" to "Dopasuj panel do siebie",
+    "Nothing is permanent. You can change every choice later in Settings." to "Nie musisz decydować na zawsze — wszystko zmienisz później w ustawieniach.",
+    "DEFAULT APP VIEW" to "DOMYŚLNY WIDOK APLIKACJI",
+    "Hapanels Grid" to "Hapanels Grid",
+    "PANEL GRID THEME" to "MOTYW HAPANELS GRID",
+    "SAVE AND CONTINUE" to "ZAPISZ I KONTYNUUJ",
     "Make it yours." to "Dostosuj panel.",
     "Connection saved. These choices can be changed later in Settings." to "Połączenie zapisane. Te opcje możesz później zmienić w Ustawieniach.",
     "TABLET NAME" to "NAZWA TABLETU",
@@ -580,6 +603,7 @@ private val polishRegex = listOf(
 )
 
 private val polishFragments = listOf(
+    "Android identified this device as:" to "Android rozpoznał urządzenie jako:",
     "Tap anywhere to dismiss" to "Stuknij gdziekolwiek, aby zamknąć",
     "Tap to toggle" to "Stuknij, aby przełączyć",
     "Tap to open app" to "Stuknij, aby otworzyć aplikację",

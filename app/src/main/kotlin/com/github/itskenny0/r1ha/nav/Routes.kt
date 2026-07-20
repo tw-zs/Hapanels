@@ -41,6 +41,16 @@ fun shortcutRoute(value: String): String? = when (value) {
 fun shortcutRoute(value: String, currentDestination: String?): String? =
     if (currentDestination == Routes.ONBOARDING) null else shortcutRoute(value)
 
+fun panelGridDestinationRoute(destination: String): String? = when (destination) {
+    Routes.SETTINGS,
+    Routes.SETTINGS_APPEARANCE,
+    Routes.SETTINGS_BEHAVIOUR,
+    Routes.SETTINGS_INTEGRATIONS,
+    Routes.PANEL_DIAGNOSTICS,
+    -> destination
+    else -> null
+}
+
 /** All top-level navigation destinations as stable string routes. */
 object Routes {
     const val ONBOARDING = "onboarding"

@@ -146,6 +146,7 @@ private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTil
     clockStyle = patch.clockStyle ?: clockStyle,
     coverVisual = patch.coverVisual ?: coverVisual,
     coverDirection = patch.coverDirection ?: coverDirection,
+    tapAction = patch.tapAction ?: tapAction,
 )
 
 private fun List<HapanelsTileConfig>.applyPatches(

@@ -100,6 +100,9 @@ private data class HapanelsPanelRenderConfig(
 fun PanelGridMockupScreen(
     haRepository: HaRepository,
     dashboardConfigSource: HapanelsDashboardConfigSource,
+    showBack: Boolean,
+    onNavigate: (String) -> Unit,
+    onLocalPanelAction: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     val cfg = LocalConfiguration.current
@@ -162,15 +165,29 @@ fun PanelGridMockupScreen(
             Unit
         }
     }
-    val onTileClick = remember(haRepository, liveEntities) {
+    val onTileClick = remember(haRepository, liveEntities, onNavigate, onLocalPanelAction) {
         { tile: HapanelsTileConfig ->
-            when (tile.kind) {
-                HapanelsTileKind.FOLDER -> {
-                    currentPanelId = tile.panelId?.takeIf { it.isNotBlank() }
-                    currentPanelTitle = tile.displayLabel()
+            val explicitAction = tile.tapAction
+            if (explicitAction != null) {
+                when (explicitAction.type) {
+                    "navigate" -> explicitAction.destination?.let(onNavigate)
+                    "local_panel" -> explicitAction.action?.let(onLocalPanelAction)
+                    "entity_default" -> {
+                        val target = (explicitAction.entityId ?: tile.entityId).toEntityIdOrNull()
+                        target?.let { entityId ->
+                            scope.launch { haRepository.call(ServiceCall.tapAction(entityId, liveEntities[entityId]?.isOn == true)) }
+                        }
+                    }
                 }
-                HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
-                else -> tile.tapAction(liveEntities)?.let { call -> scope.launch { haRepository.call(call) } }
+            } else {
+                when (tile.kind) {
+                    HapanelsTileKind.FOLDER -> {
+                        currentPanelId = tile.panelId?.takeIf { it.isNotBlank() }
+                        currentPanelTitle = tile.displayLabel()
+                    }
+                    HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
+                    else -> tile.legacyTapAction(liveEntities)?.let { call -> scope.launch { haRepository.call(call) } }
+                }
             }
             Unit
         }
@@ -186,28 +203,21 @@ fun PanelGridMockupScreen(
         ) {
             val loadedConfig = config
             val panelConfig = loadedConfig?.forPanel(currentPanelId)
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (loadedConfig == null) {
-                    LoadingPanelConfig()
-                } else if (compact) {
-                    CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
-                } else {
-                    WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
-                }
-                if (currentPanelTitle != null) {
-                    Text(
-                        text = currentPanelTitle!!,
-                        color = theme.textPrimary,
-                        style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 10.dp),
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (currentPanelId != null || showBack) {
+                    PanelNavigationHeader(
+                        title = currentPanelTitle ?: loadedConfig?.title,
+                        onBack = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() },
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(6.dp),
-                ) {
-                    ChevronBack(onClick = { if (currentPanelId != null) { currentPanelId = null; currentPanelTitle = null } else onBack() })
+                Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    if (loadedConfig == null) {
+                        LoadingPanelConfig()
+                    } else if (compact) {
+                        CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                    } else {
+                        WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                    }
                 }
             }
             if (loadedConfig != null && popupTile != null) {
@@ -236,6 +246,28 @@ fun PanelGridMockupScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PanelNavigationHeader(title: String?, onBack: () -> Unit) {
+    val theme = LocalHapanelsTheme.current
+    Box(modifier = Modifier.fillMaxWidth().height(64.dp)) {
+        ChevronBack(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
+        )
+        title?.let {
+            Text(
+                text = it,
+                color = theme.textPrimary,
+                style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 64.dp),
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -1175,7 +1207,7 @@ private fun String?.toEntityIdOrNull(): EntityId? =
 private fun HapanelsTileConfig.liveState(liveEntities: Map<EntityId, EntityState>): EntityState? =
     entityId.toEntityIdOrNull()?.let(liveEntities::get)
 
-private fun HapanelsTileConfig.tapAction(liveEntities: Map<EntityId, EntityState>): ServiceCall? {
+private fun HapanelsTileConfig.legacyTapAction(liveEntities: Map<EntityId, EntityState>): ServiceCall? {
     val target = entityId.toEntityIdOrNull() ?: return null
     return ServiceCall.tapAction(target, liveEntities[target]?.isOn == true)
 }

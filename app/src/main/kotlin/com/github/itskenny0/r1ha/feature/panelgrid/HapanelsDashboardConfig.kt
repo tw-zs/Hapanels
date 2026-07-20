@@ -101,6 +101,15 @@ data class HapanelsTileConfig(
     @SerialName("clock_style") val clockStyle: String? = null,
     @SerialName("cover_visual") val coverVisual: String? = null,
     @SerialName("cover_direction") val coverDirection: String? = null,
+    @SerialName("tap_action") val tapAction: HapanelsTileAction? = null,
+)
+
+@Serializable
+data class HapanelsTileAction(
+    val type: String,
+    val destination: String? = null,
+    val action: String? = null,
+    @SerialName("entity_id") val entityId: String? = null,
 )
 
 @Serializable
@@ -138,6 +147,7 @@ data class HapanelsTilePatch(
     @SerialName("clock_style") val clockStyle: String? = null,
     @SerialName("cover_visual") val coverVisual: String? = null,
     @SerialName("cover_direction") val coverDirection: String? = null,
+    @SerialName("tap_action") val tapAction: HapanelsTileAction? = null,
 )
 
 sealed interface HapanelsDashboardPatchResult {
@@ -286,7 +296,7 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     { "id": "energy", "kind": "entity", "size": "small", "label": "Energia", "entity_id": "sensor.home_power", "icon": "home_lightning", "accent": "red", "order": 20 },
     { "id": "presence", "kind": "entity", "size": "small", "label": "Obecność w domu", "short_label": "Obecność", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 21 },
     { "id": "watering", "kind": "entity", "size": "small", "label": "Podlewanie", "entity_id": "switch.garden_watering", "icon": "sprinkler", "order": 22 },
-    { "id": "settings", "kind": "action", "size": "small", "label": "Konfiguracja", "short_label": "Config", "icon": "cog", "order": 23 }
+    { "id": "settings", "kind": "action", "size": "small", "label": "Otwórz ustawienia", "short_label": "Ustawienia", "icon": "cog", "order": 23, "tap_action": { "type": "navigate", "destination": "settings" } }
   ],
   "camera_actions": ["Lista kamer", "Pełny ekran"]
 }

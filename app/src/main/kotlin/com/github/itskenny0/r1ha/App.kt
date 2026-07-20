@@ -6,6 +6,7 @@ import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -15,6 +16,11 @@ class App : Application() {
     val graph: AppGraph by lazy { AppGraph(this) }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    override fun onTerminate() {
+        appScope.cancel()
+        super.onTerminate()
+    }
 
     /**
      * Debug-only main-thread health probe. Every [PROBE_INTERVAL_MS] we post a

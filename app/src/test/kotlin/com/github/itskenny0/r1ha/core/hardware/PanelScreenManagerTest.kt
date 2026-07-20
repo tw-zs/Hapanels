@@ -66,6 +66,28 @@ class PanelScreenManagerTest {
     }
 
     @Test
+    fun localActionShowsEnabledScreensaverImmediately() {
+        val engine = PanelScreenEngine(
+            initialNowMillis = 1_000L,
+            initialSettings = PanelScreenSettings(screensaverEnabled = true),
+        )
+
+        val state = engine.showScreensaver(nowMillis = 2_000L)
+
+        assertThat(state.mode).isEqualTo(PanelScreenMode.SCREENSAVER)
+        assertThat(state.lastSleepReason).isEqualTo(SleepReason.USER_ACTION)
+    }
+
+    @Test
+    fun localActionShowsScreensaverEvenWhenIdleActivationIsDisabled() {
+        val engine = PanelScreenEngine(initialNowMillis = 1_000L)
+
+        assertThat(engine.showScreensaver(nowMillis = 2_000L).mode).isEqualTo(PanelScreenMode.SCREENSAVER)
+        assertThat(engine.updateSettings(PanelScreenSettings(), nowMillis = 3_000L).mode)
+            .isEqualTo(PanelScreenMode.SCREENSAVER)
+    }
+
+    @Test
     fun userActivityWhileActiveDelaysScreensaver() {
         val engine = PanelScreenEngine(
             initialNowMillis = 0L,

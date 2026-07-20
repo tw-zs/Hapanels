@@ -11,9 +11,7 @@ theme:
   language: pl
   logo: assets/hapanels_icon_no_text.svg
   favicon: assets/hapanels_icon_no_text.svg
-  font:
-    text: Nunito
-    code: JetBrains Mono
+  font: false
   palette:
     - scheme: slate
       primary: deep orange
@@ -53,13 +51,16 @@ extra:
 
 nav:
   - Strona główna: index.md
-  - Instalacja: installation.md
+  - Instalacja:
+      - Opcje instalacji: installation.md
+      - Instrukcja dla Shelly: installation-shelly.md
+      - Instrukcja dla tabletów: installation-tablet.md
   - Integracja Home Assistant: home-assistant-integration.md
   - Sprzęt panelu: hardware.md
   - Development: development.md
+  - Podziękowania i Licencje: attribution.md
   - Roadmap: ROADMAP.md
   - Plan produkcyjny: PRODUCTION_PLAN.md
-  - Milestone 6: MILESTONE_6_AGENT_BRIEF.md
 
 markdown_extensions:
   - admonition

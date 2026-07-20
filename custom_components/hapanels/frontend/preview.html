@@ -83,7 +83,7 @@
           { id: "cameras", kind: "camera", size: "large", label: "hrj/kamera", entity_id: "camera.front", icon: "mdi:cctv", accent: "orange", order: 13, col: 1, row: 6, colSpan: 4, rowSpan: 3 },
           { id: "gate", kind: "category", size: "large", label: "Brama", entity_id: "cover.gate", icon: "mdi:gate", accent: "orange", order: 14, col: 5, row: 6, colSpan: 4, rowSpan: 4 },
           { id: "energy", kind: "entity", size: "small", label: "Energia", entity_id: "sensor.home_power", icon: "mdi:home-lightning-bolt", accent: "red", order: 20, col: 9, row: 6, colSpan: 2, rowSpan: 2 },
-          { id: "settings", kind: "action", size: "small", label: "Konfiguracja", short_label: "Config", icon: "mdi:cog", accent: "white", order: 21, col: 11, row: 6, colSpan: 2, rowSpan: 2 }
+          { id: "settings", kind: "action", size: "small", label: "Otwórz ustawienia", short_label: "Ustawienia", icon: "mdi:cog", accent: "white", order: 21, col: 11, row: 6, colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings" } }
         ],
         camera_actions: ["Lista kamer", "Pełny ekran"]
       };

@@ -1,6 +1,4 @@
 :root {
-  --md-text-font: "Nunito";
-  --md-code-font: "JetBrains Mono";
 }
 
 [data-md-color-scheme="slate"] {
@@ -11,13 +9,49 @@
   --md-accent-fg-color: #ffb000;
 }
 
-.md-header,
-.md-tabs {
-  background: #e85d04;
+.md-header {
+  background: rgba(30, 41, 59, 0.72) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .md-tabs {
-  background: #d95100;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Ukrycie automatycznego nagłówka H1 i breadcrumbs tylko na stronie głównej */
+.main-hero {
+  margin-top: -2.5rem;
+}
+/* Ukrycie breadcrumbs / tytułu strony nad treścią na stronie głównej */
+article:has(.main-hero) .md-content__button,
+article:has(.main-hero) .md-typeset h1:first-of-type {
+  display: none !important;
+}
+
+/* Przywrócenie i stylizacja naszego własnego H1 wewnątrz hero */
+.main-hero h1 {
+  display: block !important;
+}
+
+/* Obsługa logo bez tła w jasnym i ciemnym motywie */
+.logo-img {
+  filter: none;
+}
+[data-md-color-scheme="slate"] .logo-img {
+  filter: invert(0.9) hue-rotate(180deg);
+}
+
+/* Interaktywne kafelki instalacji */
+.main-hero a:hover,
+div[style*="display: grid"] a:hover {
+  background: rgba(30, 144, 255, 0.08) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(30, 144, 255, 0.15) !important;
 }
 
 .hero {

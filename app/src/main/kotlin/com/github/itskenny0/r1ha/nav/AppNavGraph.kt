@@ -167,6 +167,18 @@ fun AppNavGraph(
             PanelGridMockupScreen(
                 haRepository = haRepository,
                 dashboardConfigSource = dashboardConfigSource,
+                showBack = navController.previousBackStackEntry != null,
+                onNavigate = { destination ->
+                    panelGridDestinationRoute(destination)?.let { route ->
+                        navController.navigate(route) { launchSingleTop = true }
+                    }
+                },
+                onLocalPanelAction = { action ->
+                    when (action) {
+                        "screen.aod_now" -> panelScreenManager.showScreensaverNow()
+                        "connection.reconnect_home_assistant" -> haRepository.reconnectNow(force = true)
+                    }
+                },
                 onBack = { navController.popBackStack() },
             )
         }

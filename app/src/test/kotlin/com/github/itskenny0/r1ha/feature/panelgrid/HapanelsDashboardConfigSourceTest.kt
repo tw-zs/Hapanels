@@ -38,6 +38,15 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(loaded.tiles.first { it.id == "lights" }.label).isEqualTo("Test Lights")
     }
 
+    @Test fun importPreservesLocalPanelAction() = runTest {
+        val source = newSource()
+
+        val tile = source.importRaw(SAMPLE_HAPANELS_DASHBOARD_JSON).tiles.first { it.id == "settings" }
+
+        assertThat(tile.tapAction?.type).isEqualTo("navigate")
+        assertThat(tile.tapAction?.destination).isEqualTo("settings")
+    }
+
     @Test fun importInvalidJsonDoesNotReplaceCachedConfig() = runTest {
         val source = newSource()
         source.loadOrSeed()

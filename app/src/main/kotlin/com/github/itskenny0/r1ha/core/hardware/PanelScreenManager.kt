@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
 
 enum class PanelScreenMode { ACTIVE, DIMMED, SCREENSAVER }
 
-enum class SleepReason { IDLE_TIMEOUT }
+enum class SleepReason { IDLE_TIMEOUT, USER_ACTION }
 
 data class PanelScreenSettings(
     val proximityWakeEnabled: Boolean = false,
@@ -116,7 +116,11 @@ class PanelScreenEngine(
         }
         state = state.copy(
             targetBrightnessPercent = brightness,
-            mode = if (!next.screensaverEnabled && state.mode == PanelScreenMode.SCREENSAVER) {
+            mode = if (
+                !next.screensaverEnabled &&
+                state.mode == PanelScreenMode.SCREENSAVER &&
+                state.lastSleepReason == SleepReason.IDLE_TIMEOUT
+            ) {
                 PanelScreenMode.ACTIVE
             } else {
                 state.mode
@@ -165,6 +169,16 @@ class PanelScreenEngine(
         state = state.copy(
             mode = PanelScreenMode.SCREENSAVER,
             lastSleepReason = SleepReason.IDLE_TIMEOUT,
+            lastSleepAtMillis = nowMillis,
+            updatedAtMillis = nowMillis,
+        )
+        return state
+    }
+
+    fun showScreensaver(nowMillis: Long = System.currentTimeMillis()): PanelScreenState {
+        state = state.copy(
+            mode = PanelScreenMode.SCREENSAVER,
+            lastSleepReason = SleepReason.USER_ACTION,
             lastSleepAtMillis = nowMillis,
             updatedAtMillis = nowMillis,
         )
@@ -315,6 +329,10 @@ class PanelScreenManager(
 
     fun reportUserActivity(reason: WakeReason = WakeReason.USER) {
         mutableState.value = engine.onUserActivity(reason)
+    }
+
+    fun showScreensaverNow() {
+        mutableState.value = engine.showScreensaver()
     }
 
     fun setAodBrightnessOverride(percent: Int?, wakeFadeMillis: Int = 500) {

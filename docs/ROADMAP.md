@@ -135,7 +135,7 @@ Done:
 - Screensaver/AOD timeout, mode state, user activity wake, and last wake/sleep reasons are tracked.
 - Native AOD renderer supports clock-only mode and AOD tile mode through the dashboard config model.
 - AOD clock style selection is persisted as `always_on_display.clock_style` and can be patched over MQTT/Studio.
-- AOD clock style pack is available in-app and in Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, and wide bold.
+- AOD clock style pack is expanded to 13 unical styles, fully integrated with both the client app and Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient and streaks), Electric Stained Glass (stained glass and multi-colored numbers), and Poznan Goats (Amber typography with clock-offset and optimized Poznan goats artwork).
 
 Next:
 - Optional polish: tune proximity and idle behavior on real mounted Shelly hardware after longer use.

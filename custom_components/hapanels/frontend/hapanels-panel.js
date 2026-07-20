@@ -1,8 +1,12 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260708-aod-style-pack";
+const STUDIO_FRONTEND_VERSION = "20260720-panel-actions";
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
-const PANEL_TILE_KINDS = ["clock", "folder", "popup"];
+const PANEL_TILE_KINDS = [
+  "clock", "folder", "popup",
+  "settings", "settings_appearance", "settings_behaviour", "settings_integrations", "panel_diagnostics",
+  "aod_now", "reconnect_ha",
+];
 const TILE_SIZES = ["large", "small", "action"];
 const CLOCK_STYLES = ["classic", "compact", "date_top"];
 const COVER_VISUALS = ["blind", "shade", "curtain", "gate"];
@@ -740,6 +744,10 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-frame.popup-context::before { content:""; position:absolute; inset:0; background: rgba(0,0,0,.38); backdrop-filter: blur(6px); }
         .layout-frame.will-drop { border: 3px dashed #ef4444; overflow: visible; }
         .layout-grid { position: absolute; inset: 10px; display: grid; gap: 6px; overflow: visible; min-height: 0; grid-auto-columns: calc((100% - ((var(--cols) - 1) * 6px)) / var(--cols)); grid-auto-rows: calc((100% - ((var(--rows) - 1) * 6px)) / var(--rows)); }
+        .layout-subpanel-header { position: absolute; inset: 0 0 auto; height: 8.5%; min-height: 28px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; padding: 0 6px; color: #f5f3ee; border-bottom: 1px solid rgba(148,163,184,.16); }
+        .layout-subpanel-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-weight: 800; }
+        .layout-subpanel-back { font-size: 22px; color: #94a3b8; text-align: center; }
+        .layout-frame.folder-context .layout-grid { top: calc(8.5% + 10px); }
         .layout-frame.popup-context .layout-grid { inset: 15%; border: 1px solid rgba(255,255,255,.18); border-radius: 24px; padding: 10px; background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); box-shadow: 0 24px 80px rgba(0,0,0,.38); backdrop-filter: blur(18px) saturate(1.35); }
         .layout-frame.popup-context .layout-grid::before { content:""; pointer-events:none; position:absolute; inset:0; border-radius:24px; opacity:.32; background-image: radial-gradient(circle, rgba(255,255,255,.55) 0 1px, transparent 1px); background-size: 5px 5px; mix-blend-mode: overlay; }
         .layout-frame.popup-context .layout-cell-tile { background: rgba(31,41,55,.72); backdrop-filter: blur(8px); }
@@ -1153,7 +1161,8 @@ class HapanelsStudioPanel extends HTMLElement {
             </div>
           </div>
         </div>
-        <div class="layout-frame ${context.type === "popup" ? "popup-context" : ""} ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
+        <div class="layout-frame ${context.type === "popup" ? "popup-context" : ""} ${context.type === "folder" ? "folder-context" : ""} ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
+          ${context.type === "folder" ? `<div class="layout-subpanel-header"><span class="layout-subpanel-back">‹</span><span>${this._escape(context.label.replace(/^Folder:\s*/, ""))}</span><span></span></div>` : ""}
           <div class="layout-grid" style="--cols:${this._escape(grid.columns)};--rows:${this._escape(grid.rows)};grid-template-columns:repeat(${this._escape(grid.columns)}, minmax(0, 1fr));grid-template-rows:repeat(${this._escape(grid.rows)}, minmax(0, 1fr));">
             ${draft.tiles.map((tile) => this._layoutTile(tile, grid, tile.id === draft.selectedTileId)).join("")}
             ${this._layoutGhost(draft)}
@@ -1602,6 +1611,13 @@ class HapanelsStudioPanel extends HTMLElement {
       clock: { id: `clock_${stamp}`, kind: "clock", size: "large", label: "Zegar", icon: "mdi:clock-outline", accent: "white", colSpan: 3, rowSpan: 2, clock_style: "classic" },
       folder: { id: `folder_${stamp}`, kind: "folder", size: "large", label: "Folder", short_label: "Folder", panel_id: `panel_${stamp}`, icon: "mdi:folder", accent: "orange", colSpan: 2, rowSpan: 2 },
       popup: { id: `popup_${stamp}`, kind: "popup", size: "large", label: "Popup", short_label: "Popup", panel_id: `popup_${stamp}`, icon: "mdi:view-grid-plus", accent: "orange", colSpan: 2, rowSpan: 2 },
+      settings: { id: `settings_${stamp}`, kind: "action", size: "small", label: "Otwórz ustawienia", icon: "mdi:cog", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings" } },
+      settings_appearance: { id: `appearance_${stamp}`, kind: "action", size: "small", label: "Otwórz wygląd", icon: "mdi:palette", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings/appearance" } },
+      settings_behaviour: { id: `behaviour_${stamp}`, kind: "action", size: "small", label: "Otwórz zachowanie", icon: "mdi:gesture-tap", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings/behaviour" } },
+      settings_integrations: { id: `integrations_${stamp}`, kind: "action", size: "small", label: "Otwórz integracje", icon: "mdi:puzzle", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings/integrations" } },
+      panel_diagnostics: { id: `diagnostics_${stamp}`, kind: "action", size: "small", label: "Otwórz diagnostykę", icon: "mdi:stethoscope", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "panel_diagnostics" } },
+      aod_now: { id: `aod_${stamp}`, kind: "action", size: "small", label: "Włącz AOD", icon: "mdi:weather-night", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "local_panel", action: "screen.aod_now" } },
+      reconnect_ha: { id: `reconnect_${stamp}`, kind: "action", size: "small", label: "Połącz HA ponownie", icon: "mdi:lan-connect", accent: "white", colSpan: 2, rowSpan: 2, tap_action: { type: "local_panel", action: "connection.reconnect_home_assistant" } },
     };
     return templates[kind];
   }
@@ -1617,7 +1633,18 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _panelTileKindLabel(kind) {
-    return ({ clock: "Zegar", folder: "Folder / następny panel", popup: "Popup" }[kind] || kind);
+    return ({
+      clock: "Zegar",
+      folder: "Folder / następny panel",
+      popup: "Popup",
+      settings: "Otwórz ustawienia",
+      settings_appearance: "Otwórz wygląd",
+      settings_behaviour: "Otwórz zachowanie",
+      settings_integrations: "Otwórz integracje",
+      panel_diagnostics: "Otwórz diagnostykę",
+      aod_now: "Włącz AOD",
+      reconnect_ha: "Połącz HA ponownie",
+    }[kind] || kind);
   }
 
   _panelTileKindDescription(kind) {
@@ -1625,6 +1652,13 @@ class HapanelsStudioPanel extends HTMLElement {
       clock: "Duży kafel zegara na panelu.",
       folder: "Otwiera następny panel po panel_id.",
       popup: "Otwiera popup z kaflami o tym samym panel_id.",
+      settings: "Otwiera lokalny ekran ustawień Hapanels.",
+      settings_appearance: "Otwiera ustawienia wyglądu panelu.",
+      settings_behaviour: "Otwiera ustawienia zachowania panelu.",
+      settings_integrations: "Otwiera ustawienia integracji.",
+      panel_diagnostics: "Otwiera lokalną diagnostykę panelu.",
+      aod_now: "Pokazuje skonfigurowany ekran AOD teraz.",
+      reconnect_ha: "Wymusza ponowne połączenie z Home Assistant.",
     }[kind] || "Kafel panelu");
   }
 
@@ -1666,7 +1700,7 @@ class HapanelsStudioPanel extends HTMLElement {
         <span class="panel-tile-preview accent-${this._escape(tile.accent || "orange")}">
           <ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon>
           <strong>${this._escape(tile.label)}</strong>
-          <small>${this._escape(tile.panel_id || kind)}</small>
+          <small>${this._escape(tile.panel_id || tile.tap_action?.destination || tile.tap_action?.action || kind)}</small>
         </span>
         <span><strong>${this._escape(this._panelTileKindLabel(kind))}</strong><small>${this._escape(this._panelTileKindDescription(kind))}</small></span>
       </button>

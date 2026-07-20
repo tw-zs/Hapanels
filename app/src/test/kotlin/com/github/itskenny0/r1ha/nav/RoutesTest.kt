@@ -92,4 +92,12 @@ class RoutesTest {
         assertThat(shortcutRoute("search", Routes.ONBOARDING)).isNull()
         assertThat(shortcutRoute("search", Routes.CARD_STACK)).isEqualTo(Routes.SEARCH)
     }
+
+    @Test fun panelGridNavigationUsesAllowlistedDestinations() {
+        assertThat(panelGridDestinationRoute(Routes.SETTINGS)).isEqualTo(Routes.SETTINGS)
+        assertThat(panelGridDestinationRoute(Routes.SETTINGS_APPEARANCE)).isEqualTo(Routes.SETTINGS_APPEARANCE)
+        assertThat(panelGridDestinationRoute(Routes.PANEL_DIAGNOSTICS)).isEqualTo(Routes.PANEL_DIAGNOSTICS)
+        assertThat(panelGridDestinationRoute(Routes.DEV_MENU)).isNull()
+        assertThat(panelGridDestinationRoute("https://example.com")).isNull()
+    }
 }

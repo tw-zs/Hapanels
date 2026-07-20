@@ -4,6 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.hardware.PanelHardware
 import com.github.itskenny0.r1ha.core.hardware.PanelScreenManager
@@ -18,6 +23,7 @@ import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.PanelGridMockupScreen
 import com.github.itskenny0.r1ha.feature.settings.SettingsScreen
 import com.github.itskenny0.r1ha.feature.themepicker.ThemePickerScreen
+import okhttp3.OkHttpClient
 
 @Composable
 fun AppNavGraph(
@@ -30,7 +36,22 @@ fun AppNavGraph(
     panelHardware: PanelHardware,
     panelScreenManager: PanelScreenManager,
     dashboardConfigSource: HapanelsDashboardConfigSource,
+    http: OkHttpClient,
 ) {
+    val currentRoute = navController.currentBackStackEntryAsState()
+        .value
+        ?.destination
+        ?.route
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(currentRoute, view) {
+        if (currentRoute != Routes.LONG_LIVED_TOKEN) {
+            (view.context as? android.app.Activity)?.window?.clearFlags(
+                android.view.WindowManager.LayoutParams.FLAG_SECURE,
+            )
+        }
+        onDispose { }
+    }
+
     // App-shortcut deep-link consumer — MainActivity emits a route on
     // ShortcutBus whenever a launcher long-press shortcut delivers an
     // intent. We collect once per NavController lifetime and route via
@@ -53,6 +74,7 @@ fun AppNavGraph(
                 tokens = tokens,
                 haRepository = haRepository,
                 dashboardConfigSource = dashboardConfigSource,
+                http = http,
                 onComplete = { startView ->
                     navController.navigate(startView.route()) {
                         popUpTo(Routes.ONBOARDING) { inclusive = true }
@@ -61,7 +83,11 @@ fun AppNavGraph(
                 // Skip-OAuth escape hatch — surfaces a 'Use long-lived
                 // token instead' link in the URL form so kiosk users
                 // never need to OAuth in just to reach the LLAT setup.
-                onOpenLongLivedToken = {
+                onOpenLongLivedToken = { url ->
+                    navController.currentBackStackEntry?.savedStateHandle?.set(
+                        "onboarding_llat_url",
+                        com.github.itskenny0.r1ha.feature.onboarding.normalizeServerUrl(url),
+                    )
                     navController.navigate(Routes.LONG_LIVED_TOKEN) { launchSingleTop = true }
                 },
             )
@@ -367,12 +393,32 @@ fun AppNavGraph(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable(Routes.LONG_LIVED_TOKEN) {
+        composable(
+            route = Routes.LONG_LIVED_TOKEN,
+            enterTransition = {
+                slideInHorizontally(tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+            },
+            exitTransition = {
+                slideOutHorizontally(tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { -it }
+            },
+            popEnterTransition = {
+                slideInHorizontally(tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { -it }
+            },
+            popExitTransition = {
+                slideOutHorizontally(tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f))) { it }
+            },
+        ) {
+            val previous = navController.previousBackStackEntry
             com.github.itskenny0.r1ha.feature.longlived.LongLivedTokenScreen(
                 settings = settings,
                 tokens = tokens,
                 haRepository = haRepository,
                 wheelInput = wheelInput,
+                http = http,
+                initialUrl = previous?.savedStateHandle
+                    ?.get<String>("onboarding_llat_url")
+                    .orEmpty(),
+                onboardingMode = previous?.destination?.route == Routes.ONBOARDING,
                 onBack = { navController.popBackStack() },
             )
         }

@@ -2,13 +2,31 @@ package com.github.itskenny0.r1ha.nav
 
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.Behavior
+import com.github.itskenny0.r1ha.core.prefs.OnboardingStage
 import com.github.itskenny0.r1ha.core.prefs.ServerConfig
 import com.github.itskenny0.r1ha.core.prefs.StartView
 import com.github.itskenny0.r1ha.core.prefs.Tokens
+import com.github.itskenny0.r1ha.feature.onboarding.resolvedOnboardingStage
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 class RoutesTest {
+
+    @Test fun missingCredentialsReturnEveryPostAuthStageToConnection() {
+        listOf(
+            OnboardingStage.PANEL_NAME,
+            OnboardingStage.APPEARANCE,
+            OnboardingStage.STUDIO,
+            OnboardingStage.MQTT,
+            OnboardingStage.CHECKLIST,
+            OnboardingStage.LAUNCHING,
+            OnboardingStage.COMPLETED,
+        ).forEach { stage ->
+            assertThat(resolvedOnboardingStage(stage, credentialsReady = false))
+                .isEqualTo(OnboardingStage.CONNECTION)
+        }
+    }
+
     private val server = ServerConfig("https://ha.example.com")
     private val tokens = Tokens("access", "refresh", Long.MAX_VALUE)
 
@@ -30,6 +48,24 @@ class RoutesTest {
 
         assertThat(destinations).containsExactly(Routes.PANEL_GRID, Routes.CARD_STACK)
         assertThat(destinations).doesNotContain(Routes.DASHBOARD)
+    }
+
+    @Test fun incompleteOnboardingResumesEvenWithCredentials() {
+        OnboardingStage.entries
+            .filterNot { it == OnboardingStage.LEGACY || it == OnboardingStage.COMPLETED }
+            .forEach { stage ->
+                assertThat(startupDestination(AppSettings(server = server, onboardingStage = stage), tokens))
+                    .isEqualTo(Routes.ONBOARDING)
+            }
+    }
+
+    @Test fun legacyCredentialedInstallDoesNotReenterOnboarding() {
+        assertThat(
+            startupDestination(
+                AppSettings(server = server, onboardingStage = OnboardingStage.LEGACY),
+                tokens,
+            ),
+        ).isEqualTo(Routes.PANEL_GRID)
     }
 
     @Test fun startViewsMapOnlyToPanelGridAndCards() {

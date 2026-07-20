@@ -326,6 +326,7 @@ class MainActivity : ComponentActivity() {
                                 panelHardware = graph.panelHardware,
                                 panelScreenManager = graph.panelScreenManager,
                                 dashboardConfigSource = graph.dashboardConfigSource,
+                                http = graph.okHttp,
                             )
                         }
                         PanelScreensaverOverlay(

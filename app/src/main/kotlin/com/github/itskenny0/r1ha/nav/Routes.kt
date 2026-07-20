@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.nav
 
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.prefs.OnboardingStage
 import com.github.itskenny0.r1ha.core.prefs.StartView
 import com.github.itskenny0.r1ha.core.prefs.Tokens
 
@@ -10,7 +11,11 @@ fun StartView.route(): String = when (this) {
 }
 
 fun startupDestination(settings: AppSettings, tokens: Tokens?): String =
-    if (settings.server == null || tokens?.accessToken.isNullOrBlank()) {
+    if (
+        settings.server == null ||
+        tokens?.accessToken.isNullOrBlank() ||
+        settings.onboardingStage !in setOf(OnboardingStage.LEGACY, OnboardingStage.COMPLETED)
+    ) {
         Routes.ONBOARDING
     } else {
         settings.behavior.startView.route()

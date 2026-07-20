@@ -58,6 +58,7 @@ class SettingsRepositoryTest {
         repo.update {
             it.copy(
                 tabletFriendlyName = "Kitchen panel",
+                onboardingStage = OnboardingStage.APPEARANCE,
                 theme = ThemeId.MINIMAL_DARK,
                 behavior = it.behavior.copy(startView = StartView.CARDS),
             )
@@ -65,6 +66,7 @@ class SettingsRepositoryTest {
         repo.settings.test {
             val settings = awaitItem()
             assertThat(settings.tabletFriendlyName).isEqualTo("Kitchen panel")
+            assertThat(settings.onboardingStage).isEqualTo(OnboardingStage.APPEARANCE)
             assertThat(settings.theme).isEqualTo(ThemeId.MINIMAL_DARK)
             assertThat(settings.behavior.startView).isEqualTo(StartView.CARDS)
             cancelAndConsumeRemainingEvents()

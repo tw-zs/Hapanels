@@ -469,30 +469,7 @@ class DefaultHaRepository(
                     authLostRefreshAttempt = 0
                     authThrottle?.reset()
                     if (url == null) {
-                        // Drop any cached entity states from the previous server so the next
-                        // sign-in starts fresh: otherwise stale data from server A could be
-                        // briefly visible on cards when the user signs into server B with the
-                        // same entity IDs. Cancel any seedJob whose 3-retry loop is still
-                        // grinding so its results don't land in the new server's cache.
-                        seedJob?.cancel()
-                        seedJob = null
-                        cache.update { emptyMap() }
-                        subscriptionId = null
-                        // Fail any outstanding service-call awaiters; their WS is going away.
-                        pendingCalls.values.forEach {
-                            it.complete(Result.failure(IllegalStateException("Signed out")))
-                        }
-                        pendingCalls.clear()
-                        pendingPayloads.values.forEach {
-                            it.complete(Result.failure(IllegalStateException("Signed out")))
-                        }
-                        pendingPayloads.clear()
-                        // Drop live subscriptions on sign-out too: the next sign-in
-                        // is to a different server and those subscriptions belong
-                        // to entities/templates on the old one.
-                        liveSubs.values.forEach { it.collectorJob?.cancel() }
-                        liveSubs.clear()
-                        ws.disconnect()
+                        resetServerState("Signed out")
                         return@onEach
                     }
                     val st = ws.state.value
@@ -624,14 +601,14 @@ class DefaultHaRepository(
         }
     }
 
-    override fun reconnectNow() {
+    override fun reconnectNow(force: Boolean) {
         val current = ws.state.value
         // Only honour the request when there's nothing useful in flight already — re-entering
         // a Connecting state would just thrash the WS client.
-        if (current is ConnectionState.Connecting ||
+        if (!force && (current is ConnectionState.Connecting ||
             current is ConnectionState.Authenticating ||
             current is ConnectionState.Connected
-        ) {
+        )) {
             R1Log.i("HaRepo.reconnectNow", "ignored (state=${current::class.simpleName})")
             return
         }
@@ -645,8 +622,28 @@ class DefaultHaRepository(
         // fails) starts from scratch — the user has signalled they want a fresh start.
         reconnectAttempt = 0
         authThrottle?.reset()
+        if (force) resetServerState("Credentials changed")
         R1Log.i("HaRepo.reconnectNow", "forcing immediate reconnect (was $current)")
         scope.launch { connectFromSettings() }
+    }
+
+    private fun resetServerState(reason: String) {
+        seedJob?.cancel()
+        seedJob = null
+        cache.update { emptyMap() }
+        persister?.clear()
+        subscriptionId = null
+        pendingCalls.values.forEach {
+            it.complete(Result.failure(IllegalStateException(reason)))
+        }
+        pendingCalls.clear()
+        pendingPayloads.values.forEach {
+            it.complete(Result.failure(IllegalStateException(reason)))
+        }
+        pendingPayloads.clear()
+        liveSubs.values.forEach { it.collectorJob?.cancel() }
+        liveSubs.clear()
+        ws.disconnect(reason = reason.lowercase().replace(' ', '_'))
     }
 
     private fun applyEvent(ev: HaInbound.Event) {

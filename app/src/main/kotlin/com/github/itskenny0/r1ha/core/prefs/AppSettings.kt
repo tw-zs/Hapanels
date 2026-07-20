@@ -163,6 +163,20 @@ enum class StartView {
     CARDS,
 }
 
+@Stable
+enum class OnboardingStage {
+    LEGACY,
+    WELCOME,
+    CONNECTION,
+    PANEL_NAME,
+    APPEARANCE,
+    STUDIO,
+    MQTT,
+    CHECKLIST,
+    LAUNCHING,
+    COMPLETED,
+}
+
 fun persistedStartView(value: String?, legacyStartOnDashboard: Boolean?): StartView =
     value?.let { runCatching { StartView.valueOf(it) }.getOrNull() }
         ?: legacyStartOnDashboard?.let { if (it) StartView.PANEL_GRID else StartView.CARDS }
@@ -678,6 +692,8 @@ data class FavoritePage(
 @Stable
 data class AppSettings(
     val server: ServerConfig? = null,
+    /** LEGACY lets existing credentialed installs bypass onboarding after migration. */
+    val onboardingStage: OnboardingStage = OnboardingStage.LEGACY,
     /**
      * Legacy single-page favourites list. Pre-tabs builds wrote here directly. New
      * builds keep this as a flat union of every page's [FavoritePage.favorites]

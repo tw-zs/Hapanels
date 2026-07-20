@@ -46,6 +46,9 @@ private const val SHADOW_PREFS = "r1ha_shadow"
 private const val SHADOW_SERVER_URL = "server.url"
 private const val SHADOW_HA_VERSION = "server.ha_version"
 private const val SHADOW_FAVORITES = "favorites" // newline-separated, same format as DataStore
+private const val SHADOW_ONBOARDING_STAGE = "onboarding.stage"
+private const val SHADOW_TABLET_NAME = "tablet.friendly_name"
+private const val SHADOW_START_VIEW = "behavior.start_view"
 
 /**
  * Marker set on every successful shadow write so reads can distinguish "shadow never written
@@ -119,6 +122,7 @@ class SettingsRepository private constructor(
         val serverUrl = stringPreferencesKey("server.url")
         val haVersion = stringPreferencesKey("server.ha_version")
         val favorites = stringPreferencesKey("favorites")
+        val onboardingStage = stringPreferencesKey("onboarding.stage")
 
         val wheelStep = intPreferencesKey("wheel.step")
         val wheelAccel = booleanPreferencesKey("wheel.accel")
@@ -234,8 +238,26 @@ class SettingsRepository private constructor(
                 p[K.favorites]?.takeIf { it.isNotBlank() }?.split('\n')
                     ?: shadow.getString(SHADOW_FAVORITES, null)?.takeIf { it.isNotBlank() }?.split('\n').orEmpty()
             }
+            val onboardingStageName = if (shadowInit) {
+                shadow.getString(SHADOW_ONBOARDING_STAGE, null) ?: p[K.onboardingStage]
+            } else {
+                p[K.onboardingStage] ?: shadow.getString(SHADOW_ONBOARDING_STAGE, null)
+            }
+            val startViewName = if (shadowInit) {
+                shadow.getString(SHADOW_START_VIEW, null) ?: p[K.behaviorStartView]
+            } else {
+                p[K.behaviorStartView] ?: shadow.getString(SHADOW_START_VIEW, null)
+            }
+            val tabletName = if (shadowInit) {
+                shadow.getString(SHADOW_TABLET_NAME, null) ?: p[K.tabletFriendlyName]
+            } else {
+                p[K.tabletFriendlyName] ?: shadow.getString(SHADOW_TABLET_NAME, null)
+            }
             AppSettings(
                 server = server,
+                onboardingStage = onboardingStageName
+                    ?.let { runCatching { OnboardingStage.valueOf(it) }.getOrNull() }
+                    ?: OnboardingStage.LEGACY,
                 favorites = favorites,
                 wheel = WheelSettings(
                     stepPercent = (p[K.wheelStep] ?: 2).coerceIn(1, 10),
@@ -265,7 +287,7 @@ class SettingsRepository private constructor(
                     showBatteryWhenStatusBarHidden = p[K.behaviorShowBatteryWhenHidden] ?: false,
                     kioskMode = p[K.behaviorKioskMode] ?: false,
                     startView = persistedStartView(
-                        value = p[K.behaviorStartView],
+                        value = startViewName,
                         legacyStartOnDashboard = p[K.legacyBehaviorStartOnDashboard],
                     ),
                     startOnBoot = p[K.behaviorStartOnBoot] ?: false,
@@ -308,7 +330,7 @@ class SettingsRepository private constructor(
                 nameOverrides = decodeNameOverrides(p[K.nameOverrides]),
                 entityOverrides = decodeEntityOverrides(p[K.entityOverrides]),
                 mqttPanelDeviceId = p[K.mqttPanelDeviceId]?.takeIf { it.isNotBlank() }.orEmpty(),
-                tabletFriendlyName = p[K.tabletFriendlyName]?.takeIf { it.isNotBlank() }.orEmpty(),
+                tabletFriendlyName = tabletName?.takeIf { it.isNotBlank() }.orEmpty(),
                 advanced = p[K.advancedJson]
                     ?.let {
                         runCatching {
@@ -379,7 +401,15 @@ class SettingsRepository private constructor(
         // Write shadow synchronously FIRST so a SharedPreferences commit lands even if the
         // DataStore edit below fails for any reason. The synchronous commit() can block on
         // disk I/O so we move it off whatever dispatcher the caller is on.
-        withContext(Dispatchers.IO) { writeShadow(next.server, next.favorites) }
+        withContext(Dispatchers.IO) {
+            writeShadow(
+                server = next.server,
+                favorites = next.favorites,
+                onboardingStage = next.onboardingStage,
+                tabletName = next.tabletFriendlyName,
+                startView = next.behavior.startView,
+            )
+        }
 
         try {
             store.edit { p ->
@@ -391,6 +421,7 @@ class SettingsRepository private constructor(
                     p.remove(K.serverUrl); p.remove(K.haVersion)
                 }
                 p[K.favorites] = next.favorites.joinToString("\n")
+                p[K.onboardingStage] = next.onboardingStage.name
                 p[K.wheelStep] = next.wheel.stepPercent
                 p[K.wheelAccel] = next.wheel.acceleration
                 p[K.wheelInvert] = next.wheel.invertDirection
@@ -669,7 +700,13 @@ class SettingsRepository private constructor(
             list,
         )
 
-    private fun writeShadow(server: ServerConfig?, favorites: List<String>) {
+    private fun writeShadow(
+        server: ServerConfig?,
+        favorites: List<String>,
+        onboardingStage: OnboardingStage,
+        tabletName: String,
+        startView: StartView,
+    ) {
         val editor = shadow.edit()
         if (server != null) {
             editor.putString(SHADOW_SERVER_URL, server.url)
@@ -684,6 +721,9 @@ class SettingsRepository private constructor(
         } else {
             editor.remove(SHADOW_FAVORITES)
         }
+        editor.putString(SHADOW_ONBOARDING_STAGE, onboardingStage.name)
+        editor.putString(SHADOW_TABLET_NAME, tabletName)
+        editor.putString(SHADOW_START_VIEW, startView.name)
         // Mark the shadow as initialized so the read path treats "absence of values" as
         // intentional (signed out / no favourites) rather than "fall back to DataStore".
         editor.putBoolean(SHADOW_INITIALIZED, true)

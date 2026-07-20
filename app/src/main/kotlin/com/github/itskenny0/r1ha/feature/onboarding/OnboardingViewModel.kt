@@ -12,6 +12,7 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ class OnboardingViewModel(
 
     private val _state: MutableStateFlow<State> = MutableStateFlow(State.Idle)
     val state: StateFlow<State> get() = _state
+    private var authJob: Job? = null
 
     @Serializable
     data class TokenResponse(
@@ -72,6 +74,7 @@ class OnboardingViewModel(
 
     /** Validates [rawUrl], probes reachability, then constructs the OAuth authorize URL. */
     fun probe(rawUrl: String) {
+        authJob?.cancel()
         val baseUrl = normalizeUrl(rawUrl)
         if (baseUrl.isBlank()) {
             _state.value = State.Error("Please enter your Home Assistant URL.")
@@ -80,7 +83,7 @@ class OnboardingViewModel(
         }
         R1Log.i("Onboarding.probe", "start baseUrl=$baseUrl")
         _state.value = State.Probing
-        viewModelScope.launch {
+        authJob = viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
                     val req = Request.Builder()
@@ -97,6 +100,8 @@ class OnboardingViewModel(
                 // URL gets written by exchangeCode() right after a successful token POST.
                 val authorizeUrl = "$baseUrl/auth/authorize?response_type=code&client_id=$HAPANELS_CLIENT_ID_ENCODED&redirect_uri=r1ha%3A%2F%2Fauth-callback"
                 _state.value = State.ReadyToAuth(authorizeUrl = authorizeUrl, baseUrl = baseUrl)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 R1Log.e("Onboarding.probe", "failed", e)
                 Toaster.error("Probe failed: ${e.message}")
@@ -107,6 +112,7 @@ class OnboardingViewModel(
 
     /** Called by the WebView once the r1ha://auth-callback?code=… redirect is intercepted. */
     fun exchangeCode(code: String, serverUrl: String) {
+        authJob?.cancel()
         R1Log.i("Onboarding.exchange", "start serverUrl=$serverUrl codeLen=${code.length}")
         if (serverUrl.isBlank()) {
             // Defensive: if the WebView screen couldn't extract a serverUrl, bail loudly rather
@@ -116,7 +122,7 @@ class OnboardingViewModel(
             return
         }
         _state.value = State.Exchanging
-        viewModelScope.launch {
+        authJob = viewModelScope.launch {
             try {
                 val tokenResponse = withContext(Dispatchers.IO) {
                     val body = FormBody.Builder()
@@ -140,7 +146,7 @@ class OnboardingViewModel(
                 }
                 R1Log.i("Onboarding.exchange", "token POST OK; saving")
                 val previousTokens = tokens.load()
-                val previousServer = settings.settings.first().server
+                val previousSettings = settings.settings.first()
                 val expiresAtMillis = System.currentTimeMillis() + tokenResponse.expires_in * 1_000L
                 val savedTokens = Tokens(
                     accessToken = tokenResponse.access_token,
@@ -152,13 +158,23 @@ class OnboardingViewModel(
                     check(tokens.load() == savedTokens) { "Token verification failed after save" }
                     R1Log.i("Onboarding.exchange", "tokens.save returned")
                     R1Log.i("Onboarding.exchange", "calling settings.update(server=$serverUrl)")
-                    settings.update { it.copy(server = ServerConfig(url = serverUrl)) }
-                    check(settings.settings.first().server?.url == serverUrl) {
+                    settings.update {
+                        it.copy(
+                            server = ServerConfig(url = serverUrl),
+                            onboardingStage = com.github.itskenny0.r1ha.core.prefs.OnboardingStage.PANEL_NAME,
+                        )
+                    }
+                    check(
+                        settings.settings.first().let {
+                            it.server?.url == serverUrl &&
+                                it.onboardingStage == com.github.itskenny0.r1ha.core.prefs.OnboardingStage.PANEL_NAME
+                        }
+                    ) {
                         "Server verification failed after save"
                     }
                 } catch (t: Throwable) {
                     withContext(NonCancellable) {
-                        restoreCredentials(previousTokens, previousServer)
+                        restoreCredentials(previousTokens, previousSettings)
                     }
                     throw t
                 }
@@ -176,6 +192,7 @@ class OnboardingViewModel(
     }
 
     fun resetError() {
+        authJob?.cancel()
         _state.value = State.Idle
     }
 
@@ -186,17 +203,28 @@ class OnboardingViewModel(
      * feedback instead of a silent reset.
      */
     fun failOnboarding(message: String) {
+        authJob?.cancel()
         _state.value = State.Error(message)
     }
 
-    private suspend fun restoreCredentials(previousTokens: Tokens?, previousServer: ServerConfig?) {
+    private suspend fun restoreCredentials(previousTokens: Tokens?, previousSettings: com.github.itskenny0.r1ha.core.prefs.AppSettings) {
         runCatching {
             if (previousTokens == null) tokens.clear() else tokens.save(previousTokens)
             check(tokens.load() == previousTokens) { "Token rollback verification failed" }
         }.onFailure { R1Log.e("Onboarding.exchange", "token rollback failed", it) }
         runCatching {
-            settings.update { it.copy(server = previousServer) }
-            check(settings.settings.first().server == previousServer) {
+            settings.update {
+                it.copy(
+                    server = previousSettings.server,
+                    onboardingStage = previousSettings.onboardingStage,
+                )
+            }
+            check(
+                settings.settings.first().let {
+                    it.server == previousSettings.server &&
+                        it.onboardingStage == previousSettings.onboardingStage
+                }
+            ) {
                 "Server rollback verification failed"
             }
         }.onFailure { R1Log.e("Onboarding.exchange", "server rollback failed", it) }

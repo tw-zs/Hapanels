@@ -1,30 +1,25 @@
 package com.github.itskenny0.r1ha.feature.onboarding
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,43 +27,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.ha.ConnectionState
 import com.github.itskenny0.r1ha.core.ha.HaRepository
+import com.github.itskenny0.r1ha.core.prefs.AppSettings
+import com.github.itskenny0.r1ha.core.prefs.OnboardingStage
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.StartView
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
-import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatch
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
-import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsThemePreset
-import com.github.itskenny0.r1ha.feature.panelgrid.hapanelsThemeDefinitions
-import com.github.itskenny0.r1ha.ui.components.R1Button
-import com.github.itskenny0.r1ha.ui.components.R1ButtonVariant
-import com.github.itskenny0.r1ha.ui.components.R1TextField
-import com.github.itskenny0.r1ha.ui.components.r1Pressable
-import com.github.itskenny0.r1ha.ui.i18n.Text
-import kotlinx.coroutines.flow.first
+import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsThemeMode
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+
+private enum class VisualPage(val index: Int) {
+    WELCOME(0), CONNECTION(1), AUTH(2), PANEL_NAME(3), APPEARANCE(4), STUDIO(5), MQTT(6), CHECKLIST(7), LAUNCHING(8),
+}
 
 @Composable
 fun OnboardingScreen(
@@ -77,677 +65,287 @@ fun OnboardingScreen(
     haRepository: HaRepository,
     dashboardConfigSource: HapanelsDashboardConfigSource,
     onComplete: (StartView) -> Unit,
-    /** Optional escape hatch — when set, the URL entry form shows a
-     *  small "Use long-lived token instead" link below CONNECT that
-     *  jumps to the LLAT setup screen. Lets kiosk-style installs skip
-     *  OAuth entirely without first having to OAuth in to reach the
-     *  Settings → LLAT screen (chicken-and-egg). Null disables. */
-    onOpenLongLivedToken: (() -> Unit)? = null,
-    http: OkHttpClient = remember { OkHttpClient() },
+    onOpenLongLivedToken: ((String) -> Unit)? = null,
+    http: OkHttpClient,
 ) {
     val vm: OnboardingViewModel = viewModel(
-        factory = OnboardingViewModel.factory(http = http, settings = settings, tokens = tokens),
+        factory = OnboardingViewModel.factory(http, settings, tokens),
     )
-    val state by vm.state.collectAsStateWithLifecycle()
+    val authState by vm.state.collectAsStateWithLifecycle()
     val appSettings by settings.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
-    var step by rememberSaveable { mutableStateOf(0) }
-    var credentialsReady by remember { mutableStateOf<Boolean?>(null) }
-
-    // Authentication is only the middle of onboarding. Keep the user here long enough to
-    // name the panel and choose its initial presentation before entering the app.
-    LaunchedEffect(state) {
-        if (state is OnboardingViewModel.State.Done) {
-            haRepository.reconnectNow()
-            step = 2
-        }
-    }
-
-    LaunchedEffect(step, state) {
-        if (step == 2) {
-            val persistedSettings = settings.settings.first()
-            val persistedTokens = tokens.load()
-            val ready = persistedSettings.server != null && !persistedTokens?.accessToken.isNullOrBlank()
-            credentialsReady = ready
-            if (!ready) step = 1
-        } else {
-            credentialsReady = null
-        }
-    }
-
-    // The LLAT escape hatch saves directly to TokenStore without
-    // running the OAuth state machine, so OnboardingViewModel never
-    // transitions to Done. Observe the activity lifecycle and re-check
-    // token presence on ON_RESUME — when the user comes back from the
-    // LLAT screen with a freshly-saved token, fire onComplete so they
-    // land on the card stack instead of being stranded on the URL form.
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val resumeScope = androidx.compose.runtime.rememberCoroutineScope()
-    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                resumeScope.launch {
-                    if (!tokens.load()?.accessToken.isNullOrBlank() &&
-                        settings.settings.first().server != null
-                    ) {
-                        step = 2
-                    }
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
-    when (step) {
-        0 -> {
-            WelcomeScreen(onStart = { step = 1 })
-            return
-        }
-        2 -> {
-            if (credentialsReady != true) {
-                Box(modifier = Modifier.fillMaxSize().background(R1.Bg))
-                return
-            }
-            PersonalizeScreen(
-                initialSettings = appSettings,
-                settings = settings,
-                dashboardConfigSource = dashboardConfigSource,
-                onComplete = onComplete,
-            )
-            return
-        }
-    }
-
-    when (val s = state) {
-        is OnboardingViewModel.State.ReadyToAuth -> {
-            // Back press inside the OAuth WebView should drop the user back to the URL
-            // entry form instead of exiting the app.
-            BackHandler { vm.resetError() }
-            OAuthWebView(
-                authorizeUrl = s.authorizeUrl,
-                // Use the baseUrl the user originally probed so path-prefixed HA setups
-                // (e.g. https://example.com/ha) keep their prefix on /auth/token.
-                onCodeCaptured = { code -> vm.exchangeCode(code, s.baseUrl) },
-                // If HA redirects without a `code` query parameter — typically because the
-                // user tapped "Deny" — drop them back to the URL entry form with the HA
-                // error surfaced as a visible message rather than leaving the WebView pinned
-                // on HA's error page with no clear next step.
-                onMissingCode = { errorMessage ->
-                    vm.failOnboarding(errorMessage?.let { "Login was cancelled or rejected ($it)" }
-                        ?: "Login didn't complete. Please try again.")
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .systemBarsPadding(),
-            )
-        }
-
-        is OnboardingViewModel.State.Exchanging -> {
-            // Labelled progress state — bare CircularProgressIndicator on a black screen
-            // doesn't communicate that the app is doing anything specific; users sometimes
-            // think it's hung. The screen sequence (01 LINK → 02 AUTHORISE → 03 READY) makes
-            // the onboarding feel like a guided flow with a known end.
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(com.github.itskenny0.r1ha.core.theme.R1.Bg)
-                    .systemBarsPadding()
-                    .padding(horizontal = 22.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                horizontalAlignment = Alignment.Start,
-            ) {
-                Text(
-                    text = "02 · AUTHORISE",
-                    style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.AccentWarm,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Exchanging tokens…",
-                    style = com.github.itskenny0.r1ha.core.theme.R1.screenTitle,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.Ink,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Swapping the authorisation code for an access token. This\nis a one-time round-trip; it usually takes a second.",
-                    style = com.github.itskenny0.r1ha.core.theme.R1.body,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
-                )
-                Spacer(Modifier.height(28.dp))
-                CircularProgressIndicator(
-                    modifier = Modifier.height(20.dp),
-                    strokeWidth = 2.dp,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.AccentWarm,
-                )
-            }
-        }
-
-        is OnboardingViewModel.State.Done -> {
-            // LaunchedEffect above handles navigation; show nothing while it fires.
-            Box(Modifier.fillMaxSize())
-        }
-
-        else -> {
-            // Idle / Probing / Error all show the URL entry form.
-            if (s !is OnboardingViewModel.State.Probing) {
-                BackHandler {
-                    vm.resetError()
-                    step = 0
-                }
-            }
-            UrlEntryForm(
-                isProbing = s is OnboardingViewModel.State.Probing,
-                error = (s as? OnboardingViewModel.State.Error)?.message,
-                onProbe = { vm.probe(it) },
-                onErrorDismiss = { vm.resetError() },
-                onUseLongLivedToken = onOpenLongLivedToken,
-                onBack = { step = 0 },
-            )
-        }
-    }
-}
-
-@Composable
-private fun WelcomeScreen(onStart: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(R1.Bg)
-            .systemBarsPadding()
-            .padding(horizontal = 32.dp, vertical = 24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 800.dp)
-                .fillMaxHeight()
-                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Image(
-                painter = painterResource(com.github.itskenny0.r1ha.R.drawable.hapanels_logo),
-                contentDescription = "Hapanels",
-                modifier = Modifier.width(190.dp).height(190.dp),
-            )
-            Text(
-                text = "Welcome to Hapanels!",
-                style = R1.screenTitle.copy(fontSize = 40.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold),
-                color = R1.Ink,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Your home. One simple panel.",
-                style = R1.body.copy(fontSize = 21.sp),
-                color = R1.InkSoft,
-            )
-            Spacer(Modifier.height(34.dp))
-            Text(
-                text = "Control lights, temperature, blinds, and other devices from one screen.",
-                style = R1.body.copy(fontSize = 17.sp),
-                color = R1.Ink,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Next, connect this panel to your home and choose what it should display.",
-                style = R1.body.copy(fontSize = 16.sp),
-                color = R1.InkSoft,
-            )
-            Spacer(Modifier.height(38.dp))
-            R1Button(
-                text = "START SETUP",
-                onClick = onStart,
-                modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
-            )
-        }
-    }
-}
-
-@Composable
-private fun PersonalizeScreen(
-    initialSettings: AppSettings,
-    settings: SettingsRepository,
-    dashboardConfigSource: HapanelsDashboardConfigSource,
-    onComplete: (StartView) -> Unit,
-) {
+    val connection by haRepository.connection.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    var tabletName by rememberSaveable {
-        mutableStateOf(
-            initialSettings.tabletFriendlyName.ifBlank {
-                android.os.Build.MODEL?.takeIf(String::isNotBlank) ?: "Hapanels tablet"
-            },
-        )
-    }
+    var credentialsReady by remember { mutableStateOf<Boolean?>(null) }
+    var url by rememberSaveable { mutableStateOf("") }
+    var tabletName by rememberSaveable { mutableStateOf("") }
+    var startViewName by rememberSaveable { mutableStateOf(StartView.PANEL_GRID.name) }
+    var darkMode by rememberSaveable { mutableStateOf(true) }
+    var studioInfoOpen by rememberSaveable { mutableStateOf(false) }
     var dashboardConfig by remember { mutableStateOf<HapanelsDashboardConfig?>(null) }
-    var selectedPresetName by rememberSaveable { mutableStateOf<String?>(null) }
-    var startViewName by rememberSaveable { mutableStateOf(initialSettings.behavior.startView.name) }
-    var personalizePage by rememberSaveable { mutableStateOf(0) }
-    var saving by remember { mutableStateOf(false) }
-    var error by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedPreset = selectedPresetName?.let { name ->
-        runCatching { HapanelsThemePreset.valueOf(name) }.getOrNull()
+    var appearanceLoading by remember { mutableStateOf(true) }
+    var appearanceError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(appSettings.onboardingStage, authState) {
+        credentialsReady = appSettings.server != null && !tokens.load()?.accessToken.isNullOrBlank()
+        if (authState is OnboardingViewModel.State.Done) haRepository.reconnectNow()
     }
-    val startView = runCatching { StartView.valueOf(startViewName) }
-        .getOrDefault(StartView.PANEL_GRID)
-
-    BackHandler(enabled = personalizePage == 1) { personalizePage = 0 }
-
+    LaunchedEffect(appSettings.tabletFriendlyName) {
+        if (tabletName.isBlank()) {
+            tabletName = appSettings.tabletFriendlyName.ifBlank {
+                android.os.Build.MODEL?.takeIf(String::isNotBlank) ?: "Panel Hapanels"
+            }
+        }
+    }
+    LaunchedEffect(appSettings.behavior.startView) {
+        startViewName = appSettings.behavior.startView.name
+    }
     LaunchedEffect(dashboardConfigSource) {
-        try {
-            val loaded = dashboardConfigSource.loadOrSeed()
-            dashboardConfig = loaded
-            if (selectedPresetName == null) selectedPresetName = loaded.theme.preset.name
-        } catch (t: CancellationException) {
-            throw t
-        } catch (t: Throwable) {
-            error = t.message ?: "Could not load panel theme."
+        appearanceLoading = true
+        runCatching { dashboardConfigSource.loadOrSeed() }
+            .onSuccess {
+                dashboardConfig = it
+                darkMode = it.theme.mode != HapanelsThemeMode.LIGHT
+                appearanceError = null
+            }
+            .onFailure { appearanceError = it.message ?: "Nie udało się wczytać ustawień wyglądu." }
+        appearanceLoading = false
+    }
+
+    val persistedStage = appSettings.onboardingStage
+    val stage = resolvedOnboardingStage(persistedStage, credentialsReady)
+    val page = when {
+        stage == OnboardingStage.LAUNCHING -> VisualPage.LAUNCHING
+        authState is OnboardingViewModel.State.ReadyToAuth || authState is OnboardingViewModel.State.Exchanging -> VisualPage.AUTH
+        stage == OnboardingStage.WELCOME -> VisualPage.WELCOME
+        stage == OnboardingStage.CONNECTION -> VisualPage.CONNECTION
+        stage == OnboardingStage.PANEL_NAME -> VisualPage.PANEL_NAME
+        stage == OnboardingStage.APPEARANCE -> VisualPage.APPEARANCE
+        stage == OnboardingStage.STUDIO -> VisualPage.STUDIO
+        stage == OnboardingStage.MQTT -> VisualPage.MQTT
+        else -> VisualPage.CHECKLIST
+    }
+    val startView = runCatching { StartView.valueOf(startViewName) }.getOrDefault(StartView.PANEL_GRID)
+
+    val edgeProgress = remember { Animatable(0f) }
+    val successGlow = remember { Animatable(0f) }
+    var previousPageIndex by remember { mutableStateOf(page.index) }
+    LaunchedEffect(page.index) {
+        if (page != VisualPage.LAUNCHING) {
+            val forward = page.index > previousPageIndex
+            edgeProgress.animateTo(
+                (page.index / 7f).coerceIn(0f, 1f),
+                tween(1_200, easing = CubicBezierEasing(0.55f, 0f, 0.10f, 1f)),
+            )
+            if (forward) {
+                successGlow.snapTo(1f)
+                successGlow.animateTo(0f, tween(850, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+            }
+            previousPageIndex = page.index
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(R1.Bg)
-            .systemBarsPadding(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 800.dp)
-                .fillMaxHeight()
-                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-        ) {
-            if (personalizePage == 0) {
-                Text(text = "03 · PANEL NAME", style = R1.labelMicro.copy(fontSize = 13.sp), color = R1.AccentWarm)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "What should this tablet be called?",
-                    style = R1.screenTitle.copy(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
-                    color = R1.Ink,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio.",
-                    style = R1.body.copy(fontSize = 16.sp),
-                    color = R1.InkSoft,
-                )
-                Spacer(Modifier.height(72.dp))
-                Text(text = "DEVICE NAME", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
-                Spacer(Modifier.height(8.dp))
-                R1TextField(
-                    value = tabletName,
-                    onValueChange = { tabletName = it },
-                    placeholder = "Kitchen panel",
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Android identified this device as: ${android.os.Build.MODEL}",
-                    style = R1.body.copy(fontSize = 14.sp),
-                    color = R1.InkMuted,
-                )
-                Spacer(Modifier.height(72.dp))
-                R1Button(
-                    text = "SAVE NAME AND CONTINUE",
-                    enabled = tabletName.isNotBlank(),
-                    onClick = { personalizePage = 1 },
-                    modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
-                )
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = "You can change the name later in Settings.",
-                    style = R1.body,
-                    color = R1.InkMuted,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                )
-            } else {
-                PrototypeBackButton(onClick = { personalizePage = 0 })
-                Spacer(Modifier.height(18.dp))
-                Text(text = "04 · APPEARANCE", style = R1.labelMicro.copy(fontSize = 13.sp), color = R1.AccentWarm)
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Make the panel yours",
-                    style = R1.screenTitle.copy(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
-                    color = R1.Ink,
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Nothing is permanent. You can change every choice later in Settings.",
-                    style = R1.body.copy(fontSize = 16.sp),
-                    color = R1.InkSoft,
-                )
-                Spacer(Modifier.height(32.dp))
-                Text(text = "DEFAULT APP VIEW", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ChoiceRow(
-                        title = "Hapanels Grid",
-                        selected = startView == StartView.PANEL_GRID,
-                        onClick = { startViewName = StartView.PANEL_GRID.name },
-                        modifier = Modifier.weight(1f),
-                    )
-                    ChoiceRow(
-                        title = "Cards",
-                        selected = startView == StartView.CARDS,
-                        onClick = { startViewName = StartView.CARDS.name },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+    val launchProgress = remember { Animatable(0f) }
+    var screenActive by remember { mutableStateOf(true) }
+    DisposableEffect(Unit) {
+        screenActive = true
+        onDispose { screenActive = false }
+    }
+    LaunchedEffect(stage) {
+        if (stage == OnboardingStage.LAUNCHING) {
+            launchProgress.snapTo(0.001f)
+            val startedAt = withFrameNanos { it }
+            do {
+                val elapsed = withFrameNanos { it } - startedAt
+                val progress = (elapsed / 5_600_000_000f).coerceIn(0f, 1f)
+                launchProgress.snapTo(progress)
+            } while (progress < 1f)
+            withContext(NonCancellable) {
+                settings.update { it.copy(onboardingStage = OnboardingStage.COMPLETED) }
+                check(settings.settings.first().onboardingStage == OnboardingStage.COMPLETED)
+                if (screenActive) onComplete(startView)
+            }
+        }
+    }
 
-                if (startView == StartView.PANEL_GRID) {
-                    Spacer(Modifier.height(28.dp))
-                    Text(text = "PANEL GRID THEME", style = R1.labelMicro.copy(fontSize = 12.sp), color = R1.InkSoft)
-                    Spacer(Modifier.height(8.dp))
-                    hapanelsThemeDefinitions.forEach { definition ->
-                        ChoiceRow(
-                            title = definition.name,
-                            selected = selectedPreset == definition.preset,
-                            onClick = { selectedPresetName = definition.preset.name },
-                        )
-                        Spacer(Modifier.height(8.dp))
+    BackHandler(enabled = page != VisualPage.WELCOME && page != VisualPage.LAUNCHING) {
+        when (page) {
+            VisualPage.AUTH -> vm.resetError()
+            VisualPage.CONNECTION -> {
+                vm.resetError()
+                scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.WELCOME) } }
+            }
+            VisualPage.PANEL_NAME -> scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.CONNECTION) } }
+            VisualPage.APPEARANCE -> scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.PANEL_NAME) } }
+            VisualPage.STUDIO -> scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.APPEARANCE) } }
+            VisualPage.MQTT -> scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.STUDIO) } }
+            VisualPage.CHECKLIST -> scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.MQTT) } }
+            else -> Unit
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(OnboardingBg)) {
+        OnboardingBackdrop(showPhoto = page == VisualPage.WELCOME)
+        if (page == VisualPage.LAUNCHING) {
+            LaunchSequence(launchProgress.value, tabletName, startView)
+        } else {
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    val direction = if (targetState.index >= initialState.index) 1 else -1
+                    (slideIntoContainer(
+                        if (direction > 0) AnimatedContentTransitionScope.SlideDirection.Left
+                        else AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                    ) + fadeIn(tween(180))) togetherWith
+                        (slideOutOfContainer(
+                            if (direction > 0) AnimatedContentTransitionScope.SlideDirection.Left
+                            else AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(360, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
+                        ) + fadeOut(tween(180)))
+                },
+                modifier = Modifier.fillMaxSize(),
+                label = "onboarding-page",
+            ) { target ->
+                when (target) {
+                    VisualPage.WELCOME -> WelcomePage {
+                        scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.CONNECTION) } }
                     }
-                }
-                if (error != null) {
-                    Spacer(Modifier.height(12.dp))
-                    Text(text = error.orEmpty(), style = R1.body, color = R1.StatusRed)
-                }
-                Spacer(Modifier.height(28.dp))
-                R1Button(
-                    text = if (saving) "SAVING..." else "SAVE AND CONTINUE",
-                    enabled = !saving && tabletName.isNotBlank() &&
-                        (startView != StartView.PANEL_GRID || selectedPreset != null && dashboardConfig != null),
-                    onClick = {
-                        saving = true
-                        error = null
-                        scope.launch {
-                            try {
-                                if (startView == StartView.PANEL_GRID) {
-                                    val current = requireNotNull(dashboardConfig)
-                                    when (
-                                        val patchResult = dashboardConfigSource.applyPatch(
-                                            HapanelsDashboardPatch(
-                                                baseRevision = current.revision,
-                                                updatedBy = "hapanels:onboarding",
-                                                theme = current.theme.copy(preset = requireNotNull(selectedPreset)),
-                                            ),
-                                        )
-                                    ) {
-                                        is HapanelsDashboardPatchResult.Applied -> dashboardConfig = patchResult.config
-                                        is HapanelsDashboardPatchResult.Conflict -> {
-                                            dashboardConfig = patchResult.currentConfig
-                                            error = "Panel theme changed elsewhere. Retry to apply your selection."
-                                            saving = false
-                                            return@launch
-                                        }
-                                    }
+                    VisualPage.CONNECTION -> ConnectionPage(
+                        url = url,
+                        onUrlChange = {
+                            url = it
+                            if (authState is OnboardingViewModel.State.Error) vm.resetError()
+                        },
+                        detectedServer = appSettings.server?.url,
+                        probing = authState is OnboardingViewModel.State.Probing,
+                        error = (authState as? OnboardingViewModel.State.Error)?.message,
+                        onBack = {
+                            vm.resetError()
+                            scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.WELCOME) } }
+                        },
+                        onOAuth = { vm.probe(url.ifBlank { appSettings.server?.url.orEmpty() }) },
+                        onLlat = { onOpenLongLivedToken?.invoke(url.ifBlank { appSettings.server?.url.orEmpty() }) },
+                    )
+                    VisualPage.AUTH -> AuthPage(
+                        title = if (authState is OnboardingViewModel.State.Exchanging) "Łączenie z Home Assistant" else "Zaloguj się do Home Assistant",
+                        description = "Logowanie odbywa się na bezpiecznej stronie Twojej instancji Home Assistant.",
+                        onBack = vm::resetError,
+                    ) {
+                        when (val current = authState) {
+                            is OnboardingViewModel.State.ReadyToAuth -> OAuthWebView(
+                                authorizeUrl = current.authorizeUrl,
+                                onCodeCaptured = { vm.exchangeCode(it, current.baseUrl) },
+                                onMissingCode = { vm.failOnboarding("Logowanie anulowane.") },
+                                modifier = Modifier.offset(240.dp, 230.dp).width(800.dp).height(430.dp),
+                            )
+                            else -> {
+                                Box(Modifier.offset(240.dp, 250.dp).size(800.dp, 300.dp).background(OnboardingSurface), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = OnboardingOrange)
+                                    Text("Wymiana tokenów…", color = OnboardingSoft, fontSize = 18.sp, modifier = Modifier.offset(y = 50.dp))
                                 }
-                                val expectedTabletName = tabletName.trim()
-                                settings.update { current ->
-                                    current.copy(
-                                        tabletFriendlyName = expectedTabletName,
-                                        behavior = current.behavior.copy(startView = startView),
-                                    )
-                                }
-                                val persisted = settings.settings.first()
-                                check(
-                                    persisted.tabletFriendlyName == expectedTabletName &&
-                                        persisted.behavior.startView == startView
-                                ) { "Personalization verification failed after save" }
-                                onComplete(startView)
-                            } catch (t: CancellationException) {
-                                throw t
-                            } catch (t: Throwable) {
-                                error = t.message ?: "Could not save setup."
-                                saving = false
                             }
                         }
-                    },
-                    modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth().align(Alignment.CenterHorizontally),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceRow(
-    title: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(R1.ShapeM)
-            .background(if (selected) R1.AccentWarm.copy(alpha = 0.14f) else R1.SurfaceMuted)
-            .border(1.dp, if (selected) R1.AccentWarm else R1.Hairline, R1.ShapeM)
-            .semantics {
-                this.selected = selected
-                role = Role.RadioButton
-            }
-            .r1Pressable(onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .width(14.dp)
-                .height(14.dp)
-                .clip(R1.ShapeS)
-                .background(if (selected) R1.AccentWarm else R1.Bg)
-                .border(1.dp, if (selected) R1.AccentWarm else R1.InkMuted, R1.ShapeS),
-        )
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = title.uppercase(),
-            style = R1.labelMicro,
-            color = if (selected) R1.AccentWarm else R1.InkSoft,
-        )
-    }
-}
-
-@Composable
-private fun PrototypeBackButton(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .width(128.dp)
-            .height(54.dp)
-            .clip(R1.ShapeM)
-            .background(R1.Surface)
-            .border(1.dp, R1.Hairline, R1.ShapeM)
-            .r1Pressable(onClick)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "‹  BACK",
-            style = R1.bodyEmph.copy(fontSize = 16.sp),
-            color = R1.Ink,
-        )
-    }
-}
-
-@Composable
-private fun UrlEntryForm(
-    isProbing: Boolean,
-    error: String?,
-    onProbe: (String) -> Unit,
-    onErrorDismiss: () -> Unit,
-    onUseLongLivedToken: (() -> Unit)? = null,
-    onBack: () -> Unit,
-) {
-    // Start empty so the placeholder ("http://homeassistant.local:8123") is what the
-    // user sees first — they can type a bare host like "192.168.1.10" and let the
-    // normaliser pick the protocol + port, or paste a full URL if they prefer.
-    var urlText by rememberSaveable { mutableStateOf("") }
-    val scrollState = androidx.compose.foundation.rememberScrollState()
-    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
-    LaunchedEffect(imeBottom) {
-        if (imeBottom > 0) {
-            scrollState.animateScrollTo(scrollState.maxValue)
-        }
-    }
-
-    androidx.compose.foundation.layout.Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(com.github.itskenny0.r1ha.core.theme.R1.Bg)
-            .systemBarsPadding()
-            .imePadding(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-    Column(
-        modifier = Modifier
-            .widthIn(max = 800.dp)
-            .fillMaxHeight()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 24.dp, vertical = 28.dp),
-        horizontalAlignment = Alignment.Start,
-    ) {
-        PrototypeBackButton(onClick = onBack)
-        Spacer(Modifier.height(18.dp))
-        // ── Headline ───────────────────────────────────────────────────────────────
-        // Tiny callout above the screen title — "SECTION/01 · LINK".
-        Text(
-            text = "01 · CONNECTION",
-            style = R1.labelMicro.copy(fontSize = 13.sp),
-            color = com.github.itskenny0.r1ha.core.theme.R1.AccentWarm,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Connect the panel to Home Assistant",
-            style = R1.screenTitle.copy(fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Bold),
-            color = com.github.itskenny0.r1ha.core.theme.R1.Ink,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Enter the server address. Protocol and port are optional.",
-            style = R1.body.copy(fontSize = 16.sp),
-            color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
-        )
-        Spacer(Modifier.height(42.dp))
-
-        // ── Field ──────────────────────────────────────────────────────────────────
-        Text(
-            text = "URL",
-            style = R1.labelMicro.copy(fontSize = 12.sp),
-            color = com.github.itskenny0.r1ha.core.theme.R1.InkMuted,
-        )
-        Spacer(Modifier.height(8.dp))
-        com.github.itskenny0.r1ha.ui.components.R1TextField(
-            value = urlText,
-            onValueChange = {
-                if (error != null) onErrorDismiss()
-                urlText = it
-            },
-            placeholder = "http://homeassistant.local:8123",
-            isError = error != null,
-            enabled = !isProbing,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go,
-            ),
-            keyboardActions = KeyboardActions(onGo = { onProbe(urlText) }),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        // Live preview of what the normaliser will turn the typed URL into.
-        // Surfaces the protocol-inference and default-port heuristic before the
-        // user taps CONNECT so 'why is it adding :8123?' has an immediate answer
-        // and a typo'd host doesn't probe for two seconds before failing. Only
-        // shown when the preview differs from the raw input (i.e. the normaliser
-        // actually did something).
-        val normalised = remember(urlText) {
-            com.github.itskenny0.r1ha.feature.onboarding.normalizeServerUrl(urlText)
-        }
-        if (normalised.isNotBlank() && normalised != urlText.trim().trimEnd('/')) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Will probe: $normalised",
-                style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
-                color = com.github.itskenny0.r1ha.core.theme.R1.InkSoft,
-            )
-        }
-        // OPEN IN BROWSER chip: lets the user sanity-check the normalised URL in the
-        // system browser before committing to the OAuth round-trip. Common pre-onboarding
-        // diagnostic for "is HA even reachable on this LAN" questions.
-        if (normalised.isNotBlank() && normalised.startsWith("http", ignoreCase = true)) {
-            val ctx = androidx.compose.ui.platform.LocalContext.current
-            Spacer(Modifier.height(4.dp))
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .clip(com.github.itskenny0.r1ha.core.theme.R1.ShapeS)
-                    .background(com.github.itskenny0.r1ha.core.theme.R1.SurfaceMuted)
-                    .border(
-                        1.dp,
-                        com.github.itskenny0.r1ha.core.theme.R1.Hairline,
-                        com.github.itskenny0.r1ha.core.theme.R1.ShapeS,
+                    }
+                    VisualPage.PANEL_NAME -> PanelNamePage(
+                        value = tabletName,
+                        onValueChange = { tabletName = it },
+                        onBack = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.CONNECTION) } } },
+                        onContinue = {
+                            scope.launch {
+                                settings.update {
+                                    it.copy(
+                                        tabletFriendlyName = tabletName.trim(),
+                                        onboardingStage = OnboardingStage.APPEARANCE,
+                                    )
+                                }
+                            }
+                        },
                     )
-                    .r1Pressable(onClick = {
-                        runCatching {
-                            ctx.startActivity(
-                                android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(normalised),
-                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-                            )
-                        }
-                    })
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = "OPEN IN BROWSER",
-                    style = com.github.itskenny0.r1ha.core.theme.R1.labelMicro,
-                    color = com.github.itskenny0.r1ha.core.theme.R1.InkSoft,
-                )
-            }
-        }
-
-        if (error != null) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = error,
-                style = com.github.itskenny0.r1ha.core.theme.R1.body,
-                color = com.github.itskenny0.r1ha.core.theme.R1.StatusRed,
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        com.github.itskenny0.r1ha.ui.components.R1Button(
-            text = if (isProbing) "PROBING…" else "CONNECT WITH HOME ASSISTANT",
-            onClick = { onProbe(urlText) },
-            enabled = !isProbing,
-            modifier = Modifier.fillMaxWidth(),
-            leadingContent = if (isProbing) {
-                {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .height(14.dp)
-                            .padding(end = 8.dp),
-                        strokeWidth = 2.dp,
-                        color = com.github.itskenny0.r1ha.core.theme.R1.Bg,
+                    VisualPage.APPEARANCE -> AppearancePage(
+                        dark = darkMode,
+                        startView = startView,
+                        loading = appearanceLoading,
+                        error = appearanceError,
+                        onDarkChange = { darkMode = it },
+                        onStartViewChange = { startViewName = it.name },
+                        onBack = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.PANEL_NAME) } } },
+                        onContinue = {
+                            scope.launch {
+                                try {
+                                    dashboardConfig?.let { current ->
+                                        when (
+                                            val result = dashboardConfigSource.applyPatch(
+                                                HapanelsDashboardPatch(
+                                                    baseRevision = current.revision,
+                                                    updatedBy = "hapanels:onboarding",
+                                                    theme = current.theme.copy(
+                                                        mode = if (darkMode) HapanelsThemeMode.DARK else HapanelsThemeMode.LIGHT,
+                                                    ),
+                                                ),
+                                            )
+                                        ) {
+                                            is HapanelsDashboardPatchResult.Applied -> dashboardConfig = result.config
+                                            is HapanelsDashboardPatchResult.Conflict -> {
+                                                dashboardConfig = result.currentConfig
+                                                appearanceError = "Motyw zmienił się w innym miejscu. Spróbuj ponownie."
+                                                return@launch
+                                            }
+                                        }
+                                    }
+                                    settings.update {
+                                        it.copy(
+                                            behavior = it.behavior.copy(startView = startView),
+                                            onboardingStage = OnboardingStage.STUDIO,
+                                        )
+                                    }
+                                } catch (t: CancellationException) {
+                                    throw t
+                                } catch (t: Throwable) {
+                                    appearanceError = t.message
+                                }
+                            }
+                        },
                     )
+                    VisualPage.STUDIO -> StudioPage(
+                        serverName = appSettings.server?.url ?: "Home Assistant",
+                        tabletName = tabletName,
+                        infoOpen = studioInfoOpen,
+                        onInfoChange = { studioInfoOpen = it },
+                        onBack = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.APPEARANCE) } } },
+                        onSkip = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.MQTT) } } },
+                    )
+                    VisualPage.MQTT -> MqttPage(
+                        onBack = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.STUDIO) } } },
+                        onSkip = {
+                            scope.launch {
+                                settings.update { it.copy(onboardingStage = OnboardingStage.CHECKLIST) }
+                                haRepository.reconnectNow()
+                            }
+                        },
+                    )
+                    VisualPage.CHECKLIST -> ChecklistPage(
+                        haConnected = connection is ConnectionState.Connected,
+                        dark = darkMode,
+                        startView = startView,
+                        onBack = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.MQTT) } } },
+                        onRetry = { scope.launch { haRepository.reconnectNow() } },
+                        onLaunch = { scope.launch { settings.update { it.copy(onboardingStage = OnboardingStage.LAUNCHING) } } },
+                    )
+                    VisualPage.LAUNCHING -> Unit
                 }
-            } else null,
-        )
-
-        // ── LLAT escape hatch ──────────────────────────────────────────────────────
-        // Without this link the user has to OAuth first to reach the
-        // Settings → LLAT screen — pointless if they specifically don't
-        // want OAuth in the first place. The link is muted so it doesn't
-        // compete with CONNECT as the primary action.
-        if (onUseLongLivedToken != null) {
-            Spacer(Modifier.height(12.dp))
-            R1Button(
-                text = "CONNECT WITH LONG-LIVED TOKEN",
-                onClick = onUseLongLivedToken,
-                modifier = Modifier.fillMaxWidth(),
-                variant = R1ButtonVariant.Outlined,
-            )
+            }
+            ProgressEdge(edgeProgress.value, successGlow.value)
         }
     }
-    } // centering Box
+}
+
+internal fun resolvedOnboardingStage(
+    persistedStage: OnboardingStage,
+    credentialsReady: Boolean?,
+): OnboardingStage = when {
+    persistedStage == OnboardingStage.LEGACY && credentialsReady == true -> OnboardingStage.COMPLETED
+    persistedStage == OnboardingStage.LEGACY -> OnboardingStage.WELCOME
+    credentialsReady == false && persistedStage !in setOf(OnboardingStage.WELCOME, OnboardingStage.CONNECTION) ->
+        OnboardingStage.CONNECTION
+    else -> persistedStage
 }

@@ -203,7 +203,12 @@ class SettingsViewModel(
         viewModelScope.launch {
             R1Log.i("Settings.signOut", "starting")
             tokens.clear()
-            settings.update { it.copy(server = null) }
+            settings.update {
+                it.copy(
+                    server = null,
+                    onboardingStage = com.github.itskenny0.r1ha.core.prefs.OnboardingStage.WELCOME,
+                )
+            }
             // Wipe the WebView cookie jar so re-signing in doesn't silently land
             // on the previous HA session. Without this, the OAuth in-app WebView
             // sees the existing HA cookies and skips the login form entirely,

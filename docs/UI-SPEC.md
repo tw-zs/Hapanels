@@ -207,7 +207,7 @@ Touch target minimum 48 × 48 dp. Odstęp między niezależnymi targetami minimu
 
 **Current:** Compose obsługuje jeden `currentPanelId`, powrót bez pełnego stosu oraz płaskie powiązanie dzieci przez wspólny `panel_id`.
 
-**Locked target:** nawigacja używa stosu paneli. Pasek subpanelu ma stałe 64 dp i znajduje się poza obszarem siatki, więc przycisk oraz tytuł nigdy nie nakładają się na kafle. Pokazuje target Wstecz 48 × 48, tytuł i breadcrumbs. Na wide breadcrumbs: `Dom / Parter / Salon`; na compact tylko `Wstecz` + bieżący tytuł. Root Panel Grid nie pokazuje Wstecz, gdy jest ekranem startowym i nie ma poprzedniego wpisu na stosie aplikacji; wejście do Gridu z innego ekranu zachowuje Wstecz w takim samym wydzielonym pasku. Android Back zamyka najpierw popup, potem cofa folder, potem opuszcza Panel Grid.
+**Locked target:** nawigacja używa stosu paneli. Pasek subpanelu ma stałe 64 dp i znajduje się poza obszarem siatki, więc przycisk oraz tytuł nigdy nie nakładają się na kafle. Pokazuje target Wstecz 48 × 48, tytuł i breadcrumbs. Na wide breadcrumbs: `Dom / Parter / Salon`; na compact tylko `Wstecz` + bieżący tytuł. Root Panel Grid nigdy nie pokazuje tego paska ani tytułu i wykorzystuje pełną wysokość siatki. Android Back zamyka najpierw popup, potem cofa folder, potem opuszcza Panel Grid.
 
 ### 5.2 Pusty i uszkodzony kontekst
 

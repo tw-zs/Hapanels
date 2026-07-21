@@ -1,273 +1,297 @@
-# Hapanels Roadmap
+# Hapanels - Plan rozwoju
 
-## Current Baseline
+## 📌 Aktualny stan
 
-Hapanels is currently a native Home Assistant Android panel app with Hapanels branding, a public GitHub repo, a white splash screen, panel-oriented hardware diagnostics, and a native tablet dashboard mockup.
+Hapanels to obecnie natywna aplikacja panelowa Home Assistant na Androida z brandingiem Hapanels, publicznym repozytorium GitHub, białym ekranem powitalnym, zorientowaną na panele diagnostyką sprzętu oraz natywnym mockupem dashboardu dla tabletów.
 
-## Milestone 1: Product Shell
+## 🎯 Kamienie milowe
 
-Goal: make the app feel like a wall panel/tablet app instead of a small-screen card-stack client.
+### Milestone 1: Powłoka produktu
 
-Status: done for runtime product shell.
+**Cel:** Sprawić, aby aplikacja wyglądała jak panel ścienny/tablet, a nie klient na małe ekrany.
 
-Done:
-- Branding, icon, README, and panel diagnostics entry points.
-- Tablet-first dashboard default for fresh installs.
-- Panel hardware/provider mode settings.
-- Visible runtime legacy wording replaced with Hapanels/panel copy on primary surfaces.
-- Landscape/portrait shell tuning through responsive breakpoints and tablet dashboard layouts.
-- Release/update naming uses Hapanels tags, assets, client ids, cache names, and runtime identifiers.
-- Non-runtime comments were swept so product-shell documentation describes Hapanels as a panel app.
+**Status:** ✅ Zakończony dla runtime product shell.
 
-Next:
-- Optional future cleanup: migrate inherited package/internal type names if the cost is justified.
+**Zrealizowane:**
+- Branding, ikona, README i punkty wejścia diagnostyki panelu
+- Domyślny dashboard dla tabletów dla świeżych instalacji
+- Ustawienia trybu sprzętu/panełu
+- Zastąpienie dziedziczonych sformułowań na rzecz terminologii Hapanels
+- Dostrojenie powłoki dla landscape/portrait przez responsywne breakpointy i układy dashboardu
+- Nazewnictwo release/update używa tagów, assetów i identyfikatorów Hapanels
+- Komentarze nie związane z runtime zostały usunięte
 
-## Milestone 2: Hardware Abstraction Layer
+**Następne:**
+- Opcjonalne porządki: migracja dziedziczonych nazw pakietów/typów wewnętrznych, jeśli koszt jest uzasadniony
 
-Goal: introduce a clean hardware boundary that can run on normal Android tablets and Shelly Wall Display.
+---
 
-Status: done for the HAL foundation.
+### Milestone 2: Warstwa abstrakcji sprzętu (HAL)
 
-Done:
-- `PanelHardware` interface.
-- `AndroidTabletHardware` fallback provider.
-- `ShellyWallDisplayHardware` safe stub provider.
-- `PanelHardwareController` with `AUTO / TABLET / SHELLY` mode.
-- Runtime status in Settings and `PANEL HARDWARE` diagnostics.
-- Live Android sensor reads for ambient light, proximity, and screen brightness where the OS exposes them.
-- Tests around provider mode persistence and controller provider switching.
-- Controller lifecycle is idempotent and `stop()` cancels settings/provider forwarding.
-- Active provider capability and runtime-state updates are forwarded through the controller.
-- Shelly-native button and relay runtime state now flows through the same HAL boundary.
+**Cel:** Wprowadzić czystą granicę, która może działać na zwykłych tabletach Android i Shelly Wall Display.
 
-Next:
-- Optional polish: localize all remaining hardware diagnostics labels.
-- Optional polish: add richer diagnostics around provider start/stop failures.
+**Status:** ✅ Zakończony dla fundamentu HAL.
 
-## Milestone 3: Shelly Physical Buttons
+**Zrealizowane:**
+- Interfejs `PanelHardware`
+- `AndroidTabletHardware` jako fallback provider
+- `ShellyWallDisplayHardware` jako safe stub provider
+- `PanelHardwareController` z trybami `AUTO / TABLET / SHELLY`
+- Status runtime w Ustawieniach i diagnostyce `PANEL HARDWARE`
+- Odczyty czujników Android (światło otoczenia, zbliżeniowy, jasność ekranu)
+- Testy wokół persystencji trybu providera i przełączania controller provider
+- Lifecycle controllera jest idempotentny, `stop()` anuluje forwarding ustawień/providera
+- Aktualizacje stanu runtime i capability aktywnego providera są przekazywane przez controller
+- Natywny stan przycisków i przekaźników Shelly płynie przez tę samą granicę HAL
 
-Goal: physical Shelly buttons produce reliable button events and can trigger local or HA actions.
+**Następne:**
+- Opcjonalne szlifowanie: lokalizacja pozostałych etykiet diagnostyki sprzętu
+- Opcjonalne szlifowanie: bogatsza diagnostyka wokół błędów start/stop providera
 
-Status: done for current Shelly Wall Display hardware.
+---
 
-Done:
-- Shared button event model.
-- Pressed-button runtime state field.
-- `PanelButtonPressDetector` for short, long, double, and triple presses.
-- `InputMonitor` / `shellyinput.cpp` JNI wiring.
-- Low-level Shelly input key mapping to `PanelHardwareEvent.Button` events.
-- Live `pressedButtonIds` updates in `PanelHardwareRuntimeState`.
-- Button action mapping settings for buttons 1-5.
-- Button action rows for press, release, short click, long press, double click, and triple click.
-- Local relay actions for configured button mappings: none, toggle relay, relay on, and relay off.
-- Non-local configured button actions for Home Assistant service calls and MQTT publishes.
-- Settings UI fields for HA service domain/name/data JSON and MQTT topic/payload/retain.
-- Button 1 short click defaults to relay 1 toggle when relay 1 exists.
-- Short click fires immediately when the same button has no configured double/triple click mapping.
-- Long press does not delay short-click relay behavior.
-- `PanelMqttBridge` publishes button pressed state and click event topics for HA discovery/state surfaces.
+### Milestone 3: Fizyczne przyciski Shelly
 
-Next:
-- Optional future polish: let button action rows choose relay id once more than one relay is supported.
-- Optional future polish: add built-in navigation/screen action targets if they prove useful on the mounted panel.
+**Cel:** Fizyczne przyciski Shelly generują niezawodne zdarzenia przycisków i mogą uruchamiać lokalne lub akcje HA.
 
-## Milestone 4: Shelly Relays And Sensors
+**Status:** ✅ Zakończony dla obecnego sprzętu Shelly Wall Display.
 
-Goal: Shelly relay and sensor state works locally and appears in Hapanels diagnostics/UI.
+**Zrealizowane:**
+- Wspólny model zdarzeń przycisków
+- Pole runtime state `pressedButtonIds`
+- `PanelButtonPressDetector` dla short, long, double i triple press
+- `InputMonitor` / `shellyinput.cpp` połączenie JNI
+- Mapowanie niskopoziomowych kluczy Shelly do zdarzeń `PanelHardwareEvent.Button`
+- Aktualizacje `pressedButtonIds` w `PanelHardwareRuntimeState`
+- Mapowanie akcji przycisków dla przycisków 1-5
+- Wiersze akcji przycisków dla press, release, short click, long press, double click, triple click
+- Lokalne akcje przekaźników dla skonfigurowanych mapowań przycisków: none, toggle relay, relay on, relay off
+- Nielokalne skonfigurowane akcje przycisków dla wywołań usług HA i publikacji MQTT
+- Pola UI dla HA service domain/name/data JSON i MQTT topic/payload/retain
+- Short click domyślnie toggle relay 1, gdy relay 1 istnieje
+- Short click uruchamia się natychmiast, gdy ten sam przycisk nie ma skonfigurowanego double/triple click
+- Long press nie opóźnia zachowania short-click relay
+- `PanelMqttBridge` publikuje stan pressed button i tematy zdarzeń click dla discovery/state HA
 
-Status: done for relay 1, real ambient-light exposure, and capability-based panel control tiles.
+**Następne:**
+- Opcjonalne szlifowanie: pozwolić wierszom akcji przycisków wybierać relay id, gdy obsługiwany jest więcej niż jeden relay
+- Opcjonalne szlifowanie: dodać wbudowane cele nawigacji/screen action, jeśli okażą się przydatne na zamontowanym panelu
 
-Done:
-- Relay 1 sysfs state read/write helper with unit coverage.
-- `ShellyWallDisplayHardware` keeps relay 1 state in `PanelHardwareRuntimeState` after local writes.
-- Ambient light and proximity runtime readings are sanitized so invalid sensor values are treated as missing.
-- MQTT discovery exposes ambient light only when the provider reports a reliable sensor; proximity is intentionally not exposed on Shelly until Android delivers usable events.
-- Temperature/humidity are intentionally not exposed until the hardware provides reliable readings.
-- Relay 1 read/write was smoke-tested on real Shelly Wall Display hardware through Home Assistant MQTT.
-- Shelly screen brightness writes use the real sysfs backlight path while HA/MQTT keeps a stable 0-100% contract.
-- Favorites picker has a `Kontrola panelu` section for local panel tiles, filtered by current hardware capabilities.
-- Local panel tiles can render relay 1, screen brightness, auto-brightness, ambient light, and panel status without fake sensor data.
+---
 
-Next:
-- Add temperature/humidity only when a reliable hardware or integration source exists.
+### Milestone 4: Przekaźniki i czujniki Shelly
 
-## Milestone 5: MQTT Discovery
+**Cel:** Stan przekaźników i czujników Shelly działa lokalnie i pojawia się w diagnostyce/UI Hapanels.
 
-Goal: Home Assistant discovers the panel as a device with relays, buttons, sensors, and availability.
+**Status:** ✅ Zakończony dla relay 1, rzeczywistej ekspozycji światła otoczenia i kafli kontroli panelu opartej na capability.
 
-Status: done and smoke-tested against the user's Home Assistant MQTT broker.
+**Zrealizowane:**
+- Helper odczytu/zapisu stanu sysfs relay 1 z pokryciem testów jednostkowych
+- `ShellyWallDisplayHardware` utrzymuje stan relay 1 w `PanelHardwareRuntimeState` po lokalnych zapisach
+- Odczyty runtime światła otoczenia i zbliżeniowego są sanityzowane, więc nieprawidłowe wartości czujników są traktowane jako brakujące
+- MQTT discovery wystawia światło otoczenia tylko, gdy provider raportuje niezawodny czujnik; zbliżeniowy celowo nie jest wystawiany na Shelly, dopóki Android nie dostarczy użytecznych zdarzeń
+- Temperatura/wilgotność celowo nie są wystawiane, dopóki sprzęt nie dostarcza niezawodnych odczytów
+- Odczyt/zapis relay 1 został przetestowany na rzeczywistym sprzęcie Shelly Wall Display przez MQTT Home Assistant
+- Zapisy jasności ekranu Shelly używają rzeczywistej ścieżki sysfs backlight, podczas gdy HA/MQTT utrzymuje stabilny kontrakt 0-100%
+- Selektor ulubionych ma sekcję `Kontrola panelu` dla lokalnych kafli, filtrowaną przez bieżące capability sprzętu
+- Lokalne kafle panelu mogą renderować relay 1, jasność ekranu, auto-jasność, światło otoczenia i stan panelu bez fałszywych danych czujników
 
-Done:
-- MQTT settings for host, port, TLS, username, password, and client id.
-- Lightweight MQTT v3.1.1 session with publish, subscribe, ping, and disconnect.
-- Discovery config publisher for relays, button pressed state, button click event sensors, and screen brightness.
-- Availability publishing on the panel status topic.
-- Relay state publishing.
-- Button pressed state and button event publishing.
-- Ambient light, proximity, and screen brightness state publishing where runtime state provides values.
-- Ambient light and proximity discovery configs when the active provider exposes those sensors.
-- Relay command subscriptions via `hapanels/<device>/relay/<id>/set`.
-- Screen brightness command subscription via `hapanels/<device>/screen/brightness/set`.
-- Screen auto-brightness switch discovery and command subscription via `hapanels/<device>/screen/auto_brightness/set`.
-- Dashboard config retained state/meta topics plus config import and patch command topics.
-- App online, app version, hardware provider, dashboard metadata, screen mode, target brightness, and applied brightness diagnostics.
-- MQTT connection status plus last connect, publish, and subscribe error diagnostics.
-- Home Assistant device triggers for physical button events.
-- Unit coverage for MQTT command parsing.
-- Real Home Assistant smoke tests for relay 1, brightness, auto-brightness, availability, diagnostics, and dashboard metadata.
+**Następne:**
+- Dodać temperaturę/wilgotność tylko, gdy dostępne jest niezawodne źródło sprzętowe lub integracyjne
 
-Next:
-- Add Home Assistant device metadata refinements if HA UI naming needs polish.
+---
 
-## Milestone 6: Proximity, Brightness, AOD
+### Milestone 5: MQTT Discovery
 
-Goal: make Hapanels useful as an always-mounted wall panel.
+**Cel:** Home Assistant wykrywa panel jako urządzenie z przekaźnikami, przyciskami, czujnikami i dostępnością.
 
-Status: done for practical proximity, brightness, and native AOD foundation.
+**Status:** ✅ Zakończony i przetestowany przeciw brokerowi MQTT użytkownika.
 
-Done:
-- `PanelScreenManager` lifecycle is wired from app startup.
-- Manual screen brightness control works through HA/MQTT and Shelly sysfs, with diagnostics for applied brightness.
-- Auto-brightness settings, smoothing, hysteresis, and HA/MQTT switch control are in place.
-- Screen mode, target brightness, and applied brightness are published as MQTT diagnostics.
-- `WRITE_SETTINGS` is requested/allowed for Shelly so Android does not override hardware brightness writes.
-- Proximity wake settings and threshold handling are wired through `PanelScreenManager`.
-- Screensaver/AOD timeout, mode state, user activity wake, and last wake/sleep reasons are tracked.
-- Native AOD renderer supports clock-only mode and AOD tile mode through the dashboard config model.
-- AOD clock style selection is persisted as `always_on_display.clock_style` and can be patched over MQTT/Studio.
-- AOD clock style pack is expanded to 13 unical styles, fully integrated with both the client app and Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient and streaks), Electric Stained Glass (stained glass and multi-colored numbers), and Poznan Goats (Amber typography with clock-offset and optimized Poznan goats artwork).
+**Zrealizowane:**
+- Ustawienia MQTT dla hosta, portu, TLS, username, password i client id
+- Lekka sesja MQTT v3.1.1 z publish, subscribe, ping i disconnect
+- Publisher konfiguracji discovery dla przekaźników, stanu pressed button, zdarzeń click button i jasności ekranu
+- Publikowanie dostępności na temacie stanu panelu
+- Publikowanie stanu relay
+- Publikowanie stanu pressed button i button event
+- Publikowanie stanu światła otoczenia, zbliżeniowego i jasności ekranu, gdzie runtime state dostarcza wartości
+- Konfiguracje discovery światła otoczenia i zbliżeniowego, gdy aktywny provider wystawia te czujniki
+- Subskrypcje poleceń relay przez `hapanels/<device>/relay/<id>/set`
+- Subskrypcja poleceń jasności ekranu przez `hapanels/<device>/screen/brightness/set`
+- Discovery i subskrypcja przełącznika auto-jasności ekranu przez `hapanels/<device>/screen/auto_brightness/set`
+- Retained tematy stanu/meta dashboardu + tematy poleceń importu i patcha dashboardu
+- Diagnostyka: app online, app version, hardware provider, metadata dashboardu, screen mode, target brightness, applied brightness
+- Status połączenia MQTT + ostatnie błędy connect, publish i subscribe
+- Triggery urządzenia Home Assistant dla fizycznych zdarzeń przycisków
+- Pokrycie testów jednostkowych dla parsowania poleceń MQTT
+- Rzeczywiste testy smoke dla relay 1, brightness, auto-brightness, availability, diagnostyki i metadata dashboardu
 
-Next:
-- Optional polish: tune proximity and idle behavior on real mounted Shelly hardware after longer use.
-- Optional polish: add richer AOD sources later, such as photo/video slideshow or selected native status widgets, without making Hapanels depend on Lovelace/WebView.
+**Następne:**
+- Dodać udoskonalenia metadanych urządzenia Home Assistant, jeśli UI HA potrzebuje polerowania
 
-## Milestone 7: Production Hardening
+---
 
-Goal: ship a maintainable panel appliance.
+### Milestone 6: Zbliżeniowy, Jasność, AOD
 
-Next:
-- Fix Shelly/Android system shade race: after leaving Hapanels Studio, a fast tap near the top-left hamburger can open Android `NotificationShade` and look like a black screen before the app/AOD view returns. Current evidence: app stays foreground, no crash, no FavoritesPicker navigation, `mExpandedPanel=NotificationShade`. Evaluate proper immersive/kiosk handling or a robust top-gesture guard instead of relying on layout padding.
-- Boot/autostart.
-- Kiosk mode options.
-- Floating return-to-app button when Hapanels is backgrounded or hidden.
-- Diagnostics export.
-- Hardware compatibility matrix.
-- Release workflow hardening and signed APK handling.
+**Cel:** Sprawić, aby Hapanels był użyteczny jako stale zamontowany panel ścienny.
 
-## Milestone 8: Native Panel Dashboard And HA Config Sync
+**Status:** ✅ Zakończony dla praktycznego zbliżeniowego, jasności i natywnego fundamentu AOD.
 
-Goal: let Home Assistant manage Hapanels dashboard configuration while Hapanels renders a polished native Compose wall-panel dashboard.
+**Zrealizowane:**
+- Lifecycle `PanelScreenManager` podłączony od startu aplikacji
+- Kontrola ręcznej jasności ekranu działa przez HA/MQTT i Shelly sysfs, z diagnostyką applied brightness
+- Ustawienia auto-jasności, smoothing, histereza i kontrola przełącznika HA/MQTT
+- Screen mode, target brightness i applied brightness publikowane jako diagnostyka MQTT
+- `WRITE_SETTINGS` jest request/allowed dla Shelly, więc Android nie nadpisuje zapisów jasności sprzętu
+- Ustawienia wake zbliżeniowego i obsługa progu przez `PanelScreenManager`
+- Timeout screensaver/AOD, stan trybu, user activity wake i ostatnie powody wake/sleep są śledzone
+- Natywny renderer AOD obsługuje tryb clock-only i AOD tile mode przez model konfiguracji dashboardu
+- Wybór stylu zegara AOD jest persystowany jako `always_on_display.clock_style` i może być patchowany przez MQTT/Studio
+- Pakiet stylów zegara AOD rozbudowany do 13 unikalnych stylów, w pełni zintegrowany z aplikacją kliencką i Hapanels Studio: default, modern, Warsaw Zakład, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient i streaks), Electric Stained Glass (stained glass i multi-colored numbers), i Poznan Goats (typografia Amber z clock-offset i zoptymalizowaną grafiką Poznan goats)
 
-Status: started.
+**Następne:**
+- Opcjonalne szlifowanie: dostrojenie zachowania zbliżeniowego i idle na rzeczywistym zamontowanym sprzęcie Shelly po dłuższym użyciu
+- Opcjonalne szlifowanie: dodać bogatsze źródła AOD później, takie jak pokaz slajdów zdjęć/wideo lub wybrane natywne widgety statusu, bez czynienia Hapanels zależnym od Lovelace/WebView
 
-Done:
-- Native dark panel-grid mockup route in Compose.
-- Tablet-oriented grid with clock, people, action tiles, large room tiles, and compact status tiles.
-- Local Nunito font resources for the new panel dashboard.
-- Dashboard config model with tile/person/layout types and sample JSON.
-- Local dashboard config source that seeds and caches `hapanels_dashboard_config.json`.
-- Explicit local dashboard JSON export/import/reset controls in Appearance settings.
-- Live entity binding for supported dashboard tile `entity_id` values via `HaRepository.observe`.
-- Retained MQTT dashboard config state/meta topics plus inbound `dashboard/config/set` import support.
-- Local dashboard edit patches with `base_revision` conflict detection and MQTT `dashboard/config/patch/set` support.
-- Entry points from the card stack, dashboard screen, and app navigation.
-- Hapanels Studio can edit tiles/AOD, show an approximate HTML preview, resize tiles from the preview, apply AOD presets, and resolve basic config conflicts.
-- Hapanels Studio tile editor uses Home Assistant's lazy `ha-entity-picker` instead of rendering every entity as `<option>`.
-- Native dashboard tile taps dispatch Home Assistant actions through the existing domain-aware `ServiceCall.tapAction` path.
-- Dashboard theme presets are persisted in dashboard config and rendered by the native Compose panel.
-- Hapanels Studio includes an Appearance tab for panel theme presets and light/dark mode selection.
-- Hapanels Studio can select AOD clock styles and apply them via dashboard patch commands.
+---
 
-Next:
-- Add drilldown panels: `panel_id` opens a native panel, backed by a persisted panel/card schema in dashboard config.
-- Continue Hapanels Studio layout polish after the editor rebuild, especially icon picker sizing and mobile wrapping.
-- Improve Hapanels Studio preview fidelity: match the Compose tablet renderer more closely for tile geometry, clock/person section, camera/action tiles, spacing, typography, and responsive behavior. Current HTML preview is useful for editing but not pixel-perfect.
-- Add fuller conflict resolution: compare tablet/current config vs Studio pending patch, show changed fields, and support per-tile/per-field merge instead of only “Studio wins” / “tablet wins”.
-- Keep Hapanels as the native renderer and avoid WebView/Lovelace dependence unless a specific card requires it.
+### Milestone 7: Utwardzanie produkcji
 
-## Milestone 9: Camera Support
+**Cel:** Dostarczyć utrzymywalny panel appliance.
 
-Goal: bring camera viewing into the native panel experience in a way that feels closer to Phylax's camera-first UX, while still using Hapanels' native Compose surfaces.
+**Następne:**
+- Naprawić wyścig Shelly/Android system shade: po opuszczeniu Hapanels Studio, szybkie dotknięcie w pobliżu górnego-lewego hamburgera może otworzyć Android `NotificationShade` i wyglądać jak czarny ekran, zanim widok app/AOD powróci. Obecne dowody: app pozostaje foreground, no crash, no FavoritesPicker navigation, `mExpandedPanel=NotificationShade`. Oceń odpowiednie immersive/kiosk handling lub solidny top-gesture guard zamiast polegać na layout padding
+- Boot/autostart
+- Opcje trybu kiosku
+- Pływający przycisk powrotu do aplikacji, gdy Hapanels jest w tle lub ukryty
+- Eksport diagnostyki
+- Macierz kompatybilności sprzętu
+- Utwardzanie workflow release i obsługa podpisanych APK
 
-Status: planned.
+---
 
-Tasks:
-- Add a native camera browser with list/grid modes and live snapshot polling.
-- Add fullscreen camera overlay/detail with fast refresh tuning.
-- Extend the dashboard mockup with camera-focused tiles and quick actions.
-- Support camera-friendly HA refresh defaults and graceful fallback when no cameras are available.
-- Use Phylax as inspiration for camera browsing, live status presentation, and touch-friendly camera detail flows.
+### Milestone 8: Natywny dashboard panelu i synchronizacja konfiguracji HA
 
-Verification:
-- Camera entities from HA appear in the native camera browser.
-- Grid and fullscreen camera views poll snapshots without stalling the rest of the panel.
-- Dashboard mockup shows a dedicated camera tile/section.
-- Camera browsing stays usable on both tablets and wall panels.
+**Cel:** Pozwolić Home Assistant zarządzać konfiguracją dashboardu Hapanels, podczas gdy Hapanels renderuje dopracowany natywny dashboard Compose.
 
-Maybe later:
-- ESPHome Bluetooth proxy support for nearby BLE devices.
+**Status:** Rozpoczęty.
 
-## Milestone 10: First-Run Setup
+**Zrealizowane:**
+- Natywny ciemny mockup trasy grid panelu w Compose
+- Zorientowany na tablety grid z zegarem, ludźmi, kafelkami akcji, dużymi kafelkami pomieszczeń i zwartymi kafelkami statusu
+- Lokalne zasoby czcionek Nunito dla nowego dashboardu panelu
+- Model konfiguracji dashboardu z typami tile/person/layout i przykładowym JSON
+- Lokalne źródło konfiguracji dashboardu, które inicjuje i cache'uje `hapanels_dashboard_config.json`
+- Jawne lokalne kontrole eksportu/importu/reset dashboardu JSON w ustawieniach Wyglądu
+- Live binding encji dla obsługiwanych wartości `entity_id` kafla dashboardu przez `HaRepository.observe`
+- Retained tematy stanu/meta dashboardu MQTT + wsparcie importu `dashboard/config/set`
+- Lokalne patch'e edycji dashboardu z wykrywaniem konfliktów `base_revision` i wsparciem `dashboard/config/patch/set` MQTT
+- Punkty wejścia z stacku kart, ekranu dashboardu i nawigacji aplikacji
+- Hapanels Studio może edytować kafelki/AOD, pokazywać przybliżony podgląd HTML, zmieniać rozmiar kafla z podglądu, stosować presety AOD i rozstrzygać podstawowe konflikty konfiguracji
+- Edytor kafla Hapanels Studio używa leniwego `ha-entity-picker` Home Assistant zamiast renderować każdą encję jako `<option>`
+- Natywne dotknięcia kafla dashboardu wysyłają akcje Home Assistant przez istniejąca ścieżkę `ServiceCall.tapAction` świadomą domeny
+- Presety motywów dashboardu są persystowane w konfiguracji dashboardu i renderowane przez natywny Compose panel
+- Hapanels Studio zawiera zakładkę Wygląd dla presety motywów panelu i wybór trybu jasnego/ciemnego
+- Hapanels Studio może wybierać style zegara AOD i stosować je przez polecenia patcha dashboardu
 
-Goal: make first launch feel like a real device onboarding flow instead of a raw app start.
+**Następne:**
+- Dodać panele drilldown: `panel_id` otwiera natywny panel, wsparcie przez persystowany schemat panelu/kartu w konfiguracji dashboardu
+- Kontynuować polerowanie układu Studio po rebuildzie edytora, zwłaszcza rozmiar ikon picker i mobile wrapping
+- Poprawić wierność podglądu Studio: dopasować renderer Compose tablet bardziej ściśle dla geometrii kafla, sekcji zegara/osoby, kafla kamery/akcji, spacing, typografii i zachowania responsywnego. Obecny podgląd HTML jest użyteczny do edycji, ale nie pixel-perfect
+- Dodać pełniejsze rozstrzyganie konfliktów: porównać konfigurację tablet/bieżącą vs Studio pending patch, pokazać zmienione pola i wsparcie per-tile/per-field merge zamiast tylko "Studio wins" / "tablet wins"
+- Utrzymać Hapanels jako natywny renderer i unikać zależności WebView/Lovelace, chyba że konkretna karta tego wymaga
 
-Status: done for the production onboarding foundation.
+---
 
-Done:
-- Guided first-run welcome, Home Assistant connection, authorization, and personalization screens.
-- Home Assistant OAuth sign-in with server probing and token exchange.
-- Long-lived access token setup remains available as an onboarding alternative to OAuth.
-- Tablet name persists into app settings and HA/MQTT-facing panel identity.
-- Panel Grid theme preset selection patches the persisted dashboard config without replacing its light/dark mode, AOD configuration, or tiles.
-- Startup choice is limited to `GRID` and `CARDS`, persists across restart, and replaces legacy Today/dashboard startup preferences and launcher links.
+### Milestone 9: Obsługa kamer
 
-Verification:
-- Startup stays in onboarding until both a server and non-blank access token are present.
-- OAuth and long-lived token paths can complete setup.
-- Tablet name, Panel Grid theme, and `GRID` / `CARDS` start view persist after restart.
-- Legacy start-view settings and backups migrate compatibly; startup and launcher shortcuts never open Today.
-- Onboarding strings have focused Polish localization coverage.
+**Cel:** Przenieść przeglądanie kamer do natywnego doświadczenia panelu w sposób zbliżony do UX Phylax (camera-first), wciąż używając natywnych powierzchni Compose Hapanels.
 
-## Milestone 11: Secure MQTT And Studio Onboarding
+**Status:** Zaplanowany.
 
-Goal: include real MQTT and Hapanels Studio setup in first-run onboarding without storing credentials insecurely or showing simulated connection states.
+**Zadania:**
+- Dodać natywną przeglądarkę kamer z trybami list/grid i live polling snapshotów
+- Dodać fullscreen overlay/detail kamer z dostrojonym szybkim odświeżaniem
+- Rozszerzyć mockup dashboardu o kafelki i szybkie akcje zorientowane na kamery
+- Wsparcie przyjaznych dla kamer domyślnych odświeżeń HA i graceful fallback, gdy kamery są niedostępne
+- Użyć Phylax jako inspirację dla przeglądania kamer, prezentacji live statusu i touch-friendly camera detail flows
 
-Status: planned.
+**Weryfikacja:**
+- Encje kamer z HA pojawiają się w natywnej przeglądarce kamer
+- Widoki grid i fullscreen kamer pollują snapshoty bez blokowania reszty panelu
+- Mockup dashboardu pokazuje dedykowany kafel/sekcję kamer
+- Przeglądanie kamer pozostaje użyteczne na tabletach i panelach ściennych
 
-Tasks:
-- Move MQTT credentials from regular DataStore into encrypted storage.
-- Migrate existing MQTT credentials and remove plaintext values after successful migration.
-- Add MQTT onboarding for host, port, TLS, username, password, connection test, and optional skip.
-- Report real broker connection status and actionable connection errors.
-- Add Hapanels Studio setup based on actual MQTT/config-sync availability.
-- Detect and display real Studio readiness instead of a simulated connected state.
-- Add MQTT and Studio results to the final onboarding checklist.
+**Może później:**
+- Wsparcie ESPHome Bluetooth proxy dla pobliskich urządzeń BLE
 
-Verification:
-- MQTT password never persists in plaintext settings.
-- Valid broker credentials establish a real connection.
-- Invalid credentials and unreachable brokers show useful errors.
-- Studio status reflects actual configuration-sync availability.
-- Both steps can be skipped without blocking onboarding.
+---
 
-## Milestone 12: Adaptive Display Brightness
+### Milestone 10: Pierwsze uruchomienie i onboarding
 
-Goal: keep AOD readable during the day and keep both AOD and the active panel comfortable at night.
+**Cel:** Sprawić, aby pierwsze uruchomienie wyglądało jak prawdziwy proces onboardingu urządzenia, a nie surowy start aplikacji.
 
-Status: planned.
+**Status:** ✅ Zakończony dla fundamentu onboardingu produkcji.
 
-Tasks:
-- Replace separate AOD and panel brightness behavior with one ambient-light controller.
-- Add independently tunable AOD and active-panel brightness curves with calibrated minimum and maximum levels.
-- Smooth noisy lux readings and use hysteresis, dwell time, and gradual transitions to prevent visible brightness jumps.
-- Prevent feedback where screen brightness changes alter the panel's own ambient-light reading.
-- Preserve manual brightness as an explicit override with a clear path back to adaptive mode.
-- Expose calibration and diagnostics in Hapanels Studio, including lux, filtered lux, target brightness, applied brightness, and active override source.
-- Tune day, evening, and night behavior on mounted Shelly Wall Display hardware.
+**Zrealizowane:**
+- Przewodnik first-run: powitanie, połączenie Home Assistant, autoryzacja, ekrany personalizacji
+- Logowanie OAuth Home Assistant z sondowaniem serwera i wymianą tokenów
+- Ustawienie long-lived access token pozostaje dostępne jako alternatywa onboardingowa do OAuth
+- Nazwa tabletu persystuje do ustawień aplikacji i tożsamości panelu HA/MQTT
+- Wybór presetu motywu Panel Grid patch'uje persystowaną konfigurację dashboardu bez zastępowania jego trybu jasnego/ciemnego, konfiguracji AOD lub kafla
+- Wybór startowy ograniczony do `GRID` i `CARDS`, persystuje przez restart i zastępuje dziedziczone preferencje startowe Today/dashboard i linki launchera
 
-Verification:
-- AOD remains readable in a bright room without running at unnecessary full brightness.
-- AOD and the active panel do not dazzle in a dark room.
-- Walking toward the panel and leaving AOD produces no flash, dip, or oscillation.
-- Rapid or screen-induced lux changes do not cause repeated brightness writes.
-- Behavior remains predictable with auto-brightness disabled or the ambient-light sensor unavailable.
+**Weryfikacja:**
+- Start pozostaje w onboardingu, dopóki serwer i non-blank access token nie są obecne
+- Ścieżki OAuth i long-lived token mogą ukończyć setup
+- Nazwa tabletu, preset motywu Panel Grid i `GRID` / `CARDS` widok startowy persystują przez restart
+- Dziedziczone ustawienia startowe i backupy migrują kompatybilnie; startup i launcher shortcuts nigdy nie otwierają Today
+- Stringi onboardingowe mają skupione pokrycie lokalizacji polskiej
+
+---
+
+### Milestone 11: Bezpieczny MQTT i onboarding Studio
+
+**Cel:** Uwzględnić rzeczywiste setup MQTT i Hapanels Studio w first-run onboarding bez przechowywania poświadczeń niebezpiecznie lub pokazywania symulowanych stanów połączenia.
+
+**Status:** Zaplanowany.
+
+**Zadania:**
+- Przenieść poświadczenia MQTT z regularnego DataStore do encrypted storage
+- Zmigrować istniejące poświadczenia MQTT i usunąć wartości plaintext po udanej migracji
+- Dodać onboarding MQTT dla hosta, portu, TLS, username, password, testu połączenia i opcjonalnego skip
+- Raportować rzeczywisty status połączenia brokera i actionable błędy połączenia
+- Dodać setup Hapanels Studio oparty na rzeczywistej dostępności MQTT/config-sync
+- Wykrywać i wyświetlać rzeczywistą gotowość Studio zamiast symulowanego stanu połączonego
+- Dodać wyniki MQTT i Studio do finalnej listy kontrolnej onboardingowej
+
+**Weryfikacja:**
+- Hasło MQTT nigdy nie persystuje w plaintext settings
+- Prawidłowe poświadczenia brokera ustanawiają rzeczywiste połączenie
+- Nieprawidłowe poświadczenia i nieosiągalni brokerzy pokazują użyteczne błędy
+- Status Studio odzwierciedla rzeczywistą dostępność synchronizacji konfiguracji
+- Oba kroki mogą zostać pominięte bez blokowania onboardingowego
+
+---
+
+### Milestone 12: Adaptacyjna jasność wyświetlacza
+
+**Cel:** Utrzymać AOD czytelnym w ciągu dnia i komfortowym w nocy, zarówno dla AOD, jak i aktywnego panelu.
+
+**Status:** Zaplanowany.
+
+**Zadania:**
+- Zastąpić oddzielne zachowania jasności AOD i aktywnego panelu jednym kontrolerem światła otoczenia
+- Dodać niezależnie dostrajalne krzywe jasności AOD i aktywnego panelu z skalibrowanymi poziomami minimalnymi i maksymalnymi
+- Wygładzać hałaśliwe odczyty luksów i używać histerezy, dwell time i stopniowych przejść, aby zapobiec widocznym skokom jasności
+- Zapobiegać feedback, gdzie zmiany jasności ekranu zmieniają własny odczyt światła otoczenia panelu
+- Zachować ręczną jasność jako jawne nadpisanie z klarowną ścieżką powrotu do trybu adaptacyjnego
+- Wystawić kalibrację i diagnostykę w Hapanels Studio, w tym luks, filtered luks, target brightness, applied brightness i aktywny override source
+- Dostroić zachowanie dzienne, wieczorne i nocne na zamontowanym sprzęcie Shelly Wall Display
+
+**Weryfikacja:**
+- AOD pozostaje czytelny w jasnym pomieszczeniu bez niepotrzebnego pełnego jasności
+- AOD i aktywny panel nie oślepiają w ciemnym pomieszczeniu
+- Chodzenie w kierunku panelu i opuszczanie AOD nie powoduje flash, dip lub oscylacji
+- Szybkie lub indukowane przez ekran zmiany luksów nie powodują powtarzanych zapisów jasności
+- Zachowanie pozostaje przewidywalne z auto-jasnością wyłączoną lub czujnikiem światła otoczenia niedostępnym

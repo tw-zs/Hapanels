@@ -1,78 +1,53 @@
 # Integracja Home Assistant
 
-Hapanels oferuje własną integrację `custom_components/hapanels`, która umożliwia dwukierunkową komunikację między Home Assistant a panelami Hapanels. To pierwszy krok w kierunku pełnego **Hapanels Studio** – narzędzia do zarządzania i konfigurowania panelu bezpośrednio z poziomu Home Assistant.
+Hapanels ma własną integrację `custom_components/hapanels`. To pierwszy krok pod Hapanels Studio: panel w Home Assistant ma czytać stan tabletów, wykrywać konflikty konfiguracji i wysyłać zmiany dashboardu/AOD przez MQTT.
 
-## 📋 Czym jest integracja Hapanels?
+## Status MVP
 
-Integracja służy jako most między Home Assistant a Twoimi panelami. Dzięki niej:
+Obecnie integracja robi minimum potrzebne przed budową edytora:
 
-- Home Assistant wykrywa wszystkie aktywne panele Hapanels
-- Możesz monitorować status synchronizacji konfiguracji
-- Możesz zdalnie aktualizować ustawienia panelu przez MQTT
-- Otrzymujesz informacje o ewentualnych konfliktach konfiguracji
+- dodaje config flow `Hapanels`,
+- dodaje panel `Hapanels` w sidebarze Home Assistant,
+- subskrybuje retained MQTT topic `hapanels/+/dashboard/config/sync/state`,
+- tworzy sensor `Dashboard sync` dla każdego wykrytego panelu,
+- pokazuje wykryte panele i status synchronizacji w prostym widoku web,
+- udostępnia usługi do wysyłania pełnego configu i patchy.
 
-## 🎯 Obecne możliwości (MVP)
+## Instalacja developerska
 
-Aktualna wersja integracji oferuje podstawowe funkcjonalności niezbędne przed budową pełnego edytora:
+Skopiuj katalog:
 
-| Funkcjonalność | Opis |
-|----------------|------|
-| **Config Flow** | Dodaje integrację Hapanels w interfejsie Home Assistant |
-| **Panel w sidebarze** | Tworzy dedykowany panel Hapanels w bocznym menu |
-| **Monitorowanie MQTT** | Subskrybuje tematy `hapanels/+/dashboard/config/sync/state` |
-| **Sensory synchronizacji** | Tworzy sensory `Dashboard sync` dla każdego panelu |
-| **Podgląd paneli** | Pokazuje wykryte panele i ich status synchronizacji |
-| **Usługi MQTT** | Udostępnia usługi do wysyłania pełnej konfiguracji i patchy |
-
-## 📥 Instalacja
-
-### 1. Kopiowanie plików
-
-Skopiuj katalog integracji:
-
-```bash
+```text
 custom_components/hapanels
 ```
 
-Do katalogu konfiguracyjnego Home Assistant:
+do katalogu Home Assistant:
 
-```bash
+```text
 /config/custom_components/hapanels
 ```
 
-### 2. Restart Home Assistant
+Następnie zrestartuj Home Assistant i dodaj integrację z UI:
 
-Zrestartuj swoją instancję Home Assistant, aby załadować nową integrację.
-
-### 3. Dodawanie integracji
-
-Przejdź do:
-
-```
-Ustawienia → Urządzenia i usługi → Dodaj integrację → Hapanels
+```text
+Ustawienia -> Urządzenia i usługi -> Dodaj integrację -> Hapanels
 ```
 
-### 4. Konfiguracja
+Domyślny base topic to:
 
-Domyślny base topic MQTT:
-
-```
+```text
 hapanels
 ```
 
-Możesz go zmienić podczas konfiguracji, jeśli używasz innego prefiksu.
+## MQTT Sync State
 
-## 📡 Komunikacja MQTT
+Tablet publikuje retained status synchronizacji:
 
-### Tematy synchronizacji
-
-Panel publikuje status synchronizacji na temacie:
-
-```
+```text
 hapanels/<device>/dashboard/config/sync/state
 ```
 
-#### Przykład: Status "synced"
+Przykład `synced`:
 
 ```json
 {
@@ -83,7 +58,7 @@ hapanels/<device>/dashboard/config/sync/state
 }
 ```
 
-#### Przykład: Konflikt
+Przykład `conflict`:
 
 ```json
 {
@@ -96,53 +71,55 @@ hapanels/<device>/dashboard/config/sync/state
 }
 ```
 
-Integracja konwertuje te dane na sensory z atrybutami takimi jak `revision`, `dashboard_id`, `updated_by`, itp.
+Integracja zamienia ten payload na sensor z atrybutami `revision`, `dashboard_id`, `updated_by`, `current_revision` i `attempted_base_revision`.
 
-## 🖥️ Panel Hapanels w Home Assistant
+## Panel Hapanels
 
-Po dodaniu integracji, w sidebarze pojawi się nowy panel **Hapanels**, który oferuje:
+Po dodaniu integracji w sidebarze pojawia się panel:
 
-- **Listę wykrytych paneli** – wszystkie aktywne urządzenia Hapanels
-- **Status synchronizacji** – `synced`, `conflict`, `invalid` lub `unknown`
-- **Aktualna rewizja** – numer wersji konfiguracji
-- **Ostatni autor zmiany** – kto ostatnio modyfikował konfigurację
-- **Informacje o konflikcie** – jeśli patch był oparty o starą wersję
+```text
+Hapanels
+```
 
-⚠️ **Uwaga**: To jeszcze nie jest pełny edytor. To fundament pod przyszłe **Hapanels Studio**.
+Pierwsza wersja pokazuje:
 
-## 🔧 Dostępne usługi
+- listę wykrytych paneli,
+- status `synced/conflict/invalid/unknown`,
+- aktualną revision,
+- ostatniego autora zmiany,
+- revision konfliktu, jeśli patch był oparty o starą wersję.
+
+To jeszcze nie jest pełny edytor. To fundament pod Hapanels Studio.
+
+## Usługi
 
 ### `hapanels.set_dashboard_config`
 
-Publikuje pełną konfigurację dashboardu na temacie:
+Publikuje pełny dashboard config do:
 
-```
+```text
 hapanels/<device>/dashboard/config/set
 ```
 
-**Parametry:**
+Pola:
 
-| Parametr | Typ | Opis |
-|----------|-----|------|
-| `device` | string | Nazwa urządzenia z tematu MQTT (np. `Blake`, `shelly_wall_display`) |
-| `config` | object | Pełny obiekt konfiguracji dashboardu |
+- `device`: nazwa urządzenia z topicu MQTT, np. `Blake`, `shelly_wall_display`.
+- `config`: pełny obiekt dashboard config.
 
 ### `hapanels.patch_dashboard_config`
 
-Publikuje patch (częściową aktualizację) na temacie:
+Publikuje patch do:
 
-```
+```text
 hapanels/<device>/dashboard/config/patch/set
 ```
 
-**Parametry:**
+Pola:
 
-| Parametr | Typ | Opis |
-|----------|-----|------|
-| `device` | string | Nazwa urządzenia z tematu MQTT |
-| `patch` | object | Obiekt patcha z polami: `base_revision`, `updated_by`, `surface`, `tile_updates` |
+- `device`: nazwa urządzenia z topicu MQTT.
+- `patch`: obiekt patcha z `base_revision`, `updated_by`, `surface` i `tile_updates`.
 
-#### Przykład patcha AOD
+Przykład patcha AOD:
 
 ```json
 {
@@ -159,20 +136,11 @@ hapanels/<device>/dashboard/config/patch/set
 }
 ```
 
-## 🚀 Następne kroki
+## Następny Krok
 
-Kolejnym etapem rozwoju jest **Hapanels Studio** – wizualny edytor zintegrowany z Home Assistant, który umożliwi:
+Następny etap to frontend panel `Hapanels Studio` w sidebarze Home Assistant:
 
-- Podgląd dashboardu i AOD (Always On Display)
-- Edycję kafelków w interfejsie graficznym
-- Wysyłanie patchy przez MQTT
-- Obsługę konfliktów synchronizacji
-- Zarządzanie wieloma panelami
-
----
-
-## 📖 Zobacz także
-
-- [Instrukcja instalacji MQTT](installation.md)
-- [Konfiguracja sprzętu](hardware.md)
-- [Dokumentacja dla developerów](development.md)
+- podgląd `Dashboard` i `AOD`,
+- edycja kafli,
+- wysyłanie patchy,
+- obsługa `conflict` z `dashboard/config/sync/state`.

@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -125,7 +126,7 @@ fun SelectCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "CHOOSE OPTION",
+                    text = stringResource(R.string.select_choose_option),
                     style = R1.labelMicro,
                     color = R1.InkSoft,
                 )

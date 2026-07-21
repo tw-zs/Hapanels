@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name" translatable="false">Hapanels</string>
 
-    <!-- ────────────────────────────────────────────────────────────────
+    <!-- 
          Translation policy
 
          User-visible chrome (top bars, dialog buttons, common labels,
@@ -18,7 +18,7 @@
          Strings that already have a unique technical key (shortcut_*,
          widget_*, quick_tile_*) keep theirs for back-compat with the
          manifest references that point at them.
-        ──────────────────────────────────────────────────────────────── -->
+        -->
 
     <!-- App-shortcut labels — surfaced when the user long-presses the
          launcher icon. Each routes through MainActivity's extras-based
@@ -49,7 +49,7 @@
     <string name="widget_description">Quick-launch Hapanels</string>
     <string name="widget_button_label">Hapanels</string>
 
-    <!-- ── Dialog buttons ─────────────────────────────────────────── -->
+    <!-- 	 Dialog buttons 																				 -->
     <string name="dialog_cancel">CANCEL</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_save">SAVE</string>
@@ -68,7 +68,7 @@
     <string name="dialog_yes">Yes</string>
     <string name="dialog_no">No</string>
 
-    <!-- ── Top-bar / chrome ───────────────────────────────────────── -->
+    <!-- 	 Top-bar / chrome 														 -->
     <string name="chrome_settings">Settings</string>
     <string name="chrome_assist">Assist</string>
     <string name="chrome_battery">Battery</string>
@@ -76,7 +76,7 @@
     <string name="chrome_edit_favorites">Edit favourites</string>
     <string name="chrome_back">Back</string>
 
-    <!-- ── Top-level screen titles ────────────────────────────────── -->
+    <!-- 	 Top-level screen titles 											 -->
     <string name="title_today">TODAY</string>
     <string name="title_search">SEARCH</string>
     <string name="title_assist">ASSIST</string>
@@ -105,16 +105,16 @@
     <string name="title_labels">LABELS</string>
     <string name="title_floors">FLOORS</string>
 
-    <!-- ── Card stack empty + connection states ───────────────────── -->
+    <!-- 	 Card stack empty + connection states 					 -->
     <string name="cardstack_empty_title">No favourites yet</string>
     <string name="cardstack_empty_hint">Pick entities to control from your HA setup.</string>
     <string name="cardstack_empty_action">CHOOSE FAVOURITES</string>
     <string name="conn_disconnected">Disconnected</string>
-    <string name="conn_reconnecting">Reconnecting…</string>
-    <string name="conn_connecting">Connecting…</string>
+    <string name="conn_reconnecting">Reconnecting</string>
+    <string name="conn_connecting">Connecting</string>
     <string name="conn_auth_lost">Auth lost; sign in again</string>
 
-    <!-- ── Onboarding ─────────────────────────────────────────────── -->
+    <!-- 	 Onboarding 															 -->
     <string name="onboarding_url_label">Home Assistant URL</string>
     <string name="onboarding_url_placeholder">http://homeassistant.local:8123</string>
     <string name="onboarding_continue">CONTINUE</string>
@@ -122,9 +122,354 @@
     <string name="onboarding_sign_in_token">Sign in with long-lived token</string>
     <string name="onboarding_open_ha">Open HA in browser</string>
 
-    <!-- ── Pull-to-refresh + generic affordances ──────────────────── -->
+    <!-- 	 Pull-to-refresh + generic affordances 		 -->
     <string name="pull_to_refresh">Pull to refresh</string>
-    <string name="loading">Loading…</string>
+    <string name="loading">Loading</string>
     <string name="empty_no_results">No results</string>
     <string name="error_generic">Something went wrong</string>
+
+    <!-- 	 Entity card labels 									 -->
+    <string name="label_fan">FAN</string>
+    <string name="label_battery">BATTERY</string>
+    <string name="label_enter_pin">ENTER PIN</string>
+    <string name="label_cancel">CANCEL</string>
+    <string name="label_preset">PRESET</string>
+    <string name="label_swing">SWING</string>
+    <string name="label_now">NOW</string>
+    <string name="label_mode">MODE</string>
+    <string name="label_source">SOURCE</string>
+    <string name="label_read_only">READ ONLY</string>
+
+    <!-- 	 System Health 								 -->
+    <string name="system_health_server">SERVER</string>
+    <string name="system_health_network_security">NETWORK SECURITY</string>
+    <string name="system_health_error_log">ERROR LOG (tail)</string>
+    <string name="system_health_copy">COPY</string>
+    <string name="system_health_ping">PING</string>
+    <string name="system_health_share_debug_bundle">SHARE DEBUG BUNDLE</string>
+    <string name="system_health_share">SHARE</string>
+    <string name="system_health_no_log_output">No log output (HA returned an empty body).</string>
+
+    <!-- 	 Dev Menu 									 -->
+    <string name="dev_menu_event_type">EVENT TYPE</string>
+    <string name="dev_menu_data_json">DATA (JSON, optional)</string>
+    <string name="dev_menu_last_crash">LAST CRASH</string>
+    <string name="dev_menu_port">PORT</string>
+    <string name="dev_menu_broker_host">BROKER HOST</string>
+    <string name="dev_menu_publish">PUBLISH</string>
+    <string name="dev_menu_topic">TOPIC</string>
+    <string name="dev_menu_payload">PAYLOAD</string>
+    <string name="dev_menu_uuid">UUID</string>
+    <string name="dev_menu_major">MAJOR</string>
+    <string name="dev_menu_minor">MINOR</string>
+    <string name="dev_menu_clear">CLEAR</string>
+    <string name="dev_menu_mqtt_description">Connect to an MQTT broker and publish a single message. The client is publish-only and one-shot — no subscriptions, no retained-session machinery. Useful for triggering automations on broker-side rules or pushing app state to a broker shared with HA.</string>
+
+    <!-- 	 Card Stack 							 -->
+    <string name="cardstack_hapanels_title">HAPANELS</string>
+    <string name="cardstack_generate_from_areas">GENERATE FROM HA AREAS</string>
+    <string name="cardstack_accent">ACCENT</string>
+    <string name="cardstack_icon">ICON</string>
+    <string name="cardstack_card_actions">CARD ACTIONS</string>
+    <string name="cardstack_move_to">MOVE TO</string>
+    <string name="cardstack_open_in_ha">OPEN IN HA</string>
+    <string name="cardstack_remove_from_page">REMOVE FROM PAGE</string>
+    <string name="cardstack_quick_actions">QUICK ACTIONS</string>
+    <string name="cardstack_browse">BROWSE</string>
+    <string name="cardstack_turn_all_on">TURN ALL ON</string>
+    <string name="cardstack_jump_to">JUMP TO</string>
+    <string name="cardstack_close">CLOSE</string>
+    <string name="cardstack_remove_page_confirmation">Will remove the page and its %d favourite%s from this view (HA entities aren't deleted).</string>
+    <string name="cardstack_no_other_pages">No other pages yet. Add one with the '+' chip on the tab strip.</string>
+    <string name="cardstack_turn_all_off_description">Fires turn_off on every controllable entity on this page (lights, switches, fans, media_players, covers).</string>
+
+    <!-- 	 Assist 							 -->
+    <string name="assist_voice">VOICE</string>
+    <string name="assist_ha_assist">HA ASSIST</string>
+    <string name="assist_type_below">Type below or tap one of these prompts to start.</string>
+    <string name="assist_conversation_agent">CONVERSATION AGENT</string>
+    <string name="assist_agent_id_hint">Agent ID to route Assist requests through. Leave blank to use default.</string>
+    <string name="assist_agent_example">homeassistant\nconversation.openai_conversation\n&lt;pipeline UUID&gt;</string>
+    <string name="assist_apply">APPLY</string>
+    <string name="assist_use_default">USE DEFAULT</string>
+
+    <!-- 	 Settings 						 -->
+    <string name="settings_reconnect_now">RECONNECT NOW</string>
+    <string name="settings_open_ha_web_ui">OPEN HA WEB UI</string>
+    <string name="settings_choose">CHOOSE</string>
+    <string name="settings_export">EXPORT</string>
+    <string name="settings_import">IMPORT</string>
+    <string name="settings_backup">BACKUP</string>
+    <string name="settings_preview">PREVIEW</string>
+    <string name="settings_night_theme">NIGHT THEME</string>
+    <string name="settings_night_window">NIGHT WINDOW</string>
+    <string name="settings_remove">REMOVE</string>
+    <string name="settings_add_pin">ADD PIN</string>
+    <string name="settings_add">ADD</string>
+    <string name="settings_reset_order">RESET ORDER</string>
+    <string name="settings_mtls_client">MTLS CLIENT CERTIFICATE</string>
+    <string name="settings_no_match">No settings match "%s".</string>
+    <string name="settings_chrome_buttons">Chrome buttons</string>
+    <string name="settings_chrome_buttons_hint">Reorder with  /  chips and toggle visibility per button.</string>
+    <string name="settings_start_view_hint">Select panel grid or card stack. Change takes effect on next app start.</string>
+    <string name="settings_device_type_hint">Auto selects Shelly on known Shelly devices, otherwise generic tablet.</string>
+    <string name="settings_brightness_limits_hint">Lower and upper brightness limits used by auto-brightness.</string>
+    <string name="settings_wake_duration_hint">From 5 seconds to 15 minutes. Touch always wakes; proximity is an optional extra.</string>
+    <string name="settings_tile_hint">After assigning, the panel will notify twice. Tap the edit icon and drag the 'HA Toggle' tile to active tiles.</string>
+    <string name="settings_reset_prefs_hint">Drops every override, theme, UI, and behaviour preference. Keeps your account, favourites, and pages.</string>
+    <string name="settings_drag_reorder_hint">Drag-style reorder isn't available on the panel UI yet. Use the arrows to nudge each tile up or down.</string>
+    <string name="settings_toast_off_hint">Off (default): no diagnostic toasts. Warn: surface failures and connection issues.</string>
+    <string name="settings_rotation_follow_hint">Follow device (default): rotates with the sensor.</string>
+    <string name="settings_mqtt_broker_hint">Broker used by the panel's MQTT bridge. Empty host disables MQTT; changes save after a moment.</string>
+    <string name="settings_panel_id_hint">Empty id = stable identifier from Android ID. Empty name = Hapanels + id. Changes take effect after app restart.</string>
+    <string name="settings_shelly_buttons_hint">Shelly hardware buttons. Press/release actions fire immediately. Short click is best for normal automations; it stays instant unless double or triple click is configured for the same button.</string>
+    <string name="settings_derive_pin_hint">Derive a pin manually: openssl s_client -connect HOST:443 -servername HOST | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64</string>
+    <string name="settings_panel_config">Native panel dashboard config</string>
+    <string name="settings_panel_config_hint">Import, export, or reset the JSON used by the new Hapanels panel-grid dashboard.</string>
+
+    <!-- 	 Dashboard 					 -->
+    <string name="dashboard_timers">TIMERS</string>
+    <string name="dashboard_now_playing">NOW PLAYING</string>
+    <string name="dashboard_recent_alerts">RECENT ALERTS</string>
+    <string name="dashboard_open_settings">OPEN SETTINGS</string>
+    <string name="dashboard_sun">SUN</string>
+    <string name="dashboard_next_rise">NEXT RISE</string>
+    <string name="dashboard_next_set">NEXT SET</string>
+    <string name="dashboard_cards">CARDS</string>
+    <string name="dashboard_people">PEOPLE</string>
+    <string name="dashboard_now">NOW</string>
+    <string name="dashboard_next">NEXT</string>
+    <string name="dashboard_draw">DRAW</string>
+    <string name="dashboard_refresh_failed">Dashboard refresh failed. Tap to retry.</string>
+    <string name="dashboard_all_hidden">Every dashboard tile is hidden.</string>
+    <string name="dashboard_reenable_hint">Re-enable cards under Settings  DASHBOARD  VISIBLE CARDS.</string>
+
+    <!-- 	 Energy 				 -->
+    <string name="energy_share">SHARE</string>
+    <string name="energy_top_consumers">TOP CONSUMERS</string>
+    <string name="energy_no_power_sensors">No `device_class=power` sensors found. Add a power sensor to see consumption here.</string>
+
+    <!-- 	 Sensor History 	 -->
+    <string name="sensor_history_not_enough">NOT ENOUGH HISTORY YET</string>
+    <string name="sensor_history_not_numeric">HISTORY ISN'T NUMERIC</string>
+    <string name="sensor_history_last_changes">LAST %s</string>
+
+    <!-- 	 Toast 	 -->
+    <string name="toast_dismiss">DISMISS</string>
+
+    <!-- 	 Camera 	 -->
+    <string name="camera_no_signal">NO SIGNAL</string>
+
+    <!-- 	 Select Card 	 -->
+    <string name="select_choose_option">CHOOSE OPTION</string>
+
+    <!-- 	 Services 	 -->
+    <string name="services_find">FIND</string>
+    <string name="services_copy">COPY</string>
+    <string name="services_load_failed">Services load failed: %s</string>
+
+    <!-- 	 Zones 	 -->
+    <string name="zones_load_failed">Zones load failed: %s</string>
+    <string name="zones_empty_hint">No zones defined. Settings  Areas & Zones in HA's web UI.</string>
+    <string name="zones_outside">OUTSIDE</string>
+
+    <!-- 	 ToDo 	 -->
+    <string name="todo_clear_done">CLEAR DONE</string>
+    <string name="todo_add">ADD</string>
+    <string name="todo_error">Error: %s</string>
+
+    <!-- 	 Media Browse 	 -->
+    <string name="media_browse">BROWSE</string>
+    <string name="media_play">PLAY</string>
+    <string name="media_up">UP</string>
+    <string name="media_empty_hint">Pick a media_player entity above to browse its library.</string>
+    <string name="media_empty">(Empty)</string>
+    <string name="media_play_failed">Play failed</string>
+
+    <!-- 	 Weather 	 -->
+    <string name="weather_load_failed">Weather load failed: %s</string>
+    <string name="weather_empty_hint">No weather entities in HA. Add a weather integration to see them here.</string>
+
+    <!-- 	 Areas 	 -->
+    <string name="areas_load_failed">Areas load failed: %s</string>
+    <string name="areas_empty_hint">No areas defined in HA. Settings  Areas in HA's web UI.</string>
+    <string name="areas_no_entities">No entities assigned to this area.</string>
+
+    <!-- 	 Automations 	 -->
+    <string name="automations_load_failed">Automations load failed: %s</string>
+    <string name="automations_empty_hint">No automations defined. Settings  Automations in HA's web UI.</string>
+    <string name="automations_no_matches">No matches for '%s'.</string>
+    <string name="automations_run">RUN</string>
+
+    <!-- 	 Cameras 	 -->
+    <string name="cameras_load_failed">Cameras load failed: %s</string>
+    <string name="cameras_empty_hint">No cameras in HA. Add a camera integration to see them here.</string>
+    <string name="cameras_loading">Loading</string>
+    <string name="cameras_polling">Polling every %d s  tap  to close</string>
+
+    <!-- 	 Theme Picker 	 -->
+    <string name="theme_accent">ACCENT</string>
+    <string name="theme_accent_hint">Override every theme's accent colour. Reset = use the theme's own palette.</string>
+
+    <!-- 	 ZHA Pairing 	 -->
+    <string name="zha_no_integration">NO ZIGBEE INTEGRATION</string>
+    <string name="zha_backend">BACKEND</string>
+    <string name="zha_duration">DURATION</string>
+    <string name="zha_new_entities">NEW ENTITIES</string>
+    <string name="zha_configure">CONFIGURE</string>
+    <string name="zha_permit_join_hint">Tap PERMIT JOIN to open the Zigbee network. Power your new device on while the timer is counting; HA will discover it and surface it here.</string>
+
+    <!-- 	 Repairs 	 -->
+    <string name="repairs_only_ws">Repairs only flows over the live WebSocket. If your link is down or the server is offline, retry once it reconnects.</string>
+    <string name="repairs_nothing_to_flag">Nothing for HA's integrations to flag.</string>
+    <string name="repairs_no_open">NO OPEN REPAIRS</string>
+    <string name="repairs_ignored">IGNORED</string>
+    <string name="repairs_fixable">FIXABLE</string>
+
+    <!-- 	 About 	 -->
+    <string name="about_updates">UPDATES</string>
+    <string name="about_unlicense">Released into the public domain via The Unlicense.</string>
+    <string name="about_advanced_features">Advanced tunables, behaviour flags, in-app log viewer.</string>
+    <string name="about_raw_prefixes">Raw prefixes (every domain HA returned, including unsupported)</string>
+
+    <!-- 	 Template 	 -->
+    <string name="template_render_hint">Hit RENDER to evaluate against live HA state.</string>
+    <string name="template_recent">RECENT</string>
+    <string name="template_try">TRY</string>
+    <string name="template_copy">COPY</string>
+
+    <!-- 	 Search 	 -->
+    <string name="search_find">FIND</string>
+    <string name="search_open_full">OPEN FULL</string>
+    <string name="search_open_in_ha">OPEN IN HA</string>
+    <string name="search_load_failed">Couldn't load entities.</string>
+    <string name="search_check_settings">Check Settings  Server, or wait for the WS to reconnect.</string>
+    <string name="search_hint">Type a name, entity_id, or area to find. Or tap a chip above to narrow by kind. Tap a result to fire (scenes / scripts / buttons) or toggle (lights / switches / fans).</string>
+    <string name="search_filter_set">Filter set to %s. Tap ALL above to widen the search.</string>
+    <string name="search_ask_assist">Ask Assist about "%s"</string>
+    <string name="search_history_failed">Couldn't load history: %s</string>
+
+    <!-- 	 Labels 	 -->
+    <string name="labels_empty_hint">No labels defined in HA. Settings  Labels in HA's web UI.</string>
+    <string name="labels_no_entities">No entities tagged with this label.</string>
+
+    <!-- 	 Helpers 	 -->
+    <string name="helpers_load_failed">Helpers load failed: %s</string>
+    <string name="helpers_empty_hint">No helpers defined. Add them under Settings  </string>
+    <string name="helpers_adjust">ADJUST</string>
+    <string name="helpers_press">PRESS</string>
+
+    <!-- 	 Calendars 	 -->
+    <string name="calendars_load_failed">Calendars load failed: %s</string>
+    <string name="calendars_empty_hint">No calendar entities in HA. Add a calendar integration to see them here.</string>
+    <string name="calendars_now">NOW</string>
+    <string name="calendars_no_events">No events in the next 14 days.</string>
+
+    <!-- 	 Floors 	 -->
+    <string name="floors_empty_hint">No floors defined in HA. Settings  Areas & Zones  Floors.</string>
+    <string name="floors_no_areas">No areas assigned to this floor.</string>
+
+    <!-- 	 Updates 	 -->
+    <string name="updates_load_failed">Updates load failed: %s</string>
+    <string name="updates_empty_hint">No update entities. HA exposes update.* entries </string>
+    <string name="updates_backup_hint">Back up before installing</string>
+    <string name="updates_recommended_hint">Recommended for HA Core / Supervisor / OS updates</string>
+    <string name="updates_install">INSTALL</string>
+    <string name="updates_notes">NOTES</string>
+    <string name="updates_release_notes">RELEASE NOTES</string>
+    <string name="updates_skip">SKIP</string>
+    <string name="updates_auto">AUTO</string>
+
+    <!-- 	 Notifications 	 -->
+    <string name="notifications_load_failed">Notifications load failed: %s</string>
+    <string name="notifications_empty_hint">No persistent notifications in HA. All clear.</string>
+
+    <!-- 	 Voice Satellite 	 -->
+    <string name="voice_sat_you">You: %s</string>
+    <string name="voice_sat_retry">RETRY</string>
+    <string name="voice_sat_cancelled">(cancelled)</string>
+    <string name="voice_sat_error">(error: %s)</string>
+
+    <!-- 	 Entity Config 	 -->
+    <string name="entity_config_title">CONFIGURE ENTITY</string>
+    <string name="entity_config_name">NAME</string>
+    <string name="entity_config_area">AREA</string>
+    <string name="entity_config_loading">Loading</string>
+    <string name="entity_config_create">CREATE</string>
+
+    <!-- 	 Backups 	 -->
+    <string name="backups_create_now">CREATE BACKUP NOW</string>
+    <string name="backups_create_hint">Fires backup.create on your HA server. The new backup appears in the list once HA has finished writing it (15-60 s on a typical install).</string>
+    <string name="backups_protected">PROTECTED</string>
+
+    <!-- 	 Device 	 -->
+    <string name="device_refresh">REFRESH</string>
+    <string name="device_battery">BATTERY</string>
+    <string name="device_screen_brightness">SCREEN BRIGHTNESS</string>
+    <string name="device_reset">RESET</string>
+    <string name="device_system">SYSTEM</string>
+    <string name="device_flashlight">FLASHLIGHT</string>
+    <string name="device_wifi">WIFI</string>
+    <string name="device_open">OPEN</string>
+    <string name="device_per_app_only">Per-app only. Leaves system brightness untouched.</string>
+
+    <!-- 	 Panel Diagnostics 	 -->
+    <string name="panel_diag_provider">PROVIDER</string>
+    <string name="panel_diag_live_state">LIVE STATE</string>
+    <string name="panel_diag_screen_manager">SCREEN MANAGER</string>
+    <string name="panel_diag_recent_events">RECENT EVENTS</string>
+    <string name="panel_diag_no_events">No hardware events yet. The generic tablet provider emits lifecycle events at app start.</string>
+
+    <!-- 	 Entity Picker 	 -->
+    <string name="entity_picker_title">PICK ENTITY</string>
+    <string name="entity_picker_cancel">CANCEL</string>
+    <string name="entity_picker_toggleable_only">Toggleable + action entities only</string>
+    <string name="entity_picker_empty_hint">No toggleable entities loaded yet. Sign in or wait for the registry to catch up.</string>
+    <string name="entity_picker_no_matches">No matches for '%s'.</string>
+
+    <!-- 	 Modified Settings 	 -->
+    <string name="modified_settings_all_default">Every registered setting is at its default value.</string>
+    <string name="modified_settings_diff_hint">Entries that differ from their constructor-default value.</string>
+
+    <!-- 	 Service Caller 	 -->
+    <string name="service_caller_data_json">DATA (JSON, optional)</string>
+    <string name="service_caller_paste">PASTE</string>
+    <string name="service_caller_cancel">CANCEL</string>
+    <string name="service_caller_post">POST /api/services/%s/%s</string>
+    <string name="service_caller_fire_hint">Tap FIRE to dispatch the service. State changes (if any) are listed here.</string>
+    <string name="service_caller_recent">RECENT</string>
+    <string name="service_caller_clear">CLEAR</string>
+    <string name="service_caller_try">TRY</string>
+    <string name="service_caller_copy">COPY</string>
+
+    <!-- 	 Rename Dialog 	 -->
+    <string name="rename_customize">CUSTOMIZE</string>
+    <string name="rename_local_only_hint">Local-only. Clear to revert to HA's friendly_name.</string>
+    <string name="rename_size_hint">Absolute size for the big readout on this card. Smaller sizes help with dense layouts.</string>
+    <string name="rename_color_temp_hint">Apply a fixed colour temperature when this light turns on. Only works on lights that support color_temp_kelvin.</string>
+    <string name="rename_hide_controls_hint">Hide controls you don't use on this card. Hiding a button HA already wouldn't render (e.g. HUE on a tunable-white bulb) is a no-op.</string>
+    <string name="rename_accent_hint">Override the card's accent tone. DEFAULT = domain colour.</string>
+    <string name="rename_trim_hint">Trim noisy precise readings. DEFAULT inherits the global setting.</string>
+    <string name="rename_behaviour_hint">Override the global Behaviour setting for this card. INHERIT follows the global default.</string>
+    <string name="rename_hardware_input_hint">Whether direct hardware input acts on this card. INHERIT follows the global default.</string>
+    <string name="rename_remove_hint">When ON, this card is removed from the deck whenever HA reports the entity as unavailable.</string>
+    <string name="rename_long_press_hint">Long-press this card to fire another entity. E.g. `scene.movie_night`, `script.bedtime`, `switch.kettle`.</string>
+    <string name="rename_reset">RESET</string>
+    <string name="rename_cancel">CANCEL</string>
+    <string name="rename_save">SAVE</string>
+    <string name="rename_default">DEFAULT</string>
+    <string name="rename_show">SHOW</string>
+    <string name="rename_hide">HIDE</string>
+
+    <!-- 	 Panel Grid Mockup 	 -->
+    <string name="panel_grid_live_snapshot">LIVE SNAPSHOT</string>
+
+    <!-- 	 Scenes 	 -->
+    <string name="scenes_tap_off_hint">Tap = OFF  long-press LIGHTS for ON</string>
+
+    <!-- 	 Long Lived Token 	 -->
+    <string name="long_lived_paste">PASTE</string>
+
+    <!-- 	 Lovelace 	 -->
+    <string name="lovelace_no_server">No HA server configured. Sign in via Settings  SERVER first.</string>
 </resources>

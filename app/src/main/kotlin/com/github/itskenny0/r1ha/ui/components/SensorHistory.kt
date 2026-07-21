@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,12 +54,12 @@ fun SensorHistoryChart(
     modifier: Modifier = Modifier,
 ) {
     if (points.size < 2) {
-        ChartHint(text = "NOT ENOUGH HISTORY YET", modifier = modifier)
+        ChartHint(text = stringResource(R.string.sensor_history_not_enough), modifier = modifier)
         return
     }
     val numeric = points.mapNotNull { p -> p.numeric?.let { p.timestamp to it } }
     if (numeric.size < 2) {
-        ChartHint(text = "HISTORY ISN'T NUMERIC", modifier = modifier)
+        ChartHint(text = stringResource(R.string.sensor_history_not_numeric), modifier = modifier)
         return
     }
     val ys = numeric.map { it.second }
@@ -73,7 +74,7 @@ fun SensorHistoryChart(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "LAST ${formatSpan(tSpan)}", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.sensor_history_last_changes, formatSpan(tSpan)), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.weight(1f))
             // min/max labels — show the y range so the user can interpret the line.
             Text(

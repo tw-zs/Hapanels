@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -235,7 +236,7 @@ fun SensorCard(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "TYLKO ODCZYT",
+            text = stringResource(R.string.label_read_only),
             style = R1.labelMicro,
             color = R1.InkMuted,
         )

@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import android.graphics.Bitmap
+import androidx.compose.ui.res.stringResource
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -112,7 +113,7 @@ fun CameraSnapshot(
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (failed) {
-            Text(text = "NO SIGNAL", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.camera_no_signal), style = R1.labelMicro, color = R1.InkMuted)
         } else {
             // Initial-load state: empty SurfaceMuted box matches AsyncBitmap's
             // first-frame behaviour rather than a spinner that flickers and

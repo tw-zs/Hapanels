@@ -89,4 +89,349 @@
     <string name="loading">Ładowanie…</string>
     <string name="empty_no_results">Brak wyników</string>
     <string name="error_generic">Coś poszło nie tak</string>
+
+    <!-- Entity card labels -->
+    <string name="label_fan">WENTYLATOR</string>
+    <string name="label_battery">BATERIA</string>
+    <string name="label_enter_pin">WPROWADŹ PIN</string>
+    <string name="label_cancel">ANULUJ</string>
+    <string name="label_preset">USTAWIENIE</string>
+    <string name="label_swing">OSCYLACJA</string>
+    <string name="label_now">TERAZ</string>
+    <string name="label_mode">TRYB</string>
+    <string name="label_source">ŹRÓDŁO</string>
+    <string name="label_read_only">TYLKO ODCZYT</string>
+
+    <!-- System Health -->
+    <string name="system_health_server">SERWER</string>
+    <string name="system_health_network_security">BEZPIECZEŃSTWO SIECI</string>
+    <string name="system_health_error_log">DZIENNIK BŁĘDÓW (ostatnie)</string>
+    <string name="system_health_copy">KOPIUJ</string>
+    <string name="system_health_ping">PING</string>
+    <string name="system_health_share_debug_bundle">UDOSTĘPNIJ PAKIET DIAGNOSTYCZNY</string>
+    <string name="system_health_share">UDOSTĘPNIJ</string>
+    <string name="system_health_no_log_output">Brak wyjścia dziennika (HA zwrócił pustą odpowiedź).</string>
+
+    <!-- Dev Menu -->
+    <string name="dev_menu_event_type">TYP ZDARZENIA</string>
+    <string name="dev_menu_data_json">DANE (JSON, opcjonalne)</string>
+    <string name="dev_menu_last_crash">OSTATNI AWARIA</string>
+    <string name="dev_menu_port">PORT</string>
+    <string name="dev_menu_broker_host">HOST BROKERA</string>
+    <string name="dev_menu_publish">PUBLIKUJ</string>
+    <string name="dev_menu_topic">TOPIK</string>
+    <string name="dev_menu_payload">ZAWARTOŚĆ</string>
+    <string name="dev_menu_uuid">UUID</string>
+    <string name="dev_menu_major">GŁÓWNY</string>
+    <string name="dev_menu_minor">POBOCZNY</string>
+    <string name="dev_menu_clear">WYCZYŚĆ</string>
+    <string name="dev_menu_mqtt_description">Połącz z brokerem MQTT i opublikuj pojedynczą wiadomość. Klient jest jednorazowy — nie subskrybuje tematów ani nie zachowuje sesji. Przydatne do wyzwalania automatyzacji po stronie brokera lub przesyłania stanu aplikacji do brokera współdzielonego z HA.</string>
+
+    <!-- Card Stack -->
+    <string name="cardstack_hapanels_title">HAPANELS</string>
+    <string name="cardstack_generate_from_areas">GENERUJ Z OBSZARÓW HA</string>
+    <string name="cardstack_accent">AKCENT</string>
+    <string name="cardstack_icon">IKONA</string>
+    <string name="cardstack_card_actions">AKCJE KARTY</string>
+    <string name="cardstack_move_to">PRZENIEŚ DO</string>
+    <string name="cardstack_open_in_ha">OTWÓRZ W HA</string>
+    <string name="cardstack_remove_from_page">USUŃ ZE STRONY</string>
+    <string name="cardstack_quick_actions">SZYBKIE AKCJE</string>
+    <string name="cardstack_browse">PRZEGLĄDAJ</string>
+    <string name="cardstack_turn_all_on">WŁĄCZ WSZYSTKO</string>
+    <string name="cardstack_jump_to">PRZEJDŹ DO</string>
+    <string name="cardstack_close">ZAMKNIJ</string>
+    <string name="cardstack_remove_page_confirmation">Usunie stronę i jej %d ulubione z tego widoku (encje HA nie zostaną usunięte).</string>
+    <string name="cardstack_no_other_pages">Nie ma jeszcze innych stron. Dodaj nową za pomocą przycisku '+' na pasku zakładek.</string>
+    <string name="cardstack_turn_all_off_description">Wyśle polecenie turn_off do wszystkich sterowalnych encji na tej stronie (światła, przełączniki, wentylatory, odtwarzacze multimediów, okna).</string>
+
+    <!-- Assist -->
+    <string name="assist_voice">GŁOS</string>
+    <string name="assist_ha_assist">ASYSTENT HA</string>
+    <string name="assist_type_below">Wpisz poniżej lub dotknij jednej z podpowiedzi, aby rozpocząć.</string>
+    <string name="assist_conversation_agent">AGENT KONWERSACJI</string>
+    <string name="assist_agent_id_hint">Identyfikator agenta do kierowania żądaniami Assist. Pozostaw puste, aby użyć domyślnego.</string>
+    <string name="assist_agent_example">homeassistant\nconversation.openai_conversation\n&lt;UUID potoku&gt;</string>
+    <string name="assist_apply">ZASTOSUJ</string>
+    <string name="assist_use_default">UŻYJ DOMYŚLNEGO</string>
+
+    <!-- Settings -->
+    <string name="settings_reconnect_now">POŁĄCZ TERAZ</string>
+    <string name="settings_open_ha_web_ui">OTWÓRZ INTERFEJS WEB HA</string>
+    <string name="settings_choose">WYBIERZ</string>
+    <string name="settings_export">EKSPORTUJ</string>
+    <string name="settings_import">IMPORTUJ</string>
+    <string name="settings_backup">KOPIA ZAPASOWA</string>
+    <string name="settings_preview">PODGLĄD</string>
+    <string name="settings_night_theme">MOTYW NOCNY</string>
+    <string name="settings_night_window">OKNO NOCNE</string>
+    <string name="settings_remove">USUŃ</string>
+    <string name="settings_add_pin">DODAJ PIN</string>
+    <string name="settings_add">DODAJ</string>
+    <string name="settings_reset_order">RESETUJ KOLEJNOŚĆ</string>
+    <string name="settings_mtls_client">KLIENCKI CERTYFIKAT MTLS</string>
+    <string name="settings_no_match">Brak ustawień pasujących do "%s".</string>
+    <string name="settings_chrome_buttons">Przyciski chrome</string>
+    <string name="settings_chrome_buttons_hint">Zmień kolejność za pomocą chipów ↑/↓ i przełącz widoczność dla każdego przycisku.</string>
+    <string name="settings_start_view_hint">Wybierz siatkę panelu lub stos kart. Zmiana zacznie obowiązywać przy następnym uruchomieniu aplikacji.</string>
+    <string name="settings_device_type_hint">Automatycznie wybiera Shelly na znanych urządzeniach Shelly, w pozostałych przypadkach zwykły tablet.</string>
+    <string name="settings_brightness_limits_hint">Dolna i górna granica jasności używana przez auto-jasność.</string>
+    <string name="settings_wake_duration_hint">Od 5 sekund do 15 minut. Dotyk zawsze wybudza; zbliżenie jest opcjonalnym dodatkowym sposobem.</string>
+    <string name="settings_tile_hint">Po przypisaniu panel powiadomi dwa razy. Dotknij ikony edycji i przeciągnij kafelek „Przełącznik HA” do aktywnych kafelków.</string>
+    <string name="settings_reset_prefs_hint">Usuwa wszystkie nadpisania, motywy, preferencje UI i zachowania. Zachowuje konto, ulubione i strony.</string>
+    <string name="settings_drag_reorder_hint">Przeciąganie do zmiany kolejności nie jest jeszcze dostępne w interfejsie panelu. Użyj strzałek, aby przesunąć każdy kafelek w górę lub w dół.</string>
+    <string name="settings_toast_off_hint">Wyłączone (domyślnie): brak komunikatów diagnostycznych. Ostrzeżenie: błędy powierzchni i problemy z połączeniem.</string>
+    <string name="settings_rotation_follow_hint">Śledź urządzenie (domyślnie): obraca się z czujnikiem.</string>
+    <string name="settings_mqtt_broker_hint">Broker używany przez most MQTT panelu. Pusty host wyłącza MQTT; zmiany zapisują się po chwili.</string>
+    <string name="settings_panel_id_hint">Puste id = stabilny identyfikator z Android ID. Pusta nazwa = Hapanels + id. Zmiany wchodzą w życie po restarcie aplikacji.</string>
+    <string name="settings_shelly_buttons_hint">Przyciski sprzętowe Shelly. Akcje naciśnięcia/zwolnienia są wykonywane natychmiast. Krótkie kliknięcie jest najlepsze dla normalnych automatyzacji; pozostaje natychmiastowe, chyba że podwójne lub potrójne kliknięcie jest skonfigurowane dla tego samego przycisku.</string>
+    <string name="settings_derive_pin_hint">Ręczne wyprowadzenie pinu: openssl s_client -connect HOST:443 -servername HOST | openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER | openssl dgst -sha256 -binary | openssl enc -base64</string>
+    <string name="settings_panel_config">Natywna konfiguracja panelu</string>
+    <string name="settings_panel_config_hint">Importuj, eksportuj lub zresetuj JSON używany przez nową siatkę panelu Hapanels.</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_timers">STOPERY</string>
+    <string name="dashboard_now_playing">AKTUALNIE ODTWARZANE</string>
+    <string name="dashboard_recent_alerts">OSTATNIE ALERTY</string>
+    <string name="dashboard_open_settings">OTWÓRZ USTAWIENIA</string>
+    <string name="dashboard_sun">SŁOŃCE</string>
+    <string name="dashboard_next_rise">NASTĘPNY WSCHÓD</string>
+    <string name="dashboard_next_set">NASTĘPNY ZACHÓD</string>
+    <string name="dashboard_cards">KARTY</string>
+    <string name="dashboard_people">DOMOWNICY</string>
+    <string name="dashboard_now">TERAZ</string>
+    <string name="dashboard_next">NASTĘPNY</string>
+    <string name="dashboard_draw">RYSUJ</string>
+    <string name="dashboard_refresh_failed">Odświeżanie panelu nie powiodło się. Dotknij, aby spróbować ponownie.</string>
+    <string name="dashboard_all_hidden">Wszystkie kafelki panelu są ukryte.</string>
+    <string name="dashboard_reenable_hint">Ponownie włącz karty w Ustawieniach → PANEL → WIDOCZNE KARTY.</string>
+
+    <!-- Energy -->
+    <string name="energy_share">UDOSTĘPNIJ</string>
+    <string name="energy_top_consumers">NAJWIĘKSI KONSUMENCI</string>
+    <string name="energy_no_power_sensors">Nie znaleziono czujników z `device_class=power`. Dodaj czujnik mocy, aby zobaczyć zużycie.</string>
+
+    <!-- Sensor History -->
+    <string name="sensor_history_not_enough">BRAK WYSTARCZAJĄCEJ HISTORII</string>
+    <string name="sensor_history_not_numeric">HISTORIA NIE JEST NUMERYCZNA</string>
+    <string name="sensor_history_last_changes">OSTATNIE ZMIANY · %s</string>
+
+    <!-- Toast -->
+    <string name="toast_dismiss">ZAMKNIJ</string>
+
+    <!-- Camera -->
+    <string name="camera_no_signal">BRAK SYGNAŁU</string>
+
+    <!-- Select Card -->
+    <string name="select_choose_option">WYBIERZ OPCJĘ</string>
+
+    <!-- Services -->
+    <string name="services_find">SZUKAJ</string>
+    <string name="services_copy">KOPIUJ</string>
+    <string name="services_load_failed">Ładowanie usług nie powiodło się: %s</string>
+
+    <!-- Zones -->
+    <string name="zones_load_failed">Ładowanie stref nie powiodło się: %s</string>
+    <string name="zones_empty_hint">Nie zdefiniowano żadnych stref. Ustawienia → Obszary i strefy w interfejsie web HA.</string>
+    <string name="zones_outside">NA ZEWNĄTRZ</string>
+
+    <!-- ToDo -->
+    <string name="todo_clear_done">WYCZYŚĆ ZROBIONE</string>
+    <string name="todo_add">DODAJ</string>
+    <string name="todo_error">Błąd: %s</string>
+
+    <!-- Media Browse -->
+    <string name="media_browse">PRZEGLĄDAJ</string>
+    <string name="media_play">ODTWÓRZ</string>
+    <string name="media_up">W GÓRĘ</string>
+    <string name="media_empty_hint">Wybierz encję media_player powyżej, aby przeglądać jej bibliotekę.</string>
+    <string name="media_empty">(Puste)</string>
+    <string name="media_play_failed">Odtwarzanie nie powiodło się</string>
+
+    <!-- Weather -->
+    <string name="weather_load_failed">Ładowanie pogody nie powiodło się: %s</string>
+    <string name="weather_empty_hint">Brak encji pogody w HA. Dodaj integrację pogody, aby je tutaj zobaczyć.</string>
+
+    <!-- Areas -->
+    <string name="areas_load_failed">Ładowanie obszarów nie powiodło się: %s</string>
+    <string name="areas_empty_hint">Nie zdefiniowano żadnych obszarów w HA. Ustawienia → Obszary w interfejsie web HA.</string>
+    <string name="areas_no_entities">Żadne encje nie są przypisane do tego obszaru.</string>
+
+    <!-- Automations -->
+    <string name="automations_load_failed">Ładowanie automatyzacji nie powiodło się: %s</string>
+    <string name="automations_empty_hint">Nie zdefiniowano żadnych automatyzacji. Ustawienia → Automatyzacje w interfejsie web HA.</string>
+    <string name="automations_no_matches">Brak dopasowań dla „%s”.</string>
+    <string name="automations_run">URUCHOM</string>
+
+    <!-- Cameras -->
+    <string name="cameras_load_failed">Ładowanie kamer nie powiodło się: %s</string>
+    <string name="cameras_empty_hint">Brak kamer w HA. Dodaj integrację kamer, aby je tutaj zobaczyć.</string>
+    <string name="cameras_loading">Ładowanie…</string>
+    <string name="cameras_polling">Odpytywanie co %d s · dotknij ✕, aby zamknąć</string>
+
+    <!-- Theme Picker -->
+    <string name="theme_accent">AKCENT</string>
+    <string name="theme_accent_hint">Nadpisz kolor akcentu każdego motywu. Reset = użyj własnej palety motywu.</string>
+
+    <!-- ZHA Pairing -->
+    <string name="zha_no_integration">BRAK INTEGRACJI ZIGBEE</string>
+    <string name="zha_backend">BACKEND</string>
+    <string name="zha_duration">CZAS TRWANIA</string>
+    <string name="zha_new_entities">NOWE ENTCJE</string>
+    <string name="zha_configure">KONFIGURUJ</string>
+    <string name="zha_permit_join_hint">Dotknij ZEZWÓL NA DOŁĄCZENIE, aby otworzyć sieć Zigbee. Włącz nowe urządzenie podczas odliczania; HA je wykryje i wyświetli tutaj.</string>
+
+    <!-- Repairs -->
+    <string name="repairs_only_ws">Naprawy działają tylko przez aktywne połączenie WebSocket. Jeśli Twoje połączenie jest przerwane lub serwer jest offline, spróbuj ponownie po ponownym połączeniu.</string>
+    <string name="repairs_nothing_to_flag">Nic do zgłoszenia przez integracje HA.</string>
+    <string name="repairs_no_open">BRAK OTWARTYCH NAPRAW</string>
+    <string name="repairs_ignored">IGNOROWANE</string>
+    <string name="repairs_fixable">NAPRAWIALNE</string>
+
+    <!-- About -->
+    <string name="about_updates">AKTUALIZACJE</string>
+    <string name="about_unlicense">Opublikowane na licencji public domain za pośrednictwem The Unlicense.</string>
+    <string name="about_advanced_features">Zaawansowane ustawienia, flagi zachowań, podgląd dziennika w aplikacji.</string>
+    <string name="about_raw_prefixes">Surowa prefiksy (wszystkie domeny zwrócone przez HA, w tym nieobsługiwane)</string>
+
+    <!-- Template -->
+    <string name="template_render_hint">Dotknij RENDER, aby ocenić względem aktualnego stanu HA.</string>
+    <string name="template_recent">OSTATNIE</string>
+    <string name="template_try">WYPRÓBUJ</string>
+    <string name="template_copy">KOPIUJ</string>
+
+    <!-- Search -->
+    <string name="search_find">SZUKAJ</string>
+    <string name="search_open_full">OTWÓRZ PEŁNY</string>
+    <string name="search_open_in_ha">OTWÓRZ W HA</string>
+    <string name="search_load_failed">Nie można załadować encji.</string>
+    <string name="search_check_settings">Sprawdź Ustawienia → Serwer lub poczekaj na ponowne połączenie WS.</string>
+    <string name="search_hint">Wpisz nazwę, entity_id lub obszar, aby znaleźć. Lub dotknij chipa powyżej, aby zawęzić wyszukiwanie. Dotknij wyniku, aby uruchomić (sceny/skrypty/przyciski) lub przełączyć (światła/przełączniki/wentylatory).</string>
+    <string name="search_filter_set">Filtr ustawiony na %s. Dotknij WSZYSTKO powyżej, aby poszerzyć wyszukiwanie.</string>
+    <string name="search_ask_assist">Zapytaj Asystenta o „%s”</string>
+    <string name="search_history_failed">Nie można załadować historii: %s</string>
+
+    <!-- Labels -->
+    <string name="labels_empty_hint">Nie zdefiniowano żadnych etykiet w HA. Ustawienia → Etykiety w interfejsie web HA.</string>
+    <string name="labels_no_entities">Żadne encje nie mają tej etykiety.</string>
+
+    <!-- Helpers -->
+    <string name="helpers_load_failed">Ładowanie pomocników nie powiodło się: %s</string>
+    <string name="helpers_empty_hint">Nie zdefiniowano żadnych pomocników. Dodaj je w Ustawieniach → </string>
+    <string name="helpers_adjust">DOSTOSUJ</string>
+    <string name="helpers_press">NACIŚNIJ</string>
+
+    <!-- Calendars -->
+    <string name="calendars_load_failed">Ładowanie kalendarzy nie powiodło się: %s</string>
+    <string name="calendars_empty_hint">Brak encji kalendarza w HA. Dodaj integrację kalendarza, aby je tutaj zobaczyć.</string>
+    <string name="calendars_now">TERAZ</string>
+    <string name="calendars_no_events">Brak wydarzeń w ciągu najbliższych 14 dni.</string>
+
+    <!-- Floors -->
+    <string name="floors_empty_hint">Nie zdefiniowano żadnych pięter w HA. Ustawienia → Obszary i strefy → Piętra.</string>
+    <string name="floors_no_areas">Żadne obszary nie są przypisane do tego piętra.</string>
+
+    <!-- Updates -->
+    <string name="updates_load_failed">Ładowanie aktualizacji nie powiodło się: %s</string>
+    <string name="updates_empty_hint">Brak encji aktualizacji. HA wystawia wpisy update.* </string>
+    <string name="updates_backup_hint">Utwórz kopię zapasową przed instalacją</string>
+    <string name="updates_recommended_hint">Zalecane dla aktualizacji HA Core / Supervisor / OS</string>
+    <string name="updates_install">ZAINSTALUJ</string>
+    <string name="updates_notes">NOTATKI</string>
+    <string name="updates_release_notes">NOTATKI DO WYDANIA</string>
+    <string name="updates_skip">POMIŃ</string>
+    <string name="updates_auto">AUTOMATYCZNIE</string>
+
+    <!-- Notifications -->
+    <string name="notifications_load_failed">Ładowanie powiadomień nie powiodło się: %s</string>
+    <string name="notifications_empty_hint">Brak trwałych powiadomień w HA. Wszystko jasne.</string>
+
+    <!-- Voice Satellite -->
+    <string name="voice_sat_you">Ty: %s</string>
+    <string name="voice_sat_retry">PONÓW</string>
+    <string name="voice_sat_cancelled">(anulowano)</string>
+    <string name="voice_sat_error">(błąd: %s)</string>
+
+    <!-- Entity Config -->
+    <string name="entity_config_title">KONFIGURUJ ENTCJĘ</string>
+    <string name="entity_config_name">NAZWA</string>
+    <string name="entity_config_area">OBSZAR</string>
+    <string name="entity_config_loading">Ładowanie…</string>
+    <string name="entity_config_create">UTWÓRZ</string>
+
+    <!-- Backups -->
+    <string name="backups_create_now">UTWÓRZ KOPIĘ TERAZ</string>
+    <string name="backups_create_hint">Uruchamia backup.create na serwerze HA. Nowa kopia pojawi się na liście, gdy HA ukończy jej zapisywanie (15-60 s na typowej instalacji).</string>
+    <string name="backups_protected">CHRONIONE</string>
+
+    <!-- Device -->
+    <string name="device_refresh">ODŚWIEŻ</string>
+    <string name="device_battery">BATERIA</string>
+    <string name="device_screen_brightness">JASNOŚĆ EKRANU</string>
+    <string name="device_reset">RESETUJ</string>
+    <string name="device_system">SYSTEM</string>
+    <string name="device_flashlight">LATARKA</string>
+    <string name="device_wifi">WI-FI</string>
+    <string name="device_open">OTWÓRZ</string>
+    <string name="device_per_app_only">Tylko dla aplikacji. Nie wpływa na jasność systemową.</string>
+
+    <!-- Panel Diagnostics -->
+    <string name="panel_diag_provider">DOSTAWCZY</string>
+    <string name="panel_diag_live_state">AKTUALNY STAN</string>
+    <string name="panel_diag_screen_manager">ZARZĄDCA EKRANU</string>
+    <string name="panel_diag_recent_events">OSTATNIE ZDARZENIA</string>
+    <string name="panel_diag_no_events">Brak zdarzeń sprzętowych. Ogólny dostawca tabletu emituje zdarzenia cyklu życia przy starcie aplikacji.</string>
+
+    <!-- Entity Picker -->
+    <string name="entity_picker_title">WYBIERZ ENTCJĘ</string>
+    <string name="entity_picker_cancel">ANULUJ</string>
+    <string name="entity_picker_toggleable_only">Tylko encje przełączalne i akcyjne</string>
+    <string name="entity_picker_empty_hint">Nie załadowano jeszcze żadnych encji przełączalnych. Zaloguj się lub poczekaj, aż rejestr się zaktualizuje.</string>
+    <string name="entity_picker_no_matches">Brak dopasowań dla „%s”.</string>
+
+    <!-- Modified Settings -->
+    <string name="modified_settings_all_default">Każde zarejestrowane ustawienie ma swoją domyślną wartość.</string>
+    <string name="modified_settings_diff_hint">Wpisy, które różnią się od swojej domyślnej wartości konstruktora.</string>
+
+    <!-- Service Caller -->
+    <string name="service_caller_data_json">DANE (JSON, opcjonalne)</string>
+    <string name="service_caller_paste">WKLEJ</string>
+    <string name="service_caller_cancel">ANULUJ</string>
+    <string name="service_caller_post">POST /api/services/%s/%s</string>
+    <string name="service_caller_fire_hint">Dotknij WYŚLIJ, aby wysłać usługę. Zmiany stanu (jeśli występują) są tutaj wymienione.</string>
+    <string name="service_caller_recent">OSTATNIE</string>
+    <string name="service_caller_clear">WYCZYŚĆ</string>
+    <string name="service_caller_try">WYPRÓBUJ</string>
+    <string name="service_caller_copy">KOPIUJ</string>
+
+    <!-- Rename Dialog -->
+    <string name="rename_customize">DOSTOSUJ</string>
+    <string name="rename_local_only_hint">Tylko lokalnie. Wyczyść, aby wrócić do przyjaznej nazwy HA.</string>
+    <string name="rename_size_hint">Bezwzględny rozmiar dla dużego odczytu na tej karcie. Mniejsze rozmiary pomagają w gęstych układach.</string>
+    <string name="rename_color_temp_hint">Zastosuj stałą temperaturę barwy przy włączaniu tego światła. Działa tylko na światłach obsługujących color_temp_kelvin.</string>
+    <string name="rename_hide_controls_hint">Ukryj kontrole, których nie używasz na tej karcie. Ukrycie przycisku, którego HA i tak nie wyświetliłoby (np. HUE na żarówce z regulacją bieli) nie ma efektu.</string>
+    <string name="rename_accent_hint">Nadpisz ton akcentu karty. DOMYŚLNE = kolor domeny.</string>
+    <string name="rename_trim_hint">Przycinaj głośne precyzyjne odczyty. DOMYŚLNE dziedziczy globalne ustawienie.</string>
+    <string name="rename_behaviour_hint">Nadpisz globalne ustawienie Zachowania dla tej karty. DZIEDZICZ śledzi globalną domyślną.</string>
+    <string name="rename_hardware_input_hint">Czy bezpośrednie wejście sprzętowe działa na tej karcie. DZIEDZICZ śledzi globalną domyślną.</string>
+    <string name="rename_remove_hint">Gdy WŁĄCZONE, ta karta jest usuwana ze stosu za każdym razem, gdy HA zgłasza encję jako niedostępną.</string>
+    <string name="rename_long_press_hint">Długie naciśnięcie tej karty uruchomi inną encję. Np. `scene.noc_kina`, `script.pora_spać`, `switch.czajnik`.</string>
+    <string name="rename_reset">RESETUJ</string>
+    <string name="rename_cancel">ANULUJ</string>
+    <string name="rename_save">ZAPISZ</string>
+    <string name="rename_default">DOMYŚLNE</string>
+    <string name="rename_show">POKAŻ</string>
+    <string name="rename_hide">UKRYJ</string>
+
+    <!-- Panel Grid Mockup -->
+    <string name="panel_grid_live_snapshot">PODGLĄD NA ŻYWO</string>
+
+    <!-- Scenes -->
+    <string name="scenes_tap_off_hint">Dotknięcie = WYŁĄCZ · długie naciśnięcie ŚWIATŁA = WŁĄCZ</string>
+
+    <!-- Long Lived Token -->
+    <string name="long_lived_paste">WKLEJ</string>
+
+    <!-- Lovelace -->
+    <string name="lovelace_no_server">Brak skonfigurowanego serwera HA. Zaloguj się najpierw przez Ustawienia → SERWER.</string>
 </resources>

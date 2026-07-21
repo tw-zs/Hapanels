@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.feature.systemhealth
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -107,7 +108,7 @@ fun SystemHealthScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
                     .verticalScroll(scrollState),
             ) {
-                Text(text = "SERVER", style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = stringResource(R.string.system_health_server), style = R1.labelMicro, color = R1.InkSoft)
                 Spacer(Modifier.size(4.dp))
                 val cfg = ui.config
                 if (cfg != null) {
@@ -122,14 +123,14 @@ fun SystemHealthScreen(
                 // variable the link is.
                 PingRow(haRepository)
                 Spacer(Modifier.size(12.dp))
-                Text(text = "NETWORK SECURITY", style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = stringResource(R.string.system_health_network_security), style = R1.labelMicro, color = R1.InkSoft)
                 Spacer(Modifier.size(4.dp))
                 NetworkSecurityPanel()
                 Spacer(Modifier.size(12.dp))
                 ShareDebugBundleRow()
                 Spacer(Modifier.size(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "ERROR LOG (tail)", style = R1.labelMicro, color = R1.InkSoft)
+                    Text(text = stringResource(R.string.system_health_error_log), style = R1.labelMicro, color = R1.InkSoft)
                     Spacer(Modifier.weight(1f))
                     if (ui.errorLog.isNotBlank()) {
                         Box(
@@ -143,7 +144,7 @@ fun SystemHealthScreen(
                                 })
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                         ) {
-                            Text(text = "COPY", style = R1.labelMicro, color = R1.InkSoft)
+                            Text(text = stringResource(R.string.system_health_copy), style = R1.labelMicro, color = R1.InkSoft)
                         }
                     }
                 }
@@ -152,7 +153,7 @@ fun SystemHealthScreen(
                     ui.errorLog.isNotBlank() -> ErrorLogPanel(ui.errorLog)
                     ui.errorLogError != null -> ErrorPanel(ui.errorLogError!!)
                     else -> Text(
-                        text = "No log output (HA returned an empty body).",
+                        text = stringResource(R.string.system_health_no_log_output),
                         style = R1.body,
                         color = R1.InkMuted,
                     )
@@ -250,7 +251,7 @@ private fun PingRow(haRepository: HaRepository) {
     val result = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     val inFlight = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "PING", style = R1.labelMicro, color = R1.InkSoft)
+        Text(text = stringResource(R.string.system_health_ping), style = R1.labelMicro, color = R1.InkSoft)
         Spacer(Modifier.weight(1f))
         if (result.value != null) {
             Text(
@@ -335,7 +336,7 @@ private fun NetworkSecurityPanel() {
 private fun ShareDebugBundleRow() {
     val context = androidx.compose.ui.platform.LocalContext.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "SHARE DEBUG BUNDLE", style = R1.labelMicro, color = R1.InkSoft)
+        Text(text = stringResource(R.string.system_health_share_debug_bundle), style = R1.labelMicro, color = R1.InkSoft)
         Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
@@ -379,7 +380,7 @@ private fun ShareDebugBundleRow() {
                 })
                 .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
-            Text(text = "SHARE", style = R1.labelMicro, color = R1.InkSoft)
+            Text(text = stringResource(R.string.system_health_share), style = R1.labelMicro, color = R1.InkSoft)
         }
     }
 }

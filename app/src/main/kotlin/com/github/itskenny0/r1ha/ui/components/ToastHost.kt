@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -166,7 +167,7 @@ private fun ExpandedBody(event: R1Toast.Event, accent: Color, onDismiss: () -> U
                     .r1Pressable(onClick = onDismiss)
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             ) {
-                Text(text = "DISMISS", style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = stringResource(R.string.toast_dismiss), style = R1.labelMicro, color = R1.InkSoft)
             }
         }
         Spacer(Modifier.padding(top = 6.dp))

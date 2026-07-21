@@ -57,10 +57,10 @@ nav:
       - Instrukcja dla tabletów: installation-tablet.md
   - Integracja Home Assistant: home-assistant-integration.md
   - Sprzęt panelu: hardware.md
-  - Development: development.md
+  - Dla developerów: development.md
   - Podziękowania i Licencje: attribution.md
-  - Roadmap: ROADMAP.md
-  - Plan produkcyjny: PRODUCTION_PLAN.md
+  - Plan rozwoju: ROADMAP.md
+  - Plan produkcji: PRODUCTION_PLAN.md
 
 markdown_extensions:
   - admonition
@@ -72,3 +72,7 @@ markdown_extensions:
       alternate_style: true
   - pymdownx.highlight:
       anchor_linenums: true
+
+# Pliki nie uwzględnione w nawigacji (celowo pominięte)
+exclude_docs: |
+  UI-SPEC.md

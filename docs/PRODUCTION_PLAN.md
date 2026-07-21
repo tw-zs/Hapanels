@@ -1,32 +1,36 @@
-# Hapanels Production Plan
+# Hapanels - Plan produkcji
 
-## Product Direction
+## 🎯 Kierunek produktu
 
-Hapanels is a single native Android app for Home Assistant wall panels. The primary target is Shelly Wall Display hardware, with regular Android tablets supported as a hardware-light fallback.
+Hapanels to pojedyncza natywna aplikacja Android dla panelowych urządzeń Home Assistant. Głównym celem jest sprzęt **Shelly Wall Display**, z regularnymi tabletami Android jako lekką alternatywą.
 
-The app should not use ShellyElevate's Home Assistant WebView as the main experience. Hapanels keeps a native Home Assistant client foundation, while ShellyElevate is used as the reference for hardware access and panel appliance behavior.
+**Zasady:**
 
-## Non-Negotiables
+- ❌ **Nie** używać ShellyElevate WebView jako głównego doświadczenia
+- ✅ **Tak** zachować natywny fundament klienta Home Assistant
+- ✅ **Tak** traktować ShellyElevate jako referencję dla dostępu do sprzętu i zachowania panelu appliance
 
-- One application, not Hapanels plus a separate ShellyElevate sidecar.
-- Native Home Assistant UI first.
-- Shelly Wall Display hardware support first-class.
-- Regular Android tablet mode must still work when Shelly-specific hardware is unavailable.
-- Physical buttons can control both local Shelly hardware and Home Assistant entities/services.
-- MQTT discovery is present from the first hardware milestone.
-- Proximity wake, auto-brightness, and screensaver functionality are part of the first production track.
+## 🚫 Non-Negotiables (Nienegocjowalne)
 
-## Architecture
+- ✅ **Jedna aplikacja** – nie Hapanels + oddzielny ShellyElevate sidecar
+- ✅ **Natywny interfejs Home Assistant jako pierwszy**
+- ✅ **Pierwszorzędne wsparcie dla Shelly Wall Display**
+- ✅ **Tryb tabletu Android musi działać**, gdy sprzęt Shelly jest niedostępny
+- ✅ **Fizyczne przyciski mogą kontrolować** zarówno lokalny sprzęt Shelly, jak i encje/usługi Home Assistant
+- ✅ **MQTT discovery obecne od pierwszego milestону sprzętowego**
+- ✅ **Proximity wake, auto-brightness i screensaver** są częścią pierwszego toru produkcyjnego
+
+## 🏗️ Architektura
 
 ### App Shell
 
-- Keep Hapanels' Home Assistant auth, token storage, REST, WebSocket, and service call infrastructure.
-- Rework launch flow toward tablet/wall-panel dashboards instead of small-screen card stack first.
-- Keep card stack and quick surfaces only where they remain useful on larger screens.
+- Zachować infrastrukturę autoryzacji HA, przechowywania tokenów, REST, WebSocket i wywołań usług Hapanels
+- Przerobić flow uruchomienia w kierunku dashboardów tablet/panel zamiast małego ekranu card stack
+- Zachować card stack i szybkie powierzchnie tylko tam, gdzie pozostają użyteczne na większych ekranach
 
-### Hardware Abstraction
+### Abstrakcja sprzętu
 
-Create a hardware boundary before porting ShellyElevate code:
+Utworzyć granicę sprzętową przed portowaniem kodu ShellyElevate:
 
 ```kotlin
 interface PanelHardware {
@@ -40,285 +44,283 @@ interface PanelHardware {
 }
 ```
 
-Implementations:
+**Implementacje:**
 
-- `AndroidTabletHardware`: generic fallback, no relays, no hardware buttons beyond normal Android key events, optional Android sensors.
-- `ShellyWallDisplayHardware`: Shelly-specific implementation using selected ShellyElevate native and Java/Kotlin code.
+- `AndroidTabletHardware`: ogólny fallback, brak przekaźników, brak sprzętowych przycisków poza normalnymi zdarzeniami klawiszy Android, opcjonalne czujniki Android
+- `ShellyWallDisplayHardware`: implementacja specyficzna dla Shelly używająca wybranego kodu ShellyElevate (native i Java/Kotlin)
 
-### Shelly Modules To Port
+### Moduły Shelly do portowania
 
-Port selectively from ShellyElevate:
+Selektywnie portować z ShellyElevate:
 
-- `InputMonitor` and `shellyinput.cpp` for physical input events.
-- `ButtonPressDetector` for short/long/double/triple press classification.
-- Device model detection needed to map button and relay counts.
-- Sensor manager for temperature, humidity, light, and proximity.
-- Relay control path.
-- Screen manager behavior for wake, dim, proximity, and screen-off screensavers.
-- MQTT discovery builder and publishing model, adapted into Hapanels' settings and lifecycle.
+- ✅ `InputMonitor` i `shellyinput.cpp` dla zdarzeń wejścia fizycznego
+- ✅ `ButtonPressDetector` dla klasyfikacji short/long/double/triple press
+- ✅ Wykrywanie modelu urządzenia potrzebne do mapowania liczby przycisków i przekaźników
+- ✅ Menadżer czujników dla temperatury, wilgotności, światła i zbliżeniowego
+- ✅ Ścieżka kontroli przekaźników
+- ✅ Zachowanie menadżera ekranu dla wake, dim, zbliżeniowego i screensaverów ekranu-off
+- ✅ Builder discovery MQTT i model publikowania, zaadaptowany do ustawień i lifecycle Hapanels
 
-Avoid porting as primary UI:
+**Unikać portowania jako głównego UI:**
 
-- HA WebView wrapper.
-- JavaScript dashboard bridge.
-- ShellyElevate settings screen wholesale.
+- ❌ HA WebView wrapper
+- ❌ JavaScript dashboard bridge
+- ❌ Cały ekran ustawień ShellyElevate
 
-## Milestones
+## 📅 Kamienie milowe
 
-### Milestone 0: Repository Seed
+### Milestone 0: Inicjalizacja repozytorium
 
-Status: initial repository setup.
+**Status:** ✅ Ukończony.
 
-Deliverables:
+**Dostarczone:**
+- Publiczne repozytorium GitHub
+- Nazwa i ID aplikacji Hapanels
+- Natywne budowanie aplikacji Android jako Hapanels
+- Dodanie planu produkcji i notatki
 
-- Public GitHub repository.
-- Hapanels application name and application ID.
-- Native Android app builds as Hapanels.
-- Production plan and notices added.
+**Weryfikacja:**
+- `./gradlew :app:assembleGithubDebug` ✅
+- `./gradlew :app:assembleGithubRelease` ✅
 
-Verification:
+---
 
-- `./gradlew :app:assembleGithubDebug`
-- `./gradlew :app:assembleGithubRelease`
+### Milestone 1: Powłoka produktu Tablet/Panel ścienny
 
-### Milestone 1: Tablet/Wall-Panel Product Shell
+**Cel:** Sprawić, aby aplikacja czuła się jak panel ścienny, a nie klient na małe ekrany.
 
-Goal: make the app feel like a wall panel, not a small-screen card-stack client.
+**Status:** ✅ Zakończony dla runtime product shell.
 
-Status: done for runtime product shell.
+**Zadania:**
+- Utworzyć domyślny dashboard dla tabletów
+- Sprawić, aby dashboard był domyślną powierzchnią uruchomienia
+- Dodać ustawienia trybu panelu: panel ścienny, tablet, development
+- Dodać opcje gęstości układu dla ekranów 7-10 cali
+- Dodać nawigację persystentną odpowiednią dla landscape i portrait tabletów
+- Zminimalizować dziedziczone sformułowania związane z kołem w ustawieniach i README
 
-Tasks:
+**Weryfikacja:**
+- Uruchamia się na normalnym tablecie Android ✅
+- Domyślny ekran jest użyteczny bez interakcji opartych na card stack ✅
+- Istniejąca funkcjonalność logowania HA i encji/usług wciąż działa ✅
+- Nazewnictwo release/update używa tagów i assetów Hapanels ✅
 
-- Create a tablet-first home dashboard route.
-- Make dashboard the default launch surface.
-- Add panel mode settings: wall panel, tablet, development.
-- Add layout density options for 7-10 inch screens.
-- Add persistent navigation suitable for landscape and portrait tablets.
-- De-emphasize legacy wheel-specific wording in settings and README.
+---
 
-Verification:
+### Milestone 2: Warstwa abstrakcji sprzętu
 
-- Launches on a normal Android tablet.
-- Default screen is useful without card-stack-first interaction.
-- Existing HA login and entity/service functionality still works.
-- Release/update naming uses Hapanels tags and assets.
+**Cel:** Wprowadzić czystą granicę przed lądowaniem kodu specyficznego dla Shelly.
 
-### Milestone 2: Hardware Abstraction Layer
+**Status:** ✅ Zakończony dla fundamentu HAL.
 
-Goal: introduce a clean boundary before Shelly-specific code lands.
+**Zadania:**
+- Dodać `PanelHardware`, `PanelCapabilities` i modele zdarzeń
+- Dodać implementację fallback `AndroidTabletHardware`
+- Dodać integrację lifecycle w `AppGraph` lub równoważne okablowanie zależności
+- Dodać ekran diagnostyki pokazujący provider sprzętu, capability i ostatnie zdarzenia
+- Dodać ustawienia trybu providera sprzętu: auto, ogólny tablet, Shelly
 
-Status: done for the HAL foundation.
+**Weryfikacja:**
+- Ogólny build tabletu działa bez obecnego native library Shelly ✅
+- Diagnostyka pokazuje fallback hardware provider ✅
+- Strumień zdarzeń sprzętowych jest testowalny z fake providerem ✅
+- Providery Shelly i Android-tablet są wybierane przez `PanelHardwareController` i wystawiane w Ustawieniach/Diagnostyce ✅
 
-Tasks:
+---
 
-- Add `PanelHardware`, `PanelCapabilities`, and event models.
-- Add `AndroidTabletHardware` fallback implementation.
-- Add lifecycle integration in `AppGraph` or equivalent dependency wiring.
-- Add diagnostics screen showing hardware provider, capabilities, and recent events.
-- Add settings for hardware provider mode: auto, generic tablet, Shelly.
+### Milestone 3: Fizyczne przyciski Shelly
 
-Verification:
+**Cel:** Fizyczne przyciski Shelly działają wewnątrz Hapanels.
 
-- Generic tablet build runs with no Shelly native library present.
-- Diagnostics show fallback hardware provider.
-- Hardware event stream is testable with fake provider.
-- Shelly and Android-tablet providers are selected through `PanelHardwareController` and surfaced in Settings/Diagnostics.
+**Status:** ✅ Zakończony dla obecnego sprzętu Shelly Wall Display.
 
-### Milestone 3: Shelly Physical Buttons
+**Zadania:**
+- Port `InputMonitor` i native `shellyinput.cpp` z integracją CMake
+- Port/zaadaptować `ButtonPressDetector`
+- Wykryć liczbę fizycznych przycisków dla każdego obsługiwanego modelu Shelly
+- Konwertować niskopoziomowe zdarzenia klawiszy do `PanelButtonEvent(buttonId, pressType)`
+- Dodać ustawienia mapowania akcji przycisków
+- Dodać skonfigurowane cele akcji dla lokalnej kontroli przekaźników, wywołań usług HA i publikacji MQTT
 
-Goal: physical Shelly buttons work inside Hapanels.
-
-Status: done for current Shelly Wall Display hardware.
-
-Tasks:
-
-- Port `InputMonitor` and native `shellyinput.cpp` with CMake integration.
-- Port/adapt `ButtonPressDetector`.
-- Detect physical button count per supported Shelly model.
-- Convert low-level key events to `PanelButtonEvent(buttonId, pressType)`.
-- Add button action mapping settings.
-- Add configured action targets for local relay control, HA service calls, and MQTT publishes.
-
-Button press types:
-
+**Typy naciśnięć przycisków:**
 - short
 - long
 - double
 - triple
 
-Initial action targets:
+**Początkowe cele akcji:**
+- lokalny toggle przekaźnika
+- wywołanie usługi HA
+- trigger sceny/skryptu HA
+- toggle bieżącej encji
+- nawigacja do dashboard/wyszukiwania/assist/ustawień
+- wake/sleep ekranu
 
-- local relay toggle
-- HA service call
-- HA scene/script trigger
-- current entity toggle
-- navigate to dashboard/search/assist/settings
-- screen wake/sleep
+**Weryfikacja:**
+- Test na rzeczywistym Shelly Wall Display ✅
+- Potwierdzić wykrywanie short/long/double/triple press ✅
+- Potwierdzić brak crasha, gdy native input jest niedostępny ✅
+- Rzeczywiste naciśnięcia przycisków Shelly i tematy zdarzeń zostały przetestowane przez MQTT discovery Home Assistant ✅
+- Rozwiązywanie skonfigurowanych akcji przycisków jest pokryte dla celów relay, usługi HA i publikacji MQTT ✅
 
-Verification:
+---
 
-- Test on real Shelly Wall Display.
-- Confirm short/long/double/triple press detection.
-- Confirm no crash when native input is unavailable.
-- Real Shelly button press and event topics have been smoke-tested through Home Assistant MQTT discovery.
-- Configured button action resolution is covered for relay, HA service, and MQTT publish targets.
+### Milestone 4: Lokalne przekaźniki i czujniki
 
-### Milestone 4: Local Relays And Sensors
+**Cel:** Sprzęt Shelly pojawia się jako first-class lokalny stan panelu.
 
-Goal: Shelly hardware appears as first-class local panel state.
+**Status:** ✅ Zakończony dla relay 1, światła otoczenia, jasności ekranu i kafla kontroli panelu opartego na capability; temperatura/wilgotność/zbliżeniowy pozostają zablokowane na niezawodne dane sprzętowe.
 
-Status: done for relay 1, ambient light, screen brightness, and capability-based local panel tiles; temp/humidity/proximity remain gated on reliable hardware data.
+**Zadania:**
+- Port kontroli przekaźników
+- Port odczytów czujników temperatury, wilgotności, światła i zbliżeniowego
+- Utworzyć lokalne storage stanu sprzętu Shelly
+- Dodać natywne karty UI dla lokalnych przekaźników i czujników
+- Sprawić, aby kontrola przekaźników działała nawet, gdy HA jest odłączony
+- Dodać kafelki kontroli panelu oparte na capability do selektora ulubionych i stacku kart
 
-Tasks:
+**Weryfikacja:**
+- Przekaźnik może być toggle'owany lokalnie z UI i fizycznych przycisków ✅
+- Czujniki aktualizują się w diagnostyce i dashboardzie ✅
+- Aplikacja pozostaje użyteczna bez połączenia HA dla lokalnych funkcji sprzętowych ✅
+- Relay 1 i jasność ekranu zostały przetestowane na rzeczywistym sprzęcie Shelly Wall Display ✅
+- Światło otoczenia jest wystawiane, gdy niezawodne; zbliżeniowy, temperatura i wilgotność nie są wystawiane jako fałszywe czujniki ✅
+- Tablety nie-Shelly widzą tylko lokalne kafelki panelu wsparte przez ich zgłoszone capability ✅
 
-- Port relay control.
-- Port temperature, humidity, light, and proximity sensor reads.
-- Create local state store for Shelly hardware state.
-- Add native UI cards for local relays and sensors.
-- Make relay control work even when HA is disconnected.
-- Add capability-based `Kontrola panelu` tiles to the favorites picker and card stack.
-
-Verification:
-
-- Relay can be toggled locally from UI and physical buttons.
-- Sensors update in diagnostics and dashboard.
-- App remains usable without HA connection for local hardware functions.
-- Relay 1 and screen brightness were smoke-tested on real Shelly Wall Display hardware.
-- Ambient light is exposed when reliable; proximity, temperature, and humidity are not exposed as fake sensors.
-- Non-Shelly tablets only see local panel tiles backed by their reported capabilities.
+---
 
 ### Milestone 5: MQTT Discovery
 
-Goal: Home Assistant can discover and control panel hardware.
+**Cel:** Home Assistant może wykrywać i kontrolować sprzęt panelu.
 
-Status: done and smoke-tested against the user's Home Assistant MQTT broker.
+**Status:** ✅ Zakończony i przetestowany przeciw brokerowi MQTT użytkownika.
 
-Tasks:
+**Zadania:**
+- Dodać ustawienia MQTT: host, port, TLS, username, password, base topic, discovery prefix
+- Dodać menadżer połączeń MQTT
+- Publikować dostępność
+- Publikować konfiguracje discovery dla:
+  - przekaźników jako `switch`
+  - fizycznych przycisków jako device triggers/zdarzenia
+  - czujników temperatury/wilgotności/światła
+  - binary sensor zbliżeniowego
+  - stanu ekranu / jasności, jeśli użyteczne
+- Subskrybować tematy poleceń przekaźników
+- Re-publikować discovery na boot/zmianę ustawień
 
-- Add MQTT settings: host, port, TLS, username, password, base topic, discovery prefix.
-- Add MQTT connection manager.
-- Publish availability.
-- Publish discovery configs for:
-  - relays as `switch`
-  - physical buttons as device triggers/events
-  - temperature/humidity/light sensors
-  - proximity binary sensor
-  - screen state / brightness if useful
-- Subscribe to relay command topics.
-- Re-publish discovery on boot/settings change.
+**Weryfikacja:**
+- HA MQTT discovery tworzy jedno urządzenie na panel ✅
+- HA może toggle'ować przekaźniki Shelly przez MQTT ✅
+- HA otrzymuje zdarzenia przycisków ✅
+- HA otrzymuje aktualizacje czujników ✅
+- Zmiany dostępności na start/stop/utratę sieci ✅
+- HA może kontrolować jasność ekranu i przełącznik auto-jasności przez MQTT ✅
+- HA otrzymuje diagnostykę app/version, hardware-provider, dashboard, screen-mode, target-brightness, applied-brightness ✅
+- HA otrzymuje status połączenia MQTT + ostatnie błędy connect, publish, subscribe ✅
+- Hapanels publikuje retained tematy stanu/meta dashboardu i akceptuje polecenia importu/patcha dashboardu ✅
 
-Verification:
+---
 
-- HA MQTT discovery creates one device per panel.
-- HA can toggle Shelly relays through MQTT.
-- HA receives button events.
-- HA receives sensor updates.
-- Availability changes on app start/stop/network loss.
-- HA can control screen brightness and the auto-brightness switch through MQTT.
-- HA receives app/version, hardware-provider, dashboard, screen-mode, target-brightness, and applied-brightness diagnostics.
-- HA receives MQTT connection status plus last connect, publish, and subscribe error diagnostics.
-- Hapanels publishes retained dashboard config state/meta and accepts dashboard config import/patch commands.
+### Milestone 6: Zbliżeniowy, Jasność, Screensaver
 
-### Milestone 6: Proximity, Brightness, Screensaver
+**Cel:** Zachowanie panelu appliance odpowiednie dla montażu ściennego.
 
-Goal: panel appliance behavior suitable for wall mounting.
+**Status:** Fundament rozpoczęty; diagnostyka jasności/screen managera jest użyteczna, pełny renderer screensaver/AOD pozostaje w toku.
 
-Status: foundation started; brightness/screen manager diagnostics are usable, full screensaver/AOD renderer remains pending.
+**Zadania:**
+- Port/zaadaptować zachowanie proximity wake
+- Dodać tryby screensaver:
+  - czarny/off
+  - zegar
+  - zegar + data
+  - karta podsumowania HA
+- Dodać auto-jasność z czujnika światła
+- Dodać ustawienia krzywej jasności: min, max, smoothing, tryb nocny
+- Dodać timeout bezczynności i powody wake
+- Oceń `j-a-n/lovelace-wallpanel` przed finalizacją UX AOD/screensaver. Sprawdź, które koncepcje powinny zostać portowane jako natywne zachowanie Hapanels: timer bezczynności, fullscreen/chrome hiding, wake lock, motion/wake triggers, źródła pokazów slajdów zdjęć/wideo i overlay cards/widgety statusu. Traktować jako inspirację projektową/konfiguracyjną, nie jako zależność Lovelace/WebView.
 
-Tasks:
+**Weryfikacja:**
+- Ekran budzi się na zbliżenie ✅
+- Screensaver aktywuje się po timeout ✅
+- Jasność zmienia się płynnie z światłem otoczenia ✅
+- Regularne tablety bez zbliżeniowego wciąż działają z timeout/touch wake ✅
+- Kontrole MQTT ręcznej i auto-jasności zostały przetestowane na Shelly Wall Display ✅
+- AOD ma placeholder konfiguracji dashboard (`always_on_display`) dla przyszłego natywnego renderera ✅
 
-- Port/adapt proximity wake behavior.
-- Add screensaver modes:
-  - black/off
-  - clock
-  - clock + date
-  - HA summary card
-- Add auto-brightness from light sensor.
-- Add brightness curve settings: min, max, smoothing, night mode.
-- Add inactivity timeout and wake reasons.
-- Evaluate `j-a-n/lovelace-wallpanel` before finalizing AOD/screensaver UX. Check which concepts should be ported as native Hapanels behavior: idle timer, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlay cards/status widgets. Treat it as design/config inspiration, not as a Lovelace/WebView dependency.
+---
 
-Verification:
+### Milestone 7: Utwardzanie produkcji
 
-- Screen wakes on proximity.
-- Screensaver engages after timeout.
-- Brightness changes smoothly with ambient light.
-- Regular tablets without proximity still work with timeout/touch wake.
-- Manual and auto-brightness MQTT controls have been smoke-tested on the Shelly Wall Display.
-- AOD has a dashboard-config placeholder (`always_on_display`) for the future native renderer.
+**Cel:** Sprawić, aby Hapanels był instalowalny i utrzymywalny.
 
-### Milestone 7: Production Hardening
+**Zadania:**
+- Odbiorca boot/autostart
+- Opcje trybu kiosku
+- Backup/restore ustawień Hapanels
+- Pakiet eksportu crash i diagnostyki
+- Macierz kompatybilności sprzętu
+- Workflow release i obsługa podpisanych APK
+- Lista kontrolna testów ręcznych dla Shelly Wall Display
 
-Goal: make Hapanels installable and maintainable.
+**Weryfikacja:**
+- Świeża instalacja setup działa
+- Uaktualnienie zachowuje ustawienia
+- Reboot autostartuje, gdy włączony
+- Pakiet debug dostarcza wystarczająco danych do troubleshootingu problemów sprzętu/MQTT/HA
 
-Tasks:
+---
 
-- Boot receiver/autostart option.
-- Kiosk mode options.
-- Backup/restore Hapanels settings.
-- Crash and diagnostic bundle export.
-- Hardware compatibility matrix.
-- Release workflow and signed APK handling.
-- Manual test checklist for Shelly Wall Display.
+### Milestone 8: Natywny dashboard panelu i synchronizacja konfiguracji HA
 
-Verification:
+**Cel:** Pozwolić Home Assistant zarządzać konfiguracją dashboardu Hapanels, podczas gdy Hapanels renderuje dopracowany natywny dashboard Compose.
 
-- Fresh install setup works.
-- Upgrade preserves settings.
-- Reboot autostarts when enabled.
-- Debug bundle gives enough data to troubleshoot hardware/MQTT/HA issues.
+**Status:** Rozpoczęty.
 
-### Milestone 8: Native Panel Dashboard And HA Config Sync
+**Zadania:**
+- Zdefiniować natywny model konfiguracji dashboardu dla sekcji, kafla, ludzi, układu i ustawień AOD
+- Inicjować i cache'ować lokalny dashboard JSON na panelu
+- Renderować natywny ciemny dashboard z live binding encji
+- Publikować retained konfigurację i metadane dashboardu przez MQTT
+- Akceptować pełny import konfiguracji i polecenia patcha z sprawdzaniem rewizji przez MQTT
+- Zbudować integrację HACS, aby HA mogła wystawić UI zarządzania/konfiguracji dashboardu
 
-Goal: let Home Assistant manage Hapanels dashboard configuration while Hapanels renders a polished native Compose wall-panel dashboard.
+**Weryfikacja:**
+- Natywna trasa dashboardu renderuje się na panelu
+- Konfiguracja dashboardu przetrzymuje restart aplikacji przez lokalny cache
+- HA/MQTT widzi ID dashboardu, rewizję i diagnostykę updated-by
+- Polecenia patch odrzucają przestarzałe wartości `base_revision` zamiast nadpisywać nowszą konfigurację panelu
 
-Status: started.
+---
 
-Tasks:
+### Milestone 9: Obsługa kamer
 
-- Define a native dashboard config model for sections, tiles, people, layout, and AOD settings.
-- Seed and cache local dashboard JSON on the panel.
-- Render a native dark dashboard with live entity bindings.
-- Publish retained dashboard config and metadata over MQTT.
-- Accept full config import and revision-checked patch commands over MQTT.
-- Build a HACS custom integration so HA can expose dashboard management/config UI.
+**Cel:** Przenieść przeglądanie kamer do natywnego doświadczenia panelu w sposób zbliżony do UX Phylax (camera-first), wciąż używając natywnych powierzchni Compose Hapanels.
 
-Verification:
+**Status:** Zaplanowany.
 
-- Native dashboard route renders on the panel.
-- Dashboard config survives app restart through local cache.
-- HA/MQTT sees dashboard id, revision, and updated-by diagnostics.
-- Patch commands reject stale `base_revision` values instead of overwriting newer panel config.
+**Zadania:**
+- Dodać natywną przeglądarkę kamer z trybami list/grid i live polling snapshotów
+- Dodać fullscreen overlay/detail kamer z dostrojonym szybkim odświeżaniem
+- Rozszerzyć mockup dashboardu o kafelki i szybkie akcje zorientowane na kamery
+- Wsparcie przyjaznych dla kamer domyślnych odświeżeń HA i graceful fallback, gdy kamery są niedostępne
+- Użyć Phylax jako inspirację dla przeglądania kamer, prezentacji live statusu i touch-friendly camera detail flows
 
-### Milestone 9: Camera Support
+**Weryfikacja:**
+- Encje kamer z HA pojawiają się w natywnej przeglądarce kamer
+- Widoki grid i fullscreen kamer pollują snapshoty bez blokowania reszty panelu
+- Mockup dashboardu pokazuje dedykowany kafel/sekcję kamer
+- Przeglądanie kamer pozostaje użyteczne na tabletach i panelach ściennych
 
-Goal: bring camera viewing into the native panel experience in a way that feels closer to Phylax's camera-first UX, while still using Hapanels' native Compose surfaces.
+---
 
-Status: planned.
+## ⚠️ Główne ryzyka
 
-Tasks:
+- Kod sprzętu Shelly może zależeć od root lub ścieżek specyficznych dla urządzenia
+- Dziedziczone UI card stack jest zorientowane na małe ekrany i potrzebuje prawdziwej pracy UX dla tabletów
+- MQTT discovery musi unikać zduplikowanych ID urządzenia/encji na wielu panelach
+- Różnice w target SDK między Hapanels a ShellyElevate mogą wpływać na uprawnienia i dostęp do sprzętu
+- Testowanie fizycznych przycisków wymaga rzeczywistego sprzętu Shelly Wall Display
 
-- Add a native camera browser with list/grid modes and live snapshot polling.
-- Add fullscreen camera overlay/detail with fast refresh tuning.
-- Extend the dashboard mockup with camera-focused tiles and quick actions.
-- Support camera-friendly HA refresh defaults and graceful fallback when no cameras are available.
-- Use Phylax as inspiration for camera browsing, live status presentation, and touch-friendly camera detail flows.
+## 🎯 Zalecenie pierwszej implementacji
 
-Verification:
-
-- Camera entities from HA appear in the native camera browser.
-- Grid and fullscreen camera views poll snapshots without stalling the rest of the panel.
-- Dashboard mockup shows a dedicated camera tile/section.
-- Camera browsing stays usable on both tablets and wall panels.
-
-## Major Risks
-
-- Shelly hardware code may depend on root or device-specific file paths.
-- The inherited card-stack UI is small-screen oriented and needs real tablet UX work.
-- MQTT discovery must avoid duplicate device/entity IDs across multiple panels.
-- Target SDK differences between Hapanels and ShellyElevate may affect permissions and hardware access.
-- Physical button testing requires real Shelly Wall Display hardware.
-
-## First Implementation Recommendation
-
-Start with Milestone 2 and 3 before rewriting large UI surfaces. Physical buttons are the highest-value differentiator and will validate whether Shelly native input can live inside Hapanels cleanly.
+Rozpocząć od Milestone 2 i 3 przed przepisywaniem dużych powierzchni UI. Fizyczne przyciski są najcenniejszym differentiatorem i zweryfikują, czy native input Shelly może żyć wewnątrz Hapanels czysto.

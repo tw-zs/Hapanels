@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.feature.devmenu
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -347,7 +348,7 @@ private fun FireEventPanel(haRepository: com.github.itskenny0.r1ha.core.ha.HaRep
     var result by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
     var error by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
     Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-        Text(text = "EVENT TYPE", style = R1.labelMicro, color = R1.InkSoft)
+        Text(text = stringResource(R.string.dev_menu_event_type), style = R1.labelMicro, color = R1.InkSoft)
         Spacer(Modifier.height(2.dp))
         com.github.itskenny0.r1ha.ui.components.R1TextField(
             value = eventType,
@@ -357,7 +358,7 @@ private fun FireEventPanel(haRepository: com.github.itskenny0.r1ha.core.ha.HaRep
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(6.dp))
-        Text(text = "DATA (JSON, optional)", style = R1.labelMicro, color = R1.InkSoft)
+        Text(text = stringResource(R.string.dev_menu_data_json), style = R1.labelMicro, color = R1.InkSoft)
         Spacer(Modifier.height(2.dp))
         com.github.itskenny0.r1ha.ui.components.R1TextField(
             value = data,
@@ -606,7 +607,7 @@ private fun LogViewer() {
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
                 Text(
-                    text = "LAST CRASH",
+                    text = stringResource(R.string.dev_menu_last_crash),
                     style = R1.labelMicro,
                     color = if (crashFilesExist) R1.StatusRed else R1.InkSoft,
                 )
@@ -800,7 +801,7 @@ private fun WebhookPanel(
             onChange = { v -> vm.updateAdvanced { it.copy(webhookEnabled = v) } },
         )
         Spacer(Modifier.height(8.dp))
-        Text(text = "PORT", style = R1.labelMicro, color = R1.InkSoft)
+        Text(text = stringResource(R.string.dev_menu_port), style = R1.labelMicro, color = R1.InkSoft)
         Spacer(Modifier.height(2.dp))
         com.github.itskenny0.r1ha.ui.components.R1TextField(
             value = advanced.webhookPort.toString(),
@@ -871,7 +872,7 @@ private fun MqttPanel(
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "PORT", style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = stringResource(R.string.dev_menu_port), style = R1.labelMicro, color = R1.InkSoft)
                 Spacer(Modifier.height(2.dp))
                 com.github.itskenny0.r1ha.ui.components.R1TextField(
                     value = advanced.mqttPort.toString(),

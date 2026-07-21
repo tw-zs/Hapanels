@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,7 +132,7 @@ fun VacuumPanel(state: EntityState, accent: Color, modifier: Modifier = Modifier
         }
         if (fanSpeeds.isNotEmpty() && state.hasVacuumFeature(EntityState.VacuumFeature.FAN_SPEED)) {
             Spacer(Modifier.height(8.dp))
-            Text(text = "FAN", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_fan), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -154,7 +155,7 @@ fun VacuumPanel(state: EntityState, accent: Color, modifier: Modifier = Modifier
         if (battery != null) {
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "BATTERY", style = R1.labelMicro, color = R1.InkMuted)
+                Text(text = stringResource(R.string.label_battery), style = R1.labelMicro, color = R1.InkMuted)
                 Spacer(Modifier.width(6.dp))
                 Text(text = "$battery%", style = R1.labelMicro, color = accent)
             }
@@ -288,7 +289,7 @@ private fun PinKeypadDialog(
         ) {
             Text(text = title, style = R1.titleCard, color = accent)
             Spacer(Modifier.height(6.dp))
-            Text(text = "ENTER PIN", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_enter_pin), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(10.dp))
             Box(
                 modifier = Modifier
@@ -360,7 +361,7 @@ private fun PinKeypadDialog(
                     .r1Pressable(onClick = onDismiss),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "CANCEL", style = R1.labelMicro, color = R1.InkSoft)
+                Text(text = stringResource(R.string.label_cancel), style = R1.labelMicro, color = R1.InkSoft)
             }
         }
     }
@@ -398,7 +399,7 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
         }
         if (state.climatePresetModes.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(text = "PRESET", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_preset), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -420,7 +421,7 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
         }
         if (state.climateFanModes.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(text = "FAN", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_fan), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -442,7 +443,7 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
         }
         if (state.climateSwingModes.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Text(text = "SWING", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_swing), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
@@ -474,7 +475,7 @@ fun ClimatePanel(state: EntityState, accent: Color, modifier: Modifier = Modifie
             val (converted, suffix) = convertTemperature(current, nativeUnit, ui.tempUnit)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "NOW", style = R1.labelMicro, color = R1.InkMuted)
+                Text(text = stringResource(R.string.label_now), style = R1.labelMicro, color = R1.InkMuted)
                 Spacer(Modifier.width(6.dp))
                 Text(
                     text = formatTemperature(converted) + " " + suffix,
@@ -523,7 +524,7 @@ fun WaterHeaterPanel(state: EntityState, accent: Color, modifier: Modifier = Mod
     if (modes.isEmpty()) return
     val active = state.climateHvacMode
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = "MODE", style = R1.labelMicro, color = R1.InkMuted)
+        Text(text = stringResource(R.string.label_mode), style = R1.labelMicro, color = R1.InkMuted)
         Spacer(Modifier.height(4.dp))
         Row(
             modifier = Modifier
@@ -597,7 +598,7 @@ fun MediaExtrasPanel(state: EntityState, accent: Color, modifier: Modifier = Mod
         }
         if (hasSource) {
             Spacer(Modifier.height(6.dp))
-            Text(text = "SOURCE", style = R1.labelMicro, color = R1.InkMuted)
+            Text(text = stringResource(R.string.label_source), style = R1.labelMicro, color = R1.InkMuted)
             Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier

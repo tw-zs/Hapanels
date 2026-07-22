@@ -1,7 +1,8 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260720-panel-actions";
+const STUDIO_FRONTEND_VERSION = "20260720-schema-v2-aod-fix";
+const DASHBOARD_SCHEMA_VERSION = 2;
 const TILE_ACCENTS = ["orange", "red", "white"];
-const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup"];
+const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup", "text", "spacer"];
 const PANEL_TILE_KINDS = [
   "clock", "folder", "popup",
   "settings", "settings_appearance", "settings_behaviour", "settings_integrations", "panel_diagnostics",
@@ -11,6 +12,19 @@ const TILE_SIZES = ["large", "small", "action"];
 const CLOCK_STYLES = ["classic", "compact", "date_top"];
 const COVER_VISUALS = ["blind", "shade", "curtain", "gate"];
 const COVER_DIRECTIONS = ["top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"];
+const ACTION_TYPES = ["none", "entity_default", "navigate", "local_panel"];
+const PANEL_OPENER_KINDS = ["folder", "popup", "category"];
+const ENTITY_ID_PATTERN = /^[a-z0-9_]+\.[a-z0-9_]+$/;
+const SAFE_DEFAULT_DOMAINS = ["light", "switch", "input_boolean", "automation", "fan", "scene", "script", "button", "input_button"];
+const SUPPORTED_DESTINATIONS = ["settings", "settings/appearance", "settings/behaviour", "settings/integrations", "panel_diagnostics"];
+const SUPPORTED_LOCAL_ACTIONS = ["screen.aod_now", "connection.reconnect_home_assistant"];
+const CONFIRMATION_KINDS = ["unlock", "cover_move", "delete_tile", "delete_panel", "clear_tray", "disarm_alarm", "custom"];
+const ROOT_FIELDS = ["version", "dashboard_id", "revision", "updated_by", "title", "layout", "theme", "always_on_display", "people", "tiles", "panels", "camera_actions", "extensions", "migration_report"];
+const LAYOUT_FIELDS = ["type", "columns_landscape", "columns_portrait", "gap", "columns", "rows"];
+const PANEL_FIELDS = ["id", "title", "layout", "tiles"];
+const TILE_FIELDS = ["id", "kind", "size", "label", "short_label", "entity_id", "panel_id", "icon", "accent", "order", "col", "row", "colSpan", "rowSpan", "clock_style", "cover_visual", "cover_direction", "tap_action", "hold_action", "content", "summary", "secondary", "presentation", "legacy_action"];
+const ACTION_FIELDS = ["type", "destination", "action", "entity_id", "panel_id", "domain", "service", "target", "data", "confirmation"];
+const PRESENTATION_FIELDS = ["show_icon", "show_label", "show_value", "show_secondary", "background", "border", "content_alignment"];
 const AOD_PRESETS = [
   { id: "night", name: "Nocny zegar", desc: "Ciemno, 1% jasności, sam zegar", aod: { enabled: true, layout: "minimal_clock", timeout_sec: 300, brightness_percent: 1, wake_fade_ms: 500, background: "#000000", grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" } } },
   { id: "status", name: "Status dom", desc: "Cichy pasek statusu i osoby", aod: { enabled: true, layout: "status_strip", timeout_sec: 180, brightness_percent: 3, wake_fade_ms: 500, background: "#05070a", grid_layout: { type: "fixed_grid", columns_landscape: 4, columns_portrait: 2, gap: "small" } } },
@@ -28,6 +42,9 @@ const AOD_CLOCK_STYLES = [
   { id: "modern", name: "Nowoczesny", category: "Kolorowe abstrakcje", desc: "Czysty, minimalistyczny ekran nocny.", treatment: "Smukłe cyfry, szeroki oddech i miękki kontrast." },
   { id: "popart", name: "Popart", category: "Kolorowe abstrakcje", desc: "Kolorowy, graficzny akcent na AOD.", treatment: "Grube cyfry, mocny cień i plakatowe plamy koloru." },
   { id: "popart_multiples", name: "Fabryka Koloru", category: "Kolorowe abstrakcje", desc: "Popartowy zegar z powielonymi warstwami koloru.", treatment: "Multiplikowane cyfry, mocne przesunięcia i plakatowa energia." },
+  { id: "neon_baltic", name: "Neon Bałtyk", category: "Kolorowe abstrakcje", desc: "Neonowy zegar inspirowany światłami nad Bałtykiem.", treatment: "Gradientowe cyfry, świetlna poświata i kolorowe smugi." },
+  { id: "electric_stained_glass", name: "Elektryczny Witraż", category: "Kolorowe abstrakcje", desc: "Zegar z energią kolorowego szkła.", treatment: "Wielobarwne cyfry i geometryczne tafle na czarnym tle." },
+  { id: "poznan_goats", name: "Poznańskie Koziołki", category: "Polskie inspiracje", desc: "Poznański zegar z koziołkami ratuszowymi.", treatment: "Bursztynowa typografia i sylwetki koziołków nad godziną." },
 ];
 const PANEL_THEME_PRESETS = [
   { id: "default", name: "Domyślny", category: "Wygląd domyślny", description: "Aktualny wygląd panelu Hapanels.", light: { bg: "#f8fafc", surface: "#ffffff", tile: "#e7eaf0", text: "#171a20", muted: "#666a73", accent: "#e99900", border: "#d4d8e0", hover: "#fff3d6", active: "#ffe4a3", selected: "#ffd980" }, dark: { bg: "#090d10", surface: "#23242d", tile: "#2e303a", text: "#ffffff", muted: "#888c96", accent: "#e99900", border: "#3a3d48", hover: "#30313a", active: "#3a3321", selected: "#4b3a16" } },
@@ -41,6 +58,221 @@ const PANEL_THEME_PRESETS = [
   { id: "neon_noir", name: "Neon Noir", category: "Kolorowe abstrakcyjne", description: "Ciemny premium look z neonowym magenta i elektrycznym błękitem.", light: { bg: "#fff7fb", surface: "#ffffff", tile: "#ffddec", text: "#26111e", muted: "#795d70", accent: "#0078d4", border: "#e8bed5", hover: "#ffedf6", active: "#ffd9eb", selected: "#d7ecff" }, dark: { bg: "#09040d", surface: "#1b1022", tile: "#31183c", text: "#ffeef8", muted: "#d1a7c4", accent: "#58c7ff", border: "#53305f", hover: "#271430", active: "#421c54", selected: "#193f5c" } },
   { id: "velvet_spectrum", name: "Velvet Spectrum", category: "Kolorowe abstrakcyjne", description: "Miękki, luksusowy miks śliwki, złota i indygo.", light: { bg: "#fff8f4", surface: "#ffffff", tile: "#f0ddea", text: "#251524", muted: "#735c6d", accent: "#c18a2a", border: "#ddc2d5", hover: "#ffeff8", active: "#f2d4e8", selected: "#ffe0a8" }, dark: { bg: "#100913", surface: "#211426", tile: "#35203c", text: "#fff0fa", muted: "#c7a8c4", accent: "#e4b65c", border: "#56355f", hover: "#2d1934", active: "#4b2758", selected: "#60481f" } },
 ];
+
+function defaultTilePresentation(kind) {
+  if (kind === "clock") return { show_icon: false, show_label: false, show_value: true, show_secondary: true, background: "surface", border: "default", content_alignment: "center" };
+  if (["action", "folder", "popup"].includes(kind)) return { show_icon: true, show_label: true, show_value: false, show_secondary: false, background: "surface", border: "default", content_alignment: "center" };
+  if (kind === "text") return { show_icon: false, show_label: false, show_value: true, show_secondary: false, background: "surface", border: "default", content_alignment: "center" };
+  return { show_icon: true, show_label: true, show_value: true, show_secondary: true, background: "surface", border: "default", content_alignment: "center" };
+}
+
+function migrateStudioTile(tile, { ownerPanelId = null, interactive = true, report = [] } = {}) {
+  const next = structuredClone(tile);
+  const defaults = defaultTilePresentation(next.kind);
+  if (next.kind !== "spacer") {
+    next.presentation = {
+      ...defaults,
+      ...(next.presentation || {}),
+      show_icon: next.showIcon ?? next.presentation?.show_icon ?? defaults.show_icon,
+      show_label: next.showTitle ?? next.presentation?.show_label ?? defaults.show_label,
+      show_secondary: next.showSubtitle ?? next.presentation?.show_secondary ?? defaults.show_secondary,
+    };
+  } else {
+    delete next.presentation;
+  }
+  delete next.showIcon;
+  delete next.showTitle;
+  delete next.showSubtitle;
+  if (ownerPanelId && !PANEL_OPENER_KINDS.includes(next.kind)) delete next.panel_id;
+  if (!interactive) {
+    next.tap_action = { type: "none" };
+  } else if (!next.tap_action) {
+    const domain = next.entity_id?.split(".")[0];
+    if (SAFE_DEFAULT_DOMAINS.includes(domain)) {
+      next.tap_action = { type: "entity_default", entity_id: next.entity_id };
+    } else if (next.kind === "action") {
+      next.tap_action = { type: "none" };
+    } else if (domain && !PANEL_OPENER_KINDS.includes(next.kind)) {
+      next.tap_action = { type: "none" };
+    }
+  }
+  if (next.kind === "category" && !next.panel_id && next.entity_id) next.legacy_action = true;
+  if (next.accent === "red" && next.tap_action?.confirmation?.required !== true && next.hold_action?.confirmation?.required !== true) {
+    next.accent = "white";
+    report.push("Dekoracyjny czerwony akcent zmieniono na neutralny");
+  }
+  return next;
+}
+
+function normalizeDashboardConfig(raw) {
+  if (!raw) return null;
+  const config = structuredClone(raw);
+  if (![1, DASHBOARD_SCHEMA_VERSION].includes(Number(config.version))) throw new Error(`Nieobsługiwana wersja schematu: ${config.version}`);
+  const report = [...(config.migration_report || [])];
+  if (Number(config.version) === 1) {
+    const flatTiles = config.tiles || [];
+    const panelIds = [...new Set(flatTiles.map((tile) => tile.panel_id).filter(Boolean))];
+    const openers = new Map(flatTiles.filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id).map((tile) => [tile.panel_id, tile]));
+    const legacyEditor = config.layout_editor;
+    config.layout = { ...(config.layout || {}), columns: Number(legacyEditor?.grid?.columns) || 12, rows: Number(legacyEditor?.grid?.rows) || 9 };
+    config.panels = panelIds.map((panelId) => ({
+      id: panelId,
+      title: openers.get(panelId)?.label || panelId,
+      layout: {
+        ...(config.layout || {}),
+        columns: Number(legacyEditor?.contexts?.[panelId]?.grid?.columns) || 12,
+        rows: Number(legacyEditor?.contexts?.[panelId]?.grid?.rows) || 9,
+      },
+      tiles: flatTiles.filter((tile) => tile.panel_id === panelId && !PANEL_OPENER_KINDS.includes(tile.kind)).map((tile) => migrateStudioTile(tile, { ownerPanelId: panelId, report })),
+    }));
+    config.tiles = flatTiles.filter((tile) => !tile.panel_id || PANEL_OPENER_KINDS.includes(tile.kind)).map((tile) => migrateStudioTile(tile, { report }));
+    config.extensions = { ...(config.extensions || {}) };
+    if (legacyEditor) config.extensions.legacy_layout_editor = legacyEditor;
+    delete config.layout_editor;
+    const aod = config.always_on_display ||= {};
+    aod.tiles = (aod.tiles || []).map((tile) => migrateStudioTile(tile, { interactive: false, report }));
+    for (const entityId of aod.entity_ids || []) {
+      if (aod.tiles.some((tile) => tile.entity_id === entityId)) continue;
+      const base = `aod_${entityId.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")}`;
+      let id = base;
+      let suffix = 2;
+      while (aod.tiles.some((tile) => tile.id === id)) id = `${base}_${suffix++}`;
+      aod.tiles.push(migrateStudioTile({ id, kind: "entity", size: "small", label: entityId.split(".").pop().replaceAll("_", " "), entity_id: entityId, icon: "mdi:cog", accent: "orange", order: aod.tiles.length }, { interactive: false, report }));
+    }
+    if ((aod.entity_ids || []).length) report.push("Przeniesiono legacy AOD entity_ids do tiles");
+    delete aod.entity_ids;
+  } else {
+    config.tiles ||= [];
+    config.panels ||= [];
+    (config.always_on_display ||= {}).tiles ||= [];
+  }
+  config.version = DASHBOARD_SCHEMA_VERSION;
+  config.panels ||= [];
+  config.extensions ||= {};
+  config.migration_report = [...new Set(report)];
+  return config;
+}
+
+function dashboardTiles(config) {
+  return [...(config?.tiles || []), ...(config?.panels || []).flatMap((panel) => panel.tiles || [])];
+}
+
+function validateDashboardConfig(config) {
+  const errors = [];
+  const rejectUnknown = (value, allowed, path) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    for (const field of Object.keys(value)) if (!allowed.includes(field)) errors.push(`${path}.${field}: pole nieobsługiwane`);
+  };
+  rejectUnknown(config, ROOT_FIELDS, "config");
+  if (Number(config?.version) !== DASHBOARD_SCHEMA_VERSION) errors.push(`version: wymagane ${DASHBOARD_SCHEMA_VERSION}`);
+  if (!config?.dashboard_id?.trim()) errors.push("dashboard_id: wymagane");
+  if (!Number.isInteger(Number(config?.revision)) || Number(config.revision) < 0) errors.push("revision: wymagane >= 0");
+  if (!config?.updated_by?.trim()) errors.push("updated_by: wymagane");
+  const validateLayout = (layout, path) => {
+    rejectUnknown(layout, LAYOUT_FIELDS, path);
+    if (!layout || layout.type !== "fixed_grid" || Number(layout.columns_landscape) < 1 || Number(layout.columns_portrait) < 1 || Number(layout.columns || 12) < 1 || Number(layout.rows || 9) < 1) errors.push(`${path}: niepoprawny grid`);
+    if (layout?.gap && !["small", "medium", "large"].includes(layout.gap)) errors.push(`${path}.gap: nieznany`);
+  };
+  validateLayout(config?.layout, "layout");
+  const panels = config?.panels || [];
+  panels.forEach((panel, index) => {
+    rejectUnknown(panel, PANEL_FIELDS, `panels[${index}]`);
+    if (!panel.id?.trim() || !panel.title?.trim()) errors.push(`panels[${index}]: id i title wymagane`);
+    validateLayout(panel.layout, `panels[${index}].layout`);
+  });
+  const panelIds = panels.map((panel) => panel.id);
+  const duplicatePanels = panelIds.filter((id, index) => panelIds.indexOf(id) !== index);
+  if (duplicatePanels.length) errors.push(`panels: powtórzone id ${[...new Set(duplicatePanels)].join(", ")}`);
+  const allTiles = dashboardTiles(config);
+  const tileIds = [...allTiles, ...(config?.always_on_display?.tiles || [])].map((tile) => tile.id);
+  const duplicateTiles = tileIds.filter((id, index) => tileIds.indexOf(id) !== index);
+  if (duplicateTiles.length) errors.push(`tiles: powtórzone id ${[...new Set(duplicateTiles)].join(", ")}`);
+  const validateTile = (tile, path, aod = false) => {
+    rejectUnknown(tile, TILE_FIELDS, path);
+    if (!tile.id?.trim()) errors.push(`${path}.id: wymagane`);
+    if (!TILE_KINDS.includes(tile.kind)) errors.push(`${path}.kind: nieznany typ`);
+    if (!TILE_SIZES.includes(tile.size)) errors.push(`${path}.size: nieznany rozmiar`);
+    if (!["text", "spacer"].includes(tile.kind) && !tile.label?.trim()) errors.push(`${path}.label: wymagane`);
+    if (!["text", "spacer", "clock"].includes(tile.kind) && !tile.icon?.trim()) errors.push(`${path}.icon: wymagane`);
+    if (!TILE_ACCENTS.includes(tile.accent || "orange")) errors.push(`${path}.accent: nieznany`);
+    if (tile.entity_id && !ENTITY_ID_PATTERN.test(tile.entity_id)) errors.push(`${path}.entity_id: wymagane domain.object_id`);
+    if (["entity", "cover", "camera"].includes(tile.kind) && !tile.entity_id) errors.push(`${path}.entity_id: wymagane`);
+    if (tile.kind === "text" && !tile.content?.trim()) errors.push(`${path}.content: wymagane`);
+    if (tile.kind === "spacer" && (tile.presentation || tile.entity_id || tile.tap_action || tile.hold_action)) errors.push(`${path}: spacer nie może mieć presentation, encji ani akcji`);
+    if (["folder", "popup"].includes(tile.kind) && !tile.panel_id) errors.push(`${path}.panel_id: wymagane`);
+    if (tile.kind === "category" && !tile.panel_id && !tile.legacy_action) errors.push(`${path}.panel_id: wymagane`);
+    if (tile.panel_id && PANEL_OPENER_KINDS.includes(tile.kind) && !panelIds.includes(tile.panel_id)) errors.push(`${path}.panel_id: brak panelu ${tile.panel_id}`);
+    for (const [name, action] of [["tap_action", tile.tap_action], ["hold_action", tile.hold_action]]) {
+      if (!action) continue;
+      rejectUnknown(action, ACTION_FIELDS, `${path}.${name}`);
+      if (!ACTION_TYPES.includes(action.type)) errors.push(`${path}.${name}.type: nieznana akcja`);
+      if (action.type === "entity_default" && !ENTITY_ID_PATTERN.test(action.entity_id || "")) errors.push(`${path}.${name}.entity_id: wymagane`);
+      if (action.type === "entity_default" && !SAFE_DEFAULT_DOMAINS.includes((action.entity_id || "").split(".")[0])) errors.push(`${path}.${name}.entity_id: domena nie ma bezpiecznej akcji domyślnej`);
+      if (action.type === "navigate" && Boolean(action.destination) === Boolean(action.panel_id)) errors.push(`${path}.${name}: wybierz destination albo panel_id`);
+      if (action.type === "navigate" && action.destination && !SUPPORTED_DESTINATIONS.includes(action.destination)) errors.push(`${path}.${name}.destination: nieobsługiwane`);
+      if (action.type === "navigate" && action.panel_id && !panelIds.includes(action.panel_id)) errors.push(`${path}.${name}.panel_id: brak panelu`);
+      if (action.type === "local_panel" && !SUPPORTED_LOCAL_ACTIONS.includes(action.action)) errors.push(`${path}.${name}.action: nieobsługiwane`);
+      if (action.confirmation && !CONFIRMATION_KINDS.includes(action.confirmation.kind)) errors.push(`${path}.${name}.confirmation.kind: nieobsługiwane`);
+    }
+    if (tile.kind === "action" && !tile.tap_action) errors.push(`${path}.tap_action: wymagane`);
+    if (tile.hold_action) errors.push(`${path}.hold_action: nieobsługiwane przez bieżącą wersję tabletu`);
+    if (tile.presentation) {
+      rejectUnknown(tile.presentation, PRESENTATION_FIELDS, `${path}.presentation`);
+      if (!["surface", "transparent"].includes(tile.presentation.background || "surface")) errors.push(`${path}.presentation.background: nieznane`);
+      if (!["default", "none"].includes(tile.presentation.border || "default")) errors.push(`${path}.presentation.border: nieznane`);
+      if (!["start", "center", "end"].includes(tile.presentation.content_alignment || "center")) errors.push(`${path}.presentation.content_alignment: nieznane`);
+    }
+    const confirmedUnsafe = [tile.tap_action, tile.hold_action].some((action) => action?.confirmation?.required === true && CONFIRMATION_KINDS.includes(action.confirmation.kind));
+    if (tile.accent === "red" && !confirmedUnsafe) errors.push(`${path}.accent: red wymaga unsafe confirmation`);
+    if (aod && !["clock", "entity", "text"].includes(tile.kind)) errors.push(`${path}.kind: niedozwolony w AOD`);
+    if (aod && (tile.tap_action?.type && tile.tap_action.type !== "none" || tile.hold_action)) errors.push(`${path}: AOD musi być read-only`);
+  };
+  (config.tiles || []).forEach((tile, index) => validateTile(tile, `tiles[${index}]`));
+  panels.forEach((panel, panelIndex) => (panel.tiles || []).forEach((tile, tileIndex) => validateTile(tile, `panels[${panelIndex}].tiles[${tileIndex}]`)));
+  const aodTiles = config?.always_on_display?.tiles || [];
+  if (Object.hasOwn(config?.always_on_display || {}, "entity_ids")) errors.push("always_on_display.entity_ids: nieobsługiwane w schema v2");
+  aodTiles.forEach((tile, index) => validateTile(tile, `always_on_display.tiles[${index}]`, true));
+  const aodLimit = config?.always_on_display?.layout === "status_strip" ? 4 : 6;
+  if (aodTiles.length > aodLimit) errors.push(`always_on_display.tiles: maksymalnie ${aodLimit}`);
+  const validatePlacement = (tiles, layout, path) => {
+    const columns = Number(layout?.columns) || 12;
+    const rows = Number(layout?.rows) || 9;
+    const placed = [];
+    (tiles || []).forEach((tile, index) => {
+      if (tile.col == null && tile.row == null) return;
+      if (tile.col == null || tile.row == null) {
+        errors.push(`${path}[${index}]: col i row muszą występować razem`);
+        return;
+      }
+      const area = { id: tile.id, col: Number(tile.col), row: Number(tile.row), colSpan: Number(tile.colSpan) || 1, rowSpan: Number(tile.rowSpan) || 1 };
+      if (area.col < 1 || area.row < 1 || area.colSpan < 1 || area.rowSpan < 1 || area.col + area.colSpan - 1 > columns || area.row + area.rowSpan - 1 > rows) {
+        errors.push(`${path}[${index}]: kafel wychodzi poza grid ${columns}×${rows}`);
+        return;
+      }
+      const overlap = placed.find((other) => area.col < other.col + other.colSpan && area.col + area.colSpan > other.col && area.row < other.row + other.rowSpan && area.row + area.rowSpan > other.row);
+      if (overlap) errors.push(`${path}: kafle ${overlap.id} i ${area.id} nachodzą na siebie`);
+      placed.push(area);
+    });
+  };
+  validatePlacement(config.tiles, config.layout, "tiles");
+  panels.forEach((panel, index) => validatePlacement(panel.tiles, panel.layout, `panels[${index}].tiles`));
+  validatePlacement(aodTiles, config?.always_on_display?.grid_layout, "always_on_display.tiles");
+  const edges = new Map(panels.map((panel) => [panel.id, (panel.tiles || []).filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind)).map((tile) => tile.panel_id).filter(Boolean)]));
+  const rootTargets = (config.tiles || []).filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind)).map((tile) => tile.panel_id).filter(Boolean);
+  const visit = (id, path = []) => {
+    if (path.includes(id)) {
+      errors.push(`panels: cykl ${[...path, id].join(" → ")}`);
+      return;
+    }
+    if (path.length >= 3) {
+      errors.push(`panels: głębokość przekracza 3 przy ${id}`);
+      return;
+    }
+    for (const target of edges.get(id) || []) visit(target, [...path, id]);
+  };
+  rootTargets.forEach((id) => visit(id));
+  return errors;
+}
 
 const STUDIO_TRANSLATIONS_EN = {
   "Panele wykryte po MQTT i stan synchronizacji dashboardu/AOD.": "Panels discovered over MQTT and dashboard/AOD sync state.",
@@ -300,7 +532,7 @@ class HapanelsStudioPanel extends HTMLElement {
   async _loadConfig(device) {
     if (!device) return;
     const result = await this._hass.callWS({ type: "hapanels/get_dashboard_config", device });
-    this._configs[device] = result.config || null;
+    this._configs[device] = normalizeDashboardConfig(result.config);
     this._pendingPatches[device] = result.pending_patch || null;
   }
 
@@ -340,6 +572,18 @@ class HapanelsStudioPanel extends HTMLElement {
     if (clockStyle) tile.clock_style = clockStyle;
     if (coverVisual) tile.cover_visual = coverVisual;
     if (coverDirection) tile.cover_direction = coverDirection;
+    const projected = structuredClone(config);
+    const targetTile = surface === "aod"
+      ? (projected.always_on_display?.tiles || []).find((item) => item.id === tileId)
+      : dashboardTiles(projected).find((item) => item.id === tileId);
+    if (!targetTile) return;
+    Object.assign(targetTile, tile);
+    const validationErrors = validateDashboardConfig(projected);
+    if (validationErrors.length) {
+      this._error = `Nie zapisano zmian: ${validationErrors.join(" · ")}`;
+      this._render();
+      return;
+    }
     await this._hass.callService("hapanels", "patch_dashboard_config", {
       device,
       patch: {
@@ -354,10 +598,31 @@ class HapanelsStudioPanel extends HTMLElement {
 
   async _setConfig(device, config) {
     if (!config) return;
-    const next = structuredClone(config);
+    const panel = (this._panels || []).find((item) => item.device === device);
+    if (panel && Number(panel.schema_version || 0) < DASHBOARD_SCHEMA_VERSION) {
+      this._error = `Tablet obsługuje schema ${panel.schema_version || 1}. Wymagana wersja ${DASHBOARD_SCHEMA_VERSION}.`;
+      this._render();
+      return;
+    }
+    const next = normalizeDashboardConfig(config);
     next.revision = Number(next.revision || 0) + 1;
     next.updated_by = "homeassistant:hapanels_studio";
+    const supportedKinds = panel?.supported_tile_kinds?.length ? panel.supported_tile_kinds : TILE_KINDS;
+    const supportedActions = panel?.supported_action_types?.length ? panel.supported_action_types : ACTION_TYPES;
+    const validationErrors = validateDashboardConfig(next);
+    for (const tile of [...dashboardTiles(next), ...(next.always_on_display?.tiles || [])]) {
+      if (!supportedKinds.includes(tile.kind)) validationErrors.push(`Tablet nie obsługuje kafla ${tile.kind}`);
+      for (const action of [tile.tap_action, tile.hold_action].filter(Boolean)) {
+        if (!supportedActions.includes(action.type)) validationErrors.push(`Tablet nie obsługuje akcji ${action.type}`);
+      }
+    }
+    if (validationErrors.length) {
+      this._error = `Nie zapisano zmian: ${validationErrors.join(" · ")}`;
+      this._render();
+      return;
+    }
     await this._hass.callService("hapanels", "set_dashboard_config", { device, config: next });
+    this._error = null;
     window.setTimeout(() => this._load(), 800);
   }
 
@@ -365,11 +630,19 @@ class HapanelsStudioPanel extends HTMLElement {
     const config = this._configs[device];
     if (!config) return;
     const next = structuredClone(config);
-    const target = surface === "aod" ? (next.always_on_display ||= {}) : next;
+    const target = surface === "aod"
+      ? (next.always_on_display ||= {})
+      : panelId
+        ? next.panels?.find((panel) => panel.id === panelId)
+        : next;
+    if (!target) return;
     target.tiles ||= [];
     const order = Math.max(-1, ...target.tiles.map((tile) => Number(tile.order) || 0)) + 1;
     const tile = type === "panel" ? this._newLayoutTile("panel", panelKind) : this._newLayoutTile("ha");
-    target.tiles.push({ ...tile, panel_id: panelId || tile.panel_id, size: surface === "aod" ? "small" : tile.size, order });
+    target.tiles.push({ ...tile, size: surface === "aod" ? "small" : tile.size, order });
+    if (surface !== "aod" && PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id && !next.panels.some((panel) => panel.id === tile.panel_id)) {
+      next.panels.push({ id: tile.panel_id, title: tile.label, layout: { ...next.layout }, tiles: [] });
+    }
     await this._setConfig(device, next);
   }
 
@@ -385,7 +658,6 @@ class HapanelsStudioPanel extends HTMLElement {
     const wakeFade = Number(this.shadowRoot.getElementById("aod-wake-fade")?.value ?? aod.wake_fade_ms ?? 500);
     aod.wake_fade_ms = Number.isFinite(wakeFade) ? Math.min(2000, Math.max(0, Math.round(wakeFade))) : 500;
     aod.background = this.shadowRoot.getElementById("aod-background")?.value?.trim() || aod.background;
-    aod.entity_ids = (this.shadowRoot.getElementById("aod-entities")?.value || "").split(",").map((value) => value.trim()).filter(Boolean);
     const grid = aod.grid_layout ||= {};
     grid.type = "fixed_grid";
     grid.columns_landscape = Number(this.shadowRoot.getElementById("aod-columns-landscape")?.value) || grid.columns_landscape;
@@ -407,8 +679,13 @@ class HapanelsStudioPanel extends HTMLElement {
     const config = this._configs[device];
     if (!config) return;
     const next = structuredClone(config);
-    const target = surface === "aod" ? (next.always_on_display ||= {}) : next;
-    target.tiles = (target.tiles || []).filter((tile) => tile.id !== tileId);
+    if (surface === "aod") {
+      const target = next.always_on_display ||= {};
+      target.tiles = (target.tiles || []).filter((tile) => tile.id !== tileId);
+    } else {
+      next.tiles = (next.tiles || []).filter((tile) => tile.id !== tileId);
+      next.panels = (next.panels || []).map((panel) => ({ ...panel, tiles: (panel.tiles || []).filter((tile) => tile.id !== tileId) }));
+    }
     await this._setConfig(device, next);
   }
 
@@ -694,6 +971,11 @@ class HapanelsStudioPanel extends HTMLElement {
           .aod-clock-preview.italic_editorial .time { font-weight: 400; letter-spacing: -.04em; }
           .aod-clock-preview.fullscreen_bold .time { font-size: 44px; font-weight: 950; letter-spacing: -.08em; }
           .aod-clock-preview.fullscreen_heavy .time { font-size: 52px; font-weight: 950; letter-spacing: -.12em; text-shadow: 1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff; }
+          .aod-clock-preview.neon_baltic { background: linear-gradient(160deg, rgba(0,229,255,.18), transparent 45%, rgba(255,60,172,.18)), #02030a; color: #83dfff; }
+          .aod-clock-preview.neon_baltic .time { color: #7effff; text-shadow: 0 0 12px #438cff; }
+          .aod-clock-preview.electric_stained_glass { background: linear-gradient(110deg, rgba(255,60,172,.28) 0 33%, rgba(0,229,255,.24) 33% 66%, rgba(255,214,0,.25) 66%), #050505; color: #ffd600; }
+          .aod-clock-preview.electric_stained_glass .time { text-shadow: 3px 3px 0 #111; }
+          .aod-clock-preview.poznan_goats { background: radial-gradient(circle at 50% 12%, rgba(255,190,24,.26), transparent 34%), #05080a; color: #ffbe18; font-family: Georgia, serif; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .spinner { width: 22px; height: 22px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
         .picker-filters { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
@@ -993,7 +1275,7 @@ class HapanelsStudioPanel extends HTMLElement {
     if (this._activeTab === "settings") return this._tabletInfoView(config, panel);
     if (this._activeTab === "preview") return this._previewView(device, config);
     if (this._activeTab === "appearance") return this._appearanceView(device, config, panel);
-    const tiles = (config.tiles || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const tiles = dashboardTiles(config).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
     return `
       <div class="toolbar">
         <button class="add-button" data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Kafel HA</button>
@@ -1027,7 +1309,6 @@ class HapanelsStudioPanel extends HTMLElement {
             ${this._inputField("aod-brightness", "Jasność %", aod.brightness_percent ?? 3, "number")}
             ${this._inputField("aod-wake-fade", "Rozjaśnianie ms", aod.wake_fade_ms ?? 500, "number")}
             ${this._inputField("aod-background", "Tło", aod.background || "#000000")}
-            ${this._inputField("aod-entities", "Entity IDs", (aod.entity_ids || []).join(", "))}
             ${this._inputField("aod-columns-landscape", "Kolumny L", aod.grid_layout?.columns_landscape ?? 3, "number")}
             ${this._inputField("aod-columns-portrait", "Kolumny P", aod.grid_layout?.columns_portrait ?? 2, "number")}
             ${this._selectField("aod-gap", "Gap", ["small", "medium", "large"], aod.grid_layout?.gap || "small")}
@@ -1080,7 +1361,7 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _aodClockStyle(device, config) {
-    const value = localStorage.getItem(this._aodClockStyleStorageKey(device)) || config?.always_on_display?.clock_style;
+    const value = config?.always_on_display?.clock_style || localStorage.getItem(this._aodClockStyleStorageKey(device));
     return AOD_CLOCK_STYLES.some((style) => style.id === value) ? value : AOD_CLOCK_STYLES[0].id;
   }
 
@@ -1193,6 +1474,7 @@ class HapanelsStudioPanel extends HTMLElement {
           <div class="appearance-mode" aria-label="Tryb jasny lub ciemny panelu">
             <button class="small ${mode === "light" ? "active" : "secondary"}" data-panel-theme-mode="light" data-device="${this._escape(device)}">Jasny</button>
             <button class="small ${mode === "dark" ? "active" : "secondary"}" data-panel-theme-mode="dark" data-device="${this._escape(device)}">Ciemny</button>
+            <button class="small ${mode === "system" ? "active" : "secondary"}" data-panel-theme-mode="system" data-device="${this._escape(device)}">System</button>
           </div>
         </div>
         ${this._panelThemeError ? `<div class="appearance-error">${this._escape(this._panelThemeError)}</div>` : ""}
@@ -1209,13 +1491,14 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _appearancePresetCard(device, preset, active, mode) {
-    const colors = preset[mode] || preset.dark;
+    const resolvedMode = mode === "system" ? (this._isDarkTheme() ? "dark" : "light") : mode;
+    const colors = preset[resolvedMode] || preset.dark;
     const swatches = [colors.bg, colors.surface, colors.tile, colors.text, colors.muted, colors.accent];
     return `
       <button class="appearance-card ${active ? "active" : ""}" data-panel-theme-preset="${this._escape(preset.id)}" data-device="${this._escape(device)}" style="--preset-bg:${this._escape(colors.bg)};--preset-tile:${this._escape(colors.tile)};--preset-accent:${this._escape(colors.accent)}">
         <span class="appearance-card-head">
           <span><strong>${this._escape(preset.name)}</strong></span>
-          ${active ? `<span class="pill synced">Aktywny</span>` : ""}
+          ${active ? `<span class="pill synced">${mode === "system" ? `System · ${resolvedMode === "dark" ? "ciemny" : "jasny"}` : "Aktywny"}</span>` : ""}
         </span>
         <span class="appearance-preview" aria-hidden="true"><span class="appearance-preview-main"></span><span class="appearance-preview-side"><span></span><span></span></span></span>
         <small>${this._escape(preset.description)}</small>
@@ -1230,13 +1513,13 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _panelThemePreset(device, config) {
-    const value = localStorage.getItem(this._panelThemeStorageKey(device, "preset")) || config?.theme?.preset;
+    const value = config?.theme?.preset || localStorage.getItem(this._panelThemeStorageKey(device, "preset"));
     return PANEL_THEME_PRESETS.some((preset) => preset.id === value) ? value : PANEL_THEME_PRESETS[0].id;
   }
 
   _panelThemeMode(device, config) {
-    const value = localStorage.getItem(this._panelThemeStorageKey(device, "mode")) || config?.theme?.mode;
-    return value === "light" || value === "dark" ? value : "dark";
+    const value = config?.theme?.mode || localStorage.getItem(this._panelThemeStorageKey(device, "mode"));
+    return ["light", "dark", "system"].includes(value) ? value : "dark";
   }
 
   async _applyPanelTheme(device, nextTheme) {
@@ -1267,21 +1550,33 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _layoutContextOptions(config) {
     const items = [{ id: "main", type: "main", panelId: "", label: "Panel główny" }];
-    (config.tiles || []).filter((tile) => ["folder", "popup"].includes(tile.kind) && tile.panel_id).forEach((tile) => {
-      items.push({ id: `${tile.kind}:${tile.panel_id}`, type: tile.kind, panelId: tile.panel_id, label: `${tile.kind === "popup" ? "Popup" : "Folder"}: ${tile.label || tile.panel_id}` });
+    (config.panels || []).forEach((panel) => {
+      const opener = dashboardTiles(config).find((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id === panel.id);
+      const type = opener?.kind === "popup" ? "popup" : "folder";
+      items.push({ id: `${type}:${panel.id}`, type, panelId: panel.id, label: `${type === "popup" ? "Popup" : "Folder"}: ${panel.title || panel.id}` });
     });
     return items;
   }
 
   _layoutContextTiles(config, context) {
-    const tiles = config.tiles || [];
-    if (!context || context.id === "main") return tiles.filter((tile) => !tile.panel_id || ["folder", "popup"].includes(tile.kind));
-    return tiles.filter((tile) => tile.panel_id === context.panelId && !["folder", "popup"].includes(tile.kind));
+    if (!context || context.id === "main") return config.tiles || [];
+    return (config.panels || []).find((panel) => panel.id === context.panelId)?.tiles || [];
   }
 
   _layoutContextEditor(config, context) {
-    if (!context || context.id === "main") return config.layout_editor || {};
-    return config.layout_editor?.contexts?.[context.panelId] || {};
+    const layout = !context || context.id === "main"
+      ? config.layout || {}
+      : (config.panels || []).find((panel) => panel.id === context.panelId)?.layout || config.layout || {};
+    const legacy = config.extensions?.legacy_layout_editor;
+    const legacyGrid = !context || context.id === "main" ? legacy?.grid : legacy?.contexts?.[context.panelId]?.grid;
+    return {
+      grid: {
+        columns: Number(layout.columns) || Number(legacyGrid?.columns) || 12,
+        rows: Number(layout.rows) || Number(legacyGrid?.rows) || 9,
+        aspectWidth: Number(legacyGrid?.aspectWidth) || 16,
+        aspectHeight: Number(legacyGrid?.aspectHeight) || 9,
+      },
+    };
   }
 
   _layoutDraft(device, config, context = null) {
@@ -1311,7 +1606,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _layoutSharedTrayDraft(device, config, grid) {
     const key = `${device}:${config.revision ?? "new"}:tray`;
     if (!this._layoutDrafts[key]) {
-      this._layoutDrafts[key] = (config.layout_editor?.tray || []).map((tile, index) => this._layoutTileModel(tile, index, grid));
+      this._layoutDrafts[key] = (config.extensions?.legacy_layout_editor?.tray || []).map((tile, index) => this._layoutTileModel(migrateStudioTile(tile), index, grid));
     }
     return this._layoutDrafts[key];
   }
@@ -1459,9 +1754,9 @@ class HapanelsStudioPanel extends HTMLElement {
     return `
       <button class="layout-cell-tile ${selected ? "selected" : ""} ${willRemove ? "will-remove" : ""} ${dragging ? "dragging" : ""} ${this._isOutsideGrid(tile, grid) ? "outside" : ""} accent-${this._escape(tile.accent || "orange")}" data-layout-select data-layout-drag data-tile="${this._escape(tile.id)}" style="grid-column:${this._escape(tile.col)} / span ${this._escape(tile.colSpan)};grid-row:${this._escape(tile.row)} / span ${this._escape(tile.rowSpan)};${dragStyle}">
         <span class="layout-tile-content">
-          <ha-icon class="layout-tile-icon" icon="${this._escape(this._mdiIcon(tile.icon))}" ${tile.showIcon === false ? "hidden" : ""}></ha-icon>
-          <strong class="layout-tile-title" ${tile.showTitle === false ? "hidden" : ""}>${this._escape(tile.label || tile.id)}</strong>
-          <span class="layout-tile-subtitle" ${tile.showSubtitle === false ? "hidden" : ""}>${this._escape(tile.short_label || "")}</span>
+          <ha-icon class="layout-tile-icon" icon="${this._escape(this._mdiIcon(tile.icon))}" ${tile.presentation?.show_icon === false ? "hidden" : ""}></ha-icon>
+          <strong class="layout-tile-title" ${tile.presentation?.show_label === false ? "hidden" : ""}>${this._escape(tile.label || tile.id)}</strong>
+          <span class="layout-tile-subtitle" ${tile.presentation?.show_secondary === false ? "hidden" : ""}>${this._escape(tile.short_label || "")}</span>
         </span>
         ${[
           ["left", "w"],
@@ -1506,9 +1801,9 @@ class HapanelsStudioPanel extends HTMLElement {
           ${this._inputField("layout-tile-subtitle", "Podpis", tile.short_label || "", "text", "span-6")}
           ${this._inputField("layout-tile-icon", "Ikona", this._mdiIcon(tile.icon), "text", "span-6")}
           <div class="layout-checks span-6" aria-label="Widoczne informacje kafla">
-            <label><input id="layout-show-icon" type="checkbox" ${tile.showIcon === false ? "" : "checked"}> Ikona</label>
-            <label><input id="layout-show-title" type="checkbox" ${tile.showTitle === false ? "" : "checked"}> Nazwa</label>
-            <label><input id="layout-show-subtitle" type="checkbox" ${tile.showSubtitle === false ? "" : "checked"}> Podpis</label>
+            <label><input id="layout-show-icon" type="checkbox" ${tile.presentation?.show_icon === false ? "" : "checked"}> Ikona</label>
+            <label><input id="layout-show-title" type="checkbox" ${tile.presentation?.show_label === false ? "" : "checked"}> Nazwa</label>
+            <label><input id="layout-show-subtitle" type="checkbox" ${tile.presentation?.show_secondary === false ? "" : "checked"}> Podpis</label>
           </div>
           ${tile.kind === "clock" ? `
             ${this._selectField("layout-clock-style", "Styl zegara", CLOCK_STYLES, clockStyle, "span-6")}
@@ -1594,7 +1889,6 @@ class HapanelsStudioPanel extends HTMLElement {
     const draft = this._currentLayoutDraft();
     if (!draft) return;
     const tile = this._newLayoutTile(type, panelKind);
-    if (draft.context?.panelId) tile.panel_id = draft.context.panelId;
     Object.assign(tile, this._findFreeLayoutSlot(draft, tile, new Set(), []) || { col: 1, row: draft.grid.rows + 1 });
     draft.tiles.push(tile);
     draft.selectedTileId = tile.id;
@@ -1726,9 +2020,13 @@ class HapanelsStudioPanel extends HTMLElement {
     tile.label = this.shadowRoot.getElementById("layout-tile-title")?.value || tile.label;
     tile.short_label = this.shadowRoot.getElementById("layout-tile-subtitle")?.value || "";
     tile.icon = this.shadowRoot.getElementById("layout-tile-icon")?.value || "mdi:cog";
-    tile.showIcon = !!this.shadowRoot.getElementById("layout-show-icon")?.checked;
-    tile.showTitle = !!this.shadowRoot.getElementById("layout-show-title")?.checked;
-    tile.showSubtitle = !!this.shadowRoot.getElementById("layout-show-subtitle")?.checked;
+    tile.presentation = {
+      ...defaultTilePresentation(tile.kind),
+      ...(tile.presentation || {}),
+      show_icon: !!this.shadowRoot.getElementById("layout-show-icon")?.checked,
+      show_label: !!this.shadowRoot.getElementById("layout-show-title")?.checked,
+      show_secondary: !!this.shadowRoot.getElementById("layout-show-subtitle")?.checked,
+    };
     const clockStyle = this.shadowRoot.getElementById("layout-clock-style")?.value;
     if (clockStyle) tile.clock_style = clockStyle;
     const element = this.shadowRoot.querySelector(`[data-layout-select][data-tile="${CSS.escape(tile.id)}"]`);
@@ -1737,13 +2035,13 @@ class HapanelsStudioPanel extends HTMLElement {
     const subtitle = element?.querySelector(".layout-tile-subtitle");
     if (title) {
       title.textContent = tile.label || tile.id;
-      title.hidden = tile.showTitle === false;
+      title.hidden = tile.presentation.show_label === false;
     }
     const icon = element?.querySelector(".layout-tile-icon");
-    if (icon) icon.hidden = tile.showIcon === false;
+    if (icon) icon.hidden = tile.presentation.show_icon === false;
     if (subtitle) {
       subtitle.textContent = tile.short_label || "";
-      subtitle.hidden = tile.showSubtitle === false;
+      subtitle.hidden = tile.presentation.show_secondary === false;
     }
   }
 
@@ -1972,7 +2270,7 @@ class HapanelsStudioPanel extends HTMLElement {
       }
       if (drag.source === "tray") {
         draft.tray.splice(draft.tray.findIndex((item) => item.id === tile.id), 1);
-        tile.panel_id = draft.context?.id === "main" ? (["folder", "popup"].includes(tile.kind) ? tile.panel_id : "") : draft.context.panelId;
+        if (!PANEL_OPENER_KINDS.includes(tile.kind)) delete tile.panel_id;
         draft.tiles.push(tile);
       }
       draft.selectedTileId = tile.id;
@@ -1993,23 +2291,22 @@ class HapanelsStudioPanel extends HTMLElement {
     const draft = this._layoutDraft(device, config);
     if (!config || !draft) return;
     const next = structuredClone(config);
-    next.layout_editor = {
-      ...(next.layout_editor || {}),
-    };
     const tray = this._layoutSharedTrayDraft(device, config, draft.grid);
     if (draft.context?.id === "main") {
-      next.layout_editor.grid = structuredClone(draft.grid);
+      next.layout = { ...next.layout, columns: draft.grid.columns, rows: draft.grid.rows };
     } else {
-      next.layout_editor.contexts = { ...(next.layout_editor.contexts || {}) };
-      next.layout_editor.contexts[draft.context.panelId] = {
-        ...(next.layout_editor.contexts[draft.context.panelId] || {}),
-        grid: structuredClone(draft.grid),
-      };
+      const panel = next.panels.find((item) => item.id === draft.context.panelId);
+      if (!panel) return;
+      panel.layout = { ...panel.layout, columns: draft.grid.columns, rows: draft.grid.rows };
     }
-    next.layout_editor.tray = tray.map((tile, index) => ({ ...structuredClone(tile), order: index }));
     const savedIds = new Set(draft.tiles.map((tile) => tile.id));
-    const kept = (next.tiles || []).filter((tile) => !savedIds.has(tile.id) && !tray.some((trayTile) => trayTile.id === tile.id));
-    next.tiles = [...kept, ...draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }))];
+    const target = draft.context?.id === "main" ? next : next.panels.find((item) => item.id === draft.context.panelId);
+    const kept = (target.tiles || []).filter((tile) => !savedIds.has(tile.id));
+    target.tiles = [...kept, ...draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }))];
+    for (const tile of target.tiles.filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id)) {
+      if (!next.panels.some((panel) => panel.id === tile.panel_id)) next.panels.push({ id: tile.panel_id, title: tile.label, layout: { ...next.layout }, tiles: [] });
+    }
+    if (tray.length) this._error = "Kafle w zasobniku pozostają wyłącznie w lokalnym drafcie Studio.";
     await this._setConfig(device, next);
   }
 
@@ -2044,7 +2341,7 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _tabletInfoView(config, panel = null) {
-    const grid = config.layout_editor?.grid || {};
+    const grid = config.layout || {};
     const fallbackResolution = this._fallbackScreenResolution();
     const physicalWidth = Number(panel?.screen_width_px ?? fallbackResolution?.width);
     const physicalHeight = Number(panel?.screen_height_px ?? fallbackResolution?.height);
@@ -2194,7 +2491,7 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _tileChildrenSection(device, tile) {
     const panelId = tile.panel_id || "";
-    const children = (this._configs[device]?.tiles || []).filter((item) => item.id !== tile.id && item.panel_id === panelId && !["folder", "popup"].includes(item.kind));
+    const children = (this._configs[device]?.panels || []).find((panel) => panel.id === panelId)?.tiles || [];
     return `
       <section class="tile-section">
         <h3>Zawartość ${this._escape(tile.kind === "popup" ? "popupu" : "folderu")}</h3>

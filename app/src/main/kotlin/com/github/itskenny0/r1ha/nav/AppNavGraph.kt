@@ -167,7 +167,6 @@ fun AppNavGraph(
             PanelGridMockupScreen(
                 haRepository = haRepository,
                 dashboardConfigSource = dashboardConfigSource,
-                showBack = navController.previousBackStackEntry != null,
                 onNavigate = { destination ->
                     panelGridDestinationRoute(destination)?.let { route ->
                         navController.navigate(route) { launchSingleTop = true }
@@ -179,7 +178,6 @@ fun AppNavGraph(
                         "connection.reconnect_home_assistant" -> haRepository.reconnectNow(force = true)
                     }
                 },
-                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.SETTINGS) {

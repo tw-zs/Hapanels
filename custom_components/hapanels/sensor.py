@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import clear_pending_if_synced
 from .const import CONF_BASE_TOPIC, DATA_CONFIGS, DATA_PANELS, DATA_PENDING_PATCHES, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
+from .schema import validate_dashboard_config
 
 
 @dataclass
@@ -73,9 +74,9 @@ async def async_setup_entry(
         if device is None:
             return
         try:
-            configs[device] = json.loads(msg.payload)
-        except json.JSONDecodeError:
-            configs.pop(device, None)
+            configs[device] = validate_dashboard_config(json.loads(msg.payload))
+        except (json.JSONDecodeError, ValueError):
+            return
 
     config_unsub = await mqtt.async_subscribe(
         hass,
@@ -173,6 +174,10 @@ class HapanelsSyncSensor(SensorEntity):
             "screen_resolution": self._state.screen_resolution,
             "screen_width_px": self._state.screen_width_px,
             "screen_height_px": self._state.screen_height_px,
+            "schema_version": self._state.extra.get("schema_version"),
+            "schema_capabilities": self._state.extra.get("schema_capabilities", []),
+            "supported_tile_kinds": self._state.extra.get("supported_tile_kinds", []),
+            "supported_action_types": self._state.extra.get("supported_action_types", []),
         }
 
     @callback
@@ -208,6 +213,10 @@ class HapanelsSyncSensor(SensorEntity):
             "screen_resolution": self._state.screen_resolution,
             "screen_width_px": self._state.screen_width_px,
             "screen_height_px": self._state.screen_height_px,
+            "schema_version": self._state.extra.get("schema_version"),
+            "schema_capabilities": self._state.extra.get("schema_capabilities", []),
+            "supported_tile_kinds": self._state.extra.get("supported_tile_kinds", []),
+            "supported_action_types": self._state.extra.get("supported_action_types", []),
         }
 
 

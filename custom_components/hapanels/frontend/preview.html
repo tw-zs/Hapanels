@@ -44,24 +44,19 @@
       const STORAGE_KEY = "hapanels_preview_config_1280x800";
       const PANEL_DEVICE = "preview-wall-tablet";
       const sampleConfig = {
-        version: 1,
+        version: 2,
         dashboard_id: "home-panel-main",
         revision: 130,
         updated_by: "local-preview",
         title: "Panel domowy",
-        layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "medium" },
-        layout_editor: {
-          grid: { columns: 12, rows: 9, aspectWidth: 1280, aspectHeight: 800 },
-          tray: []
-        },
+        layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, columns: 12, rows: 9, gap: "medium" },
         always_on_display: {
           enabled: true,
           layout: "minimal_clock",
           timeout_sec: 300,
           brightness_percent: 3,
           background: "#000000",
-          entity_ids: [],
-          grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, gap: "small" },
+          grid_layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, columns: 12, rows: 9, gap: "small" },
           tiles: [
             { id: "aod_clock", kind: "clock", size: "large", label: "Zegar", icon: "mdi:clock", accent: "white", order: 0 },
             { id: "aod_temp", kind: "entity", size: "small", label: "Temperatura", entity_id: "sensor.outside_temperature", icon: "mdi:home-thermometer", accent: "orange", order: 1 }
@@ -74,17 +69,25 @@
           { id: "person.tomek", name: "Tomek", state: "w domu", status: "home" }
         ],
         tiles: [
-          { id: "all_lights_off", kind: "action", size: "action", label: "Zgaś wszystko", icon: "mdi:lightbulb-off", accent: "white", order: 0, col: 1, row: 1, colSpan: 4, rowSpan: 2 },
-          { id: "alarm_settings", kind: "action", size: "action", label: "Ustawienia alarmu", short_label: "Alarm", icon: "mdi:shield-lock", accent: "white", order: 1, col: 9, row: 1, colSpan: 2, rowSpan: 2 },
-          { id: "climate", kind: "category", size: "action", label: "Klimat", entity_id: "climate.home", icon: "mdi:home-thermometer", accent: "orange", order: 2, col: 11, row: 1, colSpan: 2, rowSpan: 2 },
+          { id: "all_lights_off", kind: "action", size: "action", label: "Zgaś wszystko", icon: "mdi:lightbulb-off", accent: "white", order: 0, col: 1, row: 1, colSpan: 4, rowSpan: 2, tap_action: { type: "none" } },
+          { id: "alarm_settings", kind: "action", size: "action", label: "Ustawienia alarmu", short_label: "Alarm", icon: "mdi:shield-lock", accent: "white", order: 1, col: 9, row: 1, colSpan: 2, rowSpan: 2, tap_action: { type: "none" } },
+          { id: "climate", kind: "entity", size: "action", label: "Klimat", entity_id: "climate.home", icon: "mdi:home-thermometer", accent: "orange", order: 2, col: 11, row: 1, colSpan: 2, rowSpan: 2 },
           { id: "lamp", kind: "entity", size: "large", label: "Lampa", entity_id: "light.kitchen", icon: "mdi:lightbulb", accent: "orange", order: 10, col: 1, row: 3, colSpan: 4, rowSpan: 3 },
-          { id: "lights", kind: "category", size: "large", label: "Oświetlenie", entity_id: "group.all_lights", icon: "mdi:lightbulb-group", accent: "orange", order: 11, col: 5, row: 3, colSpan: 4, rowSpan: 3 },
+          { id: "lights", kind: "folder", size: "large", label: "Oświetlenie", panel_id: "lights-panel", icon: "mdi:lightbulb-group", accent: "orange", order: 11, col: 5, row: 3, colSpan: 4, rowSpan: 3 },
           { id: "covers", kind: "cover", size: "large", label: "Rolety", entity_id: "cover.all_covers", icon: "mdi:blinds", accent: "orange", order: 12, col: 9, row: 3, colSpan: 4, rowSpan: 3, cover_visual: "blind", cover_direction: "top" },
           { id: "cameras", kind: "camera", size: "large", label: "hrj/kamera", entity_id: "camera.front", icon: "mdi:cctv", accent: "orange", order: 13, col: 1, row: 6, colSpan: 4, rowSpan: 3 },
-          { id: "gate", kind: "category", size: "large", label: "Brama", entity_id: "cover.gate", icon: "mdi:gate", accent: "orange", order: 14, col: 5, row: 6, colSpan: 4, rowSpan: 4 },
-          { id: "energy", kind: "entity", size: "small", label: "Energia", entity_id: "sensor.home_power", icon: "mdi:home-lightning-bolt", accent: "red", order: 20, col: 9, row: 6, colSpan: 2, rowSpan: 2 },
+          { id: "gate", kind: "cover", size: "large", label: "Brama", entity_id: "cover.gate", icon: "mdi:gate", accent: "orange", order: 14, col: 5, row: 6, colSpan: 4, rowSpan: 4 },
+          { id: "energy", kind: "entity", size: "small", label: "Energia", entity_id: "sensor.home_power", icon: "mdi:home-lightning-bolt", accent: "white", order: 20, col: 9, row: 6, colSpan: 2, rowSpan: 2 },
           { id: "settings", kind: "action", size: "small", label: "Otwórz ustawienia", short_label: "Ustawienia", icon: "mdi:cog", accent: "white", order: 21, col: 11, row: 6, colSpan: 2, rowSpan: 2, tap_action: { type: "navigate", destination: "settings" } }
         ],
+        panels: [{
+          id: "lights-panel",
+          title: "Oświetlenie",
+          layout: { type: "fixed_grid", columns_landscape: 3, columns_portrait: 2, columns: 12, rows: 9, gap: "medium" },
+          tiles: [
+            { id: "living-room-light", kind: "entity", size: "large", label: "Salon", entity_id: "light.living_room", icon: "mdi:ceiling-light", accent: "orange", order: 0, col: 1, row: 1, colSpan: 4, rowSpan: 3, tap_action: { type: "entity_default", entity_id: "light.living_room" } }
+          ]
+        }],
         camera_actions: ["Lista kamer", "Pełny ekran"]
       };
 
@@ -100,6 +103,7 @@
         themes: { darkMode: true },
         states: {
           "light.kitchen": { attributes: { friendly_name: "Lampa", icon: "mdi:lightbulb" } },
+          "light.living_room": { attributes: { friendly_name: "Salon", icon: "mdi:ceiling-light" } },
           "group.all_lights": { attributes: { friendly_name: "Oświetlenie", icon: "mdi:lightbulb-group" } },
           "cover.all_covers": { state: "open", attributes: { friendly_name: "Rolety", icon: "mdi:blinds", current_position: 64 } },
           "climate.home": { attributes: { friendly_name: "Klimat", icon: "mdi:home-thermometer" } },
@@ -110,7 +114,7 @@
         async callWS(message) {
           if (message.type === "hapanels/list_panels") {
             const config = loadConfig();
-            return { panels: [{ device: PANEL_DEVICE, panel_name: "Tablet testowy", status: "synced", dashboard_id: config.dashboard_id, revision: config.revision, updated_by: config.updated_by, screen_resolution: "1280x800", screen_width_px: 1280, screen_height_px: 800 }] };
+            return { panels: [{ device: PANEL_DEVICE, panel_name: "Tablet testowy", status: "synced", dashboard_id: config.dashboard_id, revision: config.revision, updated_by: config.updated_by, schema_version: 2, schema_capabilities: ["panels", "presentation", "text", "spacer", "tap_action", "technical_actions"], supported_tile_kinds: TILE_KINDS, supported_action_types: ACTION_TYPES, screen_resolution: "1280x800", screen_width_px: 1280, screen_height_px: 800 }] };
           }
           if (message.type === "hapanels/get_dashboard_config") return { config: loadConfig(), pending_patch: null };
           throw new Error(`Unsupported mock WS: ${message.type}`);
@@ -127,6 +131,7 @@
             const target = patch.surface === "aod" ? (config.always_on_display ||= {}) : config;
             const updates = new Map((patch.tile_updates || []).map((tile) => [tile.id, tile]));
             target.tiles = (target.tiles || []).map((tile) => updates.has(tile.id) ? { ...tile, ...updates.get(tile.id) } : tile);
+            if (patch.surface !== "aod") config.panels = (config.panels || []).map((panel) => ({ ...panel, tiles: (panel.tiles || []).map((tile) => updates.has(tile.id) ? { ...tile, ...updates.get(tile.id) } : tile) }));
             config.revision = Number(config.revision || 0) + 1;
             config.updated_by = patch.updated_by || "local-preview";
             saveConfig(config);

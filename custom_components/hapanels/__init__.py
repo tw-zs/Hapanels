@@ -32,6 +32,7 @@ from .const import (
     SERVICE_SET_DASHBOARD_CONFIG,
     STATIC_URL_PATH,
 )
+from .schema import validate_dashboard_config, validate_dashboard_patch
 
 PENDING_PATCH_TTL_SECONDS = 600
 
@@ -69,6 +70,7 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         return
 
     async def set_dashboard_config(call: ServiceCall) -> None:
+        validate_dashboard_config(call.data[ATTR_CONFIG])
         hass.data[DOMAIN][entry.entry_id][DATA_PENDING_PATCHES].pop(call.data[ATTR_DEVICE], None)
         await _publish_json(
             hass,
@@ -79,7 +81,7 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         )
 
     async def patch_dashboard_config(call: ServiceCall) -> None:
-        patch = call.data[ATTR_PATCH]
+        patch = validate_dashboard_patch(call.data[ATTR_PATCH])
         hass.data[DOMAIN][entry.entry_id][DATA_PENDING_PATCHES][call.data[ATTR_DEVICE]] = _pending_patch_entry(patch)
         await _publish_json(
             hass,

@@ -25,6 +25,96 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(raw).contains("home-panel-main")
         assertThat(raw).contains("Oświetlenie")
         assertThat(config.alwaysOnDisplay.tiles.first().kind).isEqualTo(HapanelsTileKind.CLOCK)
+        assertThat(config.version).isEqualTo(HAPANELS_DASHBOARD_SCHEMA_VERSION)
+        assertThat(config.alwaysOnDisplay.entityIds).isEmpty()
+        assertThat(config.tiles.first { it.id == "energy" }.accent).isEqualTo(HapanelsTileAccent.WHITE)
+    }
+
+    @Test fun importMigratesFlatPanelAndLegacyPresentationToV2() = runTest {
+        val source = newSource()
+        val legacy = sampleHapanelsDashboardConfig()
+        val folder = HapanelsTileConfig(
+            id = "kitchen_folder",
+            kind = HapanelsTileKind.FOLDER,
+            size = HapanelsTileSize.LARGE,
+            label = "Kuchnia",
+            panelId = "kitchen",
+            icon = "mdi:folder",
+            order = 100,
+        )
+        val child = HapanelsTileConfig(
+            id = "kitchen_light",
+            kind = HapanelsTileKind.ENTITY,
+            size = HapanelsTileSize.SMALL,
+            label = "Lampa",
+            entityId = "light.kitchen",
+            panelId = "kitchen",
+            icon = "mdi:lightbulb",
+            order = 0,
+            legacyShowIcon = false,
+        )
+
+        val migrated = source.importRaw(configJsonForTest(legacy.copy(tiles = legacy.tiles + folder + child)))
+
+        assertThat(migrated.version).isEqualTo(2)
+        assertThat(migrated.tiles.map { it.id }).contains("kitchen_folder")
+        val panel = migrated.panels.single { it.id == "kitchen" }
+        assertThat(panel.title).isEqualTo("Kuchnia")
+        assertThat(panel.tiles.single().id).isEqualTo("kitchen_light")
+        assertThat(panel.tiles.single().panelId).isNull()
+        assertThat(panel.tiles.single().presentation?.showIcon).isFalse()
+        assertThat(panel.tiles.single().tapAction?.type).isEqualTo("entity_default")
+    }
+
+    @Test fun importMigratesLegacyAodEntityIdsToReadOnlyTiles() = runTest {
+        val source = newSource()
+        val legacy = sampleHapanelsDashboardConfig().copy(
+            alwaysOnDisplay = HapanelsAlwaysOnDisplayConfig(entityIds = listOf("sensor.outside_temperature")),
+        )
+
+        val migrated = source.importRaw(configJsonForTest(legacy))
+
+        assertThat(migrated.alwaysOnDisplay.entityIds).isEmpty()
+        assertThat(migrated.alwaysOnDisplay.tiles).hasSize(1)
+        assertThat(migrated.alwaysOnDisplay.tiles.single().entityId).isEqualTo("sensor.outside_temperature")
+        assertThat(migrated.alwaysOnDisplay.tiles.single().tapAction?.type).isEqualTo("none")
+    }
+
+    @Test fun importRejectsUnknownActionWithoutReplacingCurrentConfig() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+        val invalid = current.copy(
+            revision = current.revision + 1,
+            tiles = current.tiles.map { tile ->
+                if (tile.id == "settings") tile.copy(tapAction = HapanelsTileAction(type = "run_anything")) else tile
+            },
+        )
+
+        val result = runCatching { source.importRaw(configJsonForTest(invalid)) }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(HapanelsDashboardValidationException::class.java)
+        assertThat(source.loadOrSeed().revision).isEqualTo(current.revision)
+    }
+
+    @Test fun importRejectsUnknownV2Field() = runTest {
+        val source = newSource()
+        val raw = source.exportRaw().replaceFirst("\"title\":", "\"layout_editor\":{},\"title\":")
+
+        val result = runCatching { source.importRaw(raw) }
+
+        assertThat(result.isFailure).isTrue()
+    }
+
+    @Test fun importRejectsOverlappingGridTiles() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+        val invalid = current.copy(tiles = current.tiles.mapIndexed { index, tile ->
+            if (index < 2) tile.copy(col = 1, row = 1, colSpan = 2, rowSpan = 2) else tile
+        })
+
+        val result = runCatching { source.importRaw(configJsonForTest(invalid)) }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(HapanelsDashboardValidationException::class.java)
     }
 
     @Test fun importValidJsonReplacesCachedConfig() = runTest {
@@ -80,7 +170,7 @@ class HapanelsDashboardConfigSourceTest {
                         id = "lights",
                         label = "Światła parter",
                         shortLabel = "Parter",
-                        accent = HapanelsTileAccent.RED,
+                        accent = HapanelsTileAccent.WHITE,
                     ),
                 ),
             ),
@@ -92,7 +182,25 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(loaded.updatedBy).isEqualTo("hapanels:local_editor")
         assertThat(loaded.tiles.first { it.id == "lights" }.label).isEqualTo("Światła parter")
         assertThat(loaded.tiles.first { it.id == "lights" }.shortLabel).isEqualTo("Parter")
-        assertThat(loaded.tiles.first { it.id == "lights" }.accent).isEqualTo(HapanelsTileAccent.RED)
+        assertThat(loaded.tiles.first { it.id == "lights" }.accent).isEqualTo(HapanelsTileAccent.WHITE)
+    }
+
+    @Test fun patchRejectsDecorativeRedAccentWithoutChangingRevision() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+
+        val result = runCatching {
+            source.applyPatch(
+                HapanelsDashboardPatch(
+                    baseRevision = current.revision,
+                    updatedBy = "hapanels:test",
+                    tileUpdates = listOf(HapanelsTilePatch(id = "lights", accent = HapanelsTileAccent.RED)),
+                ),
+            )
+        }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(HapanelsDashboardValidationException::class.java)
+        assertThat(source.loadOrSeed().revision).isEqualTo(current.revision)
     }
 
     @Test fun applyPatchPersistsPresetAndPreservesModeAodAndTiles() = runTest {

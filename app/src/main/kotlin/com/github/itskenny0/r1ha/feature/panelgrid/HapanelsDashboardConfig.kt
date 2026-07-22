@@ -3,6 +3,9 @@ package com.github.itskenny0.r1ha.feature.panelgrid
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+
+const val HAPANELS_DASHBOARD_SCHEMA_VERSION = 2
 
 @Serializable
 data class HapanelsDashboardConfig(
@@ -16,7 +19,11 @@ data class HapanelsDashboardConfig(
     @SerialName("always_on_display") val alwaysOnDisplay: HapanelsAlwaysOnDisplayConfig = HapanelsAlwaysOnDisplayConfig(),
     val people: List<HapanelsPersonConfig> = emptyList(),
     val tiles: List<HapanelsTileConfig> = emptyList(),
+    val panels: List<HapanelsPanelConfig> = emptyList(),
     @SerialName("camera_actions") val cameraActions: List<String> = emptyList(),
+    val extensions: JsonObject = JsonObject(emptyMap()),
+    @SerialName("migration_report") val migrationReport: List<String> = emptyList(),
+    @SerialName("layout_editor") val legacyLayoutEditor: JsonObject? = null,
 )
 
 @Serializable
@@ -25,6 +32,16 @@ data class HapanelsDashboardLayout(
     @SerialName("columns_landscape") val columnsLandscape: Int,
     @SerialName("columns_portrait") val columnsPortrait: Int,
     val gap: String = "medium",
+    val columns: Int? = null,
+    val rows: Int? = null,
+)
+
+@Serializable
+data class HapanelsPanelConfig(
+    val id: String,
+    val title: String,
+    val layout: HapanelsDashboardLayout,
+    val tiles: List<HapanelsTileConfig> = emptyList(),
 )
 
 @Serializable
@@ -65,6 +82,9 @@ enum class HapanelsAodClockStyle {
     @SerialName("italic_editorial") ITALIC_EDITORIAL,
     @SerialName("fullscreen_bold") FULLSCREEN_BOLD,
     @SerialName("fullscreen_heavy") FULLSCREEN_HEAVY,
+    @SerialName("neon_baltic") NEON_BALTIC,
+    @SerialName("electric_stained_glass") ELECTRIC_STAINED_GLASS,
+    @SerialName("poznan_goats") POZNAN_GOATS,
 }
 
 @Serializable
@@ -102,6 +122,26 @@ data class HapanelsTileConfig(
     @SerialName("cover_visual") val coverVisual: String? = null,
     @SerialName("cover_direction") val coverDirection: String? = null,
     @SerialName("tap_action") val tapAction: HapanelsTileAction? = null,
+    @SerialName("hold_action") val holdAction: HapanelsTileAction? = null,
+    val content: String? = null,
+    val summary: String? = null,
+    val secondary: String? = null,
+    val presentation: HapanelsTilePresentation? = null,
+    @SerialName("legacy_action") val legacyAction: Boolean = false,
+    @SerialName("showIcon") val legacyShowIcon: Boolean? = null,
+    @SerialName("showTitle") val legacyShowTitle: Boolean? = null,
+    @SerialName("showSubtitle") val legacyShowSubtitle: Boolean? = null,
+)
+
+@Serializable
+data class HapanelsTilePresentation(
+    @SerialName("show_icon") val showIcon: Boolean = true,
+    @SerialName("show_label") val showLabel: Boolean = true,
+    @SerialName("show_value") val showValue: Boolean = true,
+    @SerialName("show_secondary") val showSecondary: Boolean = true,
+    val background: String = "surface",
+    val border: String = "default",
+    @SerialName("content_alignment") val contentAlignment: String = "center",
 )
 
 @Serializable
@@ -110,6 +150,22 @@ data class HapanelsTileAction(
     val destination: String? = null,
     val action: String? = null,
     @SerialName("entity_id") val entityId: String? = null,
+    @SerialName("panel_id") val panelId: String? = null,
+    val domain: String? = null,
+    val service: String? = null,
+    val target: JsonObject? = null,
+    val data: JsonObject? = null,
+    val confirmation: HapanelsActionConfirmation? = null,
+)
+
+@Serializable
+data class HapanelsActionConfirmation(
+    val required: Boolean = true,
+    val kind: String,
+    val title: String? = null,
+    val body: String? = null,
+    @SerialName("negative_label") val negativeLabel: String? = null,
+    @SerialName("positive_label") val positiveLabel: String? = null,
 )
 
 @Serializable
@@ -148,6 +204,11 @@ data class HapanelsTilePatch(
     @SerialName("cover_visual") val coverVisual: String? = null,
     @SerialName("cover_direction") val coverDirection: String? = null,
     @SerialName("tap_action") val tapAction: HapanelsTileAction? = null,
+    @SerialName("hold_action") val holdAction: HapanelsTileAction? = null,
+    val content: String? = null,
+    val summary: String? = null,
+    val secondary: String? = null,
+    val presentation: HapanelsTilePresentation? = null,
 )
 
 sealed interface HapanelsDashboardPatchResult {
@@ -178,6 +239,11 @@ internal fun HapanelsDashboardConfig.syncStateJson(
     append("\"updated_by\":\"")
     append(updatedBy.escapeJson())
     append('"')
+    append(",\"schema_version\":")
+    append(HAPANELS_DASHBOARD_SCHEMA_VERSION)
+    append(",\"schema_capabilities\":[\"panels\",\"presentation\",\"text\",\"spacer\",\"tap_action\",\"technical_actions\"]")
+    append(",\"supported_tile_kinds\":[\"clock\",\"category\",\"action\",\"entity\",\"cover\",\"camera\",\"folder\",\"popup\",\"text\",\"spacer\"]")
+    append(",\"supported_action_types\":[\"none\",\"entity_default\",\"navigate\",\"local_panel\"]")
     panelName?.takeIf { it.isNotBlank() }?.let {
         append(',')
         append("\"panel_name\":\"")
@@ -207,6 +273,8 @@ enum class HapanelsTileKind {
     @SerialName("camera") CAMERA,
     @SerialName("folder") FOLDER,
     @SerialName("popup") POPUP,
+    @SerialName("text") TEXT,
+    @SerialName("spacer") SPACER,
 }
 
 @Serializable

@@ -12,6 +12,7 @@ import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfig
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
+import com.github.itskenny0.r1ha.feature.panelgrid.HAPANELS_DASHBOARD_SCHEMA_VERSION
 import com.github.itskenny0.r1ha.feature.panelgrid.syncStateJson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -783,6 +784,8 @@ internal sealed interface PanelMqttCommand {
 private fun HapanelsDashboardConfig.dashboardMetaJson(): String = """
     {
       "version":$version,
+      "schema_version":$HAPANELS_DASHBOARD_SCHEMA_VERSION,
+      "schema_capabilities":["panels","presentation","text","spacer","tap_action","technical_actions"],
       "dashboard_id":"${dashboardId.escapeJson()}",
       "revision":$revision,
       "updated_by":"${updatedBy.escapeJson()}"

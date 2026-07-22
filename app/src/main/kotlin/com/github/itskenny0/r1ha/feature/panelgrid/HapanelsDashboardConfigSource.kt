@@ -10,12 +10,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.ConcurrentHashMap
 
 private const val DASHBOARD_CACHE_FILE = "hapanels_dashboard_config.json"
 
 private val configJson = Json {
-    ignoreUnknownKeys = true
+    ignoreUnknownKeys = false
     explicitNulls = false
     prettyPrint = true
 }
@@ -43,16 +45,16 @@ class HapanelsDashboardConfigSource(
 
     private fun loadOrSeedLocked(): HapanelsDashboardConfig {
         val file = dashboardFile()
-        val raw = if (file.exists()) {
-            file.readText()
-        } else {
-            file.writeText(SAMPLE_HAPANELS_DASHBOARD_JSON.trimIndent())
-            SAMPLE_HAPANELS_DASHBOARD_JSON
-        }
-        return runCatching { configJson.decodeFromString<HapanelsDashboardConfig>(raw) }
+        val raw = if (file.exists()) file.readText() else SAMPLE_HAPANELS_DASHBOARD_JSON
+        return runCatching { decodeCurrentConfig(raw) }
+            .onSuccess { config ->
+                if (!file.exists() || config.version != configJson.decodeFromString<HapanelsDashboardConfig>(raw).version) {
+                    writeConfig(file, config)
+                }
+            }
             .getOrElse {
-                val fallback = sampleHapanelsDashboardConfig()
-                file.writeText(configJson.encodeToString(fallback))
+                val fallback = sampleHapanelsDashboardConfig().migrateToCurrentSchema().also(HapanelsDashboardConfig::validateCurrentSchema)
+                writeConfig(file, fallback)
                 fallback
             }
     }
@@ -63,10 +65,10 @@ class HapanelsDashboardConfigSource(
     }
 
     suspend fun importRaw(raw: String): HapanelsDashboardConfig {
-        val config = configJson.decodeFromString<HapanelsDashboardConfig>(raw)
+        val config = decodeCurrentConfig(raw)
         return fileMutex.withLock {
             withContext(Dispatchers.IO) {
-                dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+                writeConfig(dashboardFile(), config)
                 _changes.tryEmit(Unit)
                 config
             }
@@ -91,6 +93,7 @@ class HapanelsDashboardConfigSource(
                     updatedBy = patch.updatedBy,
                     theme = patchedTheme,
                     tiles = current.tiles.applyPatches(updatesById),
+                    panels = current.panels.map { panel -> panel.copy(tiles = panel.tiles.applyPatches(updatesById)) },
                 )
                 HapanelsDashboardSurface.AOD -> current.copy(
                     revision = current.revision + 1,
@@ -102,7 +105,8 @@ class HapanelsDashboardConfigSource(
                     ),
                 )
             }
-            dashboardFile().writeText(configJson.encodeToString(next), Charsets.UTF_8)
+            next.validateCurrentSchema()
+            writeConfig(dashboardFile(), next)
             _changes.tryEmit(Unit)
             HapanelsDashboardPatchResult.Applied(next)
         }
@@ -115,14 +119,30 @@ class HapanelsDashboardConfigSource(
 
     suspend fun resetToSample(): HapanelsDashboardConfig = fileMutex.withLock {
         withContext(Dispatchers.IO) {
-            val config = sampleHapanelsDashboardConfig()
-            dashboardFile().writeText(configJson.encodeToString(config), Charsets.UTF_8)
+            val config = sampleHapanelsDashboardConfig().migrateToCurrentSchema().also(HapanelsDashboardConfig::validateCurrentSchema)
+            writeConfig(dashboardFile(), config)
             _changes.tryEmit(Unit)
             config
         }
     }
 
     private fun dashboardFile(): File = File(context.filesDir, cacheFileName)
+
+    private fun decodeCurrentConfig(raw: String): HapanelsDashboardConfig =
+        configJson.decodeFromString<HapanelsDashboardConfig>(raw)
+            .migrateToCurrentSchema()
+            .also(HapanelsDashboardConfig::validateCurrentSchema)
+
+    private fun writeConfig(file: File, config: HapanelsDashboardConfig) {
+        val temporary = File(file.parentFile, "${file.name}.tmp")
+        temporary.writeText(configJson.encodeToString(config), Charsets.UTF_8)
+        Files.move(
+            temporary.toPath(),
+            file.toPath(),
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING,
+        )
+    }
 
     private companion object {
         val fileMutexes = ConcurrentHashMap<String, Mutex>()
@@ -147,6 +167,11 @@ private fun HapanelsTileConfig.applyPatch(patch: HapanelsTilePatch): HapanelsTil
     coverVisual = patch.coverVisual ?: coverVisual,
     coverDirection = patch.coverDirection ?: coverDirection,
     tapAction = patch.tapAction ?: tapAction,
+    holdAction = patch.holdAction ?: holdAction,
+    content = patch.content ?: content,
+    summary = patch.summary ?: summary,
+    secondary = patch.secondary ?: secondary,
+    presentation = patch.presentation ?: presentation,
 )
 
 private fun List<HapanelsTileConfig>.applyPatches(

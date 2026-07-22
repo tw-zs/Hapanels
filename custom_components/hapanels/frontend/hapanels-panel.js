@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260720-schema-v2-aod-fix";
+const STUDIO_FRONTEND_VERSION = "20260722-layout-tray-fix";
 const DASHBOARD_SCHEMA_VERSION = 2;
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup", "text", "spacer"];

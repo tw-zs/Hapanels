@@ -1606,7 +1606,10 @@ class HapanelsStudioPanel extends HTMLElement {
   _layoutSharedTrayDraft(device, config, grid) {
     const key = `${device}:${config.revision ?? "new"}:tray`;
     if (!this._layoutDrafts[key]) {
-      this._layoutDrafts[key] = (config.extensions?.legacy_layout_editor?.tray || []).map((tile, index) => this._layoutTileModel(migrateStudioTile(tile), index, grid));
+      const storedTray = Object.hasOwn(config.extensions || {}, "layout_tray")
+        ? config.extensions.layout_tray
+        : config.extensions?.legacy_layout_editor?.tray;
+      this._layoutDrafts[key] = (storedTray || []).map((tile, index) => this._layoutTileModel(migrateStudioTile(tile), index, grid));
     }
     return this._layoutDrafts[key];
   }
@@ -2303,10 +2306,15 @@ class HapanelsStudioPanel extends HTMLElement {
     const target = draft.context?.id === "main" ? next : next.panels.find((item) => item.id === draft.context.panelId);
     const kept = (target.tiles || []).filter((tile) => !savedIds.has(tile.id));
     target.tiles = [...kept, ...draft.tiles.map((tile, index) => ({ ...structuredClone(tile), order: index }))];
-    for (const tile of target.tiles.filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id)) {
+    const trayIds = new Set(tray.map((tile) => tile.id));
+    next.tiles = (next.tiles || []).filter((tile) => !trayIds.has(tile.id));
+    next.panels.forEach((panel) => { panel.tiles = (panel.tiles || []).filter((tile) => !trayIds.has(tile.id)); });
+    next.extensions ||= {};
+    next.extensions.layout_tray = tray.map((tile, index) => ({ ...structuredClone(tile), order: index }));
+    const savedTarget = draft.context?.id === "main" ? next : next.panels.find((item) => item.id === draft.context.panelId);
+    for (const tile of (savedTarget?.tiles || []).filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id)) {
       if (!next.panels.some((panel) => panel.id === tile.panel_id)) next.panels.push({ id: tile.panel_id, title: tile.label, layout: { ...next.layout }, tiles: [] });
     }
-    if (tray.length) this._error = "Kafle w zasobniku pozostają wyłącznie w lokalnym drafcie Studio.";
     await this._setConfig(device, next);
   }
 

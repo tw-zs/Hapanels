@@ -61,6 +61,7 @@ sealed interface HaInbound {
             val state: String? = null,
             val attributes: JsonObject = JsonObject(emptyMap()),
             @SerialName("last_changed") val lastChanged: String? = null,
+            @SerialName("last_updated") val lastUpdated: String? = null,
         )
     }
 

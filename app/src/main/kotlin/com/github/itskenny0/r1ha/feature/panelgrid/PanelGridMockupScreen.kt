@@ -83,7 +83,10 @@ import com.github.itskenny0.r1ha.ui.i18n.Text
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.abs
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -102,6 +105,11 @@ private val NunitoPanelFont = FontFamily(
 private data class HapanelsPanelRenderConfig(
     val dashboard: HapanelsDashboardConfig,
     val theme: HapanelsThemeColors,
+)
+
+private data class OptimisticPanelEntity(
+    val state: EntityState,
+    val baseline: EntityState?,
 )
 
 @Composable
@@ -166,6 +174,19 @@ fun PanelGridMockupScreen(
         }
     }
     val scope = rememberCoroutineScope()
+    var optimisticEntities by remember(config) { mutableStateOf<Map<EntityId, OptimisticPanelEntity>>(emptyMap()) }
+    val displayedEntities = liveEntities + optimisticEntities.mapValues { it.value.state }
+    val showOptimistic: (EntityState, EntityState?) -> Unit = { state, baseline ->
+        val entry = OptimisticPanelEntity(state, baseline)
+        optimisticEntities = optimisticEntities + (state.id to entry)
+        scope.launch {
+            kotlinx.coroutines.delay(1_200)
+            if (optimisticEntities[state.id] == entry) optimisticEntities = optimisticEntities - state.id
+        }
+    }
+    LaunchedEffect(liveEntities) {
+        optimisticEntities = optimisticEntities.filterValues { entry -> liveEntities[entry.state.id] == entry.baseline }
+    }
     val onSetCoverPercent = remember(haRepository) {
         { tile: HapanelsTileConfig, percent: Int ->
             tile.entityId.toEntityIdOrNull()?.let { entityId ->
@@ -174,11 +195,11 @@ fun PanelGridMockupScreen(
             Unit
         }
     }
-    val executeAction = remember(config, haRepository, liveEntities, pendingEntityIds, onNavigate, onLocalPanelAction) {
+    val executeAction = remember(config, haRepository, liveEntities, displayedEntities, pendingEntityIds, onNavigate, onLocalPanelAction) {
         { tile: HapanelsTileConfig, action: HapanelsTileAction ->
             val targetText = action.entityId ?: tile.entityId
             val target = targetText.toEntityIdOrNull()
-            val targetState = target?.let(liveEntities::get)
+            val targetState = target?.let(displayedEntities::get)
             if (action.type in setOf("entity_default", "more_info") && target != null && targetState?.isAvailable != true) {
                 Toaster.error(if (targetState == null) "Brak danych dla ${target.value}" else "Encja ${target.value} jest niedostępna")
             } else when (action.type) {
@@ -191,6 +212,7 @@ fun PanelGridMockupScreen(
                 "more_info" -> target?.let { moreInfoEntityId = it.value }
                 "entity_default" -> target?.let { entityId ->
                     if (entityId.value !in pendingEntityIds) {
+                        targetState?.optimisticFor(ServiceCall.tapAction(entityId, targetState.isOn))?.let { showOptimistic(it, liveEntities[entityId]) }
                         pendingEntityIds = pendingEntityIds + entityId.value
                         scope.launch {
                             haRepository.call(ServiceCall.tapAction(entityId, targetState?.isOn == true))
@@ -203,7 +225,7 @@ fun PanelGridMockupScreen(
             Unit
         }
     }
-    val onTileClick = remember(config, liveEntities, executeAction) {
+    val onTileClick = remember(config, liveEntities, displayedEntities, executeAction) {
         { tile: HapanelsTileConfig ->
             val explicitAction = tile.tapAction
             if (explicitAction != null) {
@@ -211,10 +233,13 @@ fun PanelGridMockupScreen(
             } else when (tile.kind) {
                 HapanelsTileKind.FOLDER -> tile.panelId?.takeIf { loadedPanelTitle(config, it) != null }?.let { panelStack = panelStack + it }
                 HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
-                else -> tile.legacyTapAction(liveEntities)?.let { call ->
-                    val state = liveEntities[call.target]
+                else -> tile.legacyTapAction(displayedEntities)?.let { call ->
+                    val state = displayedEntities[call.target]
                     if (state?.isAvailable != true) Toaster.error(if (state == null) "Brak danych dla ${call.target.value}" else "Encja ${call.target.value} jest niedostępna")
-                    else scope.launch { haRepository.call(call) }
+                    else {
+                        state.optimisticFor(call)?.let { showOptimistic(it, liveEntities[call.target]) }
+                        scope.launch { haRepository.call(call) }
+                    }
                 }
             }
             Unit
@@ -252,9 +277,9 @@ fun PanelGridMockupScreen(
                     if (loadedConfig == null) {
                         LoadingPanelConfig()
                     } else if (compact) {
-                        CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
+                        CompactPanel(config = panelConfig!!, liveEntities = displayedEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
                     } else {
-                        WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
+                        WidePanel(config = panelConfig!!, liveEntities = displayedEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
                     }
                 }
             }
@@ -269,7 +294,7 @@ fun PanelGridMockupScreen(
                     PanelPopup(
                         tile = tile,
                         tiles = tiles,
-                        liveEntities = liveEntities,
+                        liveEntities = displayedEntities,
                         now = now,
                         dateText = dateText,
                         onTileClick = onTileClick,
@@ -286,9 +311,12 @@ fun PanelGridMockupScreen(
             }
             moreInfoEntityId?.toEntityIdOrNull()?.let { entityId ->
                 PanelEntityMoreInfo(
-                    state = liveEntities[entityId],
+                    state = displayedEntities[entityId],
                     onClose = { moreInfoEntityId = null },
-                    onCall = { call -> scope.launch { haRepository.call(call) } },
+                    onCall = { call ->
+                        displayedEntities[call.target]?.optimisticFor(call)?.let { showOptimistic(it, liveEntities[call.target]) }
+                        scope.launch { haRepository.call(call) }
+                    },
                 )
             }
         }
@@ -1460,6 +1488,18 @@ private fun String?.toEntityIdOrNull(): EntityId? =
 private fun HapanelsTileConfig.liveState(liveEntities: Map<EntityId, EntityState>): EntityState? =
     entityId.toEntityIdOrNull()?.let(liveEntities::get)
 
+internal fun EntityState.optimisticFor(call: ServiceCall): EntityState? {
+    if (call.target != id) return null
+    val hue = (call.data["hs_color"] as? JsonArray)
+        ?.firstOrNull()
+        ?.let { (it as? JsonPrimitive)?.content?.toDoubleOrNull() }
+    return when (call.service) {
+        "turn_on" -> copy(isOn = true, rawState = "on", hue = hue ?: this.hue, lastUpdated = Instant.now())
+        "turn_off" -> copy(isOn = false, rawState = "off", lastUpdated = Instant.now())
+        else -> null
+    }
+}
+
 private fun HapanelsTileConfig.resolvedIcon(liveState: EntityState?): String {
     if (iconSource != HapanelsTileIconSource.AUTO) return icon
     val entityIcon = liveState?.attributesJson?.let { attributes ->
@@ -1487,7 +1527,8 @@ private fun HapanelsTileConfig.resolvedIconColor(liveState: EntityState?, theme:
 }
 
 private fun EntityState.lightColorOrNull(): Color? {
-    val attributes = attributesJson ?: return hue?.let { Color(android.graphics.Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f))) }
+    hue?.let { return Color(android.graphics.Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f))) }
+    val attributes = attributesJson ?: return null
     val json = runCatching { JSONObject(attributes.toString()) }.getOrNull() ?: return null
     json.optJSONArray("rgb_color")?.takeIf { it.length() >= 3 }?.let {
         return Color(it.optInt(0).coerceIn(0, 255), it.optInt(1).coerceIn(0, 255), it.optInt(2).coerceIn(0, 255))
@@ -1495,7 +1536,7 @@ private fun EntityState.lightColorOrNull(): Color? {
     json.optJSONArray("hs_color")?.takeIf { it.length() >= 2 }?.let {
         return Color(android.graphics.Color.HSVToColor(floatArrayOf(it.optDouble(0).toFloat(), (it.optDouble(1) / 100.0).toFloat(), 1f)))
     }
-    return hue?.let { Color(android.graphics.Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f))) }
+    return null
 }
 
 private fun String.toComposeColorOrNull(): Color? = runCatching {

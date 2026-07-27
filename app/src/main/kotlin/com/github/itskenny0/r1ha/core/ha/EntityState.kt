@@ -249,6 +249,8 @@ data class EntityState(
     val lockCodeFormat: String? = null,
     /** Lock-only: `changed_by` attribute — last user / source that flipped it. */
     val lockChangedBy: String? = null,
+    /** Changes on attribute-only HA events, unlike [lastChanged]. */
+    val lastUpdated: Instant = lastChanged,
 ) {
     /**
      * Subset of [MediaPlayerEntityFeature](https://github.com/home-assistant/core/blob/dev/homeassistant/components/media_player/const.py)

@@ -728,6 +728,7 @@ class DefaultHaRepository(
             percent = if (available) pct else null,
             raw = rawNum,
             lastChanged = runCatching { Instant.parse(raw.lastChanged ?: "") }.getOrDefault(Instant.now()),
+            lastUpdated = runCatching { Instant.parse(raw.lastUpdated ?: "") }.getOrDefault(Instant.now()),
             isAvailable = available,
             supportsScalar = supportsScalar(id.domain, raw.attributes),
             rawState = stateStr,
@@ -1513,6 +1514,7 @@ class DefaultHaRepository(
                     raw = computeRaw(id.domain, attrs)
                         ?: if (id.domain == Domain.NUMBER || id.domain == Domain.INPUT_NUMBER) stateStr.toDoubleOrNull() else null,
                     lastChanged = runCatching { Instant.parse(row.last_changed ?: "") }.getOrDefault(Instant.now()),
+                    lastUpdated = runCatching { Instant.parse(row.last_updated ?: row.last_changed ?: "") }.getOrDefault(Instant.now()),
                     isAvailable = available,
                     rawState = stateStr,
                     unit = attrs["unit_of_measurement"].asString() ?: attrs["temperature_unit"].asString(),
@@ -1554,6 +1556,7 @@ class DefaultHaRepository(
         percent: Int?,
         raw: Number?,
         lastChanged: Instant,
+        lastUpdated: Instant,
         isAvailable: Boolean,
         rawState: String,
         unit: String?,
@@ -1570,6 +1573,7 @@ class DefaultHaRepository(
         percent = percent,
         raw = raw,
         lastChanged = lastChanged,
+        lastUpdated = lastUpdated,
         isAvailable = isAvailable,
         rawState = rawState,
         unit = unit,
@@ -1587,6 +1591,7 @@ class DefaultHaRepository(
         percent = percent,
         raw = raw,
         lastChanged = lastChanged,
+        lastUpdated = lastUpdated,
         isAvailable = isAvailable,
         rawState = rawState,
         unit = unit,
@@ -2437,6 +2442,7 @@ class DefaultHaRepository(
         val state: kotlinx.serialization.json.JsonElement? = null,
         val attributes: kotlinx.serialization.json.JsonElement? = null,
         val last_changed: String? = null,
+        val last_updated: String? = null,
     ) {
         /** Normalised state string. Empty / null state in the wire payload reads as "unknown"
          *  so downstream availability/isOn computations treat the row consistently. */

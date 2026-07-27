@@ -21,6 +21,8 @@ assert.match(source, /@media \(max-width: 1100px\)[\s\S]*layout-side/, "Preview 
 assert.match(source, /@media \(max-width: 620px\)[\s\S]*tile-toolbar-filters/, "tile editor must include mobile controls layout");
 assert.match(source, /if \(!customElements\.get\("hapanels-studio-panel"\)\)/, "frontend registration must tolerate cache-key reloads");
 assert.match(source, /data-layout-edit-tile[\s\S]*dataset\.layoutEditTile/, "Edit in Tiles must read its own data attribute");
+assert.match(source, /role="tablist"[\s\S]*Kafle[\s\S]*Układ[\s\S]*Wygląd[\s\S]*Wygaszacz[\s\S]*Informacje/, "tablet navigation must follow the content-to-device workflow");
+assert.match(source, /role="tab" aria-selected="\$\{active\}" tabindex="\$\{active \? "0" : "-1"\}"/, "tablet navigation must expose accessible tabs");
 
 const panel = new Panel();
 const tile = { id: "tile", col: 2, row: 2, colSpan: 2, rowSpan: 2 };
@@ -112,6 +114,12 @@ const normalizedTile = JSON.parse(JSON.stringify(migrateStudioTile({ id: "light"
 assert.equal(normalizedTile.icon_source, "custom", "normalization must add icon source");
 assert.equal(normalizedTile.icon_color_source, "accent", "normalization must add icon color source");
 assert.equal(normalizedTile.tap_action.type, "entity_default", "normalization must add safe entity action");
+const liveVisualPanel = new Panel();
+liveVisualPanel._hass = { states: { "light.kitchen": { state: "on", attributes: { icon: "mdi:floor-lamp", rgb_color: [10, 20, 30] } } } };
+liveVisualPanel._tileDrafts = {};
+const masterItem = liveVisualPanel._tileMasterItem("device", { ...normalizedTile, icon_source: "auto", icon_color_source: "entity" });
+assert.match(masterItem, /mdi:floor-lamp/, "Tiles list must resolve automatic icons from entity state");
+assert.match(masterItem, /rgb\(10,20,30\)/, "Tiles list must resolve entity-sourced icon colour");
 
 const resetTile = JSON.parse(JSON.stringify(resetTileAuthoring({ ...normalizedTile, short_label: "Kitchen", col: 3, row: 2, colSpan: 2, rowSpan: 3, icon_color_source: "custom", icon_color: "#123456" })));
 assert.equal(resetTile.label, "Light", "reset must preserve name");
@@ -133,6 +141,18 @@ const baseConfig = {
   extensions: {},
   migration_report: [],
 };
+const overviewPanel = new Panel();
+const overviewConfig = structuredClone(baseConfig);
+overviewConfig.tiles = [{ ...normalizedTile, col: 1, row: 1, colSpan: 3, rowSpan: 2 }];
+overviewPanel._panels = [{ device: "tablet-one", panel_name: "Kitchen", status: "synced", dashboard_id: "technical-id", revision: 4, updated_by: "technical-user" }];
+overviewPanel._configs = { "tablet-one": overviewConfig };
+overviewPanel._hiddenDevices = new Set();
+const overview = overviewPanel._mainView(overviewPanel._visiblePanels());
+assert.match(overview, /Twoje tablety/, "homepage must introduce the device overview");
+assert.match(overview, /data-select-device="tablet-one"/, "homepage must offer direct tile editing");
+assert.match(overview, /data-preview-device="tablet-one"/, "homepage must offer direct preview access");
+assert.match(overview, /panel-mini-tile/, "homepage must visualize the saved layout");
+assert.doesNotMatch(overview, /technical-id|technical-user/, "homepage must hide routine technical metadata");
 const resetCases = [
   { id: "reset-entity", kind: "entity", size: "small", label: "Entity", entity_id: "light.test", icon: "mdi:star", accent: "white", order: 0, col: 1, row: 1 },
   { id: "reset-cover", kind: "cover", size: "small", label: "Cover", entity_id: "cover.test", icon: "mdi:star", accent: "white", order: 0, cover_visual: "curtain", cover_direction: "left" },
@@ -147,7 +167,7 @@ const resetCases = [
 ];
 const resetByKind = Object.fromEntries(resetCases.map((tile) => [tile.kind, JSON.parse(JSON.stringify(resetTileAuthoring(tile)))]));
 for (const [kind, reset] of Object.entries(resetByKind)) {
-  assert.equal(reset.size, "small", `${kind} reset must preserve Preview size`);
+  assert.equal(reset.size, "small", `${kind} reset must preserve tile variant`);
   assert.equal(validateDashboardConfig({ ...structuredClone(baseConfig), tiles: [reset] }).length, 0, `${kind} reset must remain schema-valid`);
 }
 assert.equal(resetByKind.entity.entity_id, "light.test", "entity reset must preserve entity");
@@ -352,6 +372,8 @@ const folderEditor = conditionalPanel._tileEditor("device", { id: "folder", kind
 assert.match(folderEditor, /id="tile-dashboard-device-folder-panel"/, "folder editor must expose panel ID");
 assert.doesNotMatch(folderEditor, /id="tile-dashboard-device-folder-entity"/, "folder editor must hide entity source");
 assert.doesNotMatch(folderEditor, /<h3>Zachowanie<\/h3>/, "folder editor must hide implicit navigation behavior");
+assert.match(folderEditor, /id="tile-dashboard-device-folder-size"[\s\S]*Pełny/, "Tiles editor must expose the visual tile variant");
+assert.doesNotMatch(conditionalPanel._layoutSelectedPanel({ id: "folder", label: "Folder", col: 1, row: 1, colSpan: 2, rowSpan: 2 }), /layout-tile-size/, "Preview must not expose tile variant as geometry");
 for (const [kind, expected] of [
   ["entity", ["-entity", "Prezentacja", "Zachowanie"]],
   ["cover", ["-entity", "Prezentacja", "Zachowanie", "<h3>Cover</h3>"]],
@@ -387,4 +409,24 @@ assert.deepEqual(
   "Tiles editor must preserve layout fields that are not present in its form",
 );
 assert.deepEqual(JSON.parse(JSON.stringify(captured.hold_action)), { type: "none" }, "clearing hold must send an explicit none action");
-assert.equal(formPanel._tileWithDraft("device", { ...formTile, size: "small", col: 8 }).size, "small", "tile draft must not override Preview layout fields");
+assert.equal(formPanel._tileWithDraft("device", { ...formTile, size: "small", col: 8 }).size, "large", "tile draft must expose its visual variant");
+
+const positionPanel = new Panel();
+const savedPositionTile = { ...normalizedTile, col: 3, row: 2, colSpan: 2, rowSpan: 2 };
+const movedPositionTile = { ...savedPositionTile, label: "Moved light", col: 8, row: 5 };
+positionPanel._configs = { device: { ...structuredClone(baseConfig), tiles: [savedPositionTile] } };
+positionPanel._layoutDrafts = { "device:1:main": { context: { id: "main" }, grid: { columns: 12, rows: 9 }, tiles: [movedPositionTile], tray: [], historyKey: "device:1:main" } };
+positionPanel._tileDrafts = {};
+positionPanel._tileValidation = {};
+positionPanel._tileSaveStatus = {};
+positionPanel._render = () => {};
+positionPanel._captureTileDraft = () => positionPanel._tileDraft("device", "light");
+let positionPatch;
+positionPanel._hass = { callService: async (_domain, _service, data) => { positionPatch = data.patch; } };
+await positionPanel._saveTile("device", "light", "editor");
+assert.deepEqual(
+  { col: positionPanel._configs.device.tiles[0].col, row: positionPanel._configs.device.tiles[0].row },
+  { col: 8, row: 5 },
+  "saving tile authoring must preserve current Preview position",
+);
+for (const field of ["order", "col", "row", "colSpan", "rowSpan"]) assert.equal(positionPatch.tile_updates[0][field], undefined, `Tiles patch must not own ${field}`);

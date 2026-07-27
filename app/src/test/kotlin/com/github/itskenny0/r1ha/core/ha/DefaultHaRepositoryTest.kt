@@ -102,8 +102,8 @@ class DefaultHaRepositoryTest {
         // Push a state_changed event for light.kitchen
         opened.send(
             """{"id":1,"type":"event","event":{"variables":{"trigger":{"platform":"state","entity_id":"light.kitchen",""" +
-            """"to_state":{"entity_id":"light.kitchen","state":"on","attributes":{"brightness":255,"friendly_name":"Kitchen"},""" +
-            """"last_changed":"2026-05-11T10:00:00+00:00"}}}}}"""
+            """"to_state":{"entity_id":"light.kitchen","state":"on","attributes":{"brightness":255,"friendly_name":"Kitchen","rgb_color":[255,0,0]},""" +
+            """"last_changed":"2026-05-11T10:00:00+00:00","last_updated":"2026-05-11T10:00:01+00:00"}}}}}"""
         )
         @Suppress("BlockingMethodInNonBlockingContext")
         Thread.sleep(200)
@@ -116,6 +116,17 @@ class DefaultHaRepositoryTest {
             assertThat(s.isOn).isTrue()
             assertThat(s.percent).isEqualTo(100)
             assertThat(s.friendlyName).isEqualTo("Kitchen")
+
+            // Attribute-only changes must emit while the light remains on. Hapanels uses
+            // these updates to repaint entity-sourced icon colours without a user tap.
+            opened.send(
+                """{"id":1,"type":"event","event":{"variables":{"trigger":{"platform":"state","entity_id":"light.kitchen",""" +
+                """"to_state":{"entity_id":"light.kitchen","state":"on","attributes":{"brightness":255,"friendly_name":"Kitchen","rgb_color":[0,255,0]},""" +
+                """"last_changed":"2026-05-11T10:00:00+00:00","last_updated":"2026-05-11T10:00:02+00:00"}}}}}"""
+            )
+            val changed = awaitItem()[EntityId("light.kitchen")]
+            assertThat(changed?.attributesJson?.get("rgb_color")?.toString()).isEqualTo("[0,255,0]")
+            assertThat(changed?.lastUpdated).isEqualTo(java.time.Instant.parse("2026-05-11T10:00:02Z"))
             cancelAndConsumeRemainingEvents()
         }
 

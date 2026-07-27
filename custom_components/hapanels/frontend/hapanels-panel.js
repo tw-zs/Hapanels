@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260727-tile-editor-parity-1";
+const STUDIO_FRONTEND_VERSION = "20260727-tab-navigation-1";
 const DASHBOARD_SCHEMA_VERSION = 2;
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup", "text", "spacer"];
@@ -318,7 +318,7 @@ function validateDashboardConfig(config) {
 }
 
 const STUDIO_TRANSLATIONS_EN = {
-  "Panele wykryte po MQTT i stan synchronizacji dashboardu/AOD.": "Panels discovered over MQTT and dashboard/AOD sync state.",
+  "Projektuj i zarządzaj panelami swoich tabletów.": "Design and manage your tablet dashboards.",
   "Odśwież": "Refresh",
   "Ustawienia": "Settings",
   "Witaj w Hapanels Studio": "Welcome to Hapanels Studio",
@@ -326,6 +326,13 @@ const STUDIO_TRANSLATIONS_EN = {
   "Pobierz aplikację Hapanels": "Download the Hapanels app",
   "i uruchom MQTT, żeby tablet pojawił się tutaj automatycznie.": "and enable MQTT so the tablet appears here automatically.",
   "Dodaj swój pierwszy tablet +": "Add your first tablet +",
+  "Twoje tablety": "Your tablets",
+  "Wybierz urządzenie, aby edytować jego panel lub otworzyć podgląd.": "Choose a device to edit its dashboard or open the preview.",
+  "Tablety": "Tablets",
+  "Zsynchronizowane": "Synced",
+  "Wymagają uwagi": "Need attention",
+  "Edytuj kafle": "Edit tiles",
+  "Panele": "Panels",
   "WIDOCZNY": "VISIBLE",
   "NIEWIDOCZNY": "HIDDEN",
   "ZSYNCHRONIZOWANE": "SYNCED",
@@ -351,6 +358,15 @@ const STUDIO_TRANSLATIONS_EN = {
   "Short (opcjonalnie)": "Short label (optional)",
   "Typ": "Type",
   "Rozmiar": "Size",
+  "Wariant kafla": "Tile variant",
+  "Pełny": "Full",
+  "Kompaktowy": "Compact",
+  "Przycisk": "Button",
+  "Określa sposób prezentacji zawartości. Nie zmienia położenia ani wymiarów kafla.": "Controls how content is presented. It does not change the tile position or dimensions.",
+  "Wymiary kafla ustawisz w Podglądzie, przeciągając jego krawędzie.": "Set tile dimensions in Preview by dragging its edges.",
+  "- duża ikona i pełne informacje; zalecany dla zegara i kamery.": "- large icon and full information; recommended for clocks and cameras.",
+  "- mniejsza ikona i skrócone informacje.": "- smaller icon and condensed information.",
+  "- zwarty układ dla szybkich akcji.": "- compact layout for quick actions.",
   "Ikona (MDI)": "Icon (MDI)",
   "Accent (kolor)": "Accent (color)",
   "Panel (opcjonalnie)": "Panel (optional)",
@@ -365,7 +381,11 @@ const STUDIO_TRANSLATIONS_EN = {
   "Zwiń/rozwiń": "Collapse/expand",
   "Informacje": "Info",
   "Podgląd": "Preview",
+  "Układ": "Layout",
   "Wygląd": "Appearance",
+  "Wygaszacz": "Screensaver",
+  "Urządzenie": "Device",
+  "Nawigacja tabletu": "Tablet navigation",
   "Konflikt synchronizacji": "Sync conflict",
   "Oczekujące zmiany kafli:": "Pending tile changes:",
   "Użyj wersji Studio": "Use Studio version",
@@ -660,9 +680,25 @@ class HapanelsStudioPanel extends HTMLElement {
 
   set hass(hass) {
     const wasDark = this._isDarkTheme();
+    const previous = this._hass;
     this._hass = hass;
     if (!this._loaded) this._load();
     if (this._themeMode === "auto" && wasDark !== this._isDarkTheme()) this._render();
+    else if (previous) this._refreshLiveEntityVisuals(previous);
+  }
+
+  _refreshLiveEntityVisuals(previous) {
+    if (!this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll("[data-live-tile]").forEach((icon) => {
+      const tile = this._tileDraft(this._selectedDevice, icon.dataset.liveTile);
+      const entityId = tile?.entity_id;
+      if (!tile || !entityId || previous.states?.[entityId] === this._hass?.states?.[entityId]) return;
+      icon.setAttribute("icon", this._resolvedIcon(tile));
+      icon.style.color = this._resolvedIconColor(tile);
+    });
+    const editor = this.shadowRoot.querySelector("[data-tile-editor]");
+    const entityInput = editor && this.shadowRoot.getElementById(`${editor.dataset.prefix}-entity`);
+    if (entityInput?.value && previous.states?.[entityInput.value] !== this._hass?.states?.[entityInput.value]) this._syncTilePreview(editor);
   }
 
   async _load() {
@@ -775,7 +811,9 @@ class HapanelsStudioPanel extends HTMLElement {
     }
     this._rememberPreviousConfig(device, config);
     try {
-      await this._hass.callService("hapanels", "patch_dashboard_config", { device, patch: { base_revision: revision, updated_by: "homeassistant:hapanels_studio", surface, tile_updates: [tile] } });
+      const tileUpdate = structuredClone(tile);
+      if (surface === "dashboard") for (const field of ["order", "col", "row", "colSpan", "rowSpan"]) delete tileUpdate[field];
+      await this._hass.callService("hapanels", "patch_dashboard_config", { device, patch: { base_revision: revision, updated_by: "homeassistant:hapanels_studio", surface, tile_updates: [tileUpdate] } });
       const localTile = surface === "aod" ? (config.always_on_display?.tiles || []).find((item) => item.id === tileId) : dashboardTiles(config).find((item) => item.id === tileId);
       if (localTile) {
         if (surface === "dashboard") Object.keys(localTile).forEach((field) => delete localTile[field]);
@@ -859,14 +897,14 @@ class HapanelsStudioPanel extends HTMLElement {
   _tileDraft(device, tileId) {
     this._tileDrafts ||= {};
     const key = this._tileDraftKey(device, tileId);
-    const source = this._savedTile(device, tileId) || this._editableTile(device, tileId);
+    const source = this._layoutTileLocation(device, tileId)?.tile || this._savedTile(device, tileId) || this._editableTile(device, tileId);
     return this._tileDrafts[key] || (source ? migrateStudioTile(source) : null);
   }
 
   _tileWithDraft(device, tile) {
     const draft = this._tileDrafts?.[this._tileDraftKey(device, tile.id)];
     if (!draft) return tile;
-    const { size, order, col, row, colSpan, rowSpan, ...authoring } = draft;
+    const { order, col, row, colSpan, rowSpan, ...authoring } = draft;
     return { ...tile, ...authoring };
   }
 
@@ -1261,7 +1299,37 @@ class HapanelsStudioPanel extends HTMLElement {
         .language-toggle button.active { background: var(--accent); color: #1a0d03; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
         .card { border: 1px solid var(--line); border-radius: 22px; background: var(--surface); padding: 18px; box-shadow: 0 18px 50px rgba(0,0,0,.16); }
-        .panel-card { text-align: left; color: inherit; width: 100%; }
+        .overview { display: grid; gap: 18px; }
+        .overview-head { display: flex; justify-content: space-between; gap: 18px; align-items: end; }
+        .overview-head p { margin: 6px 0 0; color: var(--muted); }
+        .overview-stats { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+        .overview-stat { min-height: 86px; display: grid; align-content: center; gap: 4px; padding: 15px 17px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); }
+        .overview-stat strong { font-size: 27px; line-height: 1; }
+        .overview-stat span { color: var(--muted); font-size: 12px; font-weight: 850; }
+        .overview-stat.attention strong { color: #ff725d; }
+        .panel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 16px; }
+        .panel-card { display: grid; overflow: hidden; padding: 0; text-align: left; color: inherit; }
+        .panel-card-head { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+        .panel-identity { display: flex; flex: 1 1 auto; gap: 12px; align-items: center; min-width: 0; }
+        .panel-identity > span:last-child { min-width: 0; }
+        .panel-device-icon { width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 14px; background: color-mix(in srgb, var(--accent) 15%, var(--surface-2)); color: var(--accent); }
+        .panel-device-icon ha-icon { --mdc-icon-size: 25px; }
+        .panel-identity h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .panel-identity small { display: block; margin-top: 3px; color: var(--muted); }
+        .panel-card-body { display: grid; grid-template-columns: minmax(190px, 1.05fr) minmax(180px, .95fr); gap: 18px; padding: 18px 20px 20px; }
+        .panel-mini { min-height: 160px; padding: 10px; border: 1px solid rgba(80,160,255,.28); border-radius: 16px; background: radial-gradient(circle at 20% 0%, rgba(39,136,255,.25), transparent 52%), #07111e; box-shadow: inset 0 0 34px rgba(30,144,255,.08); }
+        .panel-mini-grid { width: 100%; height: 100%; display: grid; gap: 3px; }
+        .panel-mini-tile { min-width: 0; min-height: 0; border: 1px solid color-mix(in srgb, var(--mini-accent) 55%, transparent); border-radius: 4px; background: color-mix(in srgb, var(--mini-accent) 24%, #111827); }
+        .panel-mini-empty { height: 100%; display: grid; place-items: center; color: #66809e; }
+        .panel-card-info { display: grid; align-content: space-between; gap: 14px; }
+        .panel-content-counts { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .panel-content-count { padding: 11px 12px; border-radius: 13px; background: var(--surface-2); }
+        .panel-content-count strong, .panel-content-count span { display: block; }
+        .panel-content-count strong { font-size: 20px; }
+        .panel-content-count span { margin-top: 2px; color: var(--muted); font-size: 11px; font-weight: 800; }
+        .panel-card-alert { padding: 10px 12px; border: 1px solid rgba(255,83,56,.28); border-radius: 12px; background: rgba(255,83,56,.10); color: #ff8a77; font-size: 12px; font-weight: 750; }
+        .panel-card-actions { display: flex; gap: 8px; }
+        .panel-card-actions button { flex: 1; }
         .name { display: flex; justify-content: space-between; gap: 12px; font-size: 19px; font-weight: 850; }
         .panel-title { display: grid; gap: 3px; min-width: 0; }
         .panel-title small { color: var(--muted); font-size: 12px; font-weight: 800; overflow-wrap: anywhere; }
@@ -1277,9 +1345,16 @@ class HapanelsStudioPanel extends HTMLElement {
         .empty { min-height: 52vh; display: grid; place-items: center; text-align: center; }
         .empty-box { max-width: 540px; border: 1px dashed var(--line); border-radius: 28px; padding: 42px; background: var(--surface); }
         .empty-box p { color: var(--muted); line-height: 1.55; }
-        .tabs { display: flex; gap: 8px; margin: 20px 0 16px; flex-wrap: wrap; }
-        .tab { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
-        .tab.active { background: var(--accent); color: #1a0d03; border-color: transparent; }
+        .tabs { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 5px; margin: 20px -4px 16px; padding: 7px 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(14px); }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-group-label { flex: 0 0 auto; margin: 0 4px 0 7px; color: var(--muted); font-size: 10px; font-weight: 950; letter-spacing: .08em; text-transform: uppercase; }
+        .tab-divider { width: 1px; height: 28px; flex: 0 0 auto; margin: 0 7px; background: var(--line); }
+        .tab { position: relative; min-height: 44px; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); }
+        .tab ha-icon { --mdc-icon-size: 19px; }
+        .tab:hover { background: var(--surface-2); color: var(--text); }
+        .tab.active { background: color-mix(in srgb, var(--accent) 13%, var(--surface-2)); color: var(--text); }
+        .tab.active::after { content: ""; position: absolute; right: 12px; bottom: 3px; left: 12px; height: 3px; border-radius: 999px; background: var(--accent); }
+        .tab-dirty { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #facc15; box-shadow: 0 0 0 3px color-mix(in srgb, #facc15 16%, transparent); }
         .tiles { display: grid; gap: 14px; }
         .tile-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
         .tile-toolbar-filters, .tile-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1375,6 +1450,8 @@ class HapanelsStudioPanel extends HTMLElement {
         .tile-footer { display: flex; justify-content: space-between; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); background: rgba(0,0,0,.08); }
         .fields { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; align-items: end; }
         .field { display: grid; gap: 5px; }
+        .variant-help { display: grid; gap: 4px; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+        .variant-help strong { color: var(--text); }
         .span-2 { grid-column: span 2; }
         .span-3 { grid-column: span 3; }
         .span-4 { grid-column: span 4; }
@@ -1540,7 +1617,6 @@ class HapanelsStudioPanel extends HTMLElement {
         .preview-tile ha-icon { --mdc-icon-size: 58px; color: #e99900; }
         .preview-tile.accent-red ha-icon { color: #ff5338; }
         .preview-tile.accent-white ha-icon { color: #f1f1f1; }
-        .preview-size { position: absolute; top: 10px; right: 10px; width: 92px; padding: 6px; font-size: 12px; opacity: .82; }
         .preview-meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
         .layout-editor { display: grid; grid-template-columns: 220px minmax(0, 1fr) 180px; gap: 16px; align-items: stretch; }
         .layout-left-panel { display: grid; align-content: start; gap: 12px; }
@@ -1649,6 +1725,7 @@ class HapanelsStudioPanel extends HTMLElement {
         }
         @media (max-width: 900px) {
           .page { padding: 16px; }
+          .overview-stats { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
           .tiles-master-detail { grid-template-columns: 1fr; }
           .tile-master { position: static; max-height: 300px; }
           .layout-editor { grid-template-columns: 1fr; }
@@ -1663,7 +1740,20 @@ class HapanelsStudioPanel extends HTMLElement {
         @media (max-width: 620px) {
           .hero, .detail-head, .tile-editor-head, .tile-footer { align-items: stretch; flex-direction: column; }
           .hero .actions, .detail-head .actions { align-self: stretch; justify-content: space-between; }
+          .overview-head { align-items: start; flex-direction: column; }
+          .tabs { margin-right: -14px; margin-left: -14px; padding-right: 14px; padding-left: 14px; }
+          .tab-group-label, .tab-divider { display: none; }
+          .tab { padding-inline: 12px; }
+          .version { display: none; }
+          .overview-stats { display: flex; margin-right: -16px; padding-right: 16px; overflow-x: auto; scroll-snap-type: x mandatory; }
+          .overview-stat { min-width: 138px; scroll-snap-align: start; }
+          .panel-grid { grid-template-columns: minmax(0, 1fr); }
+          .panel-card-head { display: grid; grid-template-columns: minmax(0, 1fr); align-items: flex-start; padding: 15px; }
+          .panel-card-head > .pill { justify-self: start; margin-left: 58px; }
+          .panel-card-body { grid-template-columns: 1fr; padding: 15px; }
+          .panel-mini { min-height: 190px; }
           .card { padding: 14px; border-radius: 18px; }
+          .panel-card { padding: 0; }
           .tile-toolbar, .tile-toolbar-filters, .tile-toolbar-actions { align-items: stretch; }
           .tile-toolbar-filters, .tile-toolbar-actions { width: 100%; }
           .tile-toolbar-filters input, .tile-kind-filter { width: 100%; }
@@ -1713,7 +1803,7 @@ class HapanelsStudioPanel extends HTMLElement {
             <div class="logo" aria-hidden="true">${this._logoMark()}</div>
             <h1>Hapanels Studio <span class="version">${STUDIO_FRONTEND_VERSION}</span></h1>
           </div>
-          <div class="sub">Panele wykryte po MQTT i stan synchronizacji dashboardu/AOD.</div>
+          <div class="sub">Projektuj i zarządzaj panelami swoich tabletów.</div>
           ${this._error ? `<div class="error">${this._escape(this._error)}</div>` : ""}
         </div>
         <div class="actions">
@@ -1746,25 +1836,73 @@ class HapanelsStudioPanel extends HTMLElement {
         </section>
       `;
     }
-    return `<section class="grid">${panels.map((panel) => this._panelCard(panel)).join("")}</section>`;
+    const synced = panels.filter((panel) => panel.status === "synced").length;
+    const attention = panels.filter((panel) => ["conflict", "invalid"].includes(panel.status)).length;
+    const hidden = Math.max(0, (this._panels?.length || 0) - panels.length);
+    return `
+      <section class="overview">
+        <div class="overview-head"><div><h2>Twoje tablety</h2><p>Wybierz urządzenie, aby edytować jego panel lub otworzyć podgląd.</p></div></div>
+        <div class="overview-stats" aria-label="Status tabletów">
+          <div class="overview-stat"><strong>${this._escape(panels.length)}</strong><span>Tablety</span></div>
+          <div class="overview-stat"><strong>${this._escape(synced)}</strong><span>Zsynchronizowane</span></div>
+          <div class="overview-stat ${attention ? "attention" : ""}"><strong>${this._escape(attention)}</strong><span>Wymagają uwagi</span></div>
+          <div class="overview-stat"><strong>${this._escape(hidden)}</strong><span>Ukryte</span></div>
+        </div>
+        <div class="panel-grid">${panels.map((panel) => this._panelCard(panel)).join("")}</div>
+      </section>`;
   }
 
   _panelCard(panel) {
     const status = this._escape(panel.status || "unknown");
-    const hidden = this._hiddenDevices.has(panel.device);
+    const config = this._configs?.[panel.device];
+    const tileCount = config ? dashboardTiles(config).length : 0;
+    const panelCount = config?.panels?.length || 0;
+    const conflict = panel.status === "conflict";
+    const conflictText = this._language === "en"
+      ? `Studio revision ${panel.attempted_base_revision ?? "-"}; tablet revision ${panel.current_revision ?? panel.revision ?? "-"}.`
+      : `Studio: rewizja ${panel.attempted_base_revision ?? "-"}; tablet: rewizja ${panel.current_revision ?? panel.revision ?? "-"}.`;
     return `
-      <button class="card panel-card" data-select-device="${this._escape(panel.device)}">
-        <div class="name">
-          <span class="panel-title"><span>${this._escape(this._panelLabel(panel))}</span><small>${this._escape(panel.device || "-")}</small></span>
-          <span class="panel-pills"><span class="pill ${hidden ? "hidden" : "visible"}">${hidden ? "NIEWIDOCZNY" : "WIDOCZNY"}</span><span class="pill ${status}">${this._statusLabel(panel.status)}</span></span>
+      <article class="card panel-card">
+        <div class="panel-card-head">
+          <div class="panel-identity"><span class="panel-device-icon"><ha-icon icon="mdi:tablet-dashboard"></ha-icon></span><span><h2>${this._escape(this._panelLabel(panel))}</h2><small>Hapanels</small></span></div>
+          <span class="pill ${status}">${this._statusLabel(panel.status)}</span>
         </div>
-        <dl>
-          <dt>Dashboard</dt><dd>${this._escape(panel.dashboard_id || "-")}</dd>
-          <dt>Rewizja</dt><dd>${this._escape(panel.revision ?? "-")}</dd>
-          <dt>Zmienił</dt><dd>${this._escape(panel.updated_by || "-")}</dd>
-        </dl>
-      </button>
+        <div class="panel-card-body">
+          ${this._panelMiniature(panel, config)}
+          <div class="panel-card-info">
+            <div class="panel-content-counts">
+              <div class="panel-content-count"><strong>${this._escape(tileCount)}</strong><span>Kafle</span></div>
+              <div class="panel-content-count"><strong>${this._escape(panelCount)}</strong><span>Panele</span></div>
+            </div>
+            ${conflict ? `<div class="panel-card-alert">${this._escape(conflictText)}</div>` : ""}
+            <div class="panel-card-actions">
+              <button data-select-device="${this._escape(panel.device)}">Edytuj kafle</button>
+              <button class="secondary" data-preview-device="${this._escape(panel.device)}">Podgląd</button>
+            </div>
+          </div>
+        </div>
+      </article>
     `;
+  }
+
+  _panelMiniature(panel, config) {
+    const grid = config?.layout || {};
+    const columns = Math.max(1, Number(grid.columns) || 12);
+    const rows = Math.max(1, Number(grid.rows) || 9);
+    const width = Number(panel?.screen_width_px);
+    const height = Number(panel?.screen_height_px);
+    const aspect = Number.isFinite(width) && Number.isFinite(height) && height > 0 ? `${width} / ${height}` : "16 / 9";
+    const tiles = (config?.tiles || []).slice(0, 24);
+    return `
+      <div class="panel-mini" style="aspect-ratio:${this._escape(aspect)}">
+        ${tiles.length ? `<div class="panel-mini-grid" style="grid-template-columns:repeat(${this._escape(columns)},1fr);grid-template-rows:repeat(${this._escape(rows)},1fr)">${tiles.map((tile) => {
+          const col = Math.min(columns, Math.max(1, Number(tile.col) || 1));
+          const row = Math.min(rows, Math.max(1, Number(tile.row) || 1));
+          const colSpan = Math.min(columns - col + 1, Math.max(1, Number(tile.colSpan) || 1));
+          const rowSpan = Math.min(rows - row + 1, Math.max(1, Number(tile.rowSpan) || 1));
+          return `<span class="panel-mini-tile" title="${this._escape(tile.label || tile.id)}" style="grid-column:${this._escape(col)} / span ${this._escape(colSpan)};grid-row:${this._escape(row)} / span ${this._escape(rowSpan)};--mini-accent:${this._escape(this._accentColor(tile.accent))}"></span>`;
+        }).join("")}</div>` : `<div class="panel-mini-empty"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon></div>`}
+      </div>`;
   }
 
   _detailView(panel) {
@@ -1784,20 +1922,35 @@ class HapanelsStudioPanel extends HTMLElement {
           </div>
         </div>
         ${panel.status === "conflict" ? this._conflictView(panel) : ""}
-        <div class="tabs">
-          ${this._tab("tiles", "Kafle")}
-          ${this._tab("aod", "Always On Display")}
-          ${this._tab("settings", "Informacje")}
-          ${this._tab("preview", "Podgląd")}
-          ${this._tab("appearance", "Wygląd")}
-        </div>
+        <nav class="tabs" role="tablist" aria-label="Nawigacja tabletu">
+          <span class="tab-group-label">Panel</span>
+          ${this._tab("tiles", "Kafle", "mdi:view-grid-plus")}
+          ${this._tab("preview", "Układ", "mdi:grid-large")}
+          ${this._tab("appearance", "Wygląd", "mdi:palette-outline")}
+          <span class="tab-divider" aria-hidden="true"></span>
+          <span class="tab-group-label">Urządzenie</span>
+          ${this._tab("aod", "Wygaszacz", "mdi:weather-night")}
+          ${this._tab("settings", "Informacje", "mdi:information-outline")}
+        </nav>
         ${this._tabContent(panel.device, config, panel)}
       </section>
     `;
   }
 
-  _tab(id, label) {
-    return `<button class="tab ${this._activeTab === id ? "active" : ""}" data-tab="${id}">${label}</button>`;
+  _tab(id, label, icon) {
+    const active = this._activeTab === id;
+    const dirty = this._tabHasUnsavedChanges(id);
+    return `<button class="tab ${active ? "active" : ""}" role="tab" aria-selected="${active}" tabindex="${active ? "0" : "-1"}" data-tab="${id}"><ha-icon icon="${icon}"></ha-icon><span>${label}</span>${dirty ? `<i class="tab-dirty" title="Niezapisane zmiany" aria-label="Niezapisane zmiany"></i>` : ""}</button>`;
+  }
+
+  _tabHasUnsavedChanges(id) {
+    const device = this._selectedDevice;
+    const config = this._configs?.[device];
+    if (!device || !config) return false;
+    if (id === "tiles") return Object.keys(this._tileDrafts || {}).some((key) => key.startsWith(`${device}:`));
+    if (id !== "preview") return false;
+    const prefix = `${device}:${config.revision ?? "new"}:`;
+    return Object.entries(this._layoutDrafts || {}).some(([key, draft]) => key.startsWith(prefix) && draft?.context && this._isLayoutDirty(device, config, draft));
   }
 
   _conflictView(panel) {
@@ -1872,7 +2025,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _tileMasterItem(device, savedTile) {
     const tile = this._tileWithDraft(device, savedTile);
     const dirty = !!this._tileDrafts?.[this._tileDraftKey(device, tile.id)];
-    return `<button class="tile-master-item ${tile.id === this._selectedTileId ? "active" : ""}" data-select-tile="${this._escape(tile.id)}" title="${this._escape(tile.entity_id || tile.id)}" aria-current="${tile.id === this._selectedTileId ? "true" : "false"}"><span class="tile-master-icon"><ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon></span><span class="tile-master-copy"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><small>${this._escape(tile.entity_id || this._panelTileKindLabel(tile.kind))}</small></span>${dirty ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : `<i class="tile-kind-badge">${this._escape(tile.kind)}</i>`}</button>`;
+    return `<button class="tile-master-item ${tile.id === this._selectedTileId ? "active" : ""}" data-select-tile="${this._escape(tile.id)}" title="${this._escape(tile.entity_id || tile.id)}" aria-current="${tile.id === this._selectedTileId ? "true" : "false"}"><span class="tile-master-icon"><ha-icon data-live-tile="${this._escape(tile.id)}" icon="${this._escape(this._resolvedIcon(tile))}" style="color:${this._escape(this._resolvedIconColor(tile))}"></ha-icon></span><span class="tile-master-copy"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><small>${this._escape(tile.entity_id || this._panelTileKindLabel(tile.kind))}</small></span>${dirty ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : `<i class="tile-kind-badge">${this._escape(tile.kind)}</i>`}</button>`;
   }
 
   _aodView(device, config) {
@@ -2442,7 +2595,7 @@ class HapanelsStudioPanel extends HTMLElement {
     return `
       <button class="layout-cell-tile ${selected ? "selected" : ""} ${tile.id === this._previewHighlightTileId ? "preview-highlight" : ""} ${willRemove ? "will-remove" : ""} ${dragging ? "dragging" : ""} ${this._isOutsideGrid(tile, grid) ? "outside" : ""} accent-${this._escape(tile.accent || "orange")}" data-layout-select data-layout-drag data-tile="${this._escape(tile.id)}" style="grid-column:${this._escape(tile.col)} / span ${this._escape(tile.colSpan)};grid-row:${this._escape(tile.row)} / span ${this._escape(tile.rowSpan)};--tile-icon-color:${this._escape(this._resolvedIconColor(tile))};${dragStyle}">
         <span class="layout-tile-content">
-          <ha-icon class="layout-tile-icon" icon="${this._escape(tile.icon_source === "auto" ? (this._hass?.states?.[tile.entity_id]?.attributes?.icon || this._domainIcon(tile.entity_id || "")) : this._mdiIcon(tile.icon))}" style="color:var(--tile-icon-color)" ${tile.presentation?.show_icon === false ? "hidden" : ""}></ha-icon>
+          <ha-icon class="layout-tile-icon" data-live-tile="${this._escape(tile.id)}" icon="${this._escape(this._resolvedIcon(tile))}" style="color:var(--tile-icon-color)" ${tile.presentation?.show_icon === false ? "hidden" : ""}></ha-icon>
           <strong class="layout-tile-title" ${tile.presentation?.show_label === false ? "hidden" : ""}>${this._escape(tile.label || tile.id)}</strong>
           <span class="layout-tile-subtitle" ${tile.presentation?.show_secondary === false ? "hidden" : ""}>${this._escape(tile.short_label || "")}</span>
         </span>
@@ -2484,8 +2637,7 @@ class HapanelsStudioPanel extends HTMLElement {
       <div class="layout-panel tile-settings">
         <div class="name"><span><strong>${this._escape(tile.label || tile.id)}</strong><small class="sub">${this._escape(tile.id)}</small></span><button class="small secondary" data-layout-edit-tile="${this._escape(tile.id)}" title="Przejdź do pełnego edytora kafla">Edytuj w Kaflach</button></div>
         <div class="fields">
-          ${this._selectField("layout-tile-size", "Rozmiar", TILE_SIZES, tile.size || "large", "span-6")}
-          <div class="field span-6"><span>Pozycja</span><strong>${this._escape(tile.col)},${this._escape(tile.row)} · ${this._escape(tile.colSpan)}×${this._escape(tile.rowSpan)}</strong></div>
+          <div class="field span-12"><span>Pozycja</span><strong>${this._escape(tile.col)},${this._escape(tile.row)} · ${this._escape(tile.colSpan)}×${this._escape(tile.rowSpan)}</strong></div>
           <span class="sub span-12">Pozycję i wymiary zmieniaj przeciąganiem kafla oraz jego uchwytów.</span>
         </div>
       </div>
@@ -2689,13 +2841,6 @@ class HapanelsStudioPanel extends HTMLElement {
         <small>${this._escape(this._clockStyleLabel(style))}</small>
       </button>
     `).join("");
-  }
-
-  _syncSelectedLayoutTile() {
-    const tile = this._selectedLayoutTile();
-    if (!tile) return;
-    tile.size = this.shadowRoot.getElementById("layout-tile-size")?.value || tile.size;
-    this._render();
   }
 
   _syncLayoutTrayHeight() {
@@ -2965,37 +3110,6 @@ class HapanelsStudioPanel extends HTMLElement {
     }
   }
 
-  _previewTile(device, tile) {
-    return `
-      <div class="preview-tile preview-${this._escape(tile.size || "small")} ${tile.kind === "camera" ? "preview-camera" : ""} accent-${this._escape(tile.accent || "orange")}">
-        <select class="preview-size" data-preview-size data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}">
-          ${TILE_SIZES.map((size) => `<option value="${this._escape(size)}" ${size === (tile.size || "large") ? "selected" : ""}>${this._escape(size)}</option>`).join("")}
-        </select>
-        <ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon>
-        <strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong>
-        <span class="preview-meta">${this._escape(tile.entity_id || tile.kind || "-")}</span>
-        ${tile.kind === "camera" ? `<div class="preview-actions"><button class="preview-action-pill">Wyłącz kamery</button><button class="preview-action-pill">Włącz kamery</button></div>` : ""}
-      </div>
-    `;
-  }
-
-  async _setTileSize(device, tileId, size) {
-    const config = this._configs[device];
-    const revision = Number(config?.revision);
-    if (!config || !Number.isFinite(revision)) return;
-    this._rememberPreviousConfig(device, config);
-    await this._hass.callService("hapanels", "patch_dashboard_config", {
-      device,
-      patch: {
-        base_revision: revision,
-        updated_by: "homeassistant:hapanels_studio",
-        surface: "dashboard",
-        tile_updates: [{ id: tileId, size }],
-      },
-    });
-    window.setTimeout(() => this._load(), 800);
-  }
-
   _tabletInfoView(config, panel = null) {
     const grid = config.layout || {};
     const fallbackResolution = this._fallbackScreenResolution();
@@ -3124,7 +3238,7 @@ class HapanelsStudioPanel extends HTMLElement {
               <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(previewIcon)}" style="color:${this._escape(iconColor)}" ${presentation.show_icon ? "" : "hidden"}></ha-icon>
               <span class="tile-preview-main"><strong class="tile-live-entity tile-preview-target" data-highlight-target="entity" ${presentation.show_value ? "" : "hidden"}>${this._escape(previewValue)}</strong><span class="tile-live-label tile-preview-target" data-highlight-target="label" ${presentation.show_label ? "" : "hidden"}>${this._escape(tile.short_label || tile.label || tile.id)}</span><small class="tile-live-secondary" ${presentation.show_secondary && (tile.secondary || tile.summary) ? "" : "hidden"}>${this._escape(tile.secondary || tile.summary || "")}</small></span>
             </div>
-            <div class="tile-preview-controls"><strong>Podgląd kafla</strong><span class="tile-preview-size">${this._escape(tile.size || "-")} · rozmiar ustawiany w Podglądzie</span><small>Zmiany formularza pojawiają się tutaj od razu. Przełącz stan, aby sprawdzić zachowanie kafla.</small><div class="tile-state-tabs">${[["normal", "Normalny"], ["active", "Aktywny"], ["unavailable", "Niedostępny"], ["missing", "Brak encji"]].map(([state, label]) => `<button type="button" data-preview-state="${state}" data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}" class="${previewState === state ? "active" : ""}" aria-pressed="${previewState === state ? "true" : "false"}">${label}</button>`).join("")}</div></div>
+            <div class="tile-preview-controls"><strong>Podgląd kafla</strong><span class="tile-preview-size">${this._escape(this._tileVariantLabel(tile.size))} · ${this._language === "en" ? "tile variant" : "wariant kafla"}</span><small>Zmiany formularza pojawiają się tutaj od razu. Przełącz stan, aby sprawdzić zachowanie kafla.</small><div class="tile-state-tabs">${[["normal", "Normalny"], ["active", "Aktywny"], ["unavailable", "Niedostępny"], ["missing", "Brak encji"]].map(([state, label]) => `<button type="button" data-preview-state="${state}" data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}" class="${previewState === state ? "active" : ""}" aria-pressed="${previewState === state ? "true" : "false"}">${label}</button>`).join("")}</div></div>
           </section>
           <div class="tile-editor-body">
             <section class="tile-section"><h3>Treść</h3><div class="fields">
@@ -3137,12 +3251,11 @@ class HapanelsStudioPanel extends HTMLElement {
             </div></section>
             <section class="tile-section"><h3>Wygląd</h3><div class="fields">
               ${this._selectField(`${prefix}-kind`, "Typ", TILE_KINDS, tile.kind || "entity", "span-6", "kind")}
-              ${surface === "aod" ? this._selectField(`${prefix}-size`, "Rozmiar", TILE_SIZES, tile.size || "large", "span-6", "size") : ""}
               <div class="tile-source-control" data-field-key="icon"><div class="tile-source-head"><span><strong>Ikona</strong><small>Automatyczna z encji albo własna MDI</small></span></div><div class="fields">${this._selectField(`${prefix}-iconSource`, "Źródło ikony", ICON_SOURCES, tile.icon_source || "custom", "span-6")}${this._iconField(`${prefix}-icon`, "Ikona (MDI)", this._mdiIcon(tile.icon), accent, "", "span-6")}</div></div>
               <div class="tile-source-control"><div class="tile-source-head"><span><strong>Kolor ikony</strong><small>Akcent, kolor encji albo własny</small></span></div><div class="fields">${this._selectField(`${prefix}-iconColorSource`, "Źródło koloru", ICON_COLOR_SOURCES, tile.icon_color_source || "accent", "span-6")}${this._inputField(`${prefix}-iconColor`, "Własny kolor #RRGGBB", tile.icon_color || "", "text", "span-6")}</div></div>
               ${this._selectField(`${prefix}-accent`, "Kolor akcentu kafla", TILE_ACCENTS, accent, "span-12", "accent")}
             </div></section>
-            ${usesPresentation ? `<section class="tile-section"><h3>Prezentacja</h3><div class="fields"><div class="layout-checks span-12">${[["showIcon", "Pokaż ikonę", presentation.show_icon], ["showLabel", "Pokaż nazwę", presentation.show_label], ["showValue", "Pokaż wartość", presentation.show_value], ["showSecondary", "Pokaż szczegóły", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}</div>${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-6")}${this._selectField(`${prefix}-border`, "Ramka", ["default", "none"], presentation.border, "span-6")}${this._selectField(`${prefix}-alignment`, "Wyrównanie treści", ["start", "center", "end"], presentation.content_alignment, "span-12")}</div></section>` : ""}
+            ${usesPresentation ? `<section class="tile-section"><h3>Prezentacja</h3><div class="fields">${this._tileVariantField(`${prefix}-size`, tile.size || "large")}<div class="layout-checks span-12">${[["showIcon", "Pokaż ikonę", presentation.show_icon], ["showLabel", "Pokaż nazwę", presentation.show_label], ["showValue", "Pokaż wartość", presentation.show_value], ["showSecondary", "Pokaż szczegóły", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}</div>${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-6")}${this._selectField(`${prefix}-border`, "Ramka", ["default", "none"], presentation.border, "span-6")}${this._selectField(`${prefix}-alignment`, "Wyrównanie treści", ["start", "center", "end"], presentation.content_alignment, "span-12")}</div></section>` : ""}
             ${usesBehavior ? `<section class="tile-section tile-section-wide"><h3>Zachowanie</h3><div class="fields">${this._actionEditor(prefix, "tap", tile.tap_action, tile.kind)}${this._actionEditor(prefix, "hold", tile.hold_action, tile.kind, true)}</div></section>` : ""}
             ${usesPanel || surface === "aod" ? `<section class="tile-section tile-section-wide"><h3>${usesPanel ? "Nawigacja" : "Zaawansowane"}</h3><div class="fields">${usesPanel ? this._inputField(`${prefix}-panel`, "Panel ID", tile.panel_id || "", "text", "span-6", "panel") : ""}${surface === "aod" ? `${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}` : ""}</div></section>` : ""}
             ${clockSection}${coverSection}${childSection}
@@ -3218,6 +3331,17 @@ class HapanelsStudioPanel extends HTMLElement {
     return `<div class="field ${span}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._fieldLabel(label)}</label><select id="${this._escape(id)}">${options.map((option) => `<option value="${this._escape(option)}" ${option === selected ? "selected" : ""}>${this._escape(option)}</option>`).join("")}</select></div>`;
   }
 
+  _tileVariantField(id, selected) {
+    return `<div class="field span-12" data-field-key="size"><label for="${this._escape(id)}">${this._fieldLabel("Wariant kafla")}</label><select id="${this._escape(id)}">${TILE_SIZES.map((value) => `<option value="${value}" ${value === selected ? "selected" : ""}>${this._escape(this._tileVariantLabel(value))}</option>`).join("")}</select><small class="variant-help"><span>Określa sposób prezentacji zawartości. Nie zmienia położenia ani wymiarów kafla.</span><span><strong>Pełny</strong> - duża ikona i pełne informacje; zalecany dla zegara i kamery.</span><span><strong>Kompaktowy</strong> - mniejsza ikona i skrócone informacje.</span><span><strong>Przycisk</strong> - zwarty układ dla szybkich akcji.</span><span>Wymiary kafla ustawisz w Podglądzie, przeciągając jego krawędzie.</span></small></div>`;
+  }
+
+  _tileVariantLabel(value) {
+    const labels = this._language === "en"
+      ? { large: "Full", small: "Compact", action: "Button" }
+      : { large: "Pełny", small: "Kompaktowy", action: "Przycisk" };
+    return labels[value] || labels.large;
+  }
+
   _iconField(id, label, selected, accent = "orange", fieldKey = "", span = "span-4") {
     const accentClass = `accent-${this._escape(accent)}`;
     return `<div class="field ${this._escape(span)}" ${fieldKey ? `data-field-key="${this._escape(fieldKey)}"` : ""}><label for="${this._escape(id)}">${this._fieldLabel(label)}</label><div class="icon-field ${accentClass}"><div class="icon-preview ${accentClass}"><ha-icon icon="${this._escape(selected)}"></ha-icon></div>${customElements.get("ha-icon-picker") ? `<ha-icon-picker id="${this._escape(id)}" value="${this._escape(selected)}"></ha-icon-picker>` : `<input id="${this._escape(id)}" value="${this._escape(selected)}" placeholder="mdi:cog">`}</div></div>`;
@@ -3231,6 +3355,7 @@ class HapanelsStudioPanel extends HTMLElement {
       "Panel ID": "Identyfikator panelu otwieranego przez folder, popup lub kategorię.",
       "Źródło ikony": "Automatyczna używa ikony encji; custom pozwala wybrać własną ikonę MDI.",
       "Źródło koloru": "Wybiera akcent kafla, aktualny kolor encji albo własny kolor.",
+      "Wariant kafla": "Zmienia układ zawartości kafla, ale nie jego położenie ani wymiary.",
       "Wyrównanie treści": "Wyrównuje ikonę, nazwę i wartości wewnątrz kafla.",
       "Pojedyncze kliknięcie": "Akcja wykonywana po krótkim dotknięciu kafla.",
       "Przytrzymanie": "Osobna akcja wykonywana po przytrzymaniu kafla.",
@@ -3263,10 +3388,22 @@ class HapanelsStudioPanel extends HTMLElement {
   _resolvedIconColor(tile) {
     if (tile.icon_color_source === "custom" && tile.icon_color) return tile.icon_color;
     if (tile.icon_color_source === "entity") {
-      const rgb = this._hass?.states?.[tile.entity_id]?.attributes?.rgb_color;
+      const state = this._hass?.states?.[tile.entity_id];
+      if (["unknown", "unavailable"].includes(state?.state)) return "#ff725d";
+      const rgb = state?.attributes?.rgb_color;
       if (Array.isArray(rgb) && rgb.length >= 3) return `rgb(${rgb.slice(0, 3).join(",")})`;
+      const hs = state?.attributes?.hs_color;
+      if (Array.isArray(hs) && hs.length >= 2) return `hsl(${Number(hs[0]) || 0} ${Number(hs[1]) || 0}% 50%)`;
+      if (state?.state === "on") return "#48c97a";
+      if (state) return "var(--muted)";
     }
     return this._accentColor(tile.accent || "orange");
+  }
+
+  _resolvedIcon(tile) {
+    return tile.icon_source === "auto"
+      ? this._hass?.states?.[tile.entity_id]?.attributes?.icon || this._domainIcon(tile.entity_id || "")
+      : this._mdiIcon(tile.icon);
   }
 
   _settingsView() {
@@ -3366,6 +3503,9 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-select-device]").forEach((button) => {
       button.addEventListener("click", () => { this._hiddenDevices.delete(button.dataset.selectDevice); localStorage.setItem("hapanels_hidden_devices", JSON.stringify([...this._hiddenDevices])); this._tabletPickerOpen = false; this._selectedDevice = button.dataset.selectDevice; this._activeTab = "tiles"; this._render(); });
     });
+    this.shadowRoot.querySelectorAll("[data-preview-device]").forEach((button) => {
+      button.addEventListener("click", () => { this._selectedDevice = button.dataset.previewDevice; this._activeTab = "preview"; this._render(); });
+    });
     this.shadowRoot.querySelectorAll("[data-hide-device]").forEach((button) => {
       button.addEventListener("click", () => this._askConfirm("Usunąć tablet?", "Czy na pewno chcesz usunąć tablet?", () => this._hideDevice(button.dataset.hideDevice)));
     });
@@ -3377,6 +3517,20 @@ class HapanelsStudioPanel extends HTMLElement {
         this._render();
       });
     });
+    const tablist = this.shadowRoot.querySelector('[role="tablist"]');
+    tablist?.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+      const current = Math.max(0, tabs.indexOf(event.target.closest('[role="tab"]')));
+      const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      event.preventDefault();
+      tabs[next]?.focus();
+      tabs[next]?.click();
+    });
+    const activeTab = tablist?.querySelector('[role="tab"][aria-selected="true"]');
+    if (activeTab && (activeTab.offsetLeft < tablist.scrollLeft || activeTab.offsetLeft + activeTab.offsetWidth > tablist.scrollLeft + tablist.clientWidth)) {
+      tablist.scrollTo({ left: activeTab.offsetLeft - (tablist.clientWidth - activeTab.offsetWidth) / 2, behavior: "smooth" });
+    }
     this.shadowRoot.getElementById("tile-search")?.addEventListener("input", (event) => {
       this._tileSearch = event.target.value;
       const query = this._tileSearch.trim().toLowerCase();
@@ -3480,9 +3634,6 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-aod-clock-style]").forEach((button) => {
       button.addEventListener("click", () => this._applyAodClockStyle(button.dataset.device, button.dataset.aodClockStyle));
     });
-    this.shadowRoot.querySelectorAll("[data-preview-size]").forEach((select) => {
-      select.addEventListener("change", () => this._setTileSize(select.dataset.device, select.dataset.tile, select.value));
-    });
     this.shadowRoot.querySelectorAll("#layout-columns, #layout-rows, #layout-aspect-width, #layout-aspect-height").forEach((input) => {
       input.addEventListener("input", () => this._updateLayoutGrid());
       input.addEventListener("change", () => this._updateLayoutGrid());
@@ -3515,9 +3666,6 @@ class HapanelsStudioPanel extends HTMLElement {
       this._layoutContext = event.target.value || "main";
       this._layoutDrag = null;
       this._render();
-    });
-    this.shadowRoot.querySelectorAll("#layout-tile-size").forEach((input) => {
-      input.addEventListener("change", () => this._syncSelectedLayoutTile());
     });
     this.shadowRoot.querySelector("[data-layout-tray]")?.addEventListener("click", () => this._layoutTileToTray());
     this.shadowRoot.querySelectorAll("[data-layout-restore]").forEach((button) => {
@@ -3671,7 +3819,8 @@ class HapanelsStudioPanel extends HTMLElement {
     if (!tile || !prefix) return;
     const value = (suffix) => this.shadowRoot.getElementById(`${prefix}-${suffix}`)?.value?.trim() || "";
     const accent = value("accent") || "orange";
-    const icon = value("iconSource") === "auto" ? (this._hass?.states?.[value("entity")]?.attributes?.icon || this._domainIcon(value("entity"))) : this._mdiIcon(value("icon"));
+    const previewTile = { entity_id: value("entity"), icon: value("icon"), icon_source: value("iconSource"), icon_color_source: value("iconColorSource"), icon_color: value("iconColor"), accent: value("accent") || "orange" };
+    const icon = this._resolvedIcon(previewTile);
     const label = value("short") || value("label") || tile.querySelector(".tile-editor-title h2")?.textContent || "Kafel";
     const entity = value("entity");
     const kind = value("kind") || "entity";
@@ -3680,8 +3829,7 @@ class HapanelsStudioPanel extends HTMLElement {
     tile.querySelector(".tile-live-icon")?.setAttribute("icon", icon);
     const liveIcon = tile.querySelector(".tile-live-icon");
     if (liveIcon) {
-      const customColor = value("iconColorSource") === "custom" && /^#[0-9a-f]{6}$/i.test(value("iconColor")) ? value("iconColor") : this._accentColor(accent);
-      liveIcon.style.color = customColor;
+      liveIcon.style.color = this._resolvedIconColor(previewTile);
       liveIcon.hidden = !this.shadowRoot.getElementById(`${prefix}-showIcon`)?.checked;
     }
     const previewBox = tile.querySelector(".tile-preview-box");
@@ -3709,8 +3857,13 @@ class HapanelsStudioPanel extends HTMLElement {
       liveSecondary.textContent = secondary;
     }
     setText(".tile-live-kind", kind);
-    setText(".tile-live-size", value("size") || "-");
+    setText(".tile-live-size", this._tileVariantLabel(value("size")));
     setText(".tile-live-accent", accent);
+    const masterIcon = this.shadowRoot.querySelector(`[data-select-tile="${CSS.escape(tile.dataset.tileId)}"] ha-icon`);
+    if (masterIcon) {
+      masterIcon.setAttribute("icon", icon);
+      masterIcon.style.color = this._resolvedIconColor(previewTile);
+    }
     const coverPreview = tile.querySelector(".cover-preview");
     if (coverPreview) {
       coverPreview.className = `cover-preview span-12 cover-${value("coverVisual") || "blind"} cover-${value("coverDirection") || "top"}`;

@@ -357,6 +357,40 @@ const STUDIO_TRANSLATIONS_EN = {
   "Brak pobranej konfiguracji dashboardu.": "No dashboard configuration loaded.",
   "Kafel HA": "HA tile",
   "Kafel panelu": "Panel tile",
+  "Szukaj po nazwie lub encji…": "Search by name or entity…",
+  "Wszystkie typy": "All types",
+  "Treść": "Content",
+  "Krótka nazwa": "Short label",
+  "Źródło / encja": "Source / entity",
+  "Podsumowanie": "Summary",
+  "Wartość dodatkowa": "Secondary value",
+  "Prezentacja": "Presentation",
+  "Pokaż ikonę": "Show icon",
+  "Pokaż nazwę": "Show name",
+  "Pokaż wartość": "Show value",
+  "Pokaż szczegóły": "Show details",
+  "Ramka": "Border",
+  "Wyrównanie treści": "Content alignment",
+  "Zachowanie": "Behavior",
+  "Panel": "Panel",
+  "Usuń kafel": "Delete tile",
+  "Przywróć domyślne": "Restore defaults",
+  "Zobacz w Podglądzie": "Show in Preview",
+  "Zapisz kafel": "Save tile",
+  "Brak niezapisanych zmian": "No unsaved changes",
+  "Popraw błędy": "Fix errors",
+  "Normalny": "Normal",
+  "Niedostępny": "Unavailable",
+  "Brak encji": "Missing entity",
+  "Uzupełnij brakujące dane kafli w Kaflach przed zapisem.": "Complete missing tile data in Tiles before saving.",
+  "Zmiany formularza pojawiają się tutaj od razu. Przełącz stan, aby sprawdzić zachowanie kafla.": "Form changes appear here immediately. Switch state to check tile behavior.",
+  "Pojedyncze kliknięcie": "Single tap",
+  "Przytrzymanie": "Hold",
+  "Brak akcji": "No action",
+  "Domyślna akcja encji": "Default entity action",
+  "Pokaż więcej informacji": "Show more information",
+  "Otwórz ekran aplikacji": "Open app screen",
+  "Akcja lokalna panelu": "Local panel action",
   "Always On Display": "Always On Display",
   "Wygaszacz ekranu dla tabletu.": "Tablet screensaver.",
   "Włączony": "On",
@@ -550,13 +584,31 @@ class HapanelsStudioPanel extends HTMLElement {
     this._hiddenDevices = new Set(JSON.parse(localStorage.getItem("hapanels_hidden_devices") || "[]"));
     this._expandedTiles = new Set(JSON.parse(localStorage.getItem("hapanels_expanded_tiles") || "[]"));
     this._layoutKeydown = (event) => this._handleLayoutKeydown(event);
+    this._beforeUnload = (event) => {
+      if (!this._hasUnsavedDrafts()) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
     window.addEventListener("keydown", this._layoutKeydown);
+    window.addEventListener("beforeunload", this._beforeUnload);
     this._render();
     this._load();
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this._layoutKeydown);
+    window.removeEventListener("beforeunload", this._beforeUnload);
+  }
+
+  _hasUnsavedDrafts() {
+    if (Object.keys(this._tileDrafts || {}).length) return true;
+    for (const [device, config] of Object.entries(this._configs || {})) {
+      const prefix = `${device}:${config.revision ?? "new"}:`;
+      for (const [key, draft] of Object.entries(this._layoutDrafts || {})) {
+        if (key.startsWith(prefix) && draft?.context && this._isLayoutDirty(device, config, draft)) return true;
+      }
+    }
+    return false;
   }
 
   set hass(hass) {
@@ -803,7 +855,7 @@ class HapanelsStudioPanel extends HTMLElement {
       delete current.hold_action;
     }
     const parseErrors = [];
-    if (current.kind !== "spacer") {
+    if (current.kind !== "spacer" && element("tap-type")) {
       current.tap_action = this._actionFromForm(prefix, "tap", current.kind, parseErrors);
       const holdType = value("hold-type");
       if (holdType && holdType !== "unset") current.hold_action = this._actionFromForm(prefix, "hold", current.kind, parseErrors);
@@ -999,8 +1051,29 @@ class HapanelsStudioPanel extends HTMLElement {
       const target = next.always_on_display ||= {};
       target.tiles = (target.tiles || []).filter((tile) => tile.id !== tileId);
     } else {
+      const persisted = !!this._savedTile(device, tileId);
+      const prefix = `${device}:${config.revision ?? "new"}:`;
+      const tray = this._layoutDrafts?.[`${prefix}tray`];
+      if (Array.isArray(tray)) tray.splice(0, tray.length, ...tray.filter((tile) => tile.id !== tileId));
+      for (const [key, draft] of Object.entries(this._layoutDrafts || {})) {
+        if (!key.startsWith(prefix) || key === `${prefix}tray` || !Array.isArray(draft?.tiles)) continue;
+        draft.tiles = draft.tiles.filter((tile) => tile.id !== tileId);
+        if (draft.selectedTileId === tileId) draft.selectedTileId = draft.tiles[0]?.id || null;
+      }
+      const draftKey = this._tileDraftKey(device, tileId);
+      delete this._tileDrafts[draftKey];
+      delete this._tileValidation[draftKey];
+      delete this._tileSaveStatus[draftKey];
+      delete this._tilePreviewStates[draftKey];
+      if (this._selectedTileId === tileId) this._selectedTileId = null;
+      if (!persisted) {
+        this._render();
+        return;
+      }
       next.tiles = (next.tiles || []).filter((tile) => tile.id !== tileId);
       next.panels = (next.panels || []).map((panel) => ({ ...panel, tiles: (panel.tiles || []).filter((tile) => tile.id !== tileId) }));
+      if (next.extensions?.layout_tray) next.extensions.layout_tray = next.extensions.layout_tray.filter((tile) => tile.id !== tileId);
+      if (next.extensions?.legacy_layout_editor?.tray) next.extensions.legacy_layout_editor.tray = next.extensions.legacy_layout_editor.tray.filter((tile) => tile.id !== tileId);
     }
     await this._setConfig(device, next);
   }
@@ -1106,6 +1179,7 @@ class HapanelsStudioPanel extends HTMLElement {
         .sub { color: var(--muted); margin-top: 8px; }
         .actions { display: flex; gap: 10px; align-items: center; }
         button { border: 0; border-radius: 14px; background: var(--accent); color: #1a0d03; padding: 11px 16px; font-weight: 850; cursor: pointer; }
+        button:focus-visible, input:focus-visible, select:focus-visible, ha-entity-picker:focus-visible, ha-icon-picker:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 72%, white); outline-offset: 2px; }
         button.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
         button.danger { background: rgba(255,83,56,.14); color: #ff725d; border: 1px solid rgba(255,83,56,.30); }
         .iconbtn { width: 44px; height: 44px; padding: 0; display: grid; place-items: center; font-size: 20px; }
@@ -1709,7 +1783,7 @@ class HapanelsStudioPanel extends HTMLElement {
         </div>
       </div>
       <div class="tiles-master-detail">
-        <aside class="tile-master">
+        <aside class="tile-master" aria-label="Lista kafli">
           ${visibleGroups.map((group) => `<section class="tile-group"><h3>${this._escape(group.label)}</h3>${group.tiles.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((tile) => this._tileMasterItem(device, tile)).join("")}</section>`).join("") || `<span class="sub">Brak wyników.</span>`}
         </aside>
         ${selected ? this._tileEditor(device, selected, "dashboard", true) : `<div class="tile-editor-empty">Wybierz kafel.</div>`}
@@ -1719,7 +1793,7 @@ class HapanelsStudioPanel extends HTMLElement {
   _tileMasterItem(device, savedTile) {
     const tile = this._tileWithDraft(device, savedTile);
     const dirty = !!this._tileDrafts?.[this._tileDraftKey(device, tile.id)];
-    return `<button class="tile-master-item ${tile.id === this._selectedTileId ? "active" : ""}" data-select-tile="${this._escape(tile.id)}" title="${this._escape(tile.entity_id || tile.id)}"><span class="tile-master-icon"><ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon></span><span class="tile-master-copy"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><small>${this._escape(tile.entity_id || this._panelTileKindLabel(tile.kind))}</small></span>${dirty ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : `<i class="tile-kind-badge">${this._escape(tile.kind)}</i>`}</button>`;
+    return `<button class="tile-master-item ${tile.id === this._selectedTileId ? "active" : ""}" data-select-tile="${this._escape(tile.id)}" title="${this._escape(tile.entity_id || tile.id)}" aria-current="${tile.id === this._selectedTileId ? "true" : "false"}"><span class="tile-master-icon"><ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon></span><span class="tile-master-copy"><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><small>${this._escape(tile.entity_id || this._panelTileKindLabel(tile.kind))}</small></span>${dirty ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : `<i class="tile-kind-badge">${this._escape(tile.kind)}</i>`}</button>`;
   }
 
   _aodView(device, config) {
@@ -1890,14 +1964,14 @@ class HapanelsStudioPanel extends HTMLElement {
               ${this._layoutGhost(draft)}
             </div>
           </div>
-          <span class="layout-save-status" data-state="${saveState}">${saveLabel}</span>
+          <span class="layout-save-status" data-state="${saveState}" role="status" aria-live="polite">${saveLabel}</span>
           <div class="layout-workspace-actions">
             <div class="layout-buttons">
               <button class="small secondary" data-layout-undo title="Cofnij zmianę (Ctrl+Z)" ${history?.undo.length ? "" : "disabled"}>Cofnij</button>
               <button class="small secondary" data-layout-redo title="Ponów zmianę (Ctrl+Y lub Ctrl+Shift+Z)" ${history?.redo.length ? "" : "disabled"}>Ponów</button>
             </div>
             <div class="layout-buttons">
-              ${incomplete.length ? `<span class="warning">Uzupełnij ${this._escape(incomplete.length)} kafel w Kaflach przed zapisem.</span>` : ""}
+              ${incomplete.length ? `<span class="warning">Uzupełnij brakujące dane kafli w Kaflach przed zapisem.</span>` : ""}
               <button class="small secondary" data-layout-reset data-device="${this._escape(device)}" title="Odrzuca niezapisane zmiany i przywraca aktualnie zapisany układ">Odrzuć niezapisane zmiany</button>
               <button class="small secondary" data-layout-previous-revision data-device="${this._escape(device)}" title="Przywraca poprzednią zapisaną konfigurację jako nową rewizję" ${previousConfig ? "" : "disabled"}>Przywróć poprzedni zapis</button>
               <button class="small" data-layout-save data-device="${this._escape(device)}" ${!dirty || saveBusy || incomplete.length ? "disabled" : ""}>Zapisz układ</button>
@@ -2924,6 +2998,12 @@ class HapanelsStudioPanel extends HTMLElement {
     const statusLabel = { dirty: "Niezapisane zmiany", saving: "Zapisywanie…", saved: explicitStatus === "saved" ? "Zapisano" : "Brak niezapisanych zmian", error: "Popraw błędy" }[status];
     const previewState = this._tilePreviewStates[key] || (tile.entity_id && !this._hass?.states?.[tile.entity_id] ? "missing" : "normal");
     const previewValue = this._tilePreviewValue(tile, previewState);
+    const usesEntity = ["entity", "cover", "camera"].includes(tile.kind);
+    const usesDetails = ["entity", "cover", "camera", "category"].includes(tile.kind);
+    const usesPanel = ["folder", "popup", "category"].includes(tile.kind);
+    const usesPresentation = tile.kind !== "spacer";
+    const usesBehavior = surface === "dashboard" && ["entity", "cover", "camera", "action", "text"].includes(tile.kind);
+    const inTray = surface === "dashboard" && this._layoutTileLocation(device, tile.id)?.tray;
     const collapsedKey = `${surface}:${device}:${tile.id}`;
     const focused = this._focusedTileId === tile.id;
     const collapsed = !masterDetail && !focused && !this._expandedTiles.has(collapsedKey);
@@ -2965,16 +3045,16 @@ class HapanelsStudioPanel extends HTMLElement {
               <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(previewIcon)}" style="color:${this._escape(iconColor)}" ${presentation.show_icon ? "" : "hidden"}></ha-icon>
               <span class="tile-preview-main"><strong class="tile-live-entity tile-preview-target" data-highlight-target="entity" ${presentation.show_value ? "" : "hidden"}>${this._escape(previewValue)}</strong><span class="tile-live-label tile-preview-target" data-highlight-target="label" ${presentation.show_label ? "" : "hidden"}>${this._escape(tile.short_label || tile.label || tile.id)}</span><small class="tile-live-secondary" ${presentation.show_secondary && (tile.secondary || tile.summary) ? "" : "hidden"}>${this._escape(tile.secondary || tile.summary || "")}</small></span>
             </div>
-            <div class="tile-preview-controls"><strong>Podgląd kafla</strong><span class="tile-preview-size">${this._escape(tile.size || "-")} · rozmiar ustawiany w Podglądzie</span><small>Zmiany formularza pojawiają się tutaj od razu. Przełącz stan, aby sprawdzić zachowanie kafla.</small><div class="tile-state-tabs">${[["normal", "Normalny"], ["active", "Aktywny"], ["unavailable", "Niedostępny"], ["missing", "Brak encji"]].map(([state, label]) => `<button type="button" data-preview-state="${state}" data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}" class="${previewState === state ? "active" : ""}">${label}</button>`).join("")}</div></div>
+            <div class="tile-preview-controls"><strong>Podgląd kafla</strong><span class="tile-preview-size">${this._escape(tile.size || "-")} · rozmiar ustawiany w Podglądzie</span><small>Zmiany formularza pojawiają się tutaj od razu. Przełącz stan, aby sprawdzić zachowanie kafla.</small><div class="tile-state-tabs">${[["normal", "Normalny"], ["active", "Aktywny"], ["unavailable", "Niedostępny"], ["missing", "Brak encji"]].map(([state, label]) => `<button type="button" data-preview-state="${state}" data-device="${this._escape(device)}" data-tile="${this._escape(tile.id)}" class="${previewState === state ? "active" : ""}" aria-pressed="${previewState === state ? "true" : "false"}">${label}</button>`).join("")}</div></div>
           </section>
           <div class="tile-editor-body">
             <section class="tile-section"><h3>Treść</h3><div class="fields">
               ${this._inputField(`${prefix}-label`, "Nazwa", tile.label || tile.id, "text", "span-6", "label")}
               ${this._inputField(`${prefix}-short`, "Krótka nazwa", tile.short_label || "", "text", "span-6", "label")}
-              ${this._entityField(`${prefix}-entity`, "Źródło / encja", tile.entity_id || "", "entity", "span-12", tile.kind === "cover" ? ["cover"] : null)}
+              ${usesEntity ? this._entityField(`${prefix}-entity`, "Źródło / encja", tile.entity_id || "", "entity", "span-12", tile.kind === "cover" ? ["cover"] : null) : ""}
               ${tile.kind === "text" ? this._inputField(`${prefix}-content`, "Treść", tile.content || "", "text", "span-12") : ""}
-              ${this._inputField(`${prefix}-summary`, "Podsumowanie", tile.summary || "", "text", "span-6")}
-              ${this._inputField(`${prefix}-secondary`, "Wartość dodatkowa", tile.secondary || "", "text", "span-6")}
+              ${usesDetails ? this._inputField(`${prefix}-summary`, "Podsumowanie", tile.summary || "", "text", "span-6") : ""}
+              ${usesDetails ? this._inputField(`${prefix}-secondary`, "Wartość dodatkowa", tile.secondary || "", "text", "span-6") : ""}
             </div></section>
             <section class="tile-section"><h3>Wygląd</h3><div class="fields">
               ${this._selectField(`${prefix}-kind`, "Typ", TILE_KINDS, tile.kind || "entity", "span-6", "kind")}
@@ -2983,13 +3063,13 @@ class HapanelsStudioPanel extends HTMLElement {
               <div class="tile-source-control"><div class="tile-source-head"><span><strong>Kolor ikony</strong><small>Akcent, kolor encji albo własny</small></span></div><div class="fields">${this._selectField(`${prefix}-iconColorSource`, "Źródło koloru", ICON_COLOR_SOURCES, tile.icon_color_source || "accent", "span-6")}${this._inputField(`${prefix}-iconColor`, "Własny kolor #RRGGBB", tile.icon_color || "", "text", "span-6")}</div></div>
               ${this._selectField(`${prefix}-accent`, "Kolor akcentu kafla", TILE_ACCENTS, accent, "span-12", "accent")}
             </div></section>
-            <section class="tile-section"><h3>Prezentacja</h3><div class="fields"><div class="layout-checks span-12">${[["showIcon", "Pokaż ikonę", presentation.show_icon], ["showLabel", "Pokaż nazwę", presentation.show_label], ["showValue", "Pokaż wartość", presentation.show_value], ["showSecondary", "Pokaż szczegóły", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}</div>${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-6")}${this._selectField(`${prefix}-border`, "Ramka", ["default", "none"], presentation.border, "span-6")}${this._selectField(`${prefix}-alignment`, "Wyrównanie treści", ["start", "center", "end"], presentation.content_alignment, "span-12")}</div></section>
-            ${surface === "dashboard" ? `<section class="tile-section tile-section-wide"><h3>Zachowanie</h3><div class="fields">${this._actionEditor(prefix, "tap", tile.tap_action, tile.kind)}${this._actionEditor(prefix, "hold", tile.hold_action, tile.kind, true)}</div></section>` : ""}
-            <section class="tile-section tile-section-wide"><h3>Zaawansowane</h3><div class="fields">${this._inputField(`${prefix}-panel`, "Panel (opcjonalnie)", tile.panel_id || "", "text", "span-6", "panel")}${surface === "dashboard" ? `<span class="sub span-6">Rozmiar, kolejność i położenie ustawisz w Podglądzie.</span>` : `${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}`}</div></section>
+            ${usesPresentation ? `<section class="tile-section"><h3>Prezentacja</h3><div class="fields"><div class="layout-checks span-12">${[["showIcon", "Pokaż ikonę", presentation.show_icon], ["showLabel", "Pokaż nazwę", presentation.show_label], ["showValue", "Pokaż wartość", presentation.show_value], ["showSecondary", "Pokaż szczegóły", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}</div>${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-6")}${this._selectField(`${prefix}-border`, "Ramka", ["default", "none"], presentation.border, "span-6")}${this._selectField(`${prefix}-alignment`, "Wyrównanie treści", ["start", "center", "end"], presentation.content_alignment, "span-12")}</div></section>` : ""}
+            ${usesBehavior ? `<section class="tile-section tile-section-wide"><h3>Zachowanie</h3><div class="fields">${this._actionEditor(prefix, "tap", tile.tap_action, tile.kind)}${this._actionEditor(prefix, "hold", tile.hold_action, tile.kind, true)}</div></section>` : ""}
+            ${usesPanel || surface === "aod" ? `<section class="tile-section tile-section-wide"><h3>Zaawansowane</h3><div class="fields">${usesPanel ? this._inputField(`${prefix}-panel`, "Panel", tile.panel_id || "", "text", "span-6", "panel") : ""}${surface === "aod" ? `${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}` : ""}</div></section>` : ""}
             ${clockSection}${coverSection}${childSection}
           </div>
           <ul class="tile-validation" data-tile-validation ${errors.length ? "" : "hidden"}>${errors.map((error) => `<li>${this._escape(error)}</li>`).join("")}</ul>
-          <footer class="tile-footer"><button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń kafel</button><div class="tile-actions">${masterDetail ? `<button class="small secondary" data-tile-reset title="Przywraca domyślne ustawienia, zachowując nazwę, encję i położenie">Przywróć domyślne</button><button class="small secondary" data-show-in-preview title="Pokaż ten kafel w jego panelu">Zobacz w Podglądzie</button><span class="tile-save-status ${status}">${statusLabel}</span>` : ""}<button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}" ${status === "saving" ? "disabled" : ""}>Zapisz kafel</button></div></footer>
+          <footer class="tile-footer"><button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń kafel</button><div class="tile-actions">${masterDetail ? `<button class="small secondary" data-tile-reset title="Przywraca domyślne ustawienia, zachowując nazwę, encję i położenie">Przywróć domyślne</button>${inTray ? "" : `<button class="small secondary" data-show-in-preview title="Pokaż ten kafel w jego panelu">Zobacz w Podglądzie</button>`}<span class="tile-save-status ${status}" role="status" aria-live="polite">${statusLabel}</span>` : ""}<button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}" ${status === "saving" ? "disabled" : ""}>Zapisz kafel</button></div></footer>
         </div></div>
       </div>`;
   }

@@ -109,9 +109,25 @@ function migrateStudioTile(tile, { ownerPanelId = null, interactive = true, repo
 }
 
 function resetTileAuthoring(tile) {
-  const fields = ["id", "label", "short_label", "entity_id", "panel_id", "content", "order", "col", "row", "colSpan", "rowSpan"];
+  const kind = TILE_KINDS.includes(tile.kind) ? tile.kind : "entity";
+  const fields = ["id", "label", "short_label", "size", "order", "col", "row", "colSpan", "rowSpan"];
+  if (["entity", "cover", "camera"].includes(kind) || kind === "category" && !tile.panel_id) fields.push("entity_id");
+  if (PANEL_OPENER_KINDS.includes(kind) && tile.panel_id) fields.push("panel_id");
+  if (kind === "text") fields.push("content");
   const keep = Object.fromEntries(fields.filter((field) => tile[field] != null).map((field) => [field, structuredClone(tile[field])]));
-  return migrateStudioTile({ kind: tile.kind || "entity", size: "large", icon: tile.entity_id ? "mdi:cog" : "mdi:shape", accent: "orange", ...keep });
+  const defaults = {
+    entity: { icon: "mdi:cog" },
+    cover: { icon: "mdi:blinds", cover_visual: "blind", cover_direction: "top" },
+    camera: { icon: "mdi:cctv" },
+    category: { icon: "mdi:shape" },
+    action: { icon: "mdi:gesture-tap" },
+    clock: { icon: "mdi:clock-outline", clock_style: "classic" },
+    folder: { icon: "mdi:folder" },
+    popup: { icon: "mdi:view-grid-plus" },
+    text: { icon: "mdi:text" },
+    spacer: { icon: "mdi:crop-free" },
+  };
+  return migrateStudioTile({ kind, size: tile.size || "large", accent: "orange", ...defaults[kind], ...keep });
 }
 
 function parseJsonField(value, fallback, errors, path) {
@@ -401,6 +417,7 @@ const STUDIO_TRANSLATIONS_EN = {
   "Encja akcji": "Action entity",
   "Ekran aplikacji": "App screen",
   "Panel ID": "Panel ID",
+  "Nawigacja": "Navigation",
   "Akcja lokalna": "Local action",
   "Potwierdzenie JSON": "Confirmation JSON",
   "Brak wyników.": "No results.",
@@ -408,9 +425,11 @@ const STUDIO_TRANSLATIONS_EN = {
   "Lista kafli": "Tile list",
   "Pokaż ten kafel w jego panelu": "Show this tile in its panel",
   "Przywraca domyślne ustawienia, zachowując nazwę, encję i położenie": "Restores defaults while preserving name, entity, and placement",
+  "Przywraca domyślny wygląd i zachowanie; zachowuje treść, cel, rozmiar i położenie": "Restores default appearance and behavior while preserving content, target, size, and placement",
   "Główna nazwa kafla widoczna na panelu i liście kafli.": "Main tile name shown on the panel and tile list.",
   "Krótszy tekst używany, gdy pełna nazwa nie mieści się na kaflu.": "Shorter text used when the full name does not fit on the tile.",
   "Encja Home Assistant dostarczająca stan i domyślne zachowanie.": "Home Assistant entity providing state and default behavior.",
+  "Identyfikator panelu otwieranego przez folder, popup lub kategorię.": "ID of the panel opened by the folder, popup, or category.",
   "Automatyczna używa ikony encji; custom pozwala wybrać własną ikonę MDI.": "Automatic uses the entity icon; custom selects an MDI icon.",
   "Wybiera akcent kafla, aktualny kolor encji albo własny kolor.": "Uses tile accent, current entity color, or a custom color.",
   "Wyrównuje ikonę, nazwę i wartości wewnątrz kafla.": "Aligns icon, name, and values inside the tile.",
@@ -532,6 +551,9 @@ const STUDIO_TRANSLATIONS_EN = {
   "Widoczne informacje kafla": "Visible tile information",
   "Zawartość popupu": "Popup contents",
   "Zawartość folderu": "Folder contents",
+  "Otwórz układ": "Open layout",
+  "Zapisz kafel, aby utworzyć jego panel i dodać zawartość.": "Save the tile to create its panel and add contents.",
+  "brak Panel ID": "missing Panel ID",
   "Brak kafli. Dodaj pierwszy kafel Home Assistant.": "No tiles. Add the first Home Assistant tile.",
   "Dodaj kafel HA do zawartości +": "Add HA tile to contents +",
   "Ustawienia Studio": "Studio settings",
@@ -714,6 +736,15 @@ class HapanelsStudioPanel extends HTMLElement {
     }
     if (surface === "dashboard") Object.keys(targetTile).forEach((key) => delete targetTile[key]);
     Object.assign(targetTile, structuredClone(tile));
+    const savesPanel = surface === "dashboard" && PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id;
+    if (savesPanel) {
+      let panel = projected.panels.find((item) => item.id === tile.panel_id);
+      if (!panel) {
+        panel = { id: tile.panel_id, title: tile.label, layout: { ...projected.layout }, tiles: [] };
+        projected.panels.push(panel);
+      }
+      panel.title = tile.label;
+    }
     const validationErrors = validateDashboardConfig(projected);
     if (validationErrors.length) {
       const key = this._tileDraftKey(device, tileId);
@@ -725,6 +756,23 @@ class HapanelsStudioPanel extends HTMLElement {
     const key = this._tileDraftKey(device, tileId);
     this._tileSaveStatus[key] = "saving";
     this._render();
+    if (savesPanel) {
+      try {
+        const saved = await this._setConfig(device, projected);
+        if (saved) {
+          delete this._tileDrafts[key];
+          delete this._tileValidation[key];
+          this._tileSaveStatus[key] = "saved";
+        } else {
+          this._tileSaveStatus[key] = "error";
+        }
+      } catch (err) {
+        this._tileSaveStatus[key] = "error";
+        this._tileValidation[key] = [`Zapis: ${err?.message || err}`];
+      }
+      this._render();
+      return;
+    }
     this._rememberPreviousConfig(device, config);
     try {
       await this._hass.callService("hapanels", "patch_dashboard_config", { device, patch: { base_revision: revision, updated_by: "homeassistant:hapanels_studio", surface, tile_updates: [tile] } });
@@ -1336,6 +1384,12 @@ class HapanelsStudioPanel extends HTMLElement {
         .child-tiles { display: grid; gap: 8px; margin-top: 10px; }
         .child-tile { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
         .child-tile small { display: block; color: var(--muted); margin-top: 2px; }
+        .child-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .child-section-head h3 { margin-bottom: 4px; }
+        .child-section-head small { color: var(--muted); }
+        .child-tile-copy { min-width: 0; }
+        .child-tile-copy strong, .child-tile-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .child-tile-actions { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; }
         label { color: var(--muted); font-size: 12px; font-weight: 800; }
         .version { display: inline-flex; align-items: center; margin-left: 10px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 12px; font-weight: 800; vertical-align: middle; }
         input, select, ha-entity-picker { min-width: 0; width: 100%; font: inherit; }
@@ -1959,7 +2013,7 @@ class HapanelsStudioPanel extends HTMLElement {
             </label>
             <div class="layout-buttons">
               <button class="small add-button" data-layout-add-ha>Kafel HA</button>
-              <button class="small add-button secondary" data-pick-panel-tile data-target="layout" ${context.id === "main" ? "" : "disabled"}>Kafel panelu</button>
+              <button class="small add-button secondary" data-pick-panel-tile data-target="layout">Kafel panelu</button>
               <button class="small secondary" data-layout-tray>Usuń kafelek</button>
             </div>
             <span class="sub">${this._escape(draft.tiles.length)}/${this._escape(grid.columns * grid.rows)}</span>
@@ -2579,8 +2633,8 @@ class HapanelsStudioPanel extends HTMLElement {
     }[kind] || "Kafel panelu");
   }
 
-  _openPanelTilePicker(target, device = null, surface = "dashboard") {
-    this._panelTilePicker = { target, device, surface };
+  _openPanelTilePicker(target, device = null, surface = "dashboard", panelId = "") {
+    this._panelTilePicker = { target, device, surface, panelId };
     this._render();
   }
 
@@ -2594,7 +2648,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this._panelTilePicker = null;
     if (!picker) return;
     if (picker.target === "layout") this._addLayoutDraftTile("panel", kind);
-    else this._addTile(picker.device, picker.surface, "panel", kind);
+    else this._addTile(picker.device, picker.surface, "panel", kind, picker.panelId);
   }
 
   _panelTilePickerView() {
@@ -3090,35 +3144,62 @@ class HapanelsStudioPanel extends HTMLElement {
             </div></section>
             ${usesPresentation ? `<section class="tile-section"><h3>Prezentacja</h3><div class="fields"><div class="layout-checks span-12">${[["showIcon", "Pokaż ikonę", presentation.show_icon], ["showLabel", "Pokaż nazwę", presentation.show_label], ["showValue", "Pokaż wartość", presentation.show_value], ["showSecondary", "Pokaż szczegóły", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}</div>${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-6")}${this._selectField(`${prefix}-border`, "Ramka", ["default", "none"], presentation.border, "span-6")}${this._selectField(`${prefix}-alignment`, "Wyrównanie treści", ["start", "center", "end"], presentation.content_alignment, "span-12")}</div></section>` : ""}
             ${usesBehavior ? `<section class="tile-section tile-section-wide"><h3>Zachowanie</h3><div class="fields">${this._actionEditor(prefix, "tap", tile.tap_action, tile.kind)}${this._actionEditor(prefix, "hold", tile.hold_action, tile.kind, true)}</div></section>` : ""}
-            ${usesPanel || surface === "aod" ? `<section class="tile-section tile-section-wide"><h3>Zaawansowane</h3><div class="fields">${usesPanel ? this._inputField(`${prefix}-panel`, "Panel", tile.panel_id || "", "text", "span-6", "panel") : ""}${surface === "aod" ? `${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}` : ""}</div></section>` : ""}
+            ${usesPanel || surface === "aod" ? `<section class="tile-section tile-section-wide"><h3>${usesPanel ? "Nawigacja" : "Zaawansowane"}</h3><div class="fields">${usesPanel ? this._inputField(`${prefix}-panel`, "Panel ID", tile.panel_id || "", "text", "span-6", "panel") : ""}${surface === "aod" ? `${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}` : ""}</div></section>` : ""}
             ${clockSection}${coverSection}${childSection}
           </div>
           <ul class="tile-validation" data-tile-validation ${errors.length ? "" : "hidden"}>${errors.map((error) => `<li>${this._escape(error)}</li>`).join("")}</ul>
-          <footer class="tile-footer"><button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń kafel</button><div class="tile-actions">${masterDetail ? `<button class="small secondary" data-tile-reset title="Przywraca domyślne ustawienia, zachowując nazwę, encję i położenie">Przywróć domyślne</button>${inTray ? "" : `<button class="small secondary" data-show-in-preview title="Pokaż ten kafel w jego panelu">Zobacz w Podglądzie</button>`}<span class="tile-save-status ${status}" role="status" aria-live="polite">${statusLabel}</span>` : ""}<button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}" ${status === "saving" ? "disabled" : ""}>Zapisz kafel</button></div></footer>
+          <footer class="tile-footer"><button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń kafel</button><div class="tile-actions">${masterDetail ? `<button class="small secondary" data-tile-reset title="Przywraca domyślny wygląd i zachowanie; zachowuje treść, cel, rozmiar i położenie">Przywróć domyślne</button>${inTray ? "" : `<button class="small secondary" data-show-in-preview title="Pokaż ten kafel w jego panelu">Zobacz w Podglądzie</button>`}<span class="tile-save-status ${status}" role="status" aria-live="polite">${statusLabel}</span>` : ""}<button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}" ${status === "saving" ? "disabled" : ""}>Zapisz kafel</button></div></footer>
         </div></div>
       </div>`;
   }
 
   _tileChildrenSection(device, tile) {
     const panelId = tile.panel_id || "";
-    const children = (this._configs[device]?.panels || []).find((panel) => panel.id === panelId)?.tiles || [];
+    const config = this._configs[device];
+    const panel = (config?.panels || []).find((item) => item.id === panelId);
+    const context = config && this._layoutContextOptions(config).find((item) => item.panelId === panelId);
+    const layoutDraft = context ? this._layoutDrafts?.[`${device}:${config.revision ?? "new"}:${context.id}`] : null;
+    const children = (layoutDraft?.tiles || panel?.tiles || []).map((child) => this._tileWithDraft(device, child)).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    const panelReady = !!context;
     return `
-      <section class="tile-section">
-        <h3>Zawartość ${this._escape(tile.kind === "popup" ? "popupu" : "folderu")}</h3>
-        <div class="sub">Kafle z Panel ID: ${this._escape(panelId || "ustaw panel_id i zapisz")}</div>
+      <section class="tile-section tile-section-wide">
+        <div class="child-section-head">
+          <span><h3>Zawartość ${this._escape(tile.kind === "popup" ? "popupu" : "folderu")}</h3><small>${this._escape(panel?.title || tile.label || panelId)} · ${this._escape(this._tileCountLabel(children.length))} · ${this._escape(panelId || "brak Panel ID")}</small></span>
+          <button class="small secondary" data-open-panel-layout="${this._escape(panelId)}" ${panelReady ? "" : "disabled"}>Otwórz układ</button>
+        </div>
+        ${panelReady ? "" : `<div class="tile-note">Zapisz kafel, aby utworzyć jego panel i dodać zawartość.</div>`}
         <div class="child-tiles">
           ${children.length ? children.map((child) => `
             <div class="child-tile">
-              <span><strong>${this._escape(child.label || child.id)}</strong><small>${this._escape(child.kind || "entity")} · ${this._escape(child.entity_id || child.id)}</small></span>
-              <button class="small secondary" data-focus-child-tile="${this._escape(child.id)}">Edytuj</button>
+              <span class="child-tile-copy"><strong>${this._escape(child.label || child.id)}</strong><small>${this._escape(child.kind || "entity")} · ${this._escape(child.entity_id || child.id)}</small></span>
+              <span class="child-tile-actions">${this._tileDrafts?.[this._tileDraftKey(device, child.id)] ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : ""}<button class="small secondary" data-focus-child-tile="${this._escape(child.id)}">Edytuj</button></span>
             </div>
           `).join("") : `<span class="sub">Brak kafli. Dodaj pierwszy kafel Home Assistant.</span>`}
         </div>
         <div class="tile-actions" style="margin-top:12px">
-          <button class="small" data-add-child-ha data-device="${this._escape(device)}" data-panel-id="${this._escape(panelId)}" ${panelId ? "" : "disabled"}>Dodaj kafel HA do zawartości +</button>
+          <button class="small" data-add-child-ha data-device="${this._escape(device)}" data-panel-id="${this._escape(panelId)}" ${panelReady ? "" : "disabled"}>Kafel HA</button>
+          <button class="small secondary" data-pick-panel-tile data-target="child" data-device="${this._escape(device)}" data-surface="dashboard" data-panel-id="${this._escape(panelId)}" ${panelReady ? "" : "disabled"}>Kafel panelu</button>
         </div>
       </section>
     `;
+  }
+
+  _openPanelLayout(panelId) {
+    const device = this._selectedDevice;
+    const config = this._configs?.[device];
+    const context = config && this._layoutContextOptions(config).find((item) => item.panelId === panelId);
+    if (!context) return;
+    this._layoutContext = context.id;
+    this._activeTab = "preview";
+    this._layoutDraft(device, config, context);
+    this._render();
+  }
+
+  _tileCountLabel(count) {
+    if (this._language === "en") return `${count} ${count === 1 ? "tile" : "tiles"}`;
+    if (count === 1) return "1 kafel";
+    if ([2, 3, 4].includes(count)) return `${count} kafle`;
+    return `${count} kafli`;
   }
 
   _inputField(id, label, value, type = "text", span = "span-3", fieldKey = "") {
@@ -3147,6 +3228,7 @@ class HapanelsStudioPanel extends HTMLElement {
       "Nazwa": "Główna nazwa kafla widoczna na panelu i liście kafli.",
       "Krótka nazwa": "Krótszy tekst używany, gdy pełna nazwa nie mieści się na kaflu.",
       "Źródło / encja": "Encja Home Assistant dostarczająca stan i domyślne zachowanie.",
+      "Panel ID": "Identyfikator panelu otwieranego przez folder, popup lub kategorię.",
       "Źródło ikony": "Automatyczna używa ikony encji; custom pozwala wybrać własną ikonę MDI.",
       "Źródło koloru": "Wybiera akcent kafla, aktualny kolor encji albo własny kolor.",
       "Wyrównanie treści": "Wyrównuje ikonę, nazwę i wartości wewnątrz kafla.",
@@ -3383,8 +3465,11 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-focus-child-tile]").forEach((button) => {
       button.addEventListener("click", () => { this._focusedTileId = button.dataset.focusChildTile; this._selectedTileId = button.dataset.focusChildTile; this._expandedTiles.add(`dashboard:${this._selectedDevice}:${button.dataset.focusChildTile}`); this._render(); });
     });
+    this.shadowRoot.querySelectorAll("[data-open-panel-layout]").forEach((button) => {
+      button.addEventListener("click", () => this._openPanelLayout(button.dataset.openPanelLayout));
+    });
     this.shadowRoot.querySelectorAll("[data-pick-panel-tile]").forEach((button) => {
-      button.addEventListener("click", () => this._openPanelTilePicker(button.dataset.target, button.dataset.device, button.dataset.surface));
+      button.addEventListener("click", () => this._openPanelTilePicker(button.dataset.target, button.dataset.device, button.dataset.surface, button.dataset.panelId));
     });
     this.shadowRoot.querySelectorAll("[data-save-aod]").forEach((button) => {
       button.addEventListener("click", () => this._saveAodSettings(button.dataset.device));

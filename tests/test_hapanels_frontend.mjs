@@ -133,6 +133,32 @@ const baseConfig = {
   extensions: {},
   migration_report: [],
 };
+const resetCases = [
+  { id: "reset-entity", kind: "entity", size: "small", label: "Entity", entity_id: "light.test", icon: "mdi:star", accent: "white", order: 0, col: 1, row: 1 },
+  { id: "reset-cover", kind: "cover", size: "small", label: "Cover", entity_id: "cover.test", icon: "mdi:star", accent: "white", order: 0, cover_visual: "curtain", cover_direction: "left" },
+  { id: "reset-camera", kind: "camera", size: "small", label: "Camera", entity_id: "camera.test", icon: "mdi:star", accent: "white", order: 0 },
+  { id: "reset-category", kind: "category", size: "small", label: "Category", panel_id: "room", icon: "mdi:star", accent: "white", order: 0 },
+  { id: "reset-action", kind: "action", size: "small", label: "Action", icon: "mdi:star", accent: "white", order: 0, tap_action: { type: "local_panel", action: "screen.aod_now" } },
+  { id: "reset-clock", kind: "clock", size: "small", label: "Clock", icon: "mdi:star", accent: "white", order: 0, clock_style: "date_top" },
+  { id: "reset-folder", kind: "folder", size: "small", label: "Folder", panel_id: "room", icon: "mdi:star", accent: "white", order: 0 },
+  { id: "reset-popup", kind: "popup", size: "small", label: "Popup", panel_id: "room", icon: "mdi:star", accent: "white", order: 0 },
+  { id: "reset-text", kind: "text", size: "small", label: "Text", content: "Keep", icon: "mdi:star", accent: "white", order: 0 },
+  { id: "reset-spacer", kind: "spacer", size: "small", label: "Spacer", icon: "mdi:star", accent: "white", order: 0 },
+];
+const resetByKind = Object.fromEntries(resetCases.map((tile) => [tile.kind, JSON.parse(JSON.stringify(resetTileAuthoring(tile)))]));
+for (const [kind, reset] of Object.entries(resetByKind)) {
+  assert.equal(reset.size, "small", `${kind} reset must preserve Preview size`);
+  assert.equal(validateDashboardConfig({ ...structuredClone(baseConfig), tiles: [reset] }).length, 0, `${kind} reset must remain schema-valid`);
+}
+assert.equal(resetByKind.entity.entity_id, "light.test", "entity reset must preserve entity");
+assert.equal(resetByKind.cover.cover_visual, "blind", "cover reset must restore visual default");
+assert.equal(resetByKind.cover.cover_direction, "top", "cover reset must restore direction default");
+assert.equal(resetByKind.clock.clock_style, "classic", "clock reset must restore style default");
+assert.equal(resetByKind.folder.panel_id, "room", "folder reset must preserve panel target");
+assert.equal(resetByKind.popup.panel_id, "room", "popup reset must preserve panel target");
+assert.equal(resetByKind.text.content, "Keep", "text reset must preserve required content");
+assert.equal(resetByKind.action.tap_action.type, "none", "action reset must restore safe no-op");
+assert.equal(resetByKind.spacer.presentation, undefined, "spacer reset must remove presentation");
 const technicalTile = { id: "technical", kind: "action", size: "small", label: "Settings", icon: "mdi:cog", icon_source: "custom", icon_color_source: "accent", accent: "white", order: 0, tap_action: { type: "navigate", destination: "settings", domain: "homeassistant", service: "toggle", target: { entity_id: "light.kitchen" }, data: { transition: 1 } } };
 assert.equal(validateDashboardConfig({ ...structuredClone(baseConfig), tiles: [technicalTile] }).length, 0, "action tiles must author full technical fields");
 const rejectedTechnical = structuredClone(technicalTile);
@@ -248,6 +274,20 @@ childAddPanel._render = () => {};
 await childAddPanel._addTile("device", "dashboard", "ha", "clock", "room");
 assert.equal(childAddPanel._layoutContext, "folder:room", "child tile add must select its folder context");
 assert.ok(childAddPanel._layoutTileLocation("device", childAddPanel._selectedTileId)?.context?.panelId === "room", "child tile must be created in target panel draft");
+const pendingChildId = childAddPanel._selectedTileId;
+const childSection = childAddPanel._tileChildrenSection("device", navigationConfig.tiles[0]);
+assert.ok(childSection.includes(pendingChildId), "folder contents must include pending child drafts");
+assert.ok(childSection.includes("2 kafle"), "folder contents must show a grammatical tile count including drafts");
+assert.match(childSection, /data-open-panel-layout="room"/, "folder contents must link to its Preview layout");
+assert.match(childSection, /data-target="child"[\s\S]*data-panel-id="room"/, "folder contents must support nested panel tiles");
+childAddPanel._selectedDevice = "device";
+childAddPanel._openPanelLayout("room");
+assert.equal(childAddPanel._activeTab, "preview", "folder layout action must open Preview");
+assert.equal(childAddPanel._layoutContext, "folder:room", "folder layout action must keep folder context");
+childAddPanel._activeTab = "tiles";
+childAddPanel._openPanelTilePicker("child", "device", "dashboard", "room");
+childAddPanel._choosePanelTile("popup");
+assert.ok(childAddPanel._layoutTileLocation("device", childAddPanel._selectedTileId)?.tile?.kind === "popup", "folder contents must allow nested panel tiles");
 const popupAddPanel = new Panel();
 const popupConfig = structuredClone(navigationConfig);
 popupConfig.tiles[0].kind = "popup";
@@ -258,6 +298,22 @@ popupAddPanel._tileDrafts = {};
 popupAddPanel._render = () => {};
 await popupAddPanel._addTile("device", "dashboard", "ha", "clock", "room");
 assert.equal(popupAddPanel._layoutContext, "popup:room", "child tile add must select its popup context");
+
+const openerSavePanel = new Panel();
+openerSavePanel._configs = { device: structuredClone(navigationConfig) };
+openerSavePanel._layoutDrafts = {};
+openerSavePanel._tileDrafts = { "device:room-opener": { ...opener, label: "Renamed room" } };
+openerSavePanel._tileValidation = {};
+openerSavePanel._tileSaveStatus = {};
+openerSavePanel._render = () => {};
+openerSavePanel._captureTileDraft = () => openerSavePanel._tileDrafts["device:room-opener"];
+let openerSavedConfig;
+openerSavePanel._setConfig = async (_device, config) => { openerSavedConfig = config; return true; };
+await openerSavePanel._saveTile("device", "room-opener", "editor");
+assert.equal(openerSavedConfig.panels.find((panel) => panel.id === "room").title, "Renamed room", "saving folder must synchronize panel title");
+openerSavePanel._tileDrafts["device:room-opener"] = { ...opener, label: "New panel", panel_id: "new-panel" };
+await openerSavePanel._saveTile("device", "room-opener", "editor");
+assert.equal(openerSavedConfig.panels.find((panel) => panel.id === "new-panel").title, "New panel", "saving folder with a new target must create its panel");
 
 const trayDeletePanel = new Panel();
 const trayDeleteConfig = structuredClone(baseConfig);
@@ -283,6 +339,11 @@ conditionalPanel._tileValidation = {};
 conditionalPanel._tileSaveStatus = {};
 conditionalPanel._tilePreviewStates = {};
 conditionalPanel._expandedTiles = new Set();
+assert.equal(conditionalPanel._tileCountLabel(1), "1 kafel", "Polish child count must handle singular");
+assert.equal(conditionalPanel._tileCountLabel(5), "5 kafli", "Polish child count must handle plural");
+conditionalPanel._language = "en";
+assert.equal(conditionalPanel._tileCountLabel(2), "2 tiles", "English child count must use English plural");
+conditionalPanel._language = "pl";
 const spacerEditor = conditionalPanel._tileEditor("device", { id: "space", kind: "spacer", size: "small", label: "Space", accent: "white" }, "dashboard", true);
 assert.doesNotMatch(spacerEditor, /id="tile-dashboard-device-space-entity"/, "spacer editor must hide entity source");
 assert.doesNotMatch(spacerEditor, /<h3>Prezentacja<\/h3>/, "spacer editor must hide presentation");

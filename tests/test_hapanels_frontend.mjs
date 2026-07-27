@@ -118,6 +118,8 @@ assert.equal(resetTile.label, "Light", "reset must preserve name");
 assert.equal(resetTile.entity_id, "light.kitchen", "reset must preserve entity");
 assert.deepEqual({ col: resetTile.col, row: resetTile.row, colSpan: resetTile.colSpan, rowSpan: resetTile.rowSpan }, { col: 3, row: 2, colSpan: 2, rowSpan: 3 }, "reset must preserve layout");
 assert.equal(resetTile.icon_color_source, "accent", "reset must restore presentation defaults");
+const resetTextTile = JSON.parse(JSON.stringify(resetTileAuthoring({ id: "note", kind: "text", size: "small", label: "Note", content: "Keep me", col: 1, row: 1 })));
+assert.equal(resetTextTile.content, "Keep me", "reset must preserve required text content");
 
 const baseConfig = {
   version: 2,
@@ -246,6 +248,16 @@ childAddPanel._render = () => {};
 await childAddPanel._addTile("device", "dashboard", "ha", "clock", "room");
 assert.equal(childAddPanel._layoutContext, "folder:room", "child tile add must select its folder context");
 assert.ok(childAddPanel._layoutTileLocation("device", childAddPanel._selectedTileId)?.context?.panelId === "room", "child tile must be created in target panel draft");
+const popupAddPanel = new Panel();
+const popupConfig = structuredClone(navigationConfig);
+popupConfig.tiles[0].kind = "popup";
+popupAddPanel._configs = { device: popupConfig };
+popupAddPanel._layoutDrafts = {};
+popupAddPanel._layoutHistories = {};
+popupAddPanel._tileDrafts = {};
+popupAddPanel._render = () => {};
+await popupAddPanel._addTile("device", "dashboard", "ha", "clock", "room");
+assert.equal(popupAddPanel._layoutContext, "popup:room", "child tile add must select its popup context");
 
 const trayDeletePanel = new Panel();
 const trayDeleteConfig = structuredClone(baseConfig);
@@ -279,6 +291,17 @@ const folderEditor = conditionalPanel._tileEditor("device", { id: "folder", kind
 assert.match(folderEditor, /id="tile-dashboard-device-folder-panel"/, "folder editor must expose panel ID");
 assert.doesNotMatch(folderEditor, /id="tile-dashboard-device-folder-entity"/, "folder editor must hide entity source");
 assert.doesNotMatch(folderEditor, /<h3>Zachowanie<\/h3>/, "folder editor must hide implicit navigation behavior");
+for (const [kind, expected] of [
+  ["entity", ["-entity", "Prezentacja", "Zachowanie"]],
+  ["cover", ["-entity", "Prezentacja", "Zachowanie", "<h3>Cover</h3>"]],
+  ["camera", ["-entity", "Prezentacja", "Zachowanie"]],
+  ["action", ["Prezentacja", "Zachowanie"]],
+  ["text", ["-content", "Prezentacja", "Zachowanie"]],
+  ["clock", ["Prezentacja", "<h3>Zegar</h3>"]],
+]) {
+  const html = conditionalPanel._tileEditor("device", { id: `kind-${kind}`, kind, size: "small", label: kind, entity_id: ["entity", "cover", "camera"].includes(kind) ? `${kind === "camera" ? "camera" : kind === "cover" ? "cover" : "light"}.test` : undefined, content: kind === "text" ? "Text" : undefined, icon: "mdi:cog", accent: "orange", tap_action: kind === "action" ? { type: "none" } : undefined }, "dashboard", true);
+  for (const marker of expected) assert.ok(html.includes(marker), `${kind} editor must include ${marker}`);
+}
 
 const formPanel = new Panel();
 const formTile = { ...normalizedTile, size: "large", order: 4, col: 3, row: 2, colSpan: 2, rowSpan: 3, hold_action: { type: "more_info", entity_id: "light.kitchen" } };

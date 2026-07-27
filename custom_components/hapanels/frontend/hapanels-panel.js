@@ -109,7 +109,7 @@ function migrateStudioTile(tile, { ownerPanelId = null, interactive = true, repo
 }
 
 function resetTileAuthoring(tile) {
-  const fields = ["id", "label", "short_label", "entity_id", "panel_id", "order", "col", "row", "colSpan", "rowSpan"];
+  const fields = ["id", "label", "short_label", "entity_id", "panel_id", "content", "order", "col", "row", "colSpan", "rowSpan"];
   const keep = Object.fromEntries(fields.filter((field) => tile[field] != null).map((field) => [field, structuredClone(tile[field])]));
   return migrateStudioTile({ kind: tile.kind || "entity", size: "large", icon: tile.entity_id ? "mdi:cog" : "mdi:shape", accent: "orange", ...keep });
 }

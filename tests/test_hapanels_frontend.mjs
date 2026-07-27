@@ -14,7 +14,13 @@ const context = vm.createContext({
   },
   structuredClone,
 });
-vm.runInContext(readFileSync(new URL("../custom_components/hapanels/frontend/hapanels-panel.js", import.meta.url), "utf8"), context);
+const source = readFileSync(new URL("../custom_components/hapanels/frontend/hapanels-panel.js", import.meta.url), "utf8");
+vm.runInContext(source, context);
+assert.match(source, /tile-live-preview[\s\S]*tile-editor-body/, "production editor must keep accepted live-preview and form hierarchy");
+assert.match(source, /@media \(max-width: 1100px\)[\s\S]*layout-side/, "Preview must collapse tray before narrow desktop widths overlap");
+assert.match(source, /@media \(max-width: 620px\)[\s\S]*tile-toolbar-filters/, "tile editor must include mobile controls layout");
+assert.match(source, /if \(!customElements\.get\("hapanels-studio-panel"\)\)/, "frontend registration must tolerate cache-key reloads");
+assert.match(source, /data-layout-edit-tile[\s\S]*dataset\.layoutEditTile/, "Edit in Tiles must read its own data attribute");
 
 const panel = new Panel();
 const tile = { id: "tile", col: 2, row: 2, colSpan: 2, rowSpan: 2 };
@@ -157,6 +163,59 @@ navigationPanel._editTileFromPreview("child");
 assert.equal(navigationPanel._activeTab, "tiles", "Preview navigation must return to Tiles");
 assert.equal(navigationPanel._selectedTileId, "child", "Preview navigation must select editor tile");
 assert.equal(navigationPanel._tileDrafts["device:child"].label, "Unsaved", "cross-navigation must preserve unsaved draft");
+
+const pendingPanel = new Panel();
+const pendingConfig = structuredClone(baseConfig);
+const trayTile = { ...normalizedTile, id: "tray", label: "Tray", order: 0 };
+pendingConfig.extensions.layout_tray = [trayTile];
+pendingPanel._configs = { device: pendingConfig };
+pendingPanel._selectedDevice = "device";
+pendingPanel._layoutContext = "main";
+pendingPanel._layoutDrafts = {};
+pendingPanel._layoutHistories = {};
+pendingPanel._layoutSaveStatus = {};
+pendingPanel._tileDrafts = {};
+pendingPanel._tileValidation = {};
+pendingPanel._tileSaveStatus = {};
+pendingPanel._panels = [];
+pendingPanel._render = () => {};
+const pendingDraft = pendingPanel._layoutDraft("device", pendingConfig);
+const pendingTile = { ...normalizedTile, id: "pending", label: "Pending", entity_id: "", col: 1, row: 1, colSpan: 1, rowSpan: 1 };
+pendingDraft.tiles.push(pendingTile);
+const editableGroups = pendingPanel._editableTileGroups("device", pendingConfig);
+assert.ok(editableGroups.find((group) => group.id === "main").tiles.some((item) => item.id === "pending"), "Tiles must list unsaved Preview tiles");
+assert.ok(editableGroups.find((group) => group.id === "tray").tiles.some((item) => item.id === "tray"), "Tiles must expose a tray section");
+pendingPanel._editTileFromPreview("pending");
+assert.equal(pendingPanel._tileDraft("device", "pending").label, "Pending", "Preview tile must open in Tiles before it is saved");
+const pendingErrors = pendingPanel._validateTileDraft("device", pendingTile);
+assert.ok(pendingErrors.some((error) => error.includes("entity_id")), "pending tile validation must report its missing entity");
+assert.ok(!pendingErrors.some((error) => error.includes("nie istnieje")), "pending tile validation must not reject its draft source");
+const editedPendingTile = { ...pendingTile, entity_id: "light.pending", tap_action: { type: "entity_default", entity_id: "light.pending" } };
+pendingPanel._tileDrafts["device:pending"] = editedPendingTile;
+pendingPanel._captureTileDraft = () => editedPendingTile;
+let pendingSavedConfig;
+pendingPanel._setConfig = async (_device, config) => { pendingSavedConfig = config; return true; };
+await pendingPanel._saveTile("device", "pending", "editor");
+assert.equal(pendingSavedConfig.tiles.find((item) => item.id === "pending").entity_id, "light.pending", "layout save must persist pending tile authoring");
+
+const addPanel = new Panel();
+const addConfig = structuredClone(baseConfig);
+addPanel._configs = { device: addConfig };
+addPanel._selectedDevice = "device";
+addPanel._layoutContext = "main";
+addPanel._layoutDrafts = {};
+addPanel._layoutHistories = {};
+addPanel._tileDrafts = {};
+addPanel._panels = [];
+addPanel._render = () => {};
+let directSaveCalls = 0;
+addPanel._setConfig = async () => { directSaveCalls += 1; return false; };
+await addPanel._addTile("device", "dashboard", "ha");
+const addedTile = addPanel._editableTile("device", addPanel._selectedTileId);
+assert.equal(directSaveCalls, 0, "adding a dashboard tile must not save an invalid placeholder");
+assert.equal(addPanel._activeTab, "tiles", "new dashboard tile must open in Tiles");
+assert.equal(addedTile.entity_id, "", "new dashboard tile must wait for entity selection");
+assert.ok(addPanel._tileDrafts[`device:${addedTile.id}`], "new dashboard tile must be marked as an editable draft");
 
 const formPanel = new Panel();
 const formTile = { ...normalizedTile, size: "large", order: 4, col: 3, row: 2, colSpan: 2, rowSpan: 3, hold_action: { type: "more_info", entity_id: "light.kitchen" } };

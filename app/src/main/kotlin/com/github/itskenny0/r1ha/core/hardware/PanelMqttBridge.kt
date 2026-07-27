@@ -785,7 +785,7 @@ private fun HapanelsDashboardConfig.dashboardMetaJson(): String = """
     {
       "version":$version,
       "schema_version":$HAPANELS_DASHBOARD_SCHEMA_VERSION,
-      "schema_capabilities":["panels","presentation","text","spacer","tap_action","technical_actions"],
+      "schema_capabilities":["panels","presentation","text","spacer","tap_action","hold_action","auto_icon","icon_color","technical_actions"],
       "dashboard_id":"${dashboardId.escapeJson()}",
       "revision":$revision,
       "updated_by":"${updatedBy.escapeJson()}"

@@ -1,5 +1,5 @@
 const APP_URL = "https://github.com/tw-zs/Hapanels";
-const STUDIO_FRONTEND_VERSION = "20260722-layout-tray-fix";
+const STUDIO_FRONTEND_VERSION = "20260722-tile-editor-1";
 const DASHBOARD_SCHEMA_VERSION = 2;
 const TILE_ACCENTS = ["orange", "red", "white"];
 const TILE_KINDS = ["entity", "cover", "category", "action", "camera", "clock", "folder", "popup", "text", "spacer"];
@@ -12,7 +12,9 @@ const TILE_SIZES = ["large", "small", "action"];
 const CLOCK_STYLES = ["classic", "compact", "date_top"];
 const COVER_VISUALS = ["blind", "shade", "curtain", "gate"];
 const COVER_DIRECTIONS = ["top", "bottom", "left", "right", "top_left", "top_right", "bottom_left", "bottom_right"];
-const ACTION_TYPES = ["none", "entity_default", "navigate", "local_panel"];
+const ACTION_TYPES = ["none", "entity_default", "more_info", "navigate", "local_panel"];
+const ICON_SOURCES = ["custom", "auto"];
+const ICON_COLOR_SOURCES = ["accent", "entity", "custom"];
 const PANEL_OPENER_KINDS = ["folder", "popup", "category"];
 const ENTITY_ID_PATTERN = /^[a-z0-9_]+\.[a-z0-9_]+$/;
 const SAFE_DEFAULT_DOMAINS = ["light", "switch", "input_boolean", "automation", "fan", "scene", "script", "button", "input_button"];
@@ -22,7 +24,7 @@ const CONFIRMATION_KINDS = ["unlock", "cover_move", "delete_tile", "delete_panel
 const ROOT_FIELDS = ["version", "dashboard_id", "revision", "updated_by", "title", "layout", "theme", "always_on_display", "people", "tiles", "panels", "camera_actions", "extensions", "migration_report"];
 const LAYOUT_FIELDS = ["type", "columns_landscape", "columns_portrait", "gap", "columns", "rows"];
 const PANEL_FIELDS = ["id", "title", "layout", "tiles"];
-const TILE_FIELDS = ["id", "kind", "size", "label", "short_label", "entity_id", "panel_id", "icon", "accent", "order", "col", "row", "colSpan", "rowSpan", "clock_style", "cover_visual", "cover_direction", "tap_action", "hold_action", "content", "summary", "secondary", "presentation", "legacy_action"];
+const TILE_FIELDS = ["id", "kind", "size", "label", "short_label", "entity_id", "panel_id", "icon", "icon_source", "icon_color_source", "icon_color", "accent", "order", "col", "row", "colSpan", "rowSpan", "clock_style", "cover_visual", "cover_direction", "tap_action", "hold_action", "content", "summary", "secondary", "presentation", "legacy_action"];
 const ACTION_FIELDS = ["type", "destination", "action", "entity_id", "panel_id", "domain", "service", "target", "data", "confirmation"];
 const PRESENTATION_FIELDS = ["show_icon", "show_label", "show_value", "show_secondary", "background", "border", "content_alignment"];
 const AOD_PRESETS = [
@@ -69,6 +71,8 @@ function defaultTilePresentation(kind) {
 function migrateStudioTile(tile, { ownerPanelId = null, interactive = true, report = [] } = {}) {
   const next = structuredClone(tile);
   const defaults = defaultTilePresentation(next.kind);
+  next.icon_source ||= "custom";
+  next.icon_color_source ||= "accent";
   if (next.kind !== "spacer") {
     next.presentation = {
       ...defaults,
@@ -102,6 +106,24 @@ function migrateStudioTile(tile, { ownerPanelId = null, interactive = true, repo
     report.push("Dekoracyjny czerwony akcent zmieniono na neutralny");
   }
   return next;
+}
+
+function resetTileAuthoring(tile) {
+  const fields = ["id", "label", "short_label", "entity_id", "panel_id", "order", "col", "row", "colSpan", "rowSpan"];
+  const keep = Object.fromEntries(fields.filter((field) => tile[field] != null).map((field) => [field, structuredClone(tile[field])]));
+  return migrateStudioTile({ kind: tile.kind || "entity", size: "large", icon: tile.entity_id ? "mdi:cog" : "mdi:shape", accent: "orange", ...keep });
+}
+
+function parseJsonField(value, fallback, errors, path) {
+  if (!value?.trim()) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("wymagany obiekt JSON");
+    return parsed;
+  } catch (err) {
+    errors.push(`${path}: ${err.message}`);
+    return fallback;
+  }
 }
 
 function normalizeDashboardConfig(raw) {
@@ -194,6 +216,10 @@ function validateDashboardConfig(config) {
     if (!TILE_SIZES.includes(tile.size)) errors.push(`${path}.size: nieznany rozmiar`);
     if (!["text", "spacer"].includes(tile.kind) && !tile.label?.trim()) errors.push(`${path}.label: wymagane`);
     if (!["text", "spacer", "clock"].includes(tile.kind) && !tile.icon?.trim()) errors.push(`${path}.icon: wymagane`);
+    if (!ICON_SOURCES.includes(tile.icon_source || "custom")) errors.push(`${path}.icon_source: nieznane`);
+    if (!ICON_COLOR_SOURCES.includes(tile.icon_color_source || "accent")) errors.push(`${path}.icon_color_source: nieznane`);
+    if (tile.icon_color != null && !/^#[0-9a-f]{6}$/i.test(tile.icon_color)) errors.push(`${path}.icon_color: wymagane #RRGGBB`);
+    if (tile.icon_color_source === "custom" && !tile.icon_color) errors.push(`${path}.icon_color: wymagane dla własnego koloru`);
     if (!TILE_ACCENTS.includes(tile.accent || "orange")) errors.push(`${path}.accent: nieznany`);
     if (tile.entity_id && !ENTITY_ID_PATTERN.test(tile.entity_id)) errors.push(`${path}.entity_id: wymagane domain.object_id`);
     if (["entity", "cover", "camera"].includes(tile.kind) && !tile.entity_id) errors.push(`${path}.entity_id: wymagane`);
@@ -208,14 +234,15 @@ function validateDashboardConfig(config) {
       if (!ACTION_TYPES.includes(action.type)) errors.push(`${path}.${name}.type: nieznana akcja`);
       if (action.type === "entity_default" && !ENTITY_ID_PATTERN.test(action.entity_id || "")) errors.push(`${path}.${name}.entity_id: wymagane`);
       if (action.type === "entity_default" && !SAFE_DEFAULT_DOMAINS.includes((action.entity_id || "").split(".")[0])) errors.push(`${path}.${name}.entity_id: domena nie ma bezpiecznej akcji domyślnej`);
+      if (action.type === "more_info" && !ENTITY_ID_PATTERN.test(action.entity_id || "")) errors.push(`${path}.${name}.entity_id: wymagane`);
       if (action.type === "navigate" && Boolean(action.destination) === Boolean(action.panel_id)) errors.push(`${path}.${name}: wybierz destination albo panel_id`);
       if (action.type === "navigate" && action.destination && !SUPPORTED_DESTINATIONS.includes(action.destination)) errors.push(`${path}.${name}.destination: nieobsługiwane`);
       if (action.type === "navigate" && action.panel_id && !panelIds.includes(action.panel_id)) errors.push(`${path}.${name}.panel_id: brak panelu`);
       if (action.type === "local_panel" && !SUPPORTED_LOCAL_ACTIONS.includes(action.action)) errors.push(`${path}.${name}.action: nieobsługiwane`);
+      if (tile.kind !== "action" && ["navigate", "local_panel"].includes(action.type)) errors.push(`${path}.${name}.type: akcja techniczna wymaga typu kafla action`);
       if (action.confirmation && !CONFIRMATION_KINDS.includes(action.confirmation.kind)) errors.push(`${path}.${name}.confirmation.kind: nieobsługiwane`);
     }
     if (tile.kind === "action" && !tile.tap_action) errors.push(`${path}.tap_action: wymagane`);
-    if (tile.hold_action) errors.push(`${path}.hold_action: nieobsługiwane przez bieżącą wersję tabletu`);
     if (tile.presentation) {
       rejectUnknown(tile.presentation, PRESENTATION_FIELDS, `${path}.presentation`);
       if (!["surface", "transparent"].includes(tile.presentation.background || "surface")) errors.push(`${path}.presentation.background: nieznane`);
@@ -411,9 +438,23 @@ const STUDIO_TRANSLATIONS_EN = {
   "Panel główny": "Main panel",
   "Usuń kafelek": "Remove tile",
   "Zastosuj": "Apply",
-  "Reset draftu": "Reset draft",
-  "Układ panelu": "Panel layout",
+  "Cofnij": "Undo",
+  "Ponów": "Redo",
+  "Odrzuć niezapisane zmiany": "Discard unsaved changes",
+  "Przywróć poprzedni zapis": "Restore previous save",
   "Zapisz układ": "Save layout",
+  "Zapisywanie…": "Saving…",
+  "Oczekiwanie na tablet…": "Waiting for tablet…",
+  "Błąd zapisu": "Save error",
+  "Niezapisane zmiany": "Unsaved changes",
+  "Zapisano": "Saved",
+  "Układ zapisany": "Layout saved",
+  "Cofnij zmianę (Ctrl+Z)": "Undo change (Ctrl+Z)",
+  "Ponów zmianę (Ctrl+Y lub Ctrl+Shift+Z)": "Redo change (Ctrl+Y or Ctrl+Shift+Z)",
+  "Odrzuca niezapisane zmiany i przywraca aktualnie zapisany układ": "Discards unsaved changes and restores the currently saved layout",
+  "Przywraca poprzednią zapisaną konfigurację jako nową rewizję": "Restores the previous saved configuration as a new revision",
+  "Przywrócić poprzedni zapis?": "Restore previous save?",
+  "Bieżąca konfiguracja zostanie zastąpiona poprzednim zapisem i wysłana jako nowa rewizja.": "The current configuration will be replaced with the previous save and sent as a new revision.",
   "Ustawienia grida": "Grid settings",
   "Kafle poziomo": "Tiles across",
   "Kafle pionowo": "Tiles down",
@@ -489,6 +530,14 @@ class HapanelsStudioPanel extends HTMLElement {
     this._focusedTileId = null;
     this._tabletPickerFilter = "all";
     this._layoutDrafts = {};
+    this._layoutHistories = {};
+    this._layoutSaveStatus = {};
+    this._tileDrafts = {};
+    this._tileValidation = {};
+    this._tileSaveStatus = {};
+    this._selectedTileId = null;
+    this._tileSearch = "";
+    this._previewHighlightTileId = null;
     this._layoutContext = "main";
     this._layoutDrag = null;
     this._panelThemeError = null;
@@ -498,8 +547,14 @@ class HapanelsStudioPanel extends HTMLElement {
     this._language = localStorage.getItem("hapanels_studio_language") || "pl";
     this._hiddenDevices = new Set(JSON.parse(localStorage.getItem("hapanels_hidden_devices") || "[]"));
     this._expandedTiles = new Set(JSON.parse(localStorage.getItem("hapanels_expanded_tiles") || "[]"));
+    this._layoutKeydown = (event) => this._handleLayoutKeydown(event);
+    window.addEventListener("keydown", this._layoutKeydown);
     this._render();
     this._load();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this._layoutKeydown);
   }
 
   set hass(hass) {
@@ -532,77 +587,198 @@ class HapanelsStudioPanel extends HTMLElement {
   async _loadConfig(device) {
     if (!device) return;
     const result = await this._hass.callWS({ type: "hapanels/get_dashboard_config", device });
-    this._configs[device] = normalizeDashboardConfig(result.config);
+    const config = normalizeDashboardConfig(result.config);
+    this._configs[device] = config;
     this._pendingPatches[device] = result.pending_patch || null;
+    const saveStatus = this._layoutSaveStatus[device];
+    if (saveStatus?.state === "pending" && Number(config?.revision) >= saveStatus.expectedRevision) {
+      this._layoutSaveStatus[device] = { state: "saved" };
+    }
   }
 
   async _saveTile(device, tileId, prefix, surface = "dashboard") {
     const config = this._configs[device];
     const revision = Number(config?.revision);
-    const label = this.shadowRoot.getElementById(`${prefix}-label`)?.value?.trim();
-    const shortLabel = this.shadowRoot.getElementById(`${prefix}-short`)?.value?.trim();
-    const entityId = this.shadowRoot.getElementById(`${prefix}-entity`)?.value?.trim();
-    const panelId = this.shadowRoot.getElementById(`${prefix}-panel`)?.value?.trim();
-    const kind = this.shadowRoot.getElementById(`${prefix}-kind`)?.value;
-    const size = this.shadowRoot.getElementById(`${prefix}-size`)?.value;
-    const icon = this.shadowRoot.getElementById(`${prefix}-icon`)?.value;
-    const accent = this.shadowRoot.getElementById(`${prefix}-accent`)?.value;
-    const order = Number(this.shadowRoot.getElementById(`${prefix}-order`)?.value);
-    const col = Number(this.shadowRoot.getElementById(`${prefix}-col`)?.value);
-    const row = Number(this.shadowRoot.getElementById(`${prefix}-row`)?.value);
-    const colSpan = Number(this.shadowRoot.getElementById(`${prefix}-colSpan`)?.value);
-    const rowSpan = Number(this.shadowRoot.getElementById(`${prefix}-rowSpan`)?.value);
-    const clockStyle = this.shadowRoot.getElementById(`${prefix}-clockStyle`)?.value;
-    const coverVisual = this.shadowRoot.getElementById(`${prefix}-coverVisual`)?.value;
-    const coverDirection = this.shadowRoot.getElementById(`${prefix}-coverDirection`)?.value;
-    if (!config || !Number.isFinite(revision) || !label) return;
-    const tile = { id: tileId, label };
-    if (kind) tile.kind = kind;
-    if (size) tile.size = size;
-    if (shortLabel !== undefined) tile.short_label = shortLabel;
-    if (entityId !== undefined) tile.entity_id = entityId;
-    if (panelId !== undefined) tile.panel_id = panelId;
-    if (icon) tile.icon = icon;
-    if (accent) tile.accent = accent;
-    if (Number.isFinite(order)) tile.order = order;
-    if (Number.isFinite(col)) tile.col = col;
-    if (Number.isFinite(row)) tile.row = row;
-    if (Number.isFinite(colSpan)) tile.colSpan = colSpan;
-    if (Number.isFinite(rowSpan)) tile.rowSpan = rowSpan;
-    if (clockStyle) tile.clock_style = clockStyle;
-    if (coverVisual) tile.cover_visual = coverVisual;
-    if (coverDirection) tile.cover_direction = coverDirection;
+    if (!config || !Number.isFinite(revision)) return;
+    if (surface === "dashboard") this._captureTileDraft(prefix, device, tileId);
+    const tile = surface === "dashboard" ? this._tileDraft(device, tileId) : this._tileFromLegacyForm(prefix, tileId);
+    if (!tile) return;
     const projected = structuredClone(config);
     const targetTile = surface === "aod"
       ? (projected.always_on_display?.tiles || []).find((item) => item.id === tileId)
       : dashboardTiles(projected).find((item) => item.id === tileId);
     if (!targetTile) return;
-    Object.assign(targetTile, tile);
+    if (surface === "dashboard") Object.keys(targetTile).forEach((key) => delete targetTile[key]);
+    Object.assign(targetTile, structuredClone(tile));
     const validationErrors = validateDashboardConfig(projected);
     if (validationErrors.length) {
-      this._error = `Nie zapisano zmian: ${validationErrors.join(" · ")}`;
+      const key = this._tileDraftKey(device, tileId);
+      this._tileValidation[key] = validationErrors;
+      this._tileSaveStatus[key] = "error";
       this._render();
       return;
     }
-    await this._hass.callService("hapanels", "patch_dashboard_config", {
-      device,
-      patch: {
-        base_revision: revision,
-        updated_by: "homeassistant:hapanels_studio",
-        surface,
-        tile_updates: [tile],
-      },
-    });
-    window.setTimeout(() => this._load(), 800);
+    const key = this._tileDraftKey(device, tileId);
+    this._tileSaveStatus[key] = "saving";
+    this._render();
+    this._rememberPreviousConfig(device, config);
+    try {
+      await this._hass.callService("hapanels", "patch_dashboard_config", { device, patch: { base_revision: revision, updated_by: "homeassistant:hapanels_studio", surface, tile_updates: [tile] } });
+      const localTile = surface === "aod" ? (config.always_on_display?.tiles || []).find((item) => item.id === tileId) : dashboardTiles(config).find((item) => item.id === tileId);
+      if (localTile) {
+        if (surface === "dashboard") Object.keys(localTile).forEach((field) => delete localTile[field]);
+        Object.assign(localTile, structuredClone(tile));
+      }
+      delete this._tileDrafts[key];
+      delete this._tileValidation[key];
+      this._tileSaveStatus[key] = "saved";
+      window.setTimeout(() => this._load(), 800);
+    } catch (err) {
+      this._tileSaveStatus[key] = "error";
+      this._tileValidation[key] = [`Zapis: ${err?.message || err}`];
+    }
+    this._render();
+  }
+
+  _tileFromLegacyForm(prefix, tileId) {
+    const get = (name) => this.shadowRoot.getElementById(`${prefix}-${name}`)?.value;
+    const number = (name) => Number(get(name));
+    const tile = { id: tileId, label: get("label")?.trim() };
+    for (const [field, name] of [["short_label", "short"], ["entity_id", "entity"], ["panel_id", "panel"], ["kind", "kind"], ["size", "size"], ["icon", "icon"], ["accent", "accent"], ["clock_style", "clockStyle"], ["cover_visual", "coverVisual"], ["cover_direction", "coverDirection"]]) {
+      const value = get(name);
+      if (value != null && value !== "") tile[field] = value.trim?.() ?? value;
+    }
+    for (const [field, name] of [["order", "order"], ["col", "col"], ["row", "row"], ["colSpan", "colSpan"], ["rowSpan", "rowSpan"]]) if (Number.isFinite(number(name))) tile[field] = number(name);
+    return tile.label ? tile : null;
+  }
+
+  _tileDraftKey(device, tileId) {
+    return `${device}:${tileId}`;
+  }
+
+  _savedTile(device, tileId) {
+    return dashboardTiles(this._configs?.[device]).find((tile) => tile.id === tileId) || null;
+  }
+
+  _tileDraft(device, tileId) {
+    this._tileDrafts ||= {};
+    const key = this._tileDraftKey(device, tileId);
+    return this._tileDrafts[key] || (this._savedTile(device, tileId) ? migrateStudioTile(this._savedTile(device, tileId)) : null);
+  }
+
+  _tileWithDraft(device, tile) {
+    const draft = this._tileDrafts?.[this._tileDraftKey(device, tile.id)];
+    if (!draft) return tile;
+    const { size, order, col, row, colSpan, rowSpan, ...authoring } = draft;
+    return { ...tile, ...authoring };
+  }
+
+  _actionFromForm(prefix, name, kind, errors) {
+    const value = (field) => this.shadowRoot.getElementById(`${prefix}-${name}-${field}`)?.value?.trim() || "";
+    const type = value("type") || "none";
+    const action = { type };
+    if (type === "entity_default" || type === "more_info") action.entity_id = value("entity");
+    if (type === "navigate") {
+      if (value("destination")) action.destination = value("destination");
+      if (value("panel")) action.panel_id = value("panel");
+    }
+    if (type === "local_panel") action.action = value("local");
+    if (kind === "action") {
+      for (const field of ["domain", "service"]) if (value(field)) action[field] = value(field);
+      for (const field of ["target", "data"]) {
+        const parsed = parseJsonField(value(field), null, errors, `${name}.${field}`);
+        if (parsed) action[field] = parsed;
+      }
+    }
+    const confirmation = parseJsonField(value("confirmation"), null, errors, `${name}.confirmation`);
+    if (confirmation) action.confirmation = confirmation;
+    return action;
+  }
+
+  _captureTileDraft(prefix, device, tileId) {
+    const current = structuredClone(this._tileDraft(device, tileId) || this._savedTile(device, tileId));
+    if (!current) return null;
+    const element = (name) => this.shadowRoot.getElementById(`${prefix}-${name}`);
+    const value = (name) => element(name)?.value?.trim() ?? "";
+    const setOptional = (field, name) => value(name) ? current[field] = value(name) : delete current[field];
+    current.label = value("label");
+    current.kind = value("kind");
+    if (element("size")) current.size = value("size");
+    current.accent = value("accent");
+    current.icon_source = value("iconSource");
+    current.icon_color_source = value("iconColorSource");
+    for (const [field, name] of [["short_label", "short"], ["entity_id", "entity"], ["panel_id", "panel"], ["icon", "icon"], ["icon_color", "iconColor"], ["content", "content"], ["summary", "summary"], ["secondary", "secondary"], ["clock_style", "clockStyle"], ["cover_visual", "coverVisual"], ["cover_direction", "coverDirection"]]) setOptional(field, name);
+    for (const [field, name] of [["order", "order"], ["col", "col"], ["row", "row"], ["colSpan", "colSpan"], ["rowSpan", "rowSpan"]]) {
+      if (!element(name)) continue;
+      const number = Number(value(name));
+      if (value(name) && Number.isFinite(number)) current[field] = number;
+      else delete current[field];
+    }
+    if (current.kind !== "spacer") {
+      current.presentation = {
+        show_icon: !!element("showIcon")?.checked,
+        show_label: !!element("showLabel")?.checked,
+        show_value: !!element("showValue")?.checked,
+        show_secondary: !!element("showSecondary")?.checked,
+        background: value("background") || "surface",
+        border: value("border") || "default",
+        content_alignment: value("alignment") || "center",
+      };
+    } else {
+      delete current.presentation;
+      delete current.entity_id;
+      delete current.tap_action;
+      delete current.hold_action;
+    }
+    const parseErrors = [];
+    if (current.kind !== "spacer") {
+      current.tap_action = this._actionFromForm(prefix, "tap", current.kind, parseErrors);
+      const holdType = value("hold-type");
+      current.hold_action = holdType && holdType !== "unset"
+        ? this._actionFromForm(prefix, "hold", current.kind, parseErrors)
+        : { type: "none" };
+    }
+    const key = this._tileDraftKey(device, tileId);
+    this._tileDrafts[key] = current;
+    this._tileValidation ||= {};
+    this._tileValidation[key] = [...parseErrors, ...this._validateTileDraft(device, current)];
+    this._tileSaveStatus ||= {};
+    this._tileSaveStatus[key] = "dirty";
+    const validation = this.shadowRoot.querySelector("[data-tile-validation]");
+    if (validation) {
+      validation.hidden = !this._tileValidation[key].length;
+      validation.innerHTML = this._tileValidation[key].map((error) => `<li>${this._escape(error)}</li>`).join("");
+    }
+    const status = this.shadowRoot.querySelector(".tile-save-status");
+    if (status) { status.className = "tile-save-status dirty"; status.textContent = "Niezapisane zmiany"; }
+    return current;
+  }
+
+  _validateTileDraft(device, tile) {
+    const config = structuredClone(this._configs?.[device]);
+    if (!config) return [];
+    const target = dashboardTiles(config).find((item) => item.id === tile.id);
+    if (!target) return ["Kafel nie istnieje w konfiguracji"];
+    Object.keys(target).forEach((key) => delete target[key]);
+    Object.assign(target, structuredClone(tile));
+    return validateDashboardConfig(config);
+  }
+
+  _resetTileDraft(device, tileId) {
+    const draft = this._tileDraft(device, tileId);
+    if (!draft) return;
+    this._tileDrafts[this._tileDraftKey(device, tileId)] = resetTileAuthoring(draft);
+    this._tileSaveStatus[this._tileDraftKey(device, tileId)] = "dirty";
+    this._render();
   }
 
   async _setConfig(device, config) {
-    if (!config) return;
+    if (!config) return false;
     const panel = (this._panels || []).find((item) => item.device === device);
     if (panel && Number(panel.schema_version || 0) < DASHBOARD_SCHEMA_VERSION) {
       this._error = `Tablet obsługuje schema ${panel.schema_version || 1}. Wymagana wersja ${DASHBOARD_SCHEMA_VERSION}.`;
       this._render();
-      return;
+      return false;
     }
     const next = normalizeDashboardConfig(config);
     next.revision = Number(next.revision || 0) + 1;
@@ -619,11 +795,43 @@ class HapanelsStudioPanel extends HTMLElement {
     if (validationErrors.length) {
       this._error = `Nie zapisano zmian: ${validationErrors.join(" · ")}`;
       this._render();
-      return;
+      return false;
     }
+    this._rememberPreviousConfig(device, this._configs[device]);
     await this._hass.callService("hapanels", "set_dashboard_config", { device, config: next });
     this._error = null;
     window.setTimeout(() => this._load(), 800);
+    return true;
+  }
+
+  _previousConfigKey(device) {
+    return `hapanels_previous_config_${device}`;
+  }
+
+  _rememberPreviousConfig(device, config) {
+    if (!device || !config) return;
+    try {
+      localStorage.setItem(this._previousConfigKey(device), JSON.stringify(config));
+    } catch (_err) {
+      // Browser storage unavailable; revision rollback stays disabled.
+    }
+  }
+
+  _previousConfig(device, currentConfig = this._configs[device]) {
+    try {
+      const previous = JSON.parse(localStorage.getItem(this._previousConfigKey(device)) || "null");
+      return previous && Number(previous.revision) < Number(currentConfig?.revision) ? previous : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  async _restorePreviousRevision(device) {
+    const current = this._configs[device];
+    const previous = this._previousConfig(device, current);
+    if (!current || !previous) return;
+    previous.revision = Number(current.revision) || 0;
+    await this._setConfig(device, previous);
   }
 
   async _addTile(device, surface = "dashboard", type = "ha", panelKind = "clock", panelId = "") {
@@ -818,6 +1026,28 @@ class HapanelsStudioPanel extends HTMLElement {
         .tab { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); }
         .tab.active { background: var(--accent); color: #1a0d03; border-color: transparent; }
         .tiles { display: grid; gap: 14px; }
+        .tiles-master-detail { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 16px; align-items: start; }
+        .tile-master { position: sticky; top: 16px; display: grid; gap: 12px; max-height: calc(100vh - 32px); overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); }
+        .tile-master-search { position: sticky; top: -14px; z-index: 2; padding: 14px 0 4px; background: var(--surface-2); }
+        .tile-group { display: grid; gap: 6px; }
+        .tile-group h3 { margin: 8px 4px 2px; color: var(--muted); font-size: 11px; text-transform: uppercase; }
+        .tile-master-item { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; padding: 10px; text-align: left; color: var(--text); background: transparent; border: 1px solid transparent; }
+        .tile-master-item.active { background: var(--surface); border-color: var(--accent); }
+        .tile-master-item ha-icon { --mdc-icon-size: 24px; color: var(--tile-list-color, #e99900); }
+        .tile-master-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .tile-master-item small { color: var(--muted); }
+        .tile-draft-dot { width: 7px; height: 7px; border-radius: 50%; background: #facc15; }
+        .tile-editor-empty { min-height: 420px; display: grid; place-items: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 18px; }
+        .tile-validation { margin: 0; padding: 12px 28px; color: #ff725d; background: rgba(255,83,56,.10); border-bottom: 1px solid rgba(255,83,56,.25); }
+        .tile-save-status { align-self: center; color: var(--muted); font-size: 12px; font-weight: 850; }
+        .tile-save-status.dirty, .tile-save-status.saving { color: #facc15; }
+        .tile-save-status.saved { color: #48c97a; }
+        .tile-save-status.error { color: #ff725d; }
+        .tile-preview-box.preview-transparent { background: transparent; }
+        .tile-preview-box.preview-borderless { border-color: transparent; }
+        .tile-preview-box.align-start { place-items: center start; text-align: left; padding: 18px; }
+        .tile-preview-box.align-end { place-items: center end; text-align: right; padding: 18px; }
+        .tile-action-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
         .tile { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(145deg, var(--surface), var(--surface-2)); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
         .tile.focused { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent), 0 18px 50px rgba(0,0,0,.20); }
         .tile-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; cursor: pointer; user-select: none; }
@@ -1020,6 +1250,13 @@ class HapanelsStudioPanel extends HTMLElement {
         .preview-meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
         .layout-editor { display: grid; grid-template-columns: 220px minmax(0, 1fr) 180px; gap: 16px; align-items: stretch; }
         .layout-left-panel { display: grid; align-content: start; gap: 12px; }
+        .layout-workspace { display: grid; align-content: start; gap: 10px; min-width: 0; }
+        .layout-workspace-actions { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .layout-workspace-actions .layout-buttons { flex-wrap: nowrap; }
+        .layout-save-status { color: var(--muted); font-size: 12px; font-weight: 800; }
+        .layout-save-status[data-state="dirty"], .layout-save-status[data-state="saving"], .layout-save-status[data-state="pending"] { color: #facc15; }
+        .layout-save-status[data-state="saved"] { color: #4ade80; }
+        .layout-save-status[data-state="error"] { color: #ff725d; }
         .layout-toolbar { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
         .layout-frame { position: relative; width: 100%; align-self: start; border: 1px solid #334155; border-radius: 10px; background: #0f172a; overflow: hidden; }
         .layout-frame.popup-context { border-color: rgba(255,255,255,.16); background: radial-gradient(circle at 20% 20%, rgba(255,255,255,.10), transparent 28%), #05070a; }
@@ -1033,7 +1270,7 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-frame.popup-context .layout-grid { inset: 15%; border: 1px solid rgba(255,255,255,.18); border-radius: 24px; padding: 10px; background: linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); box-shadow: 0 24px 80px rgba(0,0,0,.38); backdrop-filter: blur(18px) saturate(1.35); }
         .layout-frame.popup-context .layout-grid::before { content:""; pointer-events:none; position:absolute; inset:0; border-radius:24px; opacity:.32; background-image: radial-gradient(circle, rgba(255,255,255,.55) 0 1px, transparent 1px); background-size: 5px 5px; mix-blend-mode: overlay; }
         .layout-frame.popup-context .layout-cell-tile { background: rgba(31,41,55,.72); backdrop-filter: blur(8px); }
-        .layout-cell-tile { position: relative; min-width: 0; min-height: 0; box-sizing: border-box; overflow: hidden; border: 1px solid #334155; border-radius: 6px; background: #1f2937; color: #cbd5e1; padding: 0; display: grid; place-items: center; text-align: center; cursor: pointer; user-select: none; font-size: clamp(.55rem, 1.4vw, .8rem); }
+        .layout-cell-tile { position: relative; min-width: 0; min-height: 0; box-sizing: border-box; overflow: visible; border: 1px solid #334155; border-radius: 6px; background: #1f2937; color: #cbd5e1; padding: 0; display: grid; place-items: center; text-align: center; cursor: pointer; user-select: none; font-size: clamp(.55rem, 1.4vw, .8rem); }
         .layout-tile-content { min-width: 0; min-height: 0; display: grid; gap: 3px; place-items: center; text-align: center; padding: 4px; pointer-events: none; }
         .layout-tile-icon { line-height: 1; }
         .layout-tile-title { font-weight: 700; }
@@ -1046,6 +1283,8 @@ class HapanelsStudioPanel extends HTMLElement {
         .layout-cell-tile strong, .layout-cell-tile .preview-meta { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .layout-cell-tile.accent-red ha-icon { color: #ff5338; }
         .layout-cell-tile.accent-white ha-icon { color: #f1f1f1; }
+        .layout-cell-tile.preview-highlight { animation: tilePreviewHighlight 1.5s ease both; }
+        @keyframes tilePreviewHighlight { 0%, 100% { box-shadow: none; } 25%, 70% { box-shadow: 0 0 0 4px #ff7a1a, 0 0 32px rgba(255,122,26,.65); } }
         .layout-resize-handle { position: absolute; background: #facc15; opacity: 0; touch-action: none; }
         .layout-cell-tile:hover .layout-resize-handle, .layout-cell-tile.selected .layout-resize-handle { opacity: 1; }
         .layout-resize-handle.right { top: 8px; right: -4px; width: 8px; bottom: 8px; cursor: ew-resize; }
@@ -1104,7 +1343,10 @@ class HapanelsStudioPanel extends HTMLElement {
         .error { color: #ff725d; margin-top: 12px; }
         a { color: var(--accent); }
         @media (max-width: 900px) {
+          .tiles-master-detail { grid-template-columns: 1fr; }
+          .tile-master { position: static; max-height: 300px; }
           .layout-editor { grid-template-columns: 1fr; }
+          .layout-workspace-actions .layout-buttons { flex-wrap: wrap; }
           .tile-body { grid-template-columns: 1fr; }
           .tile-preview-pane { border-right: 0; border-bottom: 1px solid var(--line); }
           .fields { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -1275,14 +1517,34 @@ class HapanelsStudioPanel extends HTMLElement {
     if (this._activeTab === "settings") return this._tabletInfoView(config, panel);
     if (this._activeTab === "preview") return this._previewView(device, config);
     if (this._activeTab === "appearance") return this._appearanceView(device, config, panel);
-    const tiles = dashboardTiles(config).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+    return this._tilesView(device, config);
+  }
+
+  _tilesView(device, config) {
+    const groups = [{ id: "main", label: "Panel główny", tiles: config.tiles || [] }, ...(config.panels || []).map((panel) => ({ id: panel.id, label: panel.title || panel.id, tiles: panel.tiles || [] }))];
+    const all = groups.flatMap((group) => group.tiles);
+    if (!all.some((tile) => tile.id === this._selectedTileId)) this._selectedTileId = all[0]?.id || null;
+    const query = (this._tileSearch || "").trim().toLowerCase();
+    const visibleGroups = groups.map((group) => ({ ...group, tiles: group.tiles.filter((tile) => `${tile.label || ""} ${tile.short_label || ""} ${tile.entity_id || ""} ${tile.kind || ""} ${tile.id}`.toLowerCase().includes(query)) })).filter((group) => group.tiles.length);
+    const selected = this._tileDraft(device, this._selectedTileId);
     return `
       <div class="toolbar">
         <button class="add-button" data-add-ha-tile data-device="${this._escape(device)}" data-surface="dashboard">Kafel HA</button>
         <button class="add-button secondary" data-pick-panel-tile data-target="tiles" data-device="${this._escape(device)}" data-surface="dashboard">Kafel panelu</button>
       </div>
-      <div class="tiles">${tiles.map((tile) => this._tileEditor(device, tile, "dashboard")).join("")}</div>
-    `;
+      <div class="tiles-master-detail">
+        <aside class="tile-master">
+          <div class="tile-master-search"><input id="tile-search" type="search" value="${this._escape(this._tileSearch || "")}" placeholder="Szukaj kafli" aria-label="Szukaj kafli"></div>
+          ${visibleGroups.map((group) => `<section class="tile-group"><h3>${this._escape(group.label)}</h3>${group.tiles.slice().sort((a, b) => (a.order || 0) - (b.order || 0)).map((tile) => this._tileMasterItem(device, tile)).join("")}</section>`).join("") || `<span class="sub">Brak wyników.</span>`}
+        </aside>
+        ${selected ? this._tileEditor(device, selected, "dashboard", true) : `<div class="tile-editor-empty">Wybierz kafel.</div>`}
+      </div>`;
+  }
+
+  _tileMasterItem(device, savedTile) {
+    const tile = this._tileWithDraft(device, savedTile);
+    const dirty = !!this._tileDrafts?.[this._tileDraftKey(device, tile.id)];
+    return `<button class="tile-master-item ${tile.id === this._selectedTileId ? "active" : ""}" data-select-tile="${this._escape(tile.id)}" title="${this._escape(tile.entity_id || tile.id)}"><ha-icon icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon><span><strong>${this._escape(tile.short_label || tile.label || tile.id)}</strong><small>${this._escape(tile.kind)}${tile.entity_id ? ` · ${this._escape(tile.entity_id)}` : ""}</small></span>${dirty ? `<i class="tile-draft-dot" title="Niezapisane zmiany"></i>` : ""}</button>`;
   }
 
   _aodView(device, config) {
@@ -1375,6 +1637,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this._aodClockStyleError = null;
     this._render();
     try {
+      this._rememberPreviousConfig(device, config);
       await this._hass.callService("hapanels", "patch_dashboard_config", {
         device,
         patch: {
@@ -1397,10 +1660,18 @@ class HapanelsStudioPanel extends HTMLElement {
     const context = contexts.find((item) => item.id === this._layoutContext) || contexts[0];
     const draft = this._layoutDraft(device, config, context);
     const grid = draft.grid;
-    const selected = draft.tiles.find((tile) => tile.id === draft.selectedTileId) || draft.tiles[0];
+    const previewTiles = draft.tiles.map((tile) => this._tileWithDraft(device, tile));
+    const selected = previewTiles.find((tile) => tile.id === draft.selectedTileId) || previewTiles[0];
     const outside = draft.tiles.filter((tile) => this._isOutsideGrid(tile, grid));
     const willRemove = draft.tiles.filter((tile) => tile.col > grid.columns || tile.row > grid.rows);
     const resolution = this._tabletResolution(device);
+    const history = this._layoutHistories[draft.historyKey];
+    const previousConfig = this._previousConfig(device, config);
+    const dirty = this._isLayoutDirty(device, config, draft);
+    const saveStatus = this._layoutSaveStatus[device]?.state;
+    const saveState = ["saving", "pending", "error"].includes(saveStatus) ? saveStatus : (dirty ? "dirty" : "saved");
+    const saveLabel = ({ saving: "Zapisywanie…", pending: "Oczekiwanie na tablet…", error: "Błąd zapisu", dirty: "Niezapisane zmiany", saved: saveStatus === "saved" ? "Zapisano" : "Układ zapisany" })[saveState];
+    const saveBusy = ["saving", "pending"].includes(saveState);
     return `
       <div class="layout-editor">
         <div class="layout-left-panel">
@@ -1434,19 +1705,26 @@ class HapanelsStudioPanel extends HTMLElement {
             </details>
           </div>
           ${selected ? this._layoutSelectedPanel(selected) : `<div class="layout-panel"><strong>Ustawienia kafla</strong><span class="sub">Brak kafli.</span></div>`}
-          <div class="layout-panel">
-            <div class="layout-buttons">
-              <button class="small secondary" data-layout-reset data-device="${this._escape(device)}">Reset draftu</button>
-              <button class="small secondary" data-layout-panel-preset data-device="${this._escape(device)}">Układ panelu</button>
-              <button class="small" data-layout-save data-device="${this._escape(device)}">Zapisz układ</button>
+        </div>
+        <div class="layout-workspace">
+          <div class="layout-frame ${context.type === "popup" ? "popup-context" : ""} ${context.type === "folder" ? "folder-context" : ""} ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
+            ${context.type === "folder" ? `<div class="layout-subpanel-header"><span class="layout-subpanel-back">‹</span><span>${this._escape(context.label.replace(/^Folder:\s*/, ""))}</span><span></span></div>` : ""}
+            <div class="layout-grid" style="--cols:${this._escape(grid.columns)};--rows:${this._escape(grid.rows)};grid-template-columns:repeat(${this._escape(grid.columns)}, minmax(0, 1fr));grid-template-rows:repeat(${this._escape(grid.rows)}, minmax(0, 1fr));">
+              ${previewTiles.map((tile) => this._layoutTile(tile, grid, tile.id === draft.selectedTileId)).join("")}
+              ${this._layoutGhost(draft)}
             </div>
           </div>
-        </div>
-        <div class="layout-frame ${context.type === "popup" ? "popup-context" : ""} ${context.type === "folder" ? "folder-context" : ""} ${willRemove.length ? "will-drop" : ""}" style="aspect-ratio:${this._escape(grid.aspectWidth)} / ${this._escape(grid.aspectHeight)}">
-          ${context.type === "folder" ? `<div class="layout-subpanel-header"><span class="layout-subpanel-back">‹</span><span>${this._escape(context.label.replace(/^Folder:\s*/, ""))}</span><span></span></div>` : ""}
-          <div class="layout-grid" style="--cols:${this._escape(grid.columns)};--rows:${this._escape(grid.rows)};grid-template-columns:repeat(${this._escape(grid.columns)}, minmax(0, 1fr));grid-template-rows:repeat(${this._escape(grid.rows)}, minmax(0, 1fr));">
-            ${draft.tiles.map((tile) => this._layoutTile(tile, grid, tile.id === draft.selectedTileId)).join("")}
-            ${this._layoutGhost(draft)}
+          <span class="layout-save-status" data-state="${saveState}">${saveLabel}</span>
+          <div class="layout-workspace-actions">
+            <div class="layout-buttons">
+              <button class="small secondary" data-layout-undo title="Cofnij zmianę (Ctrl+Z)" ${history?.undo.length ? "" : "disabled"}>Cofnij</button>
+              <button class="small secondary" data-layout-redo title="Ponów zmianę (Ctrl+Y lub Ctrl+Shift+Z)" ${history?.redo.length ? "" : "disabled"}>Ponów</button>
+            </div>
+            <div class="layout-buttons">
+              <button class="small secondary" data-layout-reset data-device="${this._escape(device)}" title="Odrzuca niezapisane zmiany i przywraca aktualnie zapisany układ">Odrzuć niezapisane zmiany</button>
+              <button class="small secondary" data-layout-previous-revision data-device="${this._escape(device)}" title="Przywraca poprzednią zapisaną konfigurację jako nową rewizję" ${previousConfig ? "" : "disabled"}>Przywróć poprzedni zapis</button>
+              <button class="small" data-layout-save data-device="${this._escape(device)}" ${!dirty || saveBusy ? "disabled" : ""}>Zapisz układ</button>
+            </div>
           </div>
         </div>
         <div class="layout-side">
@@ -1533,6 +1811,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this._panelThemeError = null;
     this._render();
     try {
+      this._rememberPreviousConfig(device, config);
       await this._hass.callService("hapanels", "patch_dashboard_config", {
         device,
         patch: {
@@ -1582,25 +1861,101 @@ class HapanelsStudioPanel extends HTMLElement {
   _layoutDraft(device, config, context = null) {
     const activeContext = context || this._layoutContextOptions(config).find((item) => item.id === this._layoutContext) || { id: "main" };
     const key = `${device}:${config.revision ?? "new"}:${activeContext.id}`;
-    if (this._layoutDrafts[key]) return this._layoutDrafts[key];
+    if (this._layoutDrafts[key]) {
+      this._checkpointLayoutHistory(this._layoutDrafts[key]);
+      return this._layoutDrafts[key];
+    }
+    const saved = this._savedLayoutSnapshot(device, config, activeContext);
+    const draft = {
+      context: activeContext,
+      grid: saved.grid,
+      tiles: saved.tiles,
+      tray: this._layoutSharedTrayDraft(device, config, saved.grid),
+      selectedTileId: saved.tiles[0]?.id || null,
+      historyKey: key,
+    };
+    this._layoutDrafts[key] = draft;
+    this._checkpointLayoutHistory(draft);
+    return draft;
+  }
+
+  _layoutSnapshot(draft) {
+    return structuredClone({ grid: draft.grid, tiles: draft.tiles, tray: draft.tray });
+  }
+
+  _savedLayoutSnapshot(device, config, context) {
     const resolution = this._tabletResolution(device);
-    const editor = this._layoutContextEditor(config, activeContext);
+    const editor = this._layoutContextEditor(config, context);
     const grid = {
       columns: Number(editor.grid?.columns) || 12,
       rows: Number(editor.grid?.rows) || 9,
       aspectWidth: resolution?.width || Number(editor.grid?.aspectWidth) || 16,
       aspectHeight: resolution?.height || Number(editor.grid?.aspectHeight) || 9,
     };
-    const tiles = this._layoutTiles(this._layoutContextTiles(config, activeContext).slice().sort((a, b) => (a.order || 0) - (b.order || 0)), grid);
-    const draft = {
-      context: activeContext,
+    const storedTray = Object.hasOwn(config.extensions || {}, "layout_tray")
+      ? config.extensions.layout_tray
+      : config.extensions?.legacy_layout_editor?.tray;
+    return {
       grid,
-      tiles,
-      tray: this._layoutSharedTrayDraft(device, config, grid),
-      selectedTileId: tiles[0]?.id || null,
+      tiles: this._layoutTiles(this._layoutContextTiles(config, context).slice().sort((a, b) => (a.order || 0) - (b.order || 0)), grid),
+      tray: (storedTray || []).map((tile, index) => this._layoutTileModel(migrateStudioTile(tile), index, grid)),
     };
-    this._layoutDrafts[key] = draft;
-    return draft;
+  }
+
+  _isLayoutDirty(device, config, draft) {
+    return JSON.stringify(this._layoutSnapshot(draft)) !== JSON.stringify(this._savedLayoutSnapshot(device, config, draft.context));
+  }
+
+  _checkpointLayoutHistory(draft) {
+    if (!draft?.historyKey) return;
+    const snapshot = this._layoutSnapshot(draft);
+    const serialized = JSON.stringify(snapshot);
+    const history = this._layoutHistories[draft.historyKey];
+    if (!history) {
+      this._layoutHistories[draft.historyKey] = { undo: [], redo: [], present: serialized };
+      return;
+    }
+    if (history.present === serialized) return;
+    history.undo.push(JSON.parse(history.present));
+    if (history.undo.length > 50) history.undo.shift();
+    history.redo = [];
+    history.present = serialized;
+  }
+
+  _restoreLayoutSnapshot(draft, snapshot) {
+    draft.grid = structuredClone(snapshot.grid);
+    draft.tiles = structuredClone(snapshot.tiles);
+    draft.tray.splice(0, draft.tray.length, ...structuredClone(snapshot.tray));
+    if (!draft.tiles.some((tile) => tile.id === draft.selectedTileId)) draft.selectedTileId = draft.tiles[0]?.id || null;
+  }
+
+  _undoLayout() {
+    const draft = this._currentLayoutDraft();
+    const history = draft && this._layoutHistories[draft.historyKey];
+    if (!draft || !history?.undo.length) return;
+    history.redo.push(this._layoutSnapshot(draft));
+    this._restoreLayoutSnapshot(draft, history.undo.pop());
+    history.present = JSON.stringify(this._layoutSnapshot(draft));
+    this._render();
+  }
+
+  _redoLayout() {
+    const draft = this._currentLayoutDraft();
+    const history = draft && this._layoutHistories[draft.historyKey];
+    if (!draft || !history?.redo.length) return;
+    history.undo.push(this._layoutSnapshot(draft));
+    this._restoreLayoutSnapshot(draft, history.redo.pop());
+    history.present = JSON.stringify(this._layoutSnapshot(draft));
+    this._render();
+  }
+
+  _handleLayoutKeydown(event) {
+    if (this._activeTab !== "preview" || !(event.ctrlKey || event.metaKey) || event.altKey || event.target?.closest?.("input, textarea, select, [contenteditable='true']")) return;
+    const key = event.key.toLowerCase();
+    if (key === "z" && !event.shiftKey) this._undoLayout();
+    else if (key === "y" || (key === "z" && event.shiftKey)) this._redoLayout();
+    else return;
+    event.preventDefault();
   }
 
   _layoutSharedTrayDraft(device, config, grid) {
@@ -1755,9 +2110,9 @@ class HapanelsStudioPanel extends HTMLElement {
     const willRemove = tile.col > grid.columns || tile.row > grid.rows;
     const dragStyle = dragging && this._layoutDrag?.source === "grid" ? `transform:translate(${this._escape(this._layoutDrag.offsetX || 0)}px, ${this._escape(this._layoutDrag.offsetY || 0)}px);` : "";
     return `
-      <button class="layout-cell-tile ${selected ? "selected" : ""} ${willRemove ? "will-remove" : ""} ${dragging ? "dragging" : ""} ${this._isOutsideGrid(tile, grid) ? "outside" : ""} accent-${this._escape(tile.accent || "orange")}" data-layout-select data-layout-drag data-tile="${this._escape(tile.id)}" style="grid-column:${this._escape(tile.col)} / span ${this._escape(tile.colSpan)};grid-row:${this._escape(tile.row)} / span ${this._escape(tile.rowSpan)};${dragStyle}">
+      <button class="layout-cell-tile ${selected ? "selected" : ""} ${tile.id === this._previewHighlightTileId ? "preview-highlight" : ""} ${willRemove ? "will-remove" : ""} ${dragging ? "dragging" : ""} ${this._isOutsideGrid(tile, grid) ? "outside" : ""} accent-${this._escape(tile.accent || "orange")}" data-layout-select data-layout-drag data-tile="${this._escape(tile.id)}" style="grid-column:${this._escape(tile.col)} / span ${this._escape(tile.colSpan)};grid-row:${this._escape(tile.row)} / span ${this._escape(tile.rowSpan)};--tile-icon-color:${this._escape(this._resolvedIconColor(tile))};${dragStyle}">
         <span class="layout-tile-content">
-          <ha-icon class="layout-tile-icon" icon="${this._escape(this._mdiIcon(tile.icon))}" ${tile.presentation?.show_icon === false ? "hidden" : ""}></ha-icon>
+          <ha-icon class="layout-tile-icon" icon="${this._escape(tile.icon_source === "auto" ? (this._hass?.states?.[tile.entity_id]?.attributes?.icon || this._domainIcon(tile.entity_id || "")) : this._mdiIcon(tile.icon))}" style="color:var(--tile-icon-color)" ${tile.presentation?.show_icon === false ? "hidden" : ""}></ha-icon>
           <strong class="layout-tile-title" ${tile.presentation?.show_label === false ? "hidden" : ""}>${this._escape(tile.label || tile.id)}</strong>
           <span class="layout-tile-subtitle" ${tile.presentation?.show_secondary === false ? "hidden" : ""}>${this._escape(tile.short_label || "")}</span>
         </span>
@@ -1795,25 +2150,14 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _layoutSelectedPanel(tile) {
-    const clockStyle = tile.clock_style || "classic";
     return `
       <div class="layout-panel tile-settings">
-        <strong>Ustawienia kafla</strong>
+        <div class="name"><span><strong>${this._escape(tile.label || tile.id)}</strong><small class="sub">${this._escape(tile.id)}</small></span><button class="small secondary" data-layout-edit-tile="${this._escape(tile.id)}" title="Przejdź do pełnego edytora kafla">Edytuj w Kaflach</button></div>
         <div class="fields">
-          ${this._inputField("layout-tile-title", "Nazwa", tile.label || tile.id, "text", "span-6")}
-          ${this._inputField("layout-tile-subtitle", "Podpis", tile.short_label || "", "text", "span-6")}
-          ${this._inputField("layout-tile-icon", "Ikona", this._mdiIcon(tile.icon), "text", "span-6")}
-          <div class="layout-checks span-6" aria-label="Widoczne informacje kafla">
-            <label><input id="layout-show-icon" type="checkbox" ${tile.presentation?.show_icon === false ? "" : "checked"}> Ikona</label>
-            <label><input id="layout-show-title" type="checkbox" ${tile.presentation?.show_label === false ? "" : "checked"}> Nazwa</label>
-            <label><input id="layout-show-subtitle" type="checkbox" ${tile.presentation?.show_secondary === false ? "" : "checked"}> Podpis</label>
-          </div>
-          ${tile.kind === "clock" ? `
-            ${this._selectField("layout-clock-style", "Styl zegara", CLOCK_STYLES, clockStyle, "span-6")}
-            <div class="clock-style-options span-12">${this._clockStyleCards(clockStyle, true)}</div>
-          ` : ""}
+          ${this._selectField("layout-tile-size", "Rozmiar", TILE_SIZES, tile.size || "large", "span-6")}
+          <div class="field span-6"><span>Pozycja</span><strong>${this._escape(tile.col)},${this._escape(tile.row)} · ${this._escape(tile.colSpan)}×${this._escape(tile.rowSpan)}</strong></div>
+          <span class="sub span-12">Pozycję i wymiary zmieniaj przeciąganiem kafla oraz jego uchwytów.</span>
         </div>
-        ${["folder", "popup"].includes(tile.kind) ? this._tileChildrenSection(this._selectedDevice, tile) : ""}
       </div>
     `;
   }
@@ -2020,32 +2364,8 @@ class HapanelsStudioPanel extends HTMLElement {
   _syncSelectedLayoutTile() {
     const tile = this._selectedLayoutTile();
     if (!tile) return;
-    tile.label = this.shadowRoot.getElementById("layout-tile-title")?.value || tile.label;
-    tile.short_label = this.shadowRoot.getElementById("layout-tile-subtitle")?.value || "";
-    tile.icon = this.shadowRoot.getElementById("layout-tile-icon")?.value || "mdi:cog";
-    tile.presentation = {
-      ...defaultTilePresentation(tile.kind),
-      ...(tile.presentation || {}),
-      show_icon: !!this.shadowRoot.getElementById("layout-show-icon")?.checked,
-      show_label: !!this.shadowRoot.getElementById("layout-show-title")?.checked,
-      show_secondary: !!this.shadowRoot.getElementById("layout-show-subtitle")?.checked,
-    };
-    const clockStyle = this.shadowRoot.getElementById("layout-clock-style")?.value;
-    if (clockStyle) tile.clock_style = clockStyle;
-    const element = this.shadowRoot.querySelector(`[data-layout-select][data-tile="${CSS.escape(tile.id)}"]`);
-    element?.querySelector(".layout-tile-icon")?.setAttribute("icon", this._mdiIcon(tile.icon));
-    const title = element?.querySelector(".layout-tile-title");
-    const subtitle = element?.querySelector(".layout-tile-subtitle");
-    if (title) {
-      title.textContent = tile.label || tile.id;
-      title.hidden = tile.presentation.show_label === false;
-    }
-    const icon = element?.querySelector(".layout-tile-icon");
-    if (icon) icon.hidden = tile.presentation.show_icon === false;
-    if (subtitle) {
-      subtitle.textContent = tile.short_label || "";
-      subtitle.hidden = tile.presentation.show_secondary === false;
-    }
+    tile.size = this.shadowRoot.getElementById("layout-tile-size")?.value || tile.size;
+    this._render();
   }
 
   _syncLayoutTrayHeight() {
@@ -2086,36 +2406,6 @@ class HapanelsStudioPanel extends HTMLElement {
     draft.tiles = inside;
     draft.selectedTileId = draft.tiles[0]?.id || null;
     this._render();
-  }
-
-  _applyPanelPreset() {
-    const draft = this._currentLayoutDraft();
-    if (!draft) return;
-    const resolution = this._tabletResolution(this._selectedDevice);
-    draft.grid = { columns: 12, rows: 9, aspectWidth: resolution?.width || 16, aspectHeight: resolution?.height || 9 };
-    const used = new Set();
-    draft.tiles.forEach((tile) => {
-      const preset = this._layoutPreset(tile) || { col: 9, row: 8, colSpan: 2, rowSpan: 2 };
-      Object.assign(tile, preset);
-      if (this._isOutsideGrid(tile, draft.grid) || this._isOccupied(tile, used)) Object.assign(tile, this._firstFreeSlot(tile, draft.grid, used));
-      for (let row = tile.row; row < tile.row + tile.rowSpan; row += 1) {
-        for (let col = tile.col; col < tile.col + tile.colSpan; col += 1) used.add(`${col}:${row}`);
-      }
-    });
-    draft.selectedTileId = draft.tiles[0]?.id || null;
-    this._render();
-  }
-
-  _firstFreeSlot(tile, grid, occupied) {
-    const candidate = { ...tile, colSpan: Math.min(tile.colSpan, grid.columns), rowSpan: Math.min(tile.rowSpan, grid.rows) };
-    for (let row = 1; row <= grid.rows; row += 1) {
-      for (let col = 1; col <= grid.columns; col += 1) {
-        candidate.col = col;
-        candidate.row = row;
-        if (!this._isOutsideGrid(candidate, grid) && !this._isOccupied(candidate, occupied)) return candidate;
-      }
-    }
-    return { ...candidate, col: 1, row: grid.rows + 1 };
   }
 
   _startLayoutDrag(event, tileId) {
@@ -2171,7 +2461,7 @@ class HapanelsStudioPanel extends HTMLElement {
     event.preventDefault();
     event.stopPropagation();
     draft.selectedTileId = tileId;
-    this._layoutDrag = { mode: "resize", source: "grid", edge, tileId, ghost: { col: tile.col, row: tile.row, colSpan: tile.colSpan, rowSpan: tile.rowSpan, valid: true }, toTray: false };
+    this._layoutDrag = { mode: "resize", source: "grid", edge, tileId, startX: event.clientX, startY: event.clientY, ghost: { col: tile.col, row: tile.row, colSpan: tile.colSpan, rowSpan: tile.rowSpan, valid: true }, toTray: false };
     const move = (moveEvent) => this._moveLayoutGhost(moveEvent);
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -2194,36 +2484,44 @@ class HapanelsStudioPanel extends HTMLElement {
     const rect = gridEl.getBoundingClientRect();
     const trayRect = this.shadowRoot.querySelector("[data-layout-tray-zone]")?.getBoundingClientRect();
     drag.copy = drag.mode === "move" && drag.source === "grid" && event.altKey;
-    drag.toTray = drag.source === "grid" && trayRect && event.clientX >= trayRect.left && event.clientX <= trayRect.right && event.clientY >= trayRect.top && event.clientY <= trayRect.bottom;
+    drag.toTray = drag.mode === "move" && drag.source === "grid" && trayRect && event.clientX >= trayRect.left && event.clientX <= trayRect.right && event.clientY >= trayRect.top && event.clientY <= trayRect.bottom;
     if (drag.mode === "move" && drag.source === "grid") {
       drag.offsetX = event.clientX - drag.startX;
       drag.offsetY = event.clientY - drag.startY;
     }
     const inGrid = event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom;
-    const rawCol = Math.floor(((event.clientX - rect.left) / rect.width) * draft.grid.columns) + 1;
-    const rawRow = Math.floor(((event.clientY - rect.top) / rect.height) * draft.grid.rows) + 1;
-    const col = Math.min(draft.grid.columns + 1 - tile.colSpan, Math.max(1, rawCol - (drag.grabCol || 0)));
-    const row = Math.min(draft.grid.rows + 1 - tile.rowSpan, Math.max(1, rawRow - (drag.grabRow || 0)));
-    const ghost = drag.mode === "resize" ? this._resizeGhost(tile, col, row, drag.edge || "se") : { ...tile, col, row };
+    let ghost;
+    if (drag.mode === "resize") {
+      const deltaCols = Math.round((event.clientX - drag.startX) / (rect.width / draft.grid.columns));
+      const deltaRows = Math.round((event.clientY - drag.startY) / (rect.height / draft.grid.rows));
+      ghost = this._resizeGhost(tile, deltaCols, deltaRows, drag.edge || "se", draft.grid);
+    } else {
+      const rawCol = Math.floor(((event.clientX - rect.left) / rect.width) * draft.grid.columns) + 1;
+      const rawRow = Math.floor(((event.clientY - rect.top) / rect.height) * draft.grid.rows) + 1;
+      const col = Math.min(draft.grid.columns + 1 - tile.colSpan, Math.max(1, rawCol - (drag.grabCol || 0)));
+      const row = Math.min(draft.grid.rows + 1 - tile.rowSpan, Math.max(1, rawRow - (drag.grabRow || 0)));
+      ghost = { ...tile, col, row };
+    }
     const copyHasRoom = !drag.copy || !this._blockingTiles(draft, ghost).length;
-    drag.ghost = { col: ghost.col, row: ghost.row, colSpan: ghost.colSpan, rowSpan: ghost.rowSpan, valid: inGrid && !drag.toTray && !this._isOutsideGrid(ghost, draft.grid) && copyHasRoom };
+    const valid = drag.mode === "resize" ? !this._isOutsideGrid(ghost, draft.grid) : inGrid && !drag.toTray && !this._isOutsideGrid(ghost, draft.grid) && copyHasRoom;
+    drag.ghost = { col: ghost.col, row: ghost.row, colSpan: ghost.colSpan, rowSpan: ghost.rowSpan, valid };
     this._render();
   }
 
-  _resizeGhost(tile, col, row, edge) {
-    const right = tile.col + tile.colSpan - 1;
-    const bottom = tile.row + tile.rowSpan - 1;
+  _resizeGhost(tile, deltaCols, deltaRows, edge, grid) {
+    let left = tile.col;
+    let right = tile.col + tile.colSpan - 1;
+    let top = tile.row;
+    let bottom = tile.row + tile.rowSpan - 1;
     const ghost = { ...tile };
-    if (edge.includes("w")) {
-      ghost.col = Math.min(col, right);
-      ghost.colSpan = right - ghost.col + 1;
-    }
-    if (edge.includes("e")) ghost.colSpan = Math.max(1, col - tile.col + 1);
-    if (edge.includes("n")) {
-      ghost.row = Math.min(row, bottom);
-      ghost.rowSpan = bottom - ghost.row + 1;
-    }
-    if (edge.includes("s")) ghost.rowSpan = Math.max(1, row - tile.row + 1);
+    if (edge.includes("w")) left = Math.min(right, Math.max(1, tile.col + deltaCols));
+    if (edge.includes("e")) right = Math.min(grid.columns, Math.max(left, right + deltaCols));
+    if (edge.includes("n")) top = Math.min(bottom, Math.max(1, tile.row + deltaRows));
+    if (edge.includes("s")) bottom = Math.min(grid.rows, Math.max(top, bottom + deltaRows));
+    ghost.col = left;
+    ghost.row = top;
+    ghost.colSpan = right - left + 1;
+    ghost.rowSpan = bottom - top + 1;
     return ghost;
   }
 
@@ -2284,15 +2582,19 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _resetLayoutDraft(device) {
     const config = this._configs[device];
-    if (!config) return;
-    Object.keys(this._layoutDrafts).filter((key) => key.startsWith(`${device}:${config.revision ?? "new"}:`)).forEach((key) => delete this._layoutDrafts[key]);
+    const draft = config && this._currentLayoutDraft();
+    if (!config || !draft) return;
+    this._restoreLayoutSnapshot(draft, this._savedLayoutSnapshot(device, config, draft.context));
+    this._checkpointLayoutHistory(draft);
     this._render();
   }
 
   async _saveLayout(device) {
     const config = this._configs[device];
     const draft = this._layoutDraft(device, config);
-    if (!config || !draft) return;
+    if (!config || !draft || !this._isLayoutDirty(device, config, draft)) return;
+    this._layoutSaveStatus[device] = { state: "saving" };
+    this._render();
     const next = structuredClone(config);
     const tray = this._layoutSharedTrayDraft(device, config, draft.grid);
     if (draft.context?.id === "main") {
@@ -2315,7 +2617,16 @@ class HapanelsStudioPanel extends HTMLElement {
     for (const tile of (savedTarget?.tiles || []).filter((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id)) {
       if (!next.panels.some((panel) => panel.id === tile.panel_id)) next.panels.push({ id: tile.panel_id, title: tile.label, layout: { ...next.layout }, tiles: [] });
     }
-    await this._setConfig(device, next);
+    try {
+      const saved = await this._setConfig(device, next);
+      this._layoutSaveStatus[device] = saved
+        ? { state: "pending", expectedRevision: Number(config.revision) + 1 }
+        : { state: "error" };
+    } catch (err) {
+      this._layoutSaveStatus[device] = { state: "error" };
+      this._error = `Nie udało się zapisać układu: ${err?.message || err}`;
+    }
+    this._render();
   }
 
   _previewTile(device, tile) {
@@ -2336,6 +2647,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const config = this._configs[device];
     const revision = Number(config?.revision);
     if (!config || !Number.isFinite(revision)) return;
+    this._rememberPreviousConfig(device, config);
     await this._hass.callService("hapanels", "patch_dashboard_config", {
       device,
       patch: {
@@ -2385,14 +2697,43 @@ class HapanelsStudioPanel extends HTMLElement {
     return this._fallbackScreenResolution();
   }
 
-  _tileEditor(device, tile, surface) {
+  _actionEditor(prefix, name, action, kind, allowUnset = false) {
+    const value = action || (allowUnset ? null : { type: "none" });
+    const type = value?.type || (allowUnset ? "unset" : "none");
+    const types = kind === "action" ? ACTION_TYPES : ["none", "entity_default", "more_info"];
+    return `
+      <div class="tile-action-grid">
+        <div class="field span-3"><label for="${prefix}-${name}-type" title="Akcja wykonywana przez tablet">${name === "tap" ? "Dotknięcie" : "Przytrzymanie"}</label><select id="${prefix}-${name}-type">${allowUnset ? `<option value="unset" ${type === "unset" ? "selected" : ""}>brak</option>` : ""}${types.map((item) => `<option value="${item}" ${item === type ? "selected" : ""}>${item}</option>`).join("")}</select></div>
+        ${this._entityField(`${prefix}-${name}-entity`, "Encja akcji", value?.entity_id || "", "", "span-3")}
+        ${kind === "action" ? `
+          ${this._selectField(`${prefix}-${name}-destination`, "Trasa", ["", ...SUPPORTED_DESTINATIONS], value?.destination || "", "span-3")}
+          ${this._inputField(`${prefix}-${name}-panel`, "Panel ID", value?.panel_id || "", "text", "span-3")}
+          ${this._selectField(`${prefix}-${name}-local`, "Akcja lokalna", ["", ...SUPPORTED_LOCAL_ACTIONS], value?.action || "", "span-4")}
+          ${this._inputField(`${prefix}-${name}-domain`, "Domena techniczna", value?.domain || "", "text", "span-4")}
+          ${this._inputField(`${prefix}-${name}-service`, "Usługa techniczna", value?.service || "", "text", "span-4")}
+          ${this._inputField(`${prefix}-${name}-target`, "Target JSON", value?.target ? JSON.stringify(value.target) : "", "text", "span-6")}
+          ${this._inputField(`${prefix}-${name}-data`, "Data JSON", value?.data ? JSON.stringify(value.data) : "", "text", "span-6")}
+        ` : ""}
+        ${this._inputField(`${prefix}-${name}-confirmation`, "Potwierdzenie JSON", value?.confirmation ? JSON.stringify(value.confirmation) : "", "text", "span-12")}
+      </div>`;
+  }
+
+  _tileEditor(device, tile, surface, masterDetail = false) {
     const prefix = `tile-${surface}-${device}-${tile.id}`.replace(/[^a-zA-Z0-9_-]/g, "-");
     const entityLabel = tile.entity_id ? this._entityLabel(tile.entity_id) : (tile.kind || "-");
     const tileLabel = tile.short_label || tile.label || tile.id;
     const accent = tile.accent || "orange";
+    const presentation = { ...defaultTilePresentation(tile.kind), ...(tile.presentation || {}) };
+    const autoIcon = this._hass?.states?.[tile.entity_id]?.attributes?.icon || this._domainIcon(tile.entity_id || "");
+    const previewIcon = tile.icon_source === "auto" ? autoIcon : this._mdiIcon(tile.icon);
+    const iconColor = this._resolvedIconColor(tile);
+    const key = this._tileDraftKey(device, tile.id);
+    const errors = this._tileValidation?.[key] || [];
+    const status = this._tileSaveStatus?.[key] || (this._tileDrafts?.[key] ? "dirty" : "saved");
+    const statusLabel = { dirty: "Niezapisane zmiany", saving: "Zapisywanie…", saved: "Zapisano", error: "Popraw błędy" }[status];
     const collapsedKey = `${surface}:${device}:${tile.id}`;
     const focused = this._focusedTileId === tile.id;
-    const collapsed = !focused && !this._expandedTiles.has(collapsedKey);
+    const collapsed = !masterDetail && !focused && !this._expandedTiles.has(collapsedKey);
     const childSection = surface === "dashboard" && ["folder", "popup"].includes(tile.kind) ? this._tileChildrenSection(device, tile) : "";
     const clockSection = tile.kind === "clock" ? `
       <section class="tile-section">
@@ -2423,14 +2764,14 @@ class HapanelsStudioPanel extends HTMLElement {
           <div class="tile-title">
             <span>${this._escape(tileLabel)}</span>
             <small>${this._escape(tile.id)}</small>
-            <button class="secondary" title="Edytuj nazwę">✎</button>
+            ${masterDetail ? "" : `<button class="secondary" title="Edytuj nazwę">✎</button>`}
           </div>
           <div class="tile-summary">
             <span>${this._escape(tile.kind || "tile")}</span><span>·</span>
             <span>${this._escape(tile.size || "-")}</span><span>·</span>
             <span>order ${this._escape(tile.order ?? 0)}</span><span>·</span>
             <span>${this._escape(entityLabel)}</span>
-            <button class="tile-toggle secondary" data-toggle-tile title="Zwiń/rozwiń"><span>⌃</span></button>
+            ${masterDetail ? "" : `<button class="tile-toggle secondary" data-toggle-tile title="Zwiń/rozwiń"><span>⌃</span></button>`}
           </div>
         </div>
         <div class="tile-expandable">
@@ -2438,11 +2779,12 @@ class HapanelsStudioPanel extends HTMLElement {
             <div class="tile-body">
               <aside class="tile-preview-pane">
                 <h3>Podgląd kafla</h3>
-                <div class="tile-preview-box accent-${this._escape(accent)}">
+                <div class="tile-preview-box accent-${this._escape(accent)} ${presentation.background === "transparent" ? "preview-transparent" : ""} ${presentation.border === "none" ? "preview-borderless" : ""} align-${this._escape(presentation.content_alignment)}">
                   <div>
-                    <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(this._mdiIcon(tile.icon))}"></ha-icon>
-                    <strong class="tile-live-label tile-preview-target" data-highlight-target="label">${this._escape(tile.short_label || tile.label || tile.id)}</strong>
-                    <span class="tile-live-entity tile-preview-target" data-highlight-target="entity">${this._escape(entityLabel)}</span>
+                    <ha-icon class="tile-live-icon tile-preview-target" data-highlight-target="icon" icon="${this._escape(previewIcon)}" style="color:${this._escape(iconColor)}" ${presentation.show_icon ? "" : "hidden"}></ha-icon>
+                    <strong class="tile-live-label tile-preview-target" data-highlight-target="label" ${presentation.show_label ? "" : "hidden"}>${this._escape(tile.short_label || tile.label || tile.id)}</strong>
+                    <span class="tile-live-entity tile-preview-target" data-highlight-target="entity" ${presentation.show_value ? "" : "hidden"}>${this._escape(entityLabel)}</span>
+                    <span class="tile-live-secondary" ${presentation.show_secondary ? "" : "hidden"}>${this._escape(tile.secondary || tile.summary || "")}</span>
                   </div>
                 </div>
                 <div class="tile-preview-meta">
@@ -2458,26 +2800,46 @@ class HapanelsStudioPanel extends HTMLElement {
                     ${this._inputField(`${prefix}-label`, "Label", tile.label || tile.id, "text", "span-6", "label")}
                     ${this._entityField(`${prefix}-entity`, "Źródło", tile.entity_id || "", "entity", "span-6", tile.kind === "cover" ? ["cover"] : null)}
                     ${this._inputField(`${prefix}-short`, "Short (opcjonalnie)", tile.short_label || "", "text", "span-6", "label")}
+                    ${this._inputField(`${prefix}-content`, "Treść", tile.content || "", "text", "span-6")}
+                    ${this._inputField(`${prefix}-summary`, "Podsumowanie", tile.summary || "", "text", "span-6")}
+                    ${this._inputField(`${prefix}-secondary`, "Wartość dodatkowa", tile.secondary || "", "text", "span-6")}
                   </div>
                 </section>
                 <section class="tile-section">
                   <h3>Wygląd</h3>
                   <div class="fields">
                     ${this._selectField(`${prefix}-kind`, "Typ", TILE_KINDS, tile.kind || "entity", "span-3", "kind")}
-                    ${this._selectField(`${prefix}-size`, "Rozmiar", TILE_SIZES, tile.size || "large", "span-3", "size")}
+                    ${surface === "aod" ? this._selectField(`${prefix}-size`, "Rozmiar", TILE_SIZES, tile.size || "large", "span-3", "size") : ""}
                     ${this._iconField(`${prefix}-icon`, "Ikona (MDI)", this._mdiIcon(tile.icon), accent, "icon", "span-6")}
-                    ${this._selectField(`${prefix}-accent`, "Accent (kolor)", TILE_ACCENTS, accent, "span-4", "accent")}
+                    ${this._selectField(`${prefix}-iconSource`, "Źródło ikony", ICON_SOURCES, tile.icon_source || "custom", "span-3")}
+                    ${this._selectField(`${prefix}-accent`, "Accent (kolor)", TILE_ACCENTS, accent, "span-3", "accent")}
+                    ${this._selectField(`${prefix}-iconColorSource`, "Kolor ikony", ICON_COLOR_SOURCES, tile.icon_color_source || "accent", "span-3")}
+                    ${this._inputField(`${prefix}-iconColor`, "Własny kolor #RRGGBB", tile.icon_color || "", "text", "span-3")}
                   </div>
                 </section>
+                <section class="tile-section">
+                  <h3>Prezentacja</h3>
+                  <div class="fields">
+                    <div class="layout-checks span-12">
+                      ${[["showIcon", "Ikona", presentation.show_icon], ["showLabel", "Nazwa", presentation.show_label], ["showValue", "Wartość", presentation.show_value], ["showSecondary", "Dodatkowa", presentation.show_secondary]].map(([name, label, checked]) => `<label title="Widoczność elementu na kaflu"><input id="${prefix}-${name}" type="checkbox" ${checked ? "checked" : ""}> ${label}</label>`).join("")}
+                    </div>
+                    ${this._selectField(`${prefix}-background`, "Tło", ["surface", "transparent"], presentation.background, "span-4")}
+                    ${this._selectField(`${prefix}-border`, "Obramowanie", ["default", "none"], presentation.border, "span-4")}
+                    ${this._selectField(`${prefix}-alignment`, "Wyrównanie", ["start", "center", "end"], presentation.content_alignment, "span-4")}
+                  </div>
+                </section>
+                ${surface === "dashboard" ? `<section class="tile-section"><h3>Akcje</h3><div class="fields">${this._actionEditor(prefix, "tap", tile.tap_action, tile.kind)}${this._actionEditor(prefix, "hold", tile.hold_action, tile.kind, true)}</div></section>` : ""}
                 <section class="tile-section">
                   <h3>Zaawansowane</h3>
                   <div class="fields">
                     ${this._inputField(`${prefix}-panel`, "Panel (opcjonalnie)", tile.panel_id || "", "text", "span-6", "panel")}
-                    ${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}
-                    ${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}
-                    ${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}
-                    ${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}
-                    ${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}
+                    ${surface === "dashboard" ? `<span class="sub span-12">Rozmiar, kolejność i położenie ustawisz w Podglądzie.</span>` : `
+                      ${this._inputField(`${prefix}-order`, "Order", tile.order ?? 0, "number", "span-6", "order")}
+                      ${this._inputField(`${prefix}-col`, "Kolumna", tile.col ?? "", "number", "span-3", "layout")}
+                      ${this._inputField(`${prefix}-row`, "Wiersz", tile.row ?? "", "number", "span-3", "layout")}
+                      ${this._inputField(`${prefix}-colSpan`, "Szerokość", tile.colSpan ?? "", "number", "span-3", "layout")}
+                      ${this._inputField(`${prefix}-rowSpan`, "Wysokość", tile.rowSpan ?? "", "number", "span-3", "layout")}
+                    `}
                   </div>
                 </section>
                 ${clockSection}
@@ -2485,10 +2847,12 @@ class HapanelsStudioPanel extends HTMLElement {
                 ${childSection}
               </div>
             </div>
+            <ul class="tile-validation" data-tile-validation ${errors.length ? "" : "hidden"}>${errors.map((error) => `<li>${this._escape(error)}</li>`).join("")}</ul>
             <div class="tile-footer">
               <button class="small danger" data-delete-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}">Usuń</button>
               <div class="tile-actions">
-                <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}">Zapisz</button>
+                ${masterDetail ? `<button class="small secondary" data-tile-reset title="Przywraca domyślne ustawienia, zachowując nazwę, encję i położenie">Resetuj domyślne</button><button class="small secondary" data-show-in-preview title="Pokaż ten kafel w jego panelu">Zobacz w Podglądzie</button><span class="tile-save-status ${status}">${statusLabel}</span>` : ""}
+                <button class="small" data-save-tile data-device="${this._escape(device)}" data-surface="${surface}" data-tile="${this._escape(tile.id)}" data-prefix="${this._escape(prefix)}" ${status === "saving" ? "disabled" : ""}>Zapisz</button>
               </div>
             </div>
           </div>
@@ -2559,6 +2923,15 @@ class HapanelsStudioPanel extends HTMLElement {
 
   _accentColor(accent) {
     return ({ orange: "#e99900", red: "#ff5338", white: "#f1f1f1" }[accent] || "#e99900");
+  }
+
+  _resolvedIconColor(tile) {
+    if (tile.icon_color_source === "custom" && tile.icon_color) return tile.icon_color;
+    if (tile.icon_color_source === "entity") {
+      const rgb = this._hass?.states?.[tile.entity_id]?.attributes?.rgb_color;
+      if (Array.isArray(rgb) && rgb.length >= 3) return `rgb(${rgb.slice(0, 3).join(",")})`;
+    }
+    return this._accentColor(tile.accent || "orange");
   }
 
   _settingsView() {
@@ -2662,7 +3035,27 @@ class HapanelsStudioPanel extends HTMLElement {
       button.addEventListener("click", () => this._askConfirm("Usunąć tablet?", "Czy na pewno chcesz usunąć tablet?", () => this._hideDevice(button.dataset.hideDevice)));
     });
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((button) => {
-      button.addEventListener("click", () => { this._activeTab = button.dataset.tab; this._render(); });
+      button.addEventListener("click", () => {
+        const editor = this.shadowRoot.querySelector("[data-tile-editor]");
+        if (this._activeTab === "tiles" && editor) this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+        this._activeTab = button.dataset.tab;
+        this._render();
+      });
+    });
+    this.shadowRoot.getElementById("tile-search")?.addEventListener("input", (event) => {
+      this._tileSearch = event.target.value;
+      this.shadowRoot.querySelectorAll(".tile-master-item").forEach((item) => {
+        item.hidden = !item.textContent.toLowerCase().includes(this._tileSearch.trim().toLowerCase());
+      });
+    });
+    this.shadowRoot.querySelectorAll("[data-select-tile]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const editor = this.shadowRoot.querySelector("[data-tile-editor]");
+        if (editor) this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+        this._selectedTileId = button.dataset.selectTile;
+        this._focusedTileId = this._selectedTileId;
+        this._render();
+      });
     });
     this.shadowRoot.querySelectorAll("[data-theme-mode]").forEach((select) => {
       select.addEventListener("change", () => this._setThemeMode(select.value));
@@ -2685,6 +3078,8 @@ class HapanelsStudioPanel extends HTMLElement {
         picker.value = event.detail?.value || "";
         this._fillEntityDefaults(picker);
         this._syncTilePreview(picker);
+        const editor = picker.closest("[data-tile-editor]");
+        if (editor && this._activeTab === "tiles") this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
       });
     });
     this.shadowRoot.querySelectorAll("input[id$='-entity']").forEach((input) => {
@@ -2693,7 +3088,12 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("ha-icon-picker").forEach((picker) => {
       picker.hass = this._hass;
       picker.value = picker.getAttribute("value") || "mdi:cog";
-      picker.addEventListener("value-changed", (event) => { picker.value = event.detail?.value || "mdi:cog"; this._syncTilePreview(picker); });
+      picker.addEventListener("value-changed", (event) => {
+        picker.value = event.detail?.value || "mdi:cog";
+        this._syncTilePreview(picker);
+        const editor = picker.closest("[data-tile-editor]");
+        if (editor && this._activeTab === "tiles") this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+      });
     });
     this.shadowRoot.querySelectorAll("[data-resolve-conflict]").forEach((button) => {
       button.addEventListener("click", () => this._resolveConflict(button.dataset.device, button.dataset.resolveConflict));
@@ -2716,7 +3116,7 @@ class HapanelsStudioPanel extends HTMLElement {
       button.addEventListener("click", () => this._addTile(button.dataset.device, "dashboard", "ha", "clock", button.dataset.panelId));
     });
     this.shadowRoot.querySelectorAll("[data-focus-child-tile]").forEach((button) => {
-      button.addEventListener("click", () => { this._focusedTileId = button.dataset.focusChildTile; this._collapsedTiles.delete(`dashboard:${this._selectedDevice}:${button.dataset.focusChildTile}`); this._render(); });
+      button.addEventListener("click", () => { this._focusedTileId = button.dataset.focusChildTile; this._selectedTileId = button.dataset.focusChildTile; this._expandedTiles.add(`dashboard:${this._selectedDevice}:${button.dataset.focusChildTile}`); this._render(); });
     });
     this.shadowRoot.querySelectorAll("[data-pick-panel-tile]").forEach((button) => {
       button.addEventListener("click", () => this._openPanelTilePicker(button.dataset.target, button.dataset.device, button.dataset.surface));
@@ -2766,17 +3166,8 @@ class HapanelsStudioPanel extends HTMLElement {
       this._layoutDrag = null;
       this._render();
     });
-    this.shadowRoot.querySelectorAll("#layout-tile-title, #layout-tile-subtitle, #layout-tile-icon, #layout-show-icon, #layout-show-title, #layout-show-subtitle, #layout-clock-style").forEach((input) => {
-      input.addEventListener("input", () => this._syncSelectedLayoutTile());
+    this.shadowRoot.querySelectorAll("#layout-tile-size").forEach((input) => {
       input.addEventListener("change", () => this._syncSelectedLayoutTile());
-    });
-    this.shadowRoot.querySelectorAll("[data-clock-style]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const select = this.shadowRoot.getElementById("layout-clock-style");
-        if (select) select.value = button.dataset.clockStyle;
-        this._syncSelectedLayoutTile();
-        this._render();
-      });
     });
     this.shadowRoot.querySelector("[data-layout-tray]")?.addEventListener("click", () => this._layoutTileToTray());
     this.shadowRoot.querySelectorAll("[data-layout-restore]").forEach((button) => {
@@ -2790,8 +3181,14 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-layout-apply]").forEach((button) => {
       button.addEventListener("click", () => this._applyLayoutGrid(button.dataset.device));
     });
-    this.shadowRoot.querySelectorAll("[data-layout-panel-preset]").forEach((button) => {
-      button.addEventListener("click", () => this._applyPanelPreset(button.dataset.device));
+    this.shadowRoot.querySelector("[data-layout-undo]")?.addEventListener("click", () => this._undoLayout());
+    this.shadowRoot.querySelector("[data-layout-redo]")?.addEventListener("click", () => this._redoLayout());
+    this.shadowRoot.querySelectorAll("[data-layout-previous-revision]").forEach((button) => {
+      button.addEventListener("click", () => this._askConfirm(
+        "Przywrócić poprzedni zapis?",
+        "Bieżąca konfiguracja zostanie zastąpiona poprzednim zapisem i wysłana jako nowa rewizja.",
+        () => this._restorePreviousRevision(button.dataset.device),
+      ));
     });
     this.shadowRoot.querySelectorAll("[data-layout-reset]").forEach((button) => {
       button.addEventListener("click", () => this._resetLayoutDraft(button.dataset.device));
@@ -2802,6 +3199,14 @@ class HapanelsStudioPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-layout-edit-tile]").forEach((button) => {
       button.addEventListener("click", () => this._editTileFromPreview(button.dataset.tile));
     });
+    this.shadowRoot.querySelector("[data-show-in-preview]")?.addEventListener("click", () => {
+      const editor = this.shadowRoot.querySelector("[data-tile-editor]");
+      if (editor) {
+        this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+        this._openTileInPreview(editor.dataset.tileId);
+      }
+    });
+    this.shadowRoot.querySelector("[data-tile-reset]")?.addEventListener("click", () => this._resetTileDraft(this._selectedDevice, this._selectedTileId));
     this.shadowRoot.querySelectorAll("[data-delete-tile]").forEach((button) => {
       button.addEventListener("click", () => this._askConfirm("Usunąć kafel?", "Czy na pewno chcesz usunąć kafel?", () => this._deleteTile(button.dataset.device, button.dataset.tile, button.dataset.surface)));
     });
@@ -2809,8 +3214,18 @@ class HapanelsStudioPanel extends HTMLElement {
       select.addEventListener("change", () => { this._syncIconAccent(select); this._syncTilePreview(select); });
     });
     this.shadowRoot.querySelectorAll("[data-tile-editor] input, [data-tile-editor] select").forEach((input) => {
-      input.addEventListener("input", () => this._syncTilePreview(input));
-      input.addEventListener("change", () => this._syncTilePreview(input));
+      input.addEventListener("input", () => {
+        this._syncTilePreview(input);
+        const editor = input.closest("[data-tile-editor]");
+        if (editor && this._activeTab === "tiles") this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+      });
+      input.addEventListener("change", () => {
+        this._syncTilePreview(input);
+        const editor = input.closest("[data-tile-editor]");
+        if (!editor || this._activeTab !== "tiles") return;
+        this._captureTileDraft(editor.dataset.prefix, this._selectedDevice, editor.dataset.tileId);
+        if (input.id.endsWith("-kind") || input.id.endsWith("-iconSource") || input.id.endsWith("-iconColorSource") || input.id.includes("-tap-type") || input.id.includes("-hold-type")) this._render();
+      });
     });
     this.shadowRoot.querySelectorAll("[data-toggle-tile]").forEach((button) => {
       button.addEventListener("click", (event) => {
@@ -2855,12 +3270,30 @@ class HapanelsStudioPanel extends HTMLElement {
   _editTileFromPreview(tileId) {
     if (!tileId) return;
     this._focusedTileId = tileId;
+    this._selectedTileId = tileId;
     this._activeTab = "tiles";
     this._render();
     window.setTimeout(() => {
       const tile = this.shadowRoot.querySelector(`[data-tile-id="${CSS.escape(tileId)}"]`);
       tile?.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 0);
+  }
+
+  _openTileInPreview(tileId) {
+    const config = this._configs?.[this._selectedDevice];
+    if (!config || !tileId) return;
+    const panel = (config.panels || []).find((item) => (item.tiles || []).some((tile) => tile.id === tileId));
+    if (panel) {
+      const opener = dashboardTiles(config).find((tile) => PANEL_OPENER_KINDS.includes(tile.kind) && tile.panel_id === panel.id);
+      this._layoutContext = `${opener?.kind === "popup" ? "popup" : "folder"}:${panel.id}`;
+    } else {
+      this._layoutContext = "main";
+    }
+    this._activeTab = "preview";
+    const draft = this._layoutDraft(this._selectedDevice, config, this._layoutContextOptions(config).find((item) => item.id === this._layoutContext));
+    draft.selectedTileId = tileId;
+    this._previewHighlightTileId = tileId;
+    this._render();
   }
 
   _toggleTileCollapsed(tile) {
@@ -2888,22 +3321,41 @@ class HapanelsStudioPanel extends HTMLElement {
     if (!tile || !prefix) return;
     const value = (suffix) => this.shadowRoot.getElementById(`${prefix}-${suffix}`)?.value?.trim() || "";
     const accent = value("accent") || "orange";
-    const icon = this._mdiIcon(value("icon"));
+    const icon = value("iconSource") === "auto" ? (this._hass?.states?.[value("entity")]?.attributes?.icon || this._domainIcon(value("entity"))) : this._mdiIcon(value("icon"));
     const label = value("short") || value("label") || tile.querySelector(".tile-title span")?.textContent || "Kafel";
     const entity = value("entity");
     const kind = value("kind") || "entity";
     const entityPicker = this.shadowRoot.getElementById(`${prefix}-entity`);
     if (entityPicker?.tagName === "HA-ENTITY-PICKER") entityPicker.includeDomains = kind === "cover" ? ["cover"] : undefined;
     tile.querySelector(".tile-live-icon")?.setAttribute("icon", icon);
+    const liveIcon = tile.querySelector(".tile-live-icon");
+    if (liveIcon) {
+      const customColor = value("iconColorSource") === "custom" && /^#[0-9a-f]{6}$/i.test(value("iconColor")) ? value("iconColor") : this._accentColor(accent);
+      liveIcon.style.color = customColor;
+      liveIcon.hidden = !this.shadowRoot.getElementById(`${prefix}-showIcon`)?.checked;
+    }
     const previewBox = tile.querySelector(".tile-preview-box");
     if (previewBox) {
       previewBox.classList.remove("accent-orange", "accent-red", "accent-white");
       previewBox.classList.add(`accent-${accent}`);
+      previewBox.classList.toggle("preview-transparent", value("background") === "transparent");
+      previewBox.classList.toggle("preview-borderless", value("border") === "none");
+      previewBox.classList.remove("align-start", "align-center", "align-end");
+      previewBox.classList.add(`align-${value("alignment") || "center"}`);
     }
     tile.style.setProperty("--tile-accent", this._accentColor(accent));
     const setText = (selector, text) => { const el = tile.querySelector(selector); if (el) el.textContent = text; };
     setText(".tile-live-label", label);
     setText(".tile-live-entity", entity ? this._entityLabel(entity) : kind);
+    const liveLabel = tile.querySelector(".tile-live-label");
+    const liveEntity = tile.querySelector(".tile-live-entity");
+    const liveSecondary = tile.querySelector(".tile-live-secondary");
+    if (liveLabel) liveLabel.hidden = !this.shadowRoot.getElementById(`${prefix}-showLabel`)?.checked;
+    if (liveEntity) liveEntity.hidden = !this.shadowRoot.getElementById(`${prefix}-showValue`)?.checked;
+    if (liveSecondary) {
+      liveSecondary.hidden = !this.shadowRoot.getElementById(`${prefix}-showSecondary`)?.checked;
+      liveSecondary.textContent = value("secondary") || value("summary");
+    }
     setText(".tile-live-kind", kind);
     setText(".tile-live-size", value("size") || "-");
     setText(".tile-live-accent", accent);

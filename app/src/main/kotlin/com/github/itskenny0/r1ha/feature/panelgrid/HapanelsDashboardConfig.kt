@@ -112,6 +112,9 @@ data class HapanelsTileConfig(
     @SerialName("entity_id") val entityId: String? = null,
     @SerialName("panel_id") val panelId: String? = null,
     val icon: String,
+    @SerialName("icon_source") val iconSource: HapanelsTileIconSource = HapanelsTileIconSource.CUSTOM,
+    @SerialName("icon_color_source") val iconColorSource: HapanelsTileIconColorSource = HapanelsTileIconColorSource.ACCENT,
+    @SerialName("icon_color") val iconColor: String? = null,
     val accent: HapanelsTileAccent = HapanelsTileAccent.ORANGE,
     val order: Int,
     val col: Int? = null,
@@ -194,6 +197,9 @@ data class HapanelsTilePatch(
     @SerialName("entity_id") val entityId: String? = null,
     @SerialName("panel_id") val panelId: String? = null,
     val icon: String? = null,
+    @SerialName("icon_source") val iconSource: HapanelsTileIconSource? = null,
+    @SerialName("icon_color_source") val iconColorSource: HapanelsTileIconColorSource? = null,
+    @SerialName("icon_color") val iconColor: String? = null,
     val accent: HapanelsTileAccent? = null,
     val order: Int? = null,
     val col: Int? = null,
@@ -241,9 +247,9 @@ internal fun HapanelsDashboardConfig.syncStateJson(
     append('"')
     append(",\"schema_version\":")
     append(HAPANELS_DASHBOARD_SCHEMA_VERSION)
-    append(",\"schema_capabilities\":[\"panels\",\"presentation\",\"text\",\"spacer\",\"tap_action\",\"technical_actions\"]")
+    append(",\"schema_capabilities\":[\"panels\",\"presentation\",\"text\",\"spacer\",\"tap_action\",\"hold_action\",\"auto_icon\",\"icon_color\",\"technical_actions\"]")
     append(",\"supported_tile_kinds\":[\"clock\",\"category\",\"action\",\"entity\",\"cover\",\"camera\",\"folder\",\"popup\",\"text\",\"spacer\"]")
-    append(",\"supported_action_types\":[\"none\",\"entity_default\",\"navigate\",\"local_panel\"]")
+    append(",\"supported_action_types\":[\"none\",\"entity_default\",\"more_info\",\"navigate\",\"local_panel\"]")
     panelName?.takeIf { it.isNotBlank() }?.let {
         append(',')
         append("\"panel_name\":\"")
@@ -289,6 +295,19 @@ enum class HapanelsTileAccent {
     @SerialName("orange") ORANGE,
     @SerialName("red") RED,
     @SerialName("white") WHITE,
+}
+
+@Serializable
+enum class HapanelsTileIconSource {
+    @SerialName("custom") CUSTOM,
+    @SerialName("auto") AUTO,
+}
+
+@Serializable
+enum class HapanelsTileIconColorSource {
+    @SerialName("accent") ACCENT,
+    @SerialName("entity") ENTITY,
+    @SerialName("custom") CUSTOM,
 }
 
 private val dashboardJson = Json {

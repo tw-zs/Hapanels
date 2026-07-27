@@ -44,6 +44,75 @@ class DashboardSchemaTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unsupported"):
             schema.validate_dashboard_config(config)
 
+    def test_accepts_auto_icon_entity_color_and_more_info_hold(self):
+        config = valid_config()
+        tile = config["tiles"][0]
+        tile.update({
+            "icon_source": "auto",
+            "icon_color_source": "entity",
+            "hold_action": {"type": "more_info", "entity_id": "light.kitchen"},
+        })
+
+        self.assertEqual(schema.validate_dashboard_config(config)["tiles"][0]["icon_source"], "auto")
+
+    def test_accepts_custom_icon_color(self):
+        config = valid_config()
+        config["tiles"][0].update({"icon_color_source": "custom", "icon_color": "#12AbEf"})
+
+        self.assertEqual(schema.validate_dashboard_config(config)["tiles"][0]["icon_color"], "#12AbEf")
+
+    def test_rejects_invalid_icon_options(self):
+        config = valid_config()
+        config["tiles"][0]["icon_source"] = "magic"
+        with self.assertRaisesRegex(ValueError, "icon_source"):
+            schema.validate_dashboard_config(config)
+
+        config = valid_config()
+        config["tiles"][0].update({"icon_color_source": "custom", "icon_color": "orange"})
+        with self.assertRaisesRegex(ValueError, "icon_color"):
+            schema.validate_dashboard_config(config)
+
+    def test_rejects_more_info_without_entity(self):
+        config = valid_config()
+        config["tiles"][0]["hold_action"] = {"type": "more_info"}
+
+        with self.assertRaisesRegex(ValueError, "entity_id"):
+            schema.validate_dashboard_config(config)
+
+    def test_rejects_hold_action_on_aod(self):
+        config = valid_config()
+        config["always_on_display"] = {
+            "layout": "grid",
+            "tiles": [{
+                "id": "aod",
+                "kind": "entity",
+                "size": "small",
+                "label": "Lamp",
+                "entity_id": "light.kitchen",
+                "icon": "mdi:lightbulb",
+                "order": 0,
+                "hold_action": {"type": "more_info", "entity_id": "light.kitchen"},
+            }],
+        }
+
+        with self.assertRaisesRegex(ValueError, "read-only"):
+            schema.validate_dashboard_config(config)
+
+    def test_patch_validates_new_fields_and_actions(self):
+        patch = {
+            "base_revision": 1,
+            "updated_by": "test",
+            "tile_updates": [{
+                "id": "lamp",
+                "icon_source": "auto",
+                "icon_color_source": "custom",
+                "icon_color": "#abcdef",
+                "hold_action": {"type": "more_info", "entity_id": "light.kitchen"},
+            }],
+        }
+
+        self.assertEqual(schema.validate_dashboard_patch(patch), patch)
+
 
 if __name__ == "__main__":
     unittest.main()

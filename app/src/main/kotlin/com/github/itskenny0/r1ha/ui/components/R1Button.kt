@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.github.itskenny0.r1ha.core.theme.R1
 
@@ -35,6 +36,7 @@ fun R1Button(
     enabled: Boolean = true,
     variant: R1ButtonVariant = R1ButtonVariant.Filled,
     accent: Color = R1.AccentWarm,
+    textStyle: TextStyle = R1.labelMicro,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
     val containerColor = when {
@@ -68,7 +70,7 @@ fun R1Button(
             if (leadingContent != null) {
                 leadingContent()
             }
-            Text(text = text, style = R1.labelMicro, color = textColor)
+            Text(text = text, style = textStyle, color = textColor)
         }
     }
 }

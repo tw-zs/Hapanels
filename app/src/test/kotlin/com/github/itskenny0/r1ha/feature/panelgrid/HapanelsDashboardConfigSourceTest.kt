@@ -137,6 +137,39 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(tile.tapAction?.destination).isEqualTo("settings")
     }
 
+    @Test fun importAcceptsAutoIconColorAndMoreInfoHold() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+        val configured = current.copy(tiles = current.tiles.map { tile ->
+            if (tile.id == "watering") tile.copy(
+                iconSource = HapanelsTileIconSource.AUTO,
+                iconColorSource = HapanelsTileIconColorSource.CUSTOM,
+                iconColor = "#12AbEf",
+                holdAction = HapanelsTileAction(type = "more_info", entityId = "switch.garden_watering"),
+            ) else tile
+        })
+
+        val imported = source.importRaw(configJsonForTest(configured))
+        val tile = imported.tiles.first { it.id == "watering" }
+
+        assertThat(tile.iconSource).isEqualTo(HapanelsTileIconSource.AUTO)
+        assertThat(tile.iconColorSource).isEqualTo(HapanelsTileIconColorSource.CUSTOM)
+        assertThat(tile.iconColor).isEqualTo("#12AbEf")
+        assertThat(tile.holdAction?.type).isEqualTo("more_info")
+    }
+
+    @Test fun importRejectsInvalidCustomIconColor() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+        val invalid = current.copy(tiles = current.tiles.map { tile ->
+            if (tile.id == "watering") tile.copy(iconColorSource = HapanelsTileIconColorSource.CUSTOM, iconColor = "orange") else tile
+        })
+
+        val result = runCatching { source.importRaw(configJsonForTest(invalid)) }
+
+        assertThat(result.exceptionOrNull()).isInstanceOf(HapanelsDashboardValidationException::class.java)
+    }
+
     @Test fun importInvalidJsonDoesNotReplaceCachedConfig() = runTest {
         val source = newSource()
         source.loadOrSeed()
@@ -183,6 +216,31 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(loaded.tiles.first { it.id == "lights" }.label).isEqualTo("Światła parter")
         assertThat(loaded.tiles.first { it.id == "lights" }.shortLabel).isEqualTo("Parter")
         assertThat(loaded.tiles.first { it.id == "lights" }.accent).isEqualTo(HapanelsTileAccent.WHITE)
+    }
+
+    @Test fun applyPatchUpdatesIconSourcesAndHoldAction() = runTest {
+        val source = newSource()
+        val current = source.loadOrSeed()
+
+        source.applyPatch(
+            HapanelsDashboardPatch(
+                baseRevision = current.revision,
+                updatedBy = "homeassistant:test",
+                tileUpdates = listOf(
+                    HapanelsTilePatch(
+                        id = "watering",
+                        iconSource = HapanelsTileIconSource.AUTO,
+                        iconColorSource = HapanelsTileIconColorSource.ENTITY,
+                        holdAction = HapanelsTileAction(type = "more_info", entityId = "switch.garden_watering"),
+                    ),
+                ),
+            ),
+        )
+        val tile = source.loadOrSeed().tiles.first { it.id == "watering" }
+
+        assertThat(tile.iconSource).isEqualTo(HapanelsTileIconSource.AUTO)
+        assertThat(tile.iconColorSource).isEqualTo(HapanelsTileIconColorSource.ENTITY)
+        assertThat(tile.holdAction?.type).isEqualTo("more_info")
     }
 
     @Test fun patchRejectsDecorativeRedAccentWithoutChangingRevision() = runTest {
@@ -414,6 +472,9 @@ class HapanelsDashboardConfigSourceTest {
 
         assertThat(synced).contains("\"status\":\"synced\"")
         assertThat(synced).contains("\"revision\":${current.revision}")
+        assertThat(synced).contains("\"hold_action\"")
+        assertThat(synced).contains("\"auto_icon\"")
+        assertThat(synced).contains("\"more_info\"")
         assertThat(conflict).contains("\"status\":\"conflict\"")
         assertThat(conflict).contains("\"attempted_base_revision\":${current.revision - 1}")
         assertThat(conflict).contains("\"current_revision\":${current.revision}")

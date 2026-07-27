@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
@@ -74,8 +75,12 @@ import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.ha.ServiceCall
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.ChevronBack
+import com.github.itskenny0.r1ha.ui.components.R1Button
+import com.github.itskenny0.r1ha.ui.components.R1ButtonVariant
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.ui.components.r1RowPressable
 import com.github.itskenny0.r1ha.ui.i18n.Text
+import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -87,6 +92,8 @@ import java.util.Locale
 import org.json.JSONObject
 
 private val LocalHapanelsTheme = staticCompositionLocalOf { defaultHapanelsThemeConfig.resolveHapanelsThemeColors() }
+private val LocalPendingTileEntities = staticCompositionLocalOf<Set<String>> { emptySet() }
+private val LocalTileHoldHandler = staticCompositionLocalOf<(HapanelsTileConfig) -> Unit> { {} }
 private val NunitoPanelFont = FontFamily(
     Font(R.font.nunito_regular, weight = FontWeight.Normal),
     Font(R.font.nunito_bold, weight = FontWeight.Bold),
@@ -145,6 +152,8 @@ fun PanelGridMockupScreen(
     val currentPanelTitle = currentPanelId?.let { loadedPanelTitle(config, it) }
     var popupTile by remember(config) { androidx.compose.runtime.mutableStateOf<HapanelsTileConfig?>(null) }
     var popupOpen by remember(config) { androidx.compose.runtime.mutableStateOf(false) }
+    var moreInfoEntityId by remember(config) { mutableStateOf<String?>(null) }
+    var pendingEntityIds by remember(config) { mutableStateOf(emptySet<String>()) }
     val liveEntities by produceState<Map<EntityId, EntityState>>(
         initialValue = emptyMap(),
         key1 = haRepository,
@@ -165,42 +174,64 @@ fun PanelGridMockupScreen(
             Unit
         }
     }
-    val onTileClick = remember(config, haRepository, liveEntities, onNavigate, onLocalPanelAction) {
-        { tile: HapanelsTileConfig ->
-            val explicitAction = tile.tapAction
-            if (explicitAction != null) {
-                when (explicitAction.type) {
-                    "navigate" -> explicitAction.destination?.let(onNavigate)
-                        ?: explicitAction.panelId?.let { panelId ->
-                            loadedPanelTitle(config, panelId)?.let {
-                                panelStack = panelStack + panelId
-                            }
-                        }
-                    "local_panel" -> explicitAction.action?.let(onLocalPanelAction)
-                    "entity_default" -> {
-                        val target = (explicitAction.entityId ?: tile.entityId).toEntityIdOrNull()
-                        target?.let { entityId ->
-                            scope.launch { haRepository.call(ServiceCall.tapAction(entityId, liveEntities[entityId]?.isOn == true)) }
+    val executeAction = remember(config, haRepository, liveEntities, pendingEntityIds, onNavigate, onLocalPanelAction) {
+        { tile: HapanelsTileConfig, action: HapanelsTileAction ->
+            val targetText = action.entityId ?: tile.entityId
+            val target = targetText.toEntityIdOrNull()
+            val targetState = target?.let(liveEntities::get)
+            if (action.type in setOf("entity_default", "more_info") && target != null && targetState?.isAvailable != true) {
+                Toaster.error(if (targetState == null) "Brak danych dla ${target.value}" else "Encja ${target.value} jest niedostępna")
+            } else when (action.type) {
+                "none" -> Unit
+                "navigate" -> action.destination?.let(onNavigate)
+                    ?: action.panelId?.let { panelId ->
+                        loadedPanelTitle(config, panelId)?.let { panelStack = panelStack + panelId }
+                    }
+                "local_panel" -> action.action?.let(onLocalPanelAction)
+                "more_info" -> target?.let { moreInfoEntityId = it.value }
+                "entity_default" -> target?.let { entityId ->
+                    if (entityId.value !in pendingEntityIds) {
+                        pendingEntityIds = pendingEntityIds + entityId.value
+                        scope.launch {
+                            haRepository.call(ServiceCall.tapAction(entityId, targetState?.isOn == true))
+                            kotlinx.coroutines.delay(800)
+                            pendingEntityIds = pendingEntityIds - entityId.value
                         }
                     }
-                }
-            } else {
-                when (tile.kind) {
-                    HapanelsTileKind.FOLDER -> {
-                        tile.panelId?.takeIf { loadedPanelTitle(config, it) != null }?.let { panelStack = panelStack + it }
-                    }
-                    HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
-                    else -> tile.legacyTapAction(liveEntities)?.let { call -> scope.launch { haRepository.call(call) } }
                 }
             }
             Unit
         }
     }
-    BackHandler(enabled = popupOpen || panelStack.isNotEmpty()) {
-        if (popupOpen) popupOpen = false else panelStack = panelStack.dropLast(1)
+    val onTileClick = remember(config, liveEntities, executeAction) {
+        { tile: HapanelsTileConfig ->
+            val explicitAction = tile.tapAction
+            if (explicitAction != null) {
+                executeAction(tile, explicitAction)
+            } else when (tile.kind) {
+                HapanelsTileKind.FOLDER -> tile.panelId?.takeIf { loadedPanelTitle(config, it) != null }?.let { panelStack = panelStack + it }
+                HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
+                else -> tile.legacyTapAction(liveEntities)?.let { call ->
+                    val state = liveEntities[call.target]
+                    if (state?.isAvailable != true) Toaster.error(if (state == null) "Brak danych dla ${call.target.value}" else "Encja ${call.target.value} jest niedostępna")
+                    else scope.launch { haRepository.call(call) }
+                }
+            }
+            Unit
+        }
+    }
+    val onTileHold = remember(executeAction) {
+        { tile: HapanelsTileConfig -> tile.holdAction?.takeUnless { it.type == "none" }?.let { executeAction(tile, it) }; Unit }
+    }
+    BackHandler(enabled = moreInfoEntityId != null || popupOpen || panelStack.isNotEmpty()) {
+        if (moreInfoEntityId != null) moreInfoEntityId = null else if (popupOpen) popupOpen = false else panelStack = panelStack.dropLast(1)
     }
 
-    CompositionLocalProvider(LocalHapanelsTheme provides (renderConfig?.theme ?: defaultHapanelsThemeConfig.resolveHapanelsThemeColors())) {
+    CompositionLocalProvider(
+        LocalHapanelsTheme provides (renderConfig?.theme ?: defaultHapanelsThemeConfig.resolveHapanelsThemeColors()),
+        LocalPendingTileEntities provides pendingEntityIds,
+        LocalTileHoldHandler provides onTileHold,
+    ) {
         val theme = LocalHapanelsTheme.current
         Box(
             modifier = Modifier
@@ -221,9 +252,9 @@ fun PanelGridMockupScreen(
                     if (loadedConfig == null) {
                         LoadingPanelConfig()
                     } else if (compact) {
-                        CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                        CompactPanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
                     } else {
-                        WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent)
+                        WidePanel(config = panelConfig!!, liveEntities = liveEntities, now = now, dateText = dateText, isSubPanel = currentPanelId != null, onTileClick = onTileClick, onSetCoverPercent = onSetCoverPercent, onOpenSettings = { onNavigate("settings") })
                     }
                 }
             }
@@ -252,6 +283,13 @@ fun PanelGridMockupScreen(
                         if (!popupOpen) popupTile = null
                     }
                 }
+            }
+            moreInfoEntityId?.toEntityIdOrNull()?.let { entityId ->
+                PanelEntityMoreInfo(
+                    state = liveEntities[entityId],
+                    onClose = { moreInfoEntityId = null },
+                    onCall = { call -> scope.launch { haRepository.call(call) } },
+                )
             }
         }
     }
@@ -304,9 +342,10 @@ private fun WidePanel(
     isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
     onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
-    if (isSubPanel && config.tiles.isEmpty()) {
-        EmptyPanelMessage()
+    if (config.tiles.isEmpty()) {
+        EmptyPanelMessage(onOpenSettings = if (isSubPanel) null else onOpenSettings)
         return
     }
     if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
@@ -487,9 +526,10 @@ private fun CompactPanel(
     isSubPanel: Boolean,
     onTileClick: (HapanelsTileConfig) -> Unit,
     onSetCoverPercent: (HapanelsTileConfig, Int) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
-    if (isSubPanel && config.tiles.isEmpty()) {
-        EmptyPanelMessage()
+    if (config.tiles.isEmpty()) {
+        EmptyPanelMessage(onOpenSettings = if (isSubPanel) null else onOpenSettings)
         return
     }
     if (isSubPanel && config.tiles.none { it.hasGridCell() }) {
@@ -549,15 +589,24 @@ private fun CompactPanel(
 }
 
 @Composable
-private fun EmptyPanelMessage() {
+private fun EmptyPanelMessage(onOpenSettings: (() -> Unit)? = null) {
     val theme = LocalHapanelsTheme.current
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            "Brak elementów. Dodaj je w Hapanels Studio.",
-            color = theme.textPrimary.copy(alpha = 0.78f),
-            style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
-            textAlign = TextAlign.Center,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(
+                "Wejdź do Home Assistanta i w integracji Hapanels Studio dodaj swój pierwszy kafel.",
+                color = theme.textPrimary.copy(alpha = 0.78f),
+                style = R1.body.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                textAlign = TextAlign.Center,
+            )
+            onOpenSettings?.let {
+                R1Button(
+                    text = "Przejdź do ustawień aplikacji",
+                    onClick = it,
+                    textStyle = R1.body.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                )
+            }
+        }
     }
 }
 
@@ -697,8 +746,8 @@ private fun PanelLargeTile(
         PanelTextTile(tile, modifier, onClick)
         return
     }
-    PanelTileShell(modifier = modifier, presentation = presentation, onClick = onClick) {
-        if (presentation.showIcon) PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
+    PanelTileShell(modifier = modifier, presentation = presentation, onClick = onClick, onHold = tile.holdHandler()) {
+        if (presentation.showIcon) PanelIcons.Icon(tile.resolvedIcon(liveState), tint = tile.resolvedIconColor(liveState, theme), modifier = Modifier.size(iconSize))
         if (presentation.showIcon && presentation.showLabel) Spacer(Modifier.height(14.dp))
         if (presentation.showLabel) {
             Text(
@@ -733,6 +782,115 @@ private fun PanelLargeTileOrCamera(
         HapanelsTileKind.CAMERA -> PanelCameraTile(tile = tile, liveState = liveState, cameraActions = cameraActions, modifier = modifier, iconSize = iconSize, onClick = onClick)
         HapanelsTileKind.COVER -> PanelCoverTile(tile = tile, liveState = liveState, modifier = modifier, onClick = onClick, onSetPercent = onSetPercent)
         else -> PanelLargeTile(tile = tile, liveState = liveState, modifier = modifier, iconSize = iconSize, onClick = onClick)
+    }
+}
+
+@Composable
+private fun PanelEntityMoreInfo(
+    state: EntityState?,
+    onClose: () -> Unit,
+    onCall: (ServiceCall) -> Unit,
+) {
+    val theme = LocalHapanelsTheme.current
+    Box(
+        modifier = Modifier.fillMaxSize().background(theme.popupOverlay).r1Pressable(onClick = onClose),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.72f)
+                .fillMaxHeight(0.78f)
+                .clip(RoundedCornerShape(28.dp))
+                .background(theme.popupBackground)
+                .border(1.dp, theme.tileStroke, RoundedCornerShape(28.dp))
+                .r1Pressable(onClick = { }),
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(22.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            state?.friendlyName ?: "Więcej informacji",
+                            color = theme.textPrimary,
+                            style = R1.body.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                        )
+                        Text(state?.id?.value ?: "Brak danych", color = theme.textMuted, style = R1.labelMicro)
+                    }
+                    R1Button(text = "Zamknij", onClick = onClose, variant = R1ButtonVariant.Outlined, accent = theme.accentOrange)
+                }
+                if (state == null) {
+                    Text("Encja nie jest obecnie dostępna w Home Assistant.", color = theme.accentRed, style = R1.body)
+                } else if (state.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LIGHT) {
+                    PanelLightMoreInfo(state, onCall)
+                } else {
+                    Text(state.rawState?.uppercase(Locale.getDefault()) ?: "BRAK DANYCH", color = state.statusColor(theme), style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold))
+                    Text(
+                        state.attributesJson?.toString() ?: "Brak dodatkowych atrybutów.",
+                        color = theme.textMuted,
+                        style = R1.labelMicro.copy(fontSize = 12.sp),
+                        maxLines = 14,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PanelLightMoreInfo(state: EntityState, onCall: (ServiceCall) -> Unit) {
+    val theme = LocalHapanelsTheme.current
+    var brightness by remember(state.id, state.percent) { mutableFloatStateOf((state.percent ?: if (state.isOn) 100 else 0).toFloat()) }
+    var hue by remember(state.id, state.hue) { mutableFloatStateOf((state.hue ?: 40.0).toFloat()) }
+    var kelvin by remember(state.id, state.colorTempK) { mutableFloatStateOf((state.colorTempK ?: 2700).toFloat()) }
+    val colorModes = state.supportedColorModes
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(if (state.isOn) "Włączone" else "Wyłączone", color = state.statusColor(theme), style = R1.body.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+        R1Button(
+            text = if (state.isOn) "Wyłącz" else "Włącz",
+            onClick = { onCall(ServiceCall.tapAction(state.id, state.isOn)) },
+            accent = if (state.isOn) theme.accentRed else theme.accentGreen,
+        )
+    }
+    if (state.supportsScalar) {
+        PanelMoreInfoSlider("Jasność", "${brightness.toInt()}%", brightness, 1f..100f, {
+            brightness = it
+        }) { onCall(ServiceCall.setPercent(state.id, brightness.toInt())) }
+    }
+    if (colorModes.any { it in setOf("hs", "rgb", "rgbw", "rgbww", "xy") }) {
+        PanelMoreInfoSlider("Kolor", "${hue.toInt()}°", hue, 0f..360f, { hue = it }) {
+            onCall(ServiceCall.setLightHue(state.id, hue.toDouble(), brightness.toInt().coerceAtLeast(1)))
+        }
+    }
+    if ("color_temp" in colorModes) {
+        val minimum = (state.minColorTempK ?: 2000).toFloat()
+        val maximum = (state.maxColorTempK ?: 6500).toFloat().coerceAtLeast(minimum + 1f)
+        PanelMoreInfoSlider("Temperatura barwowa", "${kelvin.toInt()} K", kelvin.coerceIn(minimum, maximum), minimum..maximum, { kelvin = it }) {
+            onCall(ServiceCall.setLightColorTemp(state.id, kelvin.toInt(), brightness.toInt().coerceAtLeast(1)))
+        }
+    }
+}
+
+@Composable
+private fun PanelMoreInfoSlider(
+    label: String,
+    valueLabel: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
+) {
+    val theme = LocalHapanelsTheme.current
+    Column {
+        Row {
+            Text(label, color = theme.textPrimary, style = R1.body.copy(fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+            Text(valueLabel, color = theme.textMuted, style = R1.labelMicro)
+        }
+        androidx.compose.material3.Slider(
+            value = value.coerceIn(range.start, range.endInclusive),
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            valueRange = range,
+        )
     }
 }
 
@@ -822,12 +980,12 @@ private fun PanelCameraTile(
     onClick: () -> Unit,
 ) {
     val theme = LocalHapanelsTheme.current
-    PanelTileShell(modifier = modifier, padding = 12.dp, onClick = onClick) {
+    PanelTileShell(modifier = modifier, padding = 12.dp, onClick = onClick, onHold = tile.holdHandler()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
+            PanelIcons.Icon(tile.resolvedIcon(liveState), tint = tile.resolvedIconColor(liveState, theme), modifier = Modifier.size(iconSize))
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -900,7 +1058,7 @@ private fun PanelCoverTile(
     val presentation = tile.presentation ?: defaultPresentation(tile.kind)
     val target = ((liveState?.percent ?: if (liveState?.isOn == true) 100 else 0).coerceIn(0, 100)) / 100f
     val openFraction by animateFloatAsState(targetValue = target, animationSpec = tween(520), label = "coverPosition")
-    PanelTileShell(modifier = modifier, presentation = presentation, padding = if (compact) 10.dp else 12.dp, onClick = onClick, pressedScale = 1f, pressedAlpha = 1f) {
+    PanelTileShell(modifier = modifier, presentation = presentation, padding = if (compact) 10.dp else 12.dp, onClick = onClick, onHold = tile.holdHandler(), pressedScale = 1f, pressedAlpha = 1f) {
         if (presentation.showValue) {
             CoverAnimation(
                 visual = tile.coverVisual ?: "blind",
@@ -1065,8 +1223,8 @@ private fun PanelSmallTile(
         PanelCoverTile(tile = tile, liveState = liveState, modifier = modifier, compact = true, onClick = onClick, onSetPercent = onSetPercent)
         return
     }
-    PanelTileShell(modifier = modifier, presentation = presentation, padding = 10.dp, onClick = onClick) {
-        if (presentation.showIcon) PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(iconSize))
+    PanelTileShell(modifier = modifier, presentation = presentation, padding = 10.dp, onClick = onClick, onHold = tile.holdHandler()) {
+        if (presentation.showIcon) PanelIcons.Icon(tile.resolvedIcon(liveState), tint = tile.resolvedIconColor(liveState, theme), modifier = Modifier.size(iconSize))
         if (presentation.showIcon && presentation.showLabel) Spacer(Modifier.height(7.dp))
         if (presentation.showLabel) {
             Text(
@@ -1111,8 +1269,8 @@ private fun PanelActionTile(
         PanelCoverTile(tile = action, liveState = liveState, modifier = modifier, compact = true, onClick = onClick, onSetPercent = onSetPercent)
         return
     }
-    PanelTileShell(modifier = modifier, presentation = presentation, padding = 12.dp, onClick = onClick) {
-        if (presentation.showIcon) PanelIcons.Icon(action.icon, tint = action.accent.color(theme), modifier = Modifier.size(iconSize))
+    PanelTileShell(modifier = modifier, presentation = presentation, padding = 12.dp, onClick = onClick, onHold = action.holdHandler()) {
+        if (presentation.showIcon) PanelIcons.Icon(action.resolvedIcon(liveState), tint = action.resolvedIconColor(liveState, theme), modifier = Modifier.size(iconSize))
         if (presentation.showIcon && presentation.showLabel) Spacer(Modifier.height(10.dp))
         if (presentation.showLabel) {
             Text(
@@ -1137,11 +1295,12 @@ private fun PanelActionTile(
 @Composable
 private fun PanelLiveStatus(tile: HapanelsTileConfig, liveState: EntityState?, compact: Boolean) {
     val theme = LocalHapanelsTheme.current
-    val label = tile.liveLabel(liveState) ?: return
+    val pending = tile.entityId in LocalPendingTileEntities.current
+    val label = if (pending) "wysyłanie…" else tile.liveLabel(liveState) ?: return
     Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
     Text(
         label,
-        color = liveState.statusColor(theme),
+        color = if (pending) theme.accentOrange else liveState.statusColor(theme),
         style = R1.labelMicro.copy(
             fontSize = if (compact) 10.sp else 12.sp,
             fontFamily = NunitoPanelFont,
@@ -1181,9 +1340,9 @@ private fun PanelTextAction(label: String, modifier: Modifier) {
 private fun PanelTextTile(tile: HapanelsTileConfig, modifier: Modifier, onClick: () -> Unit) {
     val theme = LocalHapanelsTheme.current
     val presentation = tile.presentation ?: defaultPresentation(tile.kind)
-    PanelTileShell(modifier = modifier, presentation = presentation, onClick = onClick) {
+    PanelTileShell(modifier = modifier, presentation = presentation, onClick = onClick, onHold = tile.holdHandler()) {
         if (presentation.showIcon && tile.icon.isNotBlank()) {
-            PanelIcons.Icon(tile.icon, tint = tile.accent.color(theme), modifier = Modifier.size(36.dp))
+            PanelIcons.Icon(tile.resolvedIcon(null), tint = tile.resolvedIconColor(null, theme), modifier = Modifier.size(36.dp))
             Spacer(Modifier.height(8.dp))
         }
         if (presentation.showLabel && tile.label.isNotBlank()) {
@@ -1220,6 +1379,7 @@ private fun PanelTileShell(
     presentation: HapanelsTilePresentation = HapanelsTilePresentation(),
     padding: Dp = 14.dp,
     onClick: () -> Unit,
+    onHold: (() -> Unit)? = null,
     pressedScale: Float = 0.97f,
     pressedAlpha: Float = 0.78f,
     content: @Composable ColumnScope.() -> Unit,
@@ -1231,14 +1391,33 @@ private fun PanelTileShell(
         .clip(shape)
         .background(if (presentation.background == "transparent") Color.Transparent else theme.tileBackground)
     if (presentation.border != "none") shellModifier = shellModifier.border(1.dp, theme.tileStroke, shape)
-    Column(
-        modifier = shellModifier
-            .r1Pressable(onClick = onClick, pressedScale = pressedScale, pressedAlpha = pressedAlpha)
-            .padding(padding),
-        horizontalAlignment = presentation.horizontalAlignment(),
-        verticalArrangement = Arrangement.Center,
-        content = content,
-    )
+    val gestureModifier = if (onHold == null) {
+        Modifier.r1Pressable(onClick = onClick, pressedScale = pressedScale, pressedAlpha = pressedAlpha)
+    } else {
+        Modifier.r1RowPressable(onTap = onClick, onLongPress = onHold, pressedScale = pressedScale, pressedAlpha = pressedAlpha)
+    }
+    Box(modifier = shellModifier.then(gestureModifier)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            horizontalAlignment = presentation.horizontalAlignment(),
+            verticalArrangement = Arrangement.Center,
+            content = content,
+        )
+        if (onHold != null) {
+            Text(
+                "⋯",
+                color = theme.textMuted,
+                style = R1.body.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
+                modifier = Modifier.align(Alignment.TopEnd).padding(horizontal = 10.dp, vertical = 5.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HapanelsTileConfig.holdHandler(): (() -> Unit)? {
+    val handler = LocalTileHoldHandler.current
+    return holdAction?.takeUnless { it.type == "none" }?.let { remember(this, handler) { { handler(this) } } }
 }
 
 private fun HapanelsTilePresentation.horizontalAlignment(): Alignment.Horizontal = when (contentAlignment) {
@@ -1267,7 +1446,10 @@ private fun HapanelsDashboardConfig.popupTiles(popup: HapanelsTileConfig): List<
         ?: emptyList()
 
 private fun HapanelsDashboardConfig.observableEntityIds(): Set<EntityId> =
-    (tiles + panels.flatMap { it.tiles }).mapNotNull { it.entityId.toEntityIdOrNull() }.toSet()
+    (tiles + panels.flatMap { it.tiles })
+        .flatMap { tile -> listOf(tile.entityId, tile.tapAction?.entityId, tile.holdAction?.entityId) }
+        .mapNotNull { it.toEntityIdOrNull() }
+        .toSet()
 
 private fun loadedPanelTitle(config: HapanelsDashboardConfig?, panelId: String): String? =
     config?.panels?.firstOrNull { it.id == panelId }?.title
@@ -1277,6 +1459,48 @@ private fun String?.toEntityIdOrNull(): EntityId? =
 
 private fun HapanelsTileConfig.liveState(liveEntities: Map<EntityId, EntityState>): EntityState? =
     entityId.toEntityIdOrNull()?.let(liveEntities::get)
+
+private fun HapanelsTileConfig.resolvedIcon(liveState: EntityState?): String {
+    if (iconSource != HapanelsTileIconSource.AUTO) return icon
+    val entityIcon = liveState?.attributesJson?.let { attributes ->
+        runCatching { JSONObject(attributes.toString()).optString("icon") }.getOrNull()?.takeIf(String::isNotBlank)
+    }
+    return entityIcon ?: when (entityId?.substringBefore('.')) {
+        "light" -> "mdi:lightbulb"
+        "cover" -> "mdi:blinds"
+        "camera" -> "mdi:cctv"
+        "sensor" -> "mdi:gauge"
+        else -> icon
+    }
+}
+
+private fun HapanelsTileConfig.resolvedIconColor(liveState: EntityState?, theme: HapanelsThemeColors): Color = when (iconColorSource) {
+    HapanelsTileIconColorSource.ACCENT -> accent.color(theme)
+    HapanelsTileIconColorSource.CUSTOM -> iconColor?.toComposeColorOrNull() ?: accent.color(theme)
+    HapanelsTileIconColorSource.ENTITY -> when {
+        liveState == null -> theme.textMuted
+        !liveState.isAvailable -> theme.accentRed
+        liveState.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LIGHT && liveState.isOn -> liveState.lightColorOrNull() ?: theme.accentGreen
+        liveState.isOn -> theme.accentGreen
+        else -> theme.textPrimary.copy(alpha = 0.62f)
+    }
+}
+
+private fun EntityState.lightColorOrNull(): Color? {
+    val attributes = attributesJson ?: return hue?.let { Color(android.graphics.Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f))) }
+    val json = runCatching { JSONObject(attributes.toString()) }.getOrNull() ?: return null
+    json.optJSONArray("rgb_color")?.takeIf { it.length() >= 3 }?.let {
+        return Color(it.optInt(0).coerceIn(0, 255), it.optInt(1).coerceIn(0, 255), it.optInt(2).coerceIn(0, 255))
+    }
+    json.optJSONArray("hs_color")?.takeIf { it.length() >= 2 }?.let {
+        return Color(android.graphics.Color.HSVToColor(floatArrayOf(it.optDouble(0).toFloat(), (it.optDouble(1) / 100.0).toFloat(), 1f)))
+    }
+    return hue?.let { Color(android.graphics.Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f))) }
+}
+
+private fun String.toComposeColorOrNull(): Color? = runCatching {
+    Color((0xFF000000L or removePrefix("#").toLong(16)).toULong())
+}.getOrNull()
 
 private fun HapanelsTileConfig.legacyTapAction(liveEntities: Map<EntityId, EntityState>): ServiceCall? {
     val target = entityId.toEntityIdOrNull() ?: return null
@@ -1326,8 +1550,10 @@ private fun EntityState?.statusColor(theme: HapanelsThemeColors): Color = when {
     else -> theme.textPrimary.copy(alpha = 0.62f)
 }
 
-private fun HapanelsTileConfig.displayLabel(): String =
-    shortLabel?.takeIf { it.isNotBlank() } ?: label
+private fun HapanelsTileConfig.displayLabel(): String {
+    val compactLimit = if (size == HapanelsTileSize.LARGE) 32 else 16
+    return shortLabel?.takeIf { it.isNotBlank() && label.length > compactLimit } ?: label
+}
 
 private fun HapanelsTileConfig.hasGridCell(): Boolean =
     col != null && row != null

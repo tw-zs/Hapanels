@@ -5,7 +5,7 @@ from typing import Any
 
 CURRENT_SCHEMA_VERSION = 2
 TILE_KINDS = {"clock", "category", "action", "entity", "cover", "camera", "folder", "popup", "text", "spacer"}
-ACTION_TYPES = {"none", "entity_default", "navigate", "local_panel"}
+ACTION_TYPES = {"none", "entity_default", "more_info", "navigate", "local_panel"}
 PANEL_OPENERS = {"folder", "popup", "category"}
 ENTITY_KINDS = {"entity", "cover", "camera"}
 AOD_KINDS = {"clock", "entity", "text"}
@@ -17,7 +17,7 @@ CONFIRMATIONS = {"unlock", "cover_move", "delete_tile", "delete_panel", "clear_t
 ROOT_FIELDS = {"version", "dashboard_id", "revision", "updated_by", "title", "layout", "theme", "always_on_display", "people", "tiles", "panels", "camera_actions", "extensions", "migration_report"}
 LAYOUT_FIELDS = {"type", "columns_landscape", "columns_portrait", "gap", "columns", "rows"}
 PANEL_FIELDS = {"id", "title", "layout", "tiles"}
-TILE_FIELDS = {"id", "kind", "size", "label", "short_label", "entity_id", "panel_id", "icon", "accent", "order", "col", "row", "colSpan", "rowSpan", "clock_style", "cover_visual", "cover_direction", "tap_action", "hold_action", "content", "summary", "secondary", "presentation", "legacy_action"}
+TILE_FIELDS = {"id", "kind", "size", "label", "short_label", "entity_id", "panel_id", "icon", "icon_source", "icon_color_source", "icon_color", "accent", "order", "col", "row", "colSpan", "rowSpan", "clock_style", "cover_visual", "cover_direction", "tap_action", "hold_action", "content", "summary", "secondary", "presentation", "legacy_action"}
 PATCH_TILE_FIELDS = TILE_FIELDS - {"legacy_action"}
 ACTION_FIELDS = {"type", "destination", "action", "entity_id", "panel_id", "domain", "service", "target", "data", "confirmation"}
 PRESENTATION_FIELDS = {"show_icon", "show_label", "show_value", "show_secondary", "background", "border", "content_alignment"}
@@ -128,6 +128,11 @@ def validate_dashboard_patch(patch: Any) -> dict[str, Any]:
         if not isinstance(update, dict) or not isinstance(update.get("id"), str) or not update["id"]:
             raise ValueError(f"tile_updates[{index}].id is required")
         _reject_unknown(update, PATCH_TILE_FIELDS, f"tile_updates[{index}]")
+        _validate_icon_options(update, f"tile_updates[{index}]")
+        for name in ("tap_action", "hold_action"):
+            action = update.get(name)
+            if action is not None:
+                _validate_action(action, f"tile_updates[{index}].{name}", set())
     return patch
 
 
@@ -169,6 +174,7 @@ def _validate_tiles(tiles: list[Any], layout: dict[str, Any], path: str, panel_i
             raise ValueError(f"{item_path}.label is required")
         if kind not in {"text", "spacer", "clock"} and (not isinstance(tile.get("icon"), str) or not tile["icon"]):
             raise ValueError(f"{item_path}.icon is required")
+        _validate_icon_options(tile, item_path)
         if tile.get("accent", "orange") not in {"orange", "white", "red"}:
             raise ValueError(f"{item_path}.accent is unsupported")
         if not isinstance(tile.get("order"), int) or isinstance(tile.get("order"), bool):
@@ -185,8 +191,8 @@ def _validate_tiles(tiles: list[Any], layout: dict[str, Any], path: str, panel_i
             action = tile.get(name)
             if action is not None:
                 _validate_action(action, f"{item_path}.{name}", panel_ids)
-        if tile.get("hold_action") is not None:
-            raise ValueError(f"{item_path}.hold_action is unsupported")
+        if aod and (tile.get("tap_action", {}).get("type") not in {None, "none"} or tile.get("hold_action") is not None):
+            raise ValueError(f"{item_path}: AOD tiles must be read-only")
         if kind == "action" and tile.get("tap_action") is None:
             raise ValueError(f"{item_path}.tap_action is required")
         if kind == "spacer" and any(tile.get(field) is not None for field in ("entity_id", "tap_action", "hold_action", "presentation")):
@@ -222,9 +228,11 @@ def _validate_action(action: Any, path: str, panel_ids: set[str]) -> None:
         raise ValueError(f"{path}.type is unsupported")
     if action_type == "entity_default" and (not _entity_id(action.get("entity_id")) or action["entity_id"].split(".", 1)[0] not in SAFE_DEFAULT_DOMAINS):
         raise ValueError(f"{path}.entity_id has no safe default action")
+    if action_type == "more_info" and not _entity_id(action.get("entity_id")):
+        raise ValueError(f"{path}.entity_id is required")
     if action_type == "navigate":
         destination, panel_id = action.get("destination"), action.get("panel_id")
-        if bool(destination) == bool(panel_id) or destination and destination not in DESTINATIONS or panel_id and panel_id not in panel_ids:
+        if bool(destination) == bool(panel_id) or destination and destination not in DESTINATIONS or panel_id and panel_ids and panel_id not in panel_ids:
             raise ValueError(f"{path} has invalid navigation target")
     if action_type == "local_panel" and action.get("action") not in LOCAL_ACTIONS:
         raise ValueError(f"{path}.action is unsupported")
@@ -253,6 +261,19 @@ def _validate_panel_graph(root_tiles: list[dict[str, Any]], panels: list[dict[st
 
     for target in targets(root_tiles):
         visit(target, [])
+
+
+def _validate_icon_options(tile: dict[str, Any], path: str) -> None:
+    if tile.get("icon_source", "custom") not in {"custom", "auto"}:
+        raise ValueError(f"{path}.icon_source is unsupported")
+    color_source = tile.get("icon_color_source", "accent")
+    if color_source not in {"accent", "entity", "custom"}:
+        raise ValueError(f"{path}.icon_color_source is unsupported")
+    color = tile.get("icon_color")
+    if color is not None and (not isinstance(color, str) or len(color) != 7 or color[0] != "#" or any(char not in "0123456789abcdefABCDEF" for char in color[1:])):
+        raise ValueError(f"{path}.icon_color must be #RRGGBB")
+    if color_source == "custom" and color is None:
+        raise ValueError(f"{path}.icon_color is required for custom color")
 
 
 def _reject_unknown(value: dict[str, Any], allowed: set[str], path: str) -> None:

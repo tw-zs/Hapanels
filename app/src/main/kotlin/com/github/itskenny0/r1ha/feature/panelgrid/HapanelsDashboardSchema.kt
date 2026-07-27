@@ -164,6 +164,8 @@ private fun validateTile(path: String, tile: HapanelsTileConfig, panelIds: Set<S
     if (tile.id.isBlank()) errors += "$path.id: must not be blank"
     if (tile.kind != HapanelsTileKind.SPACER && tile.kind != HapanelsTileKind.TEXT && tile.label.isBlank()) errors += "$path.label: must not be blank"
     if (tile.kind != HapanelsTileKind.SPACER && tile.kind != HapanelsTileKind.TEXT && tile.kind != HapanelsTileKind.CLOCK && tile.icon.isBlank()) errors += "$path.icon: must not be blank"
+    if (tile.iconColor != null && !hexColorRegex.matches(tile.iconColor)) errors += "$path.icon_color: expected #RRGGBB"
+    if (tile.iconColorSource == HapanelsTileIconColorSource.CUSTOM && tile.iconColor == null) errors += "$path.icon_color: required for custom color"
     if (!tile.entityId.isNullOrBlank() && !entityIdRegex.matches(tile.entityId)) errors += "$path.entity_id: expected domain.object_id"
     if (tile.kind in entityKinds && tile.entityId.isNullOrBlank()) errors += "$path.entity_id: required for ${tile.kind.name.lowercase()}"
     if (tile.kind == HapanelsTileKind.TEXT && tile.content.isNullOrBlank()) errors += "$path.content: required for text"
@@ -182,7 +184,6 @@ private fun validateTile(path: String, tile: HapanelsTileConfig, panelIds: Set<S
     listOfNotNull(tile.tapAction, tile.holdAction).forEach { action ->
         if (action.type == "navigate" && !action.panelId.isNullOrBlank() && action.panelId !in panelIds) errors += "$path: action panel_id '${action.panelId}' does not exist"
     }
-    if (tile.holdAction != null) errors += "$path.hold_action: unsupported by this tablet version"
     if (tile.kind == HapanelsTileKind.ACTION && tile.tapAction == null) errors += "$path.tap_action: required for action tile"
     if (tile.legacyShowIcon != null || tile.legacyShowTitle != null || tile.legacyShowSubtitle != null) errors += "$path: legacy showIcon/showTitle/showSubtitle are invalid in schema v2"
     if (tile.accent == HapanelsTileAccent.RED && !tile.hasUnsafeConfirmedAction()) errors += "$path.accent: red requires unsafe confirmed action"
@@ -215,6 +216,7 @@ private fun validateAction(path: String, action: HapanelsTileAction?, errors: Mu
             if (action.entityId.isNullOrBlank() || !entityIdRegex.matches(action.entityId)) errors += "$path.entity_id: required"
             else if (action.entityId.substringBefore('.') !in safeDefaultDomains) errors += "$path.entity_id: domain does not support safe default action"
         }
+        "more_info" -> if (action.entityId.isNullOrBlank() || !entityIdRegex.matches(action.entityId)) errors += "$path.entity_id: required"
         "navigate" -> {
             if (action.destination.isNullOrBlank() == action.panelId.isNullOrBlank()) errors += "$path: provide exactly one destination or panel_id"
             if (!action.destination.isNullOrBlank() && action.destination !in supportedDestinations) errors += "$path.destination: unsupported destination '${action.destination}'"
@@ -313,7 +315,7 @@ private val panelOpenerKinds = setOf(HapanelsTileKind.FOLDER, HapanelsTileKind.P
 private val strictPanelOpenerKinds = setOf(HapanelsTileKind.FOLDER, HapanelsTileKind.POPUP)
 private val entityKinds = setOf(HapanelsTileKind.ENTITY, HapanelsTileKind.COVER, HapanelsTileKind.CAMERA)
 private val aodKinds = setOf(HapanelsTileKind.CLOCK, HapanelsTileKind.ENTITY, HapanelsTileKind.TEXT)
-private val actionTypes = setOf("none", "entity_default", "navigate", "local_panel")
+private val actionTypes = setOf("none", "entity_default", "more_info", "navigate", "local_panel")
 private val confirmationKinds = setOf("unlock", "cover_move", "delete_tile", "delete_panel", "clear_tray", "disarm_alarm", "custom")
 private val unsafeConfirmationKinds = setOf("unlock", "cover_move", "delete_tile", "delete_panel", "clear_tray", "disarm_alarm", "custom")
 private val safeDefaultDomains = setOf("light", "switch", "input_boolean", "automation", "fan", "scene", "script", "button", "input_button")
@@ -321,3 +323,4 @@ private val readOnlyDomains = setOf("sensor", "binary_sensor", "person", "device
 private val supportedDestinations = setOf("settings", "settings/appearance", "settings/behaviour", "settings/integrations", "panel_diagnostics")
 private val supportedLocalActions = setOf("screen.aod_now", "connection.reconnect_home_assistant")
 private val entityIdRegex = Regex("^[a-z0-9_]+\\.[a-z0-9_]+$")
+private val hexColorRegex = Regex("^#[0-9a-fA-F]{6}$")

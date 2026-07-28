@@ -190,11 +190,11 @@ class HapanelsDashboardConfigSourceTest {
 
     @Test fun resetRestoresSampleConfig() = runTest {
         val source = newSource()
-        source.importRaw(SAMPLE_HAPANELS_DASHBOARD_JSON.replace("Oświetlenie", "Test Lights"))
+        source.importRaw(SAMPLE_HAPANELS_DASHBOARD_JSON.replace("Lighting", "Test Lights"))
 
         val reset = source.resetToSample()
 
-        assertThat(reset.tiles.first { it.id == "lights" }.label).isEqualTo("Oświetlenie")
+        assertThat(reset.tiles.first { it.id == "lights" }.label).isEqualTo("Lighting")
     }
 
     @Test fun applyPatchUpdatesTilesAndIncrementsRevision() = runTest {
@@ -323,7 +323,7 @@ class HapanelsDashboardConfigSourceTest {
                 currentConfig = current,
             ),
         )
-        assertThat(loaded.tiles.first { it.id == "lights" }.label).isEqualTo("Oświetlenie")
+        assertThat(loaded.tiles.first { it.id == "lights" }.label).isEqualTo("Lighting")
         assertThat(loaded.theme).isEqualTo(current.theme)
         assertThat(loaded.revision).isEqualTo(current.revision)
     }
@@ -512,7 +512,7 @@ class HapanelsDashboardConfigSourceTest {
         assertThat(loaded.updatedBy).isEqualTo("homeassistant:aod_editor")
         assertThat(loaded.alwaysOnDisplay.tiles.first { it.id == "aod_temperature" }.label).isEqualTo("Na zewnątrz")
         assertThat(loaded.alwaysOnDisplay.tiles.first { it.id == "aod_temperature" }.order).isEqualTo(9)
-        assertThat(loaded.tiles.first { it.id == "energy" }.label).isEqualTo("Energia")
+        assertThat(loaded.tiles.first { it.id == "energy" }.label).isEqualTo("Energy")
     }
 
     @Test fun oldAodLayoutStringStillLoads() = runTest {

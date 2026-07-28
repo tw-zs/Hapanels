@@ -1,22 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App-shortcut labels -->
     <string name="shortcut_search_short">Szukaj</string>
     <string name="shortcut_search_long">Szybkie wyszukiwanie encji HA</string>
     <string name="shortcut_assist_short">Asystent</string>
     <string name="shortcut_assist_long">Rozmawiaj z Home Assistant</string>
-    <string name="shortcut_panel_grid_short">Panel</string>
+    <string name="shortcut_panel_grid_short">Siatka panelu</string>
     <string name="shortcut_panel_grid_long">Otwórz siatkę panelu Hapanels</string>
     <string name="shortcut_automations_short">Automatyzacje</string>
     <string name="shortcut_automations_long">Przeglądaj i uruchamiaj automatyzacje</string>
 
+    <!-- Quick Settings tile chooser -->
     <string name="quick_tile_label">Przełącznik HA</string>
     <string name="quick_tile_label_b">Przełącznik HA 2</string>
     <string name="quick_tile_label_c">Przełącznik HA 3</string>
     <string name="quick_tile_label_d">Przełącznik HA 4</string>
 
+    <!-- Home-screen widget labels -->
     <string name="widget_description">Szybkie uruchamianie Hapanels</string>
     <string name="widget_button_label">Hapanels</string>
 
+    <!-- Dialog buttons -->
     <string name="dialog_cancel">ANULUJ</string>
     <string name="dialog_ok">OK</string>
     <string name="dialog_save">ZAPISZ</string>
@@ -35,6 +39,7 @@
     <string name="dialog_yes">Tak</string>
     <string name="dialog_no">Nie</string>
 
+    <!-- Top-bar / chrome -->
     <string name="chrome_settings">Ustawienia</string>
     <string name="chrome_assist">Asystent</string>
     <string name="chrome_battery">Bateria</string>
@@ -42,6 +47,7 @@
     <string name="chrome_edit_favorites">Edytuj ulubione</string>
     <string name="chrome_back">Wstecz</string>
 
+    <!-- Top-level screen titles -->
     <string name="title_today">DZISIAJ</string>
     <string name="title_search">SZUKAJ</string>
     <string name="title_assist">ASYSTENT</string>
@@ -70,6 +76,7 @@
     <string name="title_labels">ETYKIETY</string>
     <string name="title_floors">PIĘTRA</string>
 
+    <!-- Card stack empty + connection states -->
     <string name="cardstack_empty_title">Nie ma jeszcze ulubionych</string>
     <string name="cardstack_empty_hint">Wybierz encje z konfiguracji HA, którymi chcesz sterować.</string>
     <string name="cardstack_empty_action">WYBIERZ ULUBIONE</string>
@@ -78,83 +85,84 @@
     <string name="conn_connecting">Łączenie…</string>
     <string name="conn_auth_lost">Utracono autoryzację; zaloguj się ponownie</string>
 
+    <!-- Onboarding -->
     <string name="onboarding_url_label">Adres URL Home Assistant</string>
     <string name="onboarding_url_placeholder">http://homeassistant.local:8123</string>
     <string name="onboarding_continue">DALEJ</string>
-    <string name="onboarding_sign_in_browser">Zaloguj przez przeglądarkę</string>
-    <string name="onboarding_sign_in_token">Zaloguj tokenem długoterminowym</string>
+    <string name="onboarding_sign_in_browser">Zaloguj się przez przeglądarkę</string>
+    <string name="onboarding_sign_in_token">Zaloguj się długoterminowym tokenem dostępu</string>
     <string name="onboarding_open_ha">Otwórz HA w przeglądarce</string>
     <string name="onboarding_welcome_title">Witaj w Hapanels!</string>
     <string name="onboarding_welcome_tagline">Twój dom. Jeden prosty panel.</string>
-    <string name="onboarding_welcome_body">Steruj światłem, temperaturą, roletami i innymi urządzeniami z jednego ekranu.</string>
-    <string name="onboarding_welcome_hint">Za chwilę połączysz panel ze swoim domem i wybierzesz, co ma się na nim wyświetlać.</string>
+    <string name="onboarding_welcome_body">Steruj światłem, klimatyzacją, roletami i innymi urządzeniami z jednego ekranu.</string>
+    <string name="onboarding_welcome_hint">Za chwilę połączysz ten panel ze swoim domem i wybierzesz, co ma wyświetlać.</string>
     <string name="onboarding_start_setup">Rozpocznij konfigurację</string>
     <string name="onboarding_step_connection">01 · POŁĄCZENIE</string>
-    <string name="onboarding_connection_title">Połącz panel z Home Assistant</string>
+    <string name="onboarding_connection_title">Połącz ten panel z Home Assistant</string>
     <string name="onboarding_connection_description">Wybierz wykryty serwer albo wpisz jego adres ręcznie.</string>
-    <string name="onboarding_discovered_servers">INSTANCJE HOME ASSISTANT W SIECI</string>
+    <string name="onboarding_discovered_servers">SERWERY HOME ASSISTANT W TWOJEJ SIECI</string>
     <string name="onboarding_search_again">SZUKAJ PONOWNIE</string>
-    <string name="onboarding_searching">Szukam Home Assistant w sieci lokalnej…</string>
+    <string name="onboarding_searching">Szukanie Home Assistant w sieci lokalnej…</string>
     <string name="onboarding_search_failed">Wyszukiwanie nie powiodło się. Spróbuj ponownie.</string>
     <string name="onboarding_manual_address">LUB WPISZ ADRES RĘCZNIE</string>
     <string name="onboarding_connecting">ŁĄCZENIE…</string>
     <string name="onboarding_sign_in_ha">ZALOGUJ SIĘ PRZEZ HOME ASSISTANT</string>
-    <string name="onboarding_long_lived_token">POŁĄCZ ZA POMOCĄ TOKENA DŁUGOTERMINOWEGO</string>
+    <string name="onboarding_long_lived_token">POŁĄCZ DŁUGOTERMINOWYM TOKENEM DOSTĘPU</string>
     <string name="onboarding_step_sign_in">02 · LOGOWANIE</string>
     <string name="onboarding_sign_in_title">Zaloguj się do Home Assistant</string>
     <string name="onboarding_connecting_title">Łączenie z Home Assistant</string>
-    <string name="onboarding_sign_in_description">Logowanie odbywa się na bezpiecznej stronie Twojej instancji Home Assistant.</string>
+    <string name="onboarding_sign_in_description">Zalogujesz się bezpiecznie na swoim serwerze Home Assistant.</string>
     <string name="onboarding_completing_sign_in">Kończenie logowania…</string>
     <string name="onboarding_sign_in_canceled">Logowanie anulowane.</string>
     <string name="onboarding_step_panel_name">03 · NAZWA PANELU</string>
-    <string name="onboarding_panel_name_title">Jak nazwać ten tablet?</string>
-    <string name="onboarding_panel_name_description">Nazwa pomoże rozpoznać panel w Home Assistant, MQTT i Hapanels Studio.</string>
+    <string name="onboarding_panel_name_title">Jak ma się nazywać ten tablet?</string>
+    <string name="onboarding_panel_name_description">Ta nazwa identyfikuje panel w Home Assistant, MQTT i Hapanels Studio.</string>
     <string name="onboarding_device_name">NAZWA URZĄDZENIA</string>
     <string name="onboarding_device_model">Model urządzenia: %1$s</string>
     <string name="onboarding_save_name">ZAPISZ NAZWĘ I KONTYNUUJ</string>
-    <string name="onboarding_name_later">Nazwę można później zmienić w ustawieniach.</string>
+    <string name="onboarding_name_later">Nazwę możesz zmienić później w Ustawieniach.</string>
     <string name="onboarding_step_mqtt">04 · MQTT · OPCJONALNIE</string>
     <string name="onboarding_mqtt_title">Połącz z brokerem MQTT</string>
-    <string name="onboarding_mqtt_description">MQTT łączy panel z Hapanels Studio i przesyła jego stan.</string>
+    <string name="onboarding_mqtt_description">MQTT łączy ten panel z Hapanels Studio i publikuje jego stan.</string>
     <string name="onboarding_broker_address">ADRES BROKERA</string>
     <string name="onboarding_use_ha_host">UŻYJ HOSTA HA</string>
-    <string name="onboarding_username">UŻYTKOWNIK</string>
+    <string name="onboarding_username">NAZWA UŻYTKOWNIKA</string>
     <string name="onboarding_password">HASŁO</string>
     <string name="onboarding_optional">Opcjonalnie</string>
     <string name="onboarding_tls_on">TLS WŁĄCZONY</string>
     <string name="onboarding_tls_off">TLS WYŁĄCZONY</string>
     <string name="onboarding_save_continue">ZAPISZ I KONTYNUUJ</string>
     <string name="onboarding_skip">POMIŃ</string>
-    <string name="onboarding_mqtt_skip_hint">Możesz pominąć MQTT, ale panel nie pojawi się w Studio do czasu skonfigurowania brokera.</string>
+    <string name="onboarding_mqtt_skip_hint">Możesz pominąć MQTT, ale ten panel nie pojawi się w Studio, dopóki broker nie zostanie skonfigurowany.</string>
     <string name="onboarding_mqtt_host_error">Podaj adres brokera MQTT albo pomiń ten krok.</string>
-    <string name="onboarding_mqtt_port_error">Port musi mieścić się w zakresie 1–65535.</string>
+    <string name="onboarding_mqtt_port_error">Port musi mieścić się w zakresie od 1 do 65535.</string>
     <string name="onboarding_step_studio">05 · HAPANELS STUDIO</string>
-    <string name="onboarding_studio_title">Połącz panel z Hapanels Studio</string>
-    <string name="onboarding_studio_description">Studio pozwala układać ekrany panelu bezpośrednio z Home Assistant.</string>
-    <string name="onboarding_mqtt_connected">Połączono przez MQTT</string>
-    <string name="onboarding_mqtt_required">Wymaga konfiguracji MQTT</string>
+    <string name="onboarding_studio_title">Połącz ten panel z Hapanels Studio</string>
+    <string name="onboarding_studio_description">Studio pozwala układać ekrany tego panelu bezpośrednio z Home Assistant.</string>
+    <string name="onboarding_mqtt_connected">Połączono z MQTT</string>
+    <string name="onboarding_mqtt_required">Wymagana konfiguracja MQTT</string>
     <string name="onboarding_online">ONLINE</string>
-    <string name="onboarding_studio_available">Wygląd i ekrany panelu są teraz dostępne w Home Assistant.</string>
+    <string name="onboarding_studio_available">Wygląd i ekrany Twojego panelu są teraz dostępne w Home Assistant.</string>
     <string name="onboarding_studio_ready">STUDIO GOTOWE</string>
     <string name="onboarding_mqtt_configured">MQTT SKONFIGUROWANE</string>
     <string name="onboarding_learn_more">DOWIEDZ SIĘ WIĘCEJ</string>
-    <string name="onboarding_studio_later">Studio można skonfigurować później w ustawieniach.</string>
+    <string name="onboarding_studio_later">Studio możesz skonfigurować później w Ustawieniach.</string>
     <string name="onboarding_step_appearance">06 · WYGLĄD</string>
-    <string name="onboarding_appearance_title">Dopasuj panel do siebie</string>
-    <string name="onboarding_appearance_description">Wszystkie opcje możesz później zmienić w ustawieniach.</string>
+    <string name="onboarding_appearance_title">Dostosuj ten panel do siebie</string>
+    <string name="onboarding_appearance_description">Te opcje możesz zmienić później w Ustawieniach.</string>
     <string name="onboarding_color_mode">TRYB KOLORÓW</string>
     <string name="onboarding_light">Jasny</string>
     <string name="onboarding_dark">Ciemny</string>
     <string name="onboarding_start_screen">EKRAN STARTOWY</string>
     <string name="onboarding_continue_without_theme">KONTYNUUJ BEZ ZMIANY MOTYWU</string>
-    <string name="onboarding_grid_description">Wszystko w jednym układzie</string>
+    <string name="onboarding_grid_description">Wszystko w jednym widoku</string>
     <string name="onboarding_cards">Karty</string>
     <string name="onboarding_cards_description">Jedno urządzenie na ekranie</string>
-    <string name="onboarding_selected">WYBRANY</string>
+    <string name="onboarding_selected">WYBRANO</string>
     <string name="onboarding_select">WYBIERZ</string>
     <string name="onboarding_step_ready">07 · GOTOWE</string>
-    <string name="onboarding_ready_title">Sprawdźmy, czy wszystko działa</string>
-    <string name="onboarding_ready_description">Ostatnia kontrola przed uruchomieniem panelu.</string>
+    <string name="onboarding_ready_title">Upewnijmy się, że wszystko działa</string>
+    <string name="onboarding_ready_description">Ostatnie sprawdzenie przed uruchomieniem panelu.</string>
     <string name="onboarding_connected">Połączono</string>
     <string name="onboarding_waiting_connection">Oczekiwanie na połączenie</string>
     <string name="onboarding_configured_mqtt">Połączono przez MQTT</string>
@@ -163,12 +171,12 @@
     <string name="onboarding_broker_configured">Broker skonfigurowany</string>
     <string name="onboarding_skipped">Pominięto</string>
     <string name="onboarding_start_hapanels">URUCHOM HAPANELS</string>
-    <string name="onboarding_try_again">SPRAWDŹ PONOWNIE</string>
-    <string name="onboarding_setup_complete">Wszystko skonfigurowane!</string>
-    <string name="onboarding_welcome_home">Witaj w swoim domu!</string>
-    <string name="onboarding_back">‹  Cofnij</string>
-    <string name="onboarding_studio_manage">Zarządzaj panelami z Home Assistant</string>
-    <string name="onboarding_studio_popup_description">Studio synchronizuje ekrany, ustawienia i stan panelu przez MQTT.</string>
+    <string name="onboarding_try_again">SPRÓBUJ PONOWNIE</string>
+    <string name="onboarding_setup_complete">Konfiguracja zakończona!</string>
+    <string name="onboarding_welcome_home">Witaj w domu!</string>
+    <string name="onboarding_back">‹  Wstecz</string>
+    <string name="onboarding_studio_manage">Zarządzaj swoimi panelami z Home Assistant</string>
+    <string name="onboarding_studio_popup_description">Studio synchronizuje ekrany, ustawienia i stan panelu poprzez MQTT.</string>
     <string name="onboarding_studio_bullet_screens">• układaj ekrany bez edytowania plików</string>
     <string name="onboarding_studio_bullet_tablets">• zarządzaj wieloma tabletami w jednym miejscu</string>
     <string name="onboarding_studio_bullet_deploy">• wdrażaj zmiany bez dotykania każdego panelu</string>
@@ -179,14 +187,58 @@
     <string name="onboarding_theme_conflict">Motyw zmienił się w innym miejscu. Spróbuj ponownie.</string>
     <string name="onboarding_panel_name_placeholder">Panel Hapanels</string>
     <string name="onboarding_port">PORT</string>
-    <string name="onboarding_enter_ha_url">Podaj adres Home Assistant.</string>
+    <string name="onboarding_enter_ha_url">Wprowadź adres URL Home Assistant.</string>
     <string name="onboarding_server_unreachable">Nie można połączyć się z serwerem: %1$s</string>
     <string name="onboarding_lost_server_url">Utracono adres serwera podczas logowania. Spróbuj ponownie.</string>
     <string name="onboarding_token_exchange_error">Nie udało się dokończyć logowania: %1$s</string>
     <string name="onboarding_webview_error">Nie udało się wczytać strony logowania: %1$s</string>
 
+    <!-- Pull-to-refresh + generic affordances -->
     <string name="pull_to_refresh">Pociągnij, aby odświeżyć</string>
     <string name="loading">Ładowanie…</string>
     <string name="empty_no_results">Brak wyników</string>
     <string name="error_generic">Coś poszło nie tak</string>
+
+    <!-- Updates screen -->
+    <string name="updates_empty">Brak encji aktualizacji. HA udostępnia wpisy update.* po zainstalowaniu i skonfigurowaniu Supervisor / dodatków / integracji do zgłaszania wersji.</string>
+    <string name="updates_load_failed">Nie udało się wczytać aktualizacji: %1$s</string>
+
+    <!-- Settings search & controls -->
+    <string name="settings_no_match">Brak ustawień pasujących do „%1$s”.</string>
+    <string name="settings_search_placeholder">Szukaj w Ustawieniach…</string>
+
+    <!-- ZHA Pairing -->
+    <string name="zha_instruction_idle">Stuknij ZEZWÓL NA DOŁĄCZENIE, aby otworzyć sieć Zigbee. Włącz nowe urządzenie, gdy timer odlicza czas; HA wykryje je i wyświetli tutaj.</string>
+    <string name="zha_waiting_devices">Oczekiwanie na urządzenia… nowe encje pojawią się tutaj, gdy HA je wykryje.</string>
+    <string name="zha_pairing_closed">Okno parowania zostało zamknięte; nie wykryto jeszcze nowych encji. Niektóre urządzenia potrzebują 30–60 s na rejestrację po dołączeniu.</string>
+
+    <!-- Favorites picker -->
+    <string name="favorites_sort">SORTUJ</string>
+    <string name="favorites_change_sort">Zmień sortowanie</string>
+    <string name="favorites_no_results_query">BRAK WYNIKÓW DLA „%1$s”</string>
+    <string name="favorites_no_results_hint">Spróbuj innego słowa. Szukamy po nazwie encji i po entity_id, np. „sensor.”.</string>
+    <string name="favorites_no_supported_entities">BRAK OBSŁUGIWANYCH ENCJI</string>
+    <string name="favorites_no_supported_hint">Home Assistant nie zwrócił żadnych encji sterowalnych.</string>
+    <string name="favorites_no_favorites">BRAK ULUBIONYCH</string>
+    <string name="favorites_no_favorites_hint">Wybierz filtr powyżej, a potem stuknij encję, żeby dodać ją do ulubionych.</string>
+    <string name="favorites_empty_filter">PUSTY FILTR</string>
+    <string name="favorites_empty_filter_hint">Stuknij WSZYSTKIE powyżej, żeby zobaczyć każdą encję.</string>
+    <string name="favorites_search">SZUKAJ</string>
+    <string name="favorites_search_placeholder">kuchnia, .door, scena, ...</string>
+    <string name="favorites_preview_hold">PODGLĄD · PRZYTRZYMANIE</string>
+    <string name="favorites_tap_to_dismiss">Stuknij gdziekolwiek, żeby zamknąć</string>
+    <string name="favorites_fetching_entities">POBIERANIE ENCJI…</string>
+    <string name="favorites_error_reconnect">Otwórz Ustawienia → Wyloguj i połącz ponownie.</string>
+    <string name="move_up">Przenieś wyżej</string>
+    <string name="move_down">Przenieś niżej</string>
+
+    <!-- Panel grid mockup -->
+    <string name="panel_loading">Ładowanie panelu…</string>
+    <string name="panel_first_tile_hint">Wejdź do Home Assistant i w integracji Hapanels Studio dodaj swój pierwszy kafel.</string>
+    <string name="panel_go_to_settings">Przejdź do Ustawień aplikacji</string>
+    <string name="panel_more_info">Więcej informacji</string>
+    <string name="panel_no_data">Brak danych</string>
+    <string name="panel_entity_unavailable">Encja nie jest obecnie dostępna w Home Assistant.</string>
+    <string name="panel_no_extra_attrs">Brak dodatkowych atrybutów.</string>
+    <string name="panel_live_preview">Podgląd na żywo</string>
 </resources>

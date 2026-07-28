@@ -1175,15 +1175,15 @@ private fun String?.toAodEntityIdOrNull(): EntityId? =
 
 private fun HapanelsTileConfig.aodLiveLabel(liveState: EntityState?): String? {
     if (entityId.isNullOrBlank()) return null
-    val entity = entityId.toAodEntityIdOrNull() ?: return "niewspierane"
+    val entity = entityId.toAodEntityIdOrNull() ?: return "unsupported"
     val state = liveState ?: return entity.objectId
-    if (!state.isAvailable) return "niedostępne"
+    if (!state.isAvailable) return "unavailable"
     return when (entity.domain) {
         Domain.LIGHT,
         Domain.SWITCH,
         Domain.INPUT_BOOLEAN,
         Domain.AUTOMATION,
-        -> if (state.isOn) "włączone" else "wyłączone"
+        -> if (state.isOn) "on" else "off"
         Domain.COVER,
         Domain.VALVE,
         -> state.percent?.let { "$it%" } ?: state.rawState.aodUnknown()
@@ -1195,13 +1195,13 @@ private fun HapanelsTileConfig.aodLiveLabel(liveState: EntityState?): String? {
         Domain.SENSOR,
         Domain.NUMBER,
         Domain.INPUT_NUMBER,
-        -> listOfNotNull(state.rawState, state.unit).joinToString(" ").ifBlank { "nieznane" }
-        Domain.BINARY_SENSOR -> if (state.isOn) "wykryto" else "brak"
+        -> listOfNotNull(state.rawState, state.unit).joinToString(" ").ifBlank { "unknown" }
+        Domain.BINARY_SENSOR -> if (state.isOn) "detected" else "clear"
         else -> state.rawState.aodUnknown()
     }
 }
 
-private fun String?.aodUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "nieznane"
+private fun String?.aodUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "unknown"
 
 private fun Double.aodNumber(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format(Locale.US, "%.1f", this)

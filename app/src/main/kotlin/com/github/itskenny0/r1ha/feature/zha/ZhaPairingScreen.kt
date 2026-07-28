@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.res.stringResource
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -274,16 +276,16 @@ private fun Body(
             ui.remainingSec > 0 || ui.baselineEntityIds.isNotEmpty() -> {
                 Text(
                     text = if (ui.remainingSec > 0)
-                        "Waiting for devices… new entities will appear here as HA discovers them."
+                        stringResource(R.string.zha_waiting_devices)
                     else
-                        "Pairing window closed; no new entities detected yet. Some devices take 30-60 s to enrol after joining.",
+                        stringResource(R.string.zha_pairing_closed),
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                 )
             }
             else -> {
                 Text(
-                    text = "Tap PERMIT JOIN to open the Zigbee network. Power your new device on while the timer is counting; HA will discover it and surface it here.",
+                    text = stringResource(R.string.zha_instruction_idle),
                     style = R1.labelMicro,
                     color = R1.InkMuted,
                 )

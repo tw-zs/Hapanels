@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.res.stringResource
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -411,7 +413,7 @@ fun SettingsScreen(
                 if (matchedEntries.isEmpty()) {
                     item {
                         Text(
-                            text = "No settings match \"$settingsQuery\".",
+                            text = stringResource(R.string.settings_no_match, settingsQuery),
                             style = R1.body,
                             color = R1.InkMuted,
                             modifier = Modifier.padding(22.dp),
@@ -2323,7 +2325,7 @@ private fun SettingsHeader(
                 com.github.itskenny0.r1ha.ui.components.R1TextField(
                     value = query,
                     onValueChange = onQueryChange,
-                    placeholder = "Search settings…",
+                    placeholder = stringResource(R.string.settings_search_placeholder),
                     monospace = false,
                 )
             }

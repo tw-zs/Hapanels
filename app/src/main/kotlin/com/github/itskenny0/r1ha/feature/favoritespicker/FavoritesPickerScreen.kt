@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.res.stringResource
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -97,7 +99,7 @@ fun FavoritesPickerScreen(
                 .systemBarsPadding()
                 .imePadding(),
         ) {
-            R1TopBar(title = "ULUBIONE", onBack = onBack)
+            R1TopBar(title = "FAVOURITES", onBack = onBack)
             AdaptiveContent(modifier = Modifier.weight(1f)) {
 
             // Search + filter chips — both pinned above the list so the user can refine
@@ -128,7 +130,7 @@ fun FavoritesPickerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "SORTUJ",
+                            text = stringResource(R.string.favorites_sort),
                             style = R1.labelMicro,
                             color = R1.InkMuted,
                         )
@@ -140,7 +142,7 @@ fun FavoritesPickerScreen(
                                 .border(1.dp, R1.Hairline, R1.ShapeS)
                                 .r1Pressable(
                                     onClick = { vm.cycleSortOrder() },
-                                    contentDescription = "Zmień sortowanie",
+                                    contentDescription = stringResource(R.string.favorites_change_sort),
                                 )
                                 .padding(horizontal = 10.dp, vertical = 4.dp),
                         ) {
@@ -274,13 +276,13 @@ private fun FilteredEmptyState(filter: PickerFilter, query: String) {
     // all, filter pruned them all, or the favourites-only view with no favourites set
     // yet. Each gets a short hint that points the user at the next step.
     val (heading, body) = when {
-        query.isNotBlank() -> "BRAK WYNIKÓW DLA \"${query.uppercase()}\"" to
-            "Spróbuj innego słowa. Szukamy po nazwie encji i po\nentity_id, np. \"sensor.\"."
-        filter == PickerFilter.ALL -> "BRAK OBSŁUGIWANYCH ENCJI" to
-            "Home Assistant nie zwrócił nic, czym umiemy sterować. Brak świateł,\nprzełączników, scen lub czujników."
-        filter == PickerFilter.FAVS -> "BRAK ULUBIONYCH" to
-            "Wybierz filtr powyżej, a potem stuknij encję, żeby dodać ją do ulubionych."
-        else -> "PUSTY FILTR" to "Stuknij WSZYSTKIE powyżej, żeby zobaczyć każdą encję."
+        query.isNotBlank() -> stringResource(R.string.favorites_no_results_query, query.uppercase()) to
+            stringResource(R.string.favorites_no_results_hint)
+        filter == PickerFilter.ALL -> stringResource(R.string.favorites_no_supported_entities) to
+            stringResource(R.string.favorites_no_supported_hint)
+        filter == PickerFilter.FAVS -> stringResource(R.string.favorites_no_favorites) to
+            stringResource(R.string.favorites_no_favorites_hint)
+        else -> stringResource(R.string.favorites_empty_filter) to stringResource(R.string.favorites_empty_filter_hint)
     }
     Column(
         modifier = Modifier
@@ -315,7 +317,7 @@ private fun SearchBar(
         // a Canvas to every recomposition; a single character "⌕" or "Q" is cheaper and
         // reads as "this is a search field" especially next to the placeholder copy.
         Text(
-            text = "SZUKAJ",
+            text = stringResource(R.string.favorites_search),
             style = R1.labelMicro,
             color = R1.InkMuted,
             modifier = Modifier.padding(end = 8.dp),
@@ -324,7 +326,7 @@ private fun SearchBar(
             com.github.itskenny0.r1ha.ui.components.R1TextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = "kuchnia, .door, scena, ...",
+                placeholder = stringResource(R.string.favorites_search_placeholder),
                 monospace = false,
             )
         }
@@ -371,7 +373,7 @@ private fun PreviewOverlay(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header — tells the user this is a preview, not the live card.
-            Text("PODGLĄD · PRZYTRZYMANIE", style = R1.labelMicro, color = R1.AccentWarm)
+            Text(stringResource(R.string.favorites_preview_hold), style = R1.labelMicro, color = R1.AccentWarm)
             Spacer(Modifier.height(6.dp))
             // The card itself — same EntityCard the live stack uses, framed in a hairline
             // border so it reads as a "card surface" lifted off the overlay. The whole
@@ -392,7 +394,7 @@ private fun PreviewOverlay(
                 )
             }
             Spacer(Modifier.height(6.dp))
-            Text("Stuknij gdziekolwiek, żeby zamknąć", style = R1.body, color = R1.InkMuted)
+            Text(stringResource(R.string.favorites_tap_to_dismiss), style = R1.body, color = R1.InkMuted)
         }
     }
 }
@@ -410,7 +412,7 @@ private fun CenteredLoading() {
                 color = R1.AccentWarm,
             )
             Spacer(Modifier.height(16.dp))
-            Text("POBIERAM ENCJE…", style = R1.sectionHeader, color = R1.InkMuted)
+            Text(stringResource(R.string.favorites_fetching_entities), style = R1.sectionHeader, color = R1.InkMuted)
         }
     }
 }
@@ -424,12 +426,12 @@ private fun ErrorState(message: String) {
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("BŁĄD", style = R1.labelMicro, color = R1.StatusRed)
+        Text("ERROR", style = R1.labelMicro, color = R1.StatusRed)
         Spacer(Modifier.height(8.dp))
         Text(message, style = R1.body, color = R1.Ink)
         Spacer(Modifier.height(16.dp))
         Text(
-            text = "Otwórz Ustawienia → Wyloguj i połącz ponownie.",
+            text = stringResource(R.string.favorites_error_reconnect),
             style = R1.body,
             color = R1.InkMuted,
         )
@@ -565,9 +567,9 @@ private fun ChannelRow(
                 // SENSOR for read-only sensors, ON/OFF for on-off-only switches, and silent
                 // for scalar entities (the percent control is implicit from the domain).
                 val tag = when {
-                    row.state.id.domain.isAction -> "AKCJA"
-                    row.state.id.domain == Domain.SENSOR -> "ODCZYT"
-                    !row.state.supportsScalar -> "WŁ./WYŁ."
+                    row.state.id.domain.isAction -> "ACTION"
+                    row.state.id.domain == Domain.SENSOR -> "READOUT"
+                    !row.state.supportsScalar -> "ON/OFF"
                     else -> null
                 }
                 if (tag != null) {
@@ -637,13 +639,13 @@ private fun ChannelRow(
                 onClick = onMoveUp,
                 enabled = canMoveUp,
                 direction = ChevronDirection.Up,
-                description = "Przenieś wyżej",
+                description = stringResource(R.string.move_up),
             )
             MoveChevron(
                 onClick = onMoveDown,
                 enabled = canMoveDown,
                 direction = ChevronDirection.Down,
-                description = "Przenieś niżej",
+                description = stringResource(R.string.move_down),
             )
         }
         Spacer(Modifier.width(10.dp))
@@ -723,33 +725,33 @@ private fun domainAccentFor(domain: Domain): Color = when (domain) {
 }
 
 private fun domainLabel(domain: Domain): String = when (domain) {
-    Domain.LIGHT -> "ŚWIATŁO"
-    Domain.FAN -> "WENTYL."
-    Domain.COVER -> "OSŁONA"
+    Domain.LIGHT -> "LIGHT"
+    Domain.FAN -> "FAN"
+    Domain.COVER -> "COVER"
     Domain.MEDIA_PLAYER -> "MEDIA"
-    Domain.SWITCH -> "PRZEŁ."
+    Domain.SWITCH -> "SWITCH"
     Domain.INPUT_BOOLEAN -> "TOGGLE"
-    Domain.AUTOMATION -> "AUTOM."
-    Domain.LOCK -> "ZAMEK"
-    Domain.HUMIDIFIER -> "NAWILŻ."
-    Domain.CLIMATE -> "KLIMAT"
-    Domain.SCENE -> "SCENA"
-    Domain.SCRIPT -> "SKRYPT"
-    Domain.BUTTON -> "PRZYC."
-    Domain.INPUT_BUTTON -> "PRZYC."
-    Domain.SENSOR -> "CZUJNIK"
-    Domain.BINARY_SENSOR -> "DETEKTOR"
-    Domain.NUMBER -> "LICZBA"
-    Domain.INPUT_NUMBER -> "LICZBA"
-    Domain.VALVE -> "ZAWÓR"
-    Domain.VACUUM -> "ODKURZ."
-    Domain.LAWN_MOWER -> "KOSIARKA"
-    Domain.WATER_HEATER -> "BOJLER"
-    Domain.SELECT -> "WYBÓR"
-    Domain.INPUT_SELECT -> "WYBÓR"
-    Domain.COUNTER -> "LICZNIK"
+    Domain.AUTOMATION -> "AUTO"
+    Domain.LOCK -> "LOCK"
+    Domain.HUMIDIFIER -> "HUMID"
+    Domain.CLIMATE -> "CLIMATE"
+    Domain.SCENE -> "SCENE"
+    Domain.SCRIPT -> "SCRIPT"
+    Domain.BUTTON -> "BUTTON"
+    Domain.INPUT_BUTTON -> "BUTTON"
+    Domain.SENSOR -> "SENSOR"
+    Domain.BINARY_SENSOR -> "SENSOR"
+    Domain.NUMBER -> "NUMBER"
+    Domain.INPUT_NUMBER -> "NUMBER"
+    Domain.VALVE -> "VALVE"
+    Domain.VACUUM -> "VACUUM"
+    Domain.LAWN_MOWER -> "MOWER"
+    Domain.WATER_HEATER -> "BOILER"
+    Domain.SELECT -> "SELECT"
+    Domain.INPUT_SELECT -> "SELECT"
+    Domain.COUNTER -> "COUNTER"
     Domain.TIMER -> "TIMER"
-    Domain.INPUT_TEXT -> "TEKST"
-    Domain.INPUT_DATETIME -> "DATA/CZAS"
-    Domain.UPDATE -> "AKTUAL."
+    Domain.INPUT_TEXT -> "TEXT"
+    Domain.INPUT_DATETIME -> "DATETIME"
+    Domain.UPDATE -> "UPDATE"
 }

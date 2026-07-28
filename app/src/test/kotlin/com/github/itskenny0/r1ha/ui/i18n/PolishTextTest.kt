@@ -56,6 +56,38 @@ class PolishTextTest {
     }
 
     @Test
+    fun `static compose text literals have polish translations`() {
+        val untranslatedNames = setOf(
+            "Hapanels",
+            "HAPANELS STUDIO",
+            "HOME ASSISTANT",
+            "PING",
+            "Port",
+            "SSL / 8883",
+            "TLS",
+            "tw-zs.github.io/Hapanels/",
+            "+",
+            "−",
+            "·",
+            "×",
+            "✓",
+            "⋯",
+        )
+        val literal = Regex("""\b(?:Text|MockText|EmptyText)\(\s*"([^"$]+)"""")
+        val missing = File("src/main/kotlin").walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { file ->
+                literal.findAll(file.readText()).map { match -> file to match.groupValues[1] }
+            }
+            .filter { (_, text) -> text !in untranslatedNames }
+            .filter { (_, text) -> translateUiText(text, language = "pl") == text }
+            .map { (file, text) -> "${file.relativeTo(File("src/main/kotlin"))}: $text" }
+            .toList()
+
+        assertThat(missing).isEmpty()
+    }
+
+    @Test
     fun `xml string resource keys match between default and pl`() {
         val rootDir = File("src/main/res")
         val enXml = File(rootDir, "values/strings.xml")

@@ -198,4 +198,47 @@
     <string name="loading">Ładowanie…</string>
     <string name="empty_no_results">Brak wyników</string>
     <string name="error_generic">Coś poszło nie tak</string>
+
+    <!-- Updates screen -->
+    <string name="updates_empty">Brak encji aktualizacji. HA udostępnia wpisy update.* po zainstalowaniu i skonfigurowaniu Supervisor / dodatków / integracji do zgłaszania wersji.</string>
+    <string name="updates_load_failed">Nie udało się wczytać aktualizacji: %1$s</string>
+
+    <!-- Settings search & controls -->
+    <string name="settings_no_match">Brak ustawień pasujących do „%1$s”.</string>
+    <string name="settings_search_placeholder">Szukaj w Ustawieniach…</string>
+
+    <!-- ZHA Pairing -->
+    <string name="zha_instruction_idle">Stuknij ZEZWÓL NA DOŁĄCZENIE, aby otworzyć sieć Zigbee. Włącz nowe urządzenie, gdy timer odlicza czas; HA wykryje je i wyświetli tutaj.</string>
+    <string name="zha_waiting_devices">Oczekiwanie na urządzenia… nowe encje pojawią się tutaj, gdy HA je wykryje.</string>
+    <string name="zha_pairing_closed">Okno parowania zostało zamknięte; nie wykryto jeszcze nowych encji. Niektóre urządzenia potrzebują 30–60 s na rejestrację po dołączeniu.</string>
+
+    <!-- Favorites picker -->
+    <string name="favorites_sort">SORTUJ</string>
+    <string name="favorites_change_sort">Zmień sortowanie</string>
+    <string name="favorites_no_results_query">BRAK WYNIKÓW DLA „%1$s”</string>
+    <string name="favorites_no_results_hint">Spróbuj innego słowa. Szukamy po nazwie encji i po entity_id, np. „sensor.”.</string>
+    <string name="favorites_no_supported_entities">BRAK OBSŁUGIWANYCH ENCJI</string>
+    <string name="favorites_no_supported_hint">Home Assistant nie zwrócił żadnych encji sterowalnych.</string>
+    <string name="favorites_no_favorites">BRAK ULUBIONYCH</string>
+    <string name="favorites_no_favorites_hint">Wybierz filtr powyżej, a potem stuknij encję, żeby dodać ją do ulubionych.</string>
+    <string name="favorites_empty_filter">PUSTY FILTR</string>
+    <string name="favorites_empty_filter_hint">Stuknij WSZYSTKIE powyżej, żeby zobaczyć każdą encję.</string>
+    <string name="favorites_search">SZUKAJ</string>
+    <string name="favorites_search_placeholder">kuchnia, .door, scena, ...</string>
+    <string name="favorites_preview_hold">PODGLĄD · PRZYTRZYMANIE</string>
+    <string name="favorites_tap_to_dismiss">Stuknij gdziekolwiek, żeby zamknąć</string>
+    <string name="favorites_fetching_entities">POBIERANIE ENCJI…</string>
+    <string name="favorites_error_reconnect">Otwórz Ustawienia → Wyloguj i połącz ponownie.</string>
+    <string name="move_up">Przenieś wyżej</string>
+    <string name="move_down">Przenieś niżej</string>
+
+    <!-- Panel grid mockup -->
+    <string name="panel_loading">Ładowanie panelu…</string>
+    <string name="panel_first_tile_hint">Wejdź do Home Assistant i w integracji Hapanels Studio dodaj swój pierwszy kafel.</string>
+    <string name="panel_go_to_settings">Przejdź do Ustawień aplikacji</string>
+    <string name="panel_more_info">Więcej informacji</string>
+    <string name="panel_no_data">Brak danych</string>
+    <string name="panel_entity_unavailable">Encja nie jest obecnie dostępna w Home Assistant.</string>
+    <string name="panel_no_extra_attrs">Brak dodatkowych atrybutów.</string>
+    <string name="panel_live_preview">Podgląd na żywo</string>
 </resources>

@@ -77,9 +77,9 @@ fun resolveHapanelsThemeDefinition(
 val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.DEFAULT,
-        name = "Domyślny",
-        category = "Wygląd domyślny",
-        description = "Aktualny ciemny wygląd panelu Hapanels.",
+        name = "Default",
+        category = "Default appearance",
+        description = "Current dark look of Hapanels panel.",
         light = colors(
             panelBg = 0xFFF8FAFC,
             surface = 0xFFFFFFFF,
@@ -116,8 +116,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.LIGHT_BREEZE,
         name = "Light Breeze",
-        category = "Wygląd monochromatyczny",
-        description = "Chłodny, jasny błękit z lekkim kontrastem.",
+        category = "Monochrome appearance",
+        description = "Cool, bright blue with light contrast.",
         light = colors(
             panelBg = 0xFFF4FAFF,
             surface = 0xFFFFFFFF,
@@ -154,8 +154,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.DESERT_SUN,
         name = "Desert Sun",
-        category = "Wygląd monochromatyczny",
-        description = "Ciepły piasek i bursztyn.",
+        category = "Monochrome appearance",
+        description = "Warm sand and amber.",
         light = colors(
             panelBg = 0xFFFFF8EE,
             surface = 0xFFFFFCF7,
@@ -192,8 +192,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.FOREST_LEAVES,
         name = "Forest Leaves",
-        category = "Wygląd monochromatyczny",
-        description = "Zielenie lasu, spokojne i kontrastowe.",
+        category = "Monochrome appearance",
+        description = "Forest greens, calm and contrasting.",
         light = colors(
             panelBg = 0xFFF4FBF2,
             surface = 0xFFFFFFFF,
@@ -229,9 +229,9 @@ val hapanelsThemeDefinitions = listOf(
     ),
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.BALTIC_DAWN,
-        name = "Bałtyk o świcie",
-        category = "Polskie inspiracje",
-        description = "Morski błękit, mgła i różowy świt.",
+        name = "Baltic Dawn",
+        category = "Polish inspirations",
+        description = "Sea blue, mist, and pink dawn.",
         light = colors(
             panelBg = 0xFFF3FAFA,
             surface = 0xFFFFFFFF,
@@ -267,9 +267,9 @@ val hapanelsThemeDefinitions = listOf(
     ),
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.BIESZCZADY_SUNSET,
-        name = "Bieszczadzkie zachody",
-        category = "Polskie inspiracje",
-        description = "Ciepły zachód nad połoninami.",
+        name = "Bieszczady Sunset",
+        category = "Polish inspirations",
+        description = "Warm sunset over mountain meadows.",
         light = colors(
             panelBg = 0xFFFFF7F0,
             surface = 0xFFFFFCF9,
@@ -305,9 +305,9 @@ val hapanelsThemeDefinitions = listOf(
     ),
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.MASURIAN_NIGHTS,
-        name = "Mazurskie noce",
-        category = "Polskie inspiracje",
-        description = "Granat jezior i nocne światło.",
+        name = "Masurian Nights",
+        category = "Polish inspirations",
+        description = "Deep lake blue and night light.",
         light = colors(
             panelBg = 0xFFF5F8FF,
             surface = 0xFFFFFFFF,
@@ -344,8 +344,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.AURORA_GLASS,
         name = "Aurora Glass",
-        category = "Kolorowe abstrakcyjne",
-        description = "Szklany gradient zorzy z chłodnym fioletem i cyjanem.",
+        category = "Colorful abstract",
+        description = "Glassy aurora gradient with cool violet and cyan.",
         light = colors(
             panelBg = 0xFFF7F8FF,
             surface = 0xFFFFFFFF,
@@ -382,8 +382,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.NEON_NOIR,
         name = "Neon Noir",
-        category = "Kolorowe abstrakcyjne",
-        description = "Ciemny premium look z neonowym magenta i elektrycznym błękitem.",
+        category = "Colorful abstract",
+        description = "Dark premium look with neon magenta and electric blue.",
         light = colors(
             panelBg = 0xFFFFF7FB,
             surface = 0xFFFFFFFF,
@@ -420,8 +420,8 @@ val hapanelsThemeDefinitions = listOf(
     HapanelsThemeDefinition(
         preset = HapanelsThemePreset.VELVET_SPECTRUM,
         name = "Velvet Spectrum",
-        category = "Kolorowe abstrakcyjne",
-        description = "Miękki, luksusowy miks śliwki, złota i indygo.",
+        category = "Colorful abstract",
+        description = "Soft, luxurious mix of plum, gold, and indigo.",
         light = colors(
             panelBg = 0xFFFFF8F4,
             surface = 0xFFFFFFFF,

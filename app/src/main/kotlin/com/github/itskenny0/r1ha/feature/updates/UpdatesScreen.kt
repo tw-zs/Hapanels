@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.res.stringResource
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -140,9 +142,7 @@ fun UpdatesScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No update entities. HA exposes update.* entries " +
-                            "once the Supervisor / add-ons / integrations are " +
-                            "installed and configured to report versions.",
+                        text = stringResource(R.string.updates_empty),
                         style = R1.body,
                         color = R1.InkMuted,
                     )

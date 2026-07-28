@@ -28,33 +28,33 @@ import kotlinx.coroutines.launch
  * chip row stays readable on a 240 px display (six or seven chips, not fifteen).
  */
 enum class PickerFilter(val label: String, val matches: (Domain) -> Boolean) {
-    ALL("WSZYSTKIE", { true }),
-    FAVS("★ ULUBIONE", { true }),  // "isFavorite" filter applied outside `matches`; this entry is special-cased.
-    PANEL("KONTROLA PANELU", { false }),
-    LIGHTS("ŚWIATŁA", { it == Domain.LIGHT }),
-    SWITCHES("PRZEŁĄCZNIKI", { it == Domain.SWITCH || it == Domain.INPUT_BOOLEAN || it == Domain.AUTOMATION }),
-    COVERS("ROLETA/OSŁONY", { it == Domain.COVER }),
+    ALL("ALL", { true }),
+    FAVS("★ FAVS", { true }),  // "isFavorite" filter applied outside `matches`; this entry is special-cased.
+    PANEL("PANEL CONTROLS", { false }),
+    LIGHTS("LIGHTS", { it == Domain.LIGHT }),
+    SWITCHES("SWITCHES", { it == Domain.SWITCH || it == Domain.INPUT_BOOLEAN || it == Domain.AUTOMATION }),
+    COVERS("COVERS", { it == Domain.COVER }),
     // Valves get their own chip rather than living under COVERS — HA keeps the two
     // domains distinct (water valves vs window covers) and grouping them confused
     // discovery for users who knew they had a `valve.foo` entity but couldn't find it
     // by searching "valve".
-    VALVES("ZAWORY", { it == Domain.VALVE }),
-    CLIMATE("KLIMAT", { it == Domain.CLIMATE || it == Domain.HUMIDIFIER || it == Domain.FAN || it == Domain.WATER_HEATER }),
-    LOCKS("ZAMKI", { it == Domain.LOCK }),
+    VALVES("VALVES", { it == Domain.VALVE }),
+    CLIMATE("CLIMATE", { it == Domain.CLIMATE || it == Domain.HUMIDIFIER || it == Domain.FAN || it == Domain.WATER_HEATER }),
+    LOCKS("LOCKS", { it == Domain.LOCK }),
     MEDIA("MEDIA", { it == Domain.MEDIA_PLAYER }),
     // Action-only entities — scene/script/button/input_button. SCENES is the
     // human-friendly umbrella label even though it also covers scripts/buttons,
     // because that's the most-searched-for kind in this group.
-    SCENES("SCENY", { it.isAction }),
-    SENSORS("CZUJNIKI", { it.isSensor }),
+    SCENES("SCENES", { it.isAction }),
+    SENSORS("SENSORS", { it.isSensor }),
     // Number / input_number — settable scalars common in MQTT integrations (pump
     // speeds, calibration knobs, manual setpoints). Previously hidden inside ALL
     // because no chip filtered for them.
-    NUMBERS("LICZBY", { it == Domain.NUMBER || it == Domain.INPUT_NUMBER }),
-    VACUUMS("ODKURZACZE", { it == Domain.VACUUM || it == Domain.LAWN_MOWER }),
+    NUMBERS("NUMBERS", { it == Domain.NUMBER || it == Domain.INPUT_NUMBER }),
+    VACUUMS("VACUUMS", { it == Domain.VACUUM || it == Domain.LAWN_MOWER }),
     // Settable-enum entities — select / input_select. Useful for fan-mode selectors,
     // operating-mode pickers, room-target selectors for vacuums, etc.
-    SELECTS("WYBORY", { it.isSelect }),
+    SELECTS("SELECTS", { it.isSelect }),
 }
 
 class FavoritesPickerViewModel(
@@ -83,8 +83,8 @@ class FavoritesPickerViewModel(
      */
     enum class SortOrder(val label: String) {
         ALPHA("A→Z"),
-        AREA("WG POMIESZCZEŃ"),
-        DOMAIN("WG TYPU"),
+        AREA("BY ROOM"),
+        DOMAIN("BY KIND"),
     }
 
     data class UiState(

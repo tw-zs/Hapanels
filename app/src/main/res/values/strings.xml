@@ -228,6 +228,11 @@
     <string name="empty_no_results">No results</string>
     <string name="error_generic">Something went wrong</string>
 
+    <!-- To-do lists -->
+    <string name="todo_no_lists">No to-do lists found.\n\nAdd one in Home Assistant: Settings → Devices &amp; services → Add integration → Local To-do. Or install one of the Google Tasks / CalDAV / Shopping List integrations.</string>
+    <string name="todo_pick_list">Pick a list to view items.</string>
+    <string name="todo_empty_list">List is empty.</string>
+
     <!-- Updates screen -->
     <string name="updates_empty">No update entities. HA exposes update.* entries once the Supervisor / add-ons / integrations are installed and configured to report versions.</string>
     <string name="updates_load_failed">Updates load failed: %1$s</string>

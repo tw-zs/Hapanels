@@ -199,6 +199,11 @@
     <string name="empty_no_results">Brak wyników</string>
     <string name="error_generic">Coś poszło nie tak</string>
 
+    <!-- Listy zadań -->
+    <string name="todo_no_lists">Nie znaleziono list zadań.\n\nDodaj listę w Home Assistant: Ustawienia → Urządzenia i usługi → Dodaj integrację → Local To-do. Możesz też zainstalować integrację Google Tasks, CalDAV lub Shopping List.</string>
+    <string name="todo_pick_list">Wybierz listę, aby zobaczyć zadania.</string>
+    <string name="todo_empty_list">Lista jest pusta.</string>
+
     <!-- Updates screen -->
     <string name="updates_empty">Brak encji aktualizacji. HA udostępnia wpisy update.* po zainstalowaniu i skonfigurowaniu Supervisor / dodatków / integracji do zgłaszania wersji.</string>
     <string name="updates_load_failed">Nie udało się wczytać aktualizacji: %1$s</string>

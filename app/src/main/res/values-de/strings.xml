@@ -199,6 +199,11 @@
     <string name="empty_no_results">Keine Ergebnisse</string>
     <string name="error_generic">Etwas ist schiefgelaufen</string>
 
+    <!-- Aufgabenlisten -->
+    <string name="todo_no_lists">Keine Aufgabenlisten gefunden.\n\nFüge eine Liste in Home Assistant hinzu: Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → Local To-do. Alternativ kannst du Google Tasks, CalDAV oder Shopping List installieren.</string>
+    <string name="todo_pick_list">Wähle eine Liste aus, um Aufgaben anzuzeigen.</string>
+    <string name="todo_empty_list">Die Liste ist leer.</string>
+
     <!-- Updates screen -->
     <string name="updates_empty">Keine Update-Entitäten. HA stellt update.*-Einträge bereit, sobald Supervisor / Add-ons / Integrationen installiert und für Versionsmeldungen konfiguriert sind.</string>
     <string name="updates_load_failed">Fehler beim Laden der Updates: %1$s</string>

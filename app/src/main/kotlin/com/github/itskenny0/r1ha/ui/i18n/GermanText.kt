@@ -301,7 +301,7 @@ private fun populate_german_2(m: MutableMap<String, String>) {
     m["HIGH"] = "HOCH"
     m["HISTORY"] = "VERLAUF"
     m["HOME"] = "ZUHAUSE"
-    m["HOME ASSISTANT URL"] = "HOME ASSISTANT URL"
+    m["HOME ASSISTANT URL"] = "HOME-ASSISTANT-URL"
     m["HORIZONTAL"] = "HORIZONTAL"
     m["HUE"] = "FARBTON"
     m["Hapanels Grid"] = "Hapanels Grid"
@@ -318,7 +318,7 @@ private fun populate_german_2(m: MutableMap<String, String>) {
     m["Home presence"] = "Anwesenheit zuhause"
     m["ICON"] = "SYMBOL"
     m["IDLE"] = "INAKTIV"
-    m["IMG CACHE"] = "IMG CACHE"
+    m["IMG CACHE"] = "BILDCACHE"
 }
 
 private fun populate_german_3(m: MutableMap<String, String>) {
@@ -788,7 +788,7 @@ private fun populate_german_7(m: MutableMap<String, String>) {
     m["Unavailable"] = "Nicht verfügbar"
     m["Unknown error"] = "Unbekannter Fehler"
     m["Updated"] = "Aktualisiert"
-    m["Updates"] = "Updates"
+    m["Updates"] = "Aktualisierungen"
     m["Use a long-lived token instead"] = "Stattdessen langlebigen Zugriffstoken verwenden"
     m["Use direct stepping for this value"] = "Use direct stepping for this value"
     m["Use long-lived token"] = "Langlebigen Zugriffstoken verwenden"
@@ -881,8 +881,8 @@ private fun populate_german_8(m: MutableMap<String, String>) {
     m["unknown error"] = "unbekannter Fehler"
     m["unsupported"] = "nicht unterstützt"
     m["waiting"] = "warten"
-    m["· ON/OFF"] = "· ON/OFF"
-    m["· TRIGGER"] = "· TRIGGER"
+    m["· ON/OFF"] = "· AN/AUS"
+    m["· TRIGGER"] = "· AUSLÖSEN"
     m["Ładowanie panelu..."] = "Ładowanie panelu..."
     m["‹  BACK"] = "‹  ZURÜCK"
     m["← UP"] = "← UP"

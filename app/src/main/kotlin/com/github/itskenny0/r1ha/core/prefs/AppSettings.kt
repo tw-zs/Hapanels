@@ -198,11 +198,10 @@ data class Behavior(
     val tapToToggle: Boolean = false,
     /**
      * When on, the Android system status bar is hidden across the app via the
-     * WindowInsetsController. Off by default — the bar is harmless and gives the user
-     * a clock + battery for free. Useful when running on an R1 LineageOS GSI where the
-     * bar competes with our chrome row for the precious top 24 dp.
+     * WindowInsetsController. On by default so dedicated panels use the full display;
+     * users can restore the clock and battery bar in Settings.
      */
-    val hideStatusBar: Boolean = false,
+    val hideStatusBar: Boolean = true,
     /**
      * When [hideStatusBar] is on the user loses sight of the Android system battery
      * percentage — fine for most users but a real loss on the R1 where a low battery

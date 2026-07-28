@@ -224,7 +224,13 @@ internal fun AuthPage(
     onBack: () -> Unit,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    StandardPage(stringResource(R.string.onboarding_step_sign_in), title, description, onBack, content)
+    Box(Modifier.fillMaxSize().imePadding().background(OnboardingBg)) {
+        MockButton(stringResource(R.string.onboarding_back), 48.dp, 38.dp, 128.dp, 54.dp, outlined = true, mutedOutline = true, onClick = onBack)
+        MockText(stringResource(R.string.onboarding_step_sign_in), 240.dp, 96.dp, 800.dp, 16, OnboardingOrange, bold = true, letterSpacing = 1.5f)
+        MockText(title, 240.dp, 123.dp, 850.dp, 36, bold = true)
+        MockText(description, 240.dp, 178.dp, 900.dp, 17, OnboardingSoft)
+        content()
+    }
 }
 
 @Composable

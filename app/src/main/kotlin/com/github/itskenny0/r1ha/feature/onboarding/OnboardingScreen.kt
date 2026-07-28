@@ -16,9 +16,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +60,6 @@ import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardConfigSource
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatch
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsDashboardPatchResult
 import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsThemeMode
-import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.first
@@ -187,6 +190,7 @@ fun OnboardingScreen(
         else -> VisualPage.CHECKLIST
     }
     val startView = runCatching { StartView.valueOf(startViewName) }.getOrDefault(StartView.PANEL_GRID)
+    val authTopPadding = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 0.dp else 230.dp
 
     val edgeProgress = remember { Animatable(0f) }
     val successGlow = remember { Animatable(0f) }
@@ -314,7 +318,9 @@ fun OnboardingScreen(
                                 authorizeUrl = current.authorizeUrl,
                                 onCodeCaptured = { vm.exchangeCode(it, current.baseUrl) },
                                 onMissingCode = { vm.failOnboarding(context.getString(R.string.onboarding_sign_in_canceled)) },
-                                modifier = Modifier.offset(240.dp, 230.dp).width(800.dp).height(430.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(start = 240.dp, top = authTopPadding, end = 240.dp, bottom = 16.dp),
                             )
                             else -> {
                                 Box(Modifier.offset(240.dp, 250.dp).size(800.dp, 300.dp).background(OnboardingSurface), contentAlignment = Alignment.Center) {
@@ -449,30 +455,6 @@ fun OnboardingScreen(
                 }
             }
             ProgressEdge(edgeProgress.value, successGlow.value)
-            if (!appSettings.behavior.hideStatusBar) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset((-24).dp, 24.dp)
-                        .width(190.dp)
-                        .height(48.dp)
-                        .background(OnboardingSurface)
-                        .r1Pressable(onClick = {
-                            scope.launch {
-                                settings.update {
-                                    it.copy(behavior = it.behavior.copy(hideStatusBar = true))
-                                }
-                            }
-                        }),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    com.github.itskenny0.r1ha.ui.i18n.Text(
-                        text = "Hide status bar",
-                        color = OnboardingSoft,
-                        fontSize = 15.sp,
-                    )
-                }
-            }
         }
     }
 }

@@ -15,19 +15,19 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class HapanelsDashboardConfigSourceTest {
-    @Test fun loadSeedsAndExportsSampleConfig() = runTest {
-        val source = newSource()
+    @Test fun firstLoadCreatesAndExportsEmptyConfig() = runTest {
+        val source = newSource(seedSample = false)
 
         val config = source.loadOrSeed()
         val raw = source.exportRaw()
 
         assertThat(config.dashboardId).isEqualTo("home-panel-main")
         assertThat(raw).contains("home-panel-main")
-        assertThat(raw).contains("Oświetlenie")
-        assertThat(config.alwaysOnDisplay.tiles.first().kind).isEqualTo(HapanelsTileKind.CLOCK)
+        assertThat(raw).doesNotContain("Oświetlenie")
+        assertThat(config.tiles).isEmpty()
+        assertThat(config.alwaysOnDisplay.tiles).isEmpty()
         assertThat(config.version).isEqualTo(HAPANELS_DASHBOARD_SCHEMA_VERSION)
         assertThat(config.alwaysOnDisplay.entityIds).isEmpty()
-        assertThat(config.tiles.first { it.id == "energy" }.accent).isEqualTo(HapanelsTileAccent.WHITE)
     }
 
     @Test fun importMigratesFlatPanelAndLegacyPresentationToV2() = runTest {
@@ -119,7 +119,14 @@ class HapanelsDashboardConfigSourceTest {
 
     @Test fun importValidJsonReplacesCachedConfig() = runTest {
         val source = newSource()
-        val raw = SAMPLE_HAPANELS_DASHBOARD_JSON.replace("Oświetlenie", "Test Lights")
+        val raw = configJsonForTest(
+            sampleHapanelsDashboardConfig().copy(
+                updatedBy = "test:fixture",
+                tiles = sampleHapanelsDashboardConfig().tiles.map { tile ->
+                    if (tile.id == "lights") tile.copy(label = "Test Lights") else tile
+                },
+            ),
+        )
 
         val imported = source.importRaw(raw)
         val loaded = source.loadOrSeed()
@@ -522,10 +529,15 @@ class HapanelsDashboardConfigSourceTest {
 
     private fun newSource(
         cacheFileName: String = "hapanels_dashboard_test_${System.nanoTime()}.json",
-    ): HapanelsDashboardConfigSource = HapanelsDashboardConfigSource(
-        ApplicationProvider.getApplicationContext(),
-        cacheFileName = cacheFileName,
-    )
+        seedSample: Boolean = true,
+    ): HapanelsDashboardConfigSource {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val file = java.io.File(context.filesDir, cacheFileName)
+        if (seedSample && !file.exists()) {
+            file.writeText(configJsonForTest(sampleHapanelsDashboardConfig().copy(updatedBy = "test:fixture")))
+        }
+        return HapanelsDashboardConfigSource(context, cacheFileName = cacheFileName)
+    }
 
     private fun configJsonForTest(config: HapanelsDashboardConfig): String =
         kotlinx.serialization.json.Json.encodeToString(HapanelsDashboardConfig.serializer(), config)

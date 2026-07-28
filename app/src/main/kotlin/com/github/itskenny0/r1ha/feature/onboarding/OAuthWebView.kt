@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
@@ -75,12 +76,10 @@ fun OAuthWebView(
                         val error = uri.getQueryParameter("error")
                         R1Log.i("OAuthWebView", "redirect captured code?=${!code.isNullOrBlank()} error=$error")
                         if (!code.isNullOrBlank()) {
-                            Toaster.show("Captured auth code")
                             currentOnCode.value.invoke(code)
                         } else {
                             val msg = error?.let { "Redirect had error=$it" } ?: "Redirect had no code"
                             R1Log.w("OAuthWebView", msg)
-                            Toaster.error(msg)
                             currentOnMissing.value.invoke(error)
                         }
                         return true
@@ -103,7 +102,7 @@ fun OAuthWebView(
                     if (url.scheme == "r1ha") return
                     val desc = runCatching { error.description?.toString() }.getOrNull() ?: "error"
                     R1Log.w("OAuthWebView", "main-frame load error: $desc ($url)")
-                    Toaster.error("WebView: $desc")
+                    Toaster.error(context.getString(R.string.onboarding_webview_error, desc))
                 }
             }
             loadUrl(authorizeUrl)

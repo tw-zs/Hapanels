@@ -100,4 +100,13 @@ class RoutesTest {
         assertThat(panelGridDestinationRoute(Routes.DEV_MENU)).isNull()
         assertThat(panelGridDestinationRoute("https://example.com")).isNull()
     }
+
+    @Test fun mqttValidationRequiresValidHostAndPort() {
+        assertThat(com.github.itskenny0.r1ha.feature.onboarding.mqttValidationError("", "1883"))
+            .isNotNull()
+        assertThat(com.github.itskenny0.r1ha.feature.onboarding.mqttValidationError("192.168.1.17", "0"))
+            .isNotNull()
+        assertThat(com.github.itskenny0.r1ha.feature.onboarding.mqttValidationError("192.168.1.17", "1883"))
+            .isNull()
+    }
 }

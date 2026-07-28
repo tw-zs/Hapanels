@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -76,7 +78,7 @@ internal fun ScaledOnboardingPage(
     content: @Composable BoxScope.() -> Unit,
 ) {
     androidx.compose.foundation.layout.BoxWithConstraints(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().imePadding(),
         contentAlignment = Alignment.Center,
     ) {
         val scale = min(maxWidth.value / 1280f, maxHeight.value / 752f)
@@ -107,10 +109,10 @@ internal fun WelcomePage(onStart: () -> Unit) {
             contentDescription = "Hapanels",
             modifier = Modifier.offset(508.dp, 82.dp).size(264.dp),
         )
-        MockText("Witaj w Hapanels!", 0.dp, 277.dp, 1280.dp, 46, bold = true, align = Alignment.CenterHorizontally)
-        MockText("Twój dom. Jeden prosty panel.", 0.dp, 341.dp, 1280.dp, 24, OnboardingSoft, align = Alignment.CenterHorizontally)
+        MockText(stringResource(R.string.onboarding_welcome_title), 0.dp, 277.dp, 1280.dp, 46, bold = true, align = Alignment.CenterHorizontally)
+        MockText(stringResource(R.string.onboarding_welcome_tagline), 0.dp, 341.dp, 1280.dp, 24, OnboardingSoft, align = Alignment.CenterHorizontally)
         MockText(
-            "Steruj światłem, temperaturą, roletami i innymi urządzeniami z jednego ekranu.",
+            stringResource(R.string.onboarding_welcome_body),
             0.dp,
             411.dp,
             1280.dp,
@@ -118,7 +120,7 @@ internal fun WelcomePage(onStart: () -> Unit) {
             align = Alignment.CenterHorizontally,
         )
         MockText(
-            "Za chwilę połączysz panel ze swoim domem i wybierzesz, co ma się na nim wyświetlać.",
+            stringResource(R.string.onboarding_welcome_hint),
             0.dp,
             447.dp,
             1280.dp,
@@ -126,7 +128,7 @@ internal fun WelcomePage(onStart: () -> Unit) {
             OnboardingSoft,
             align = Alignment.CenterHorizontally,
         )
-        MockButton("Rozpocznij konfigurację", 420.dp, 580.dp, 440.dp, 68.dp, onClick = onStart)
+        MockButton(stringResource(R.string.onboarding_start_setup), 420.dp, 580.dp, 440.dp, 68.dp, onClick = onStart)
     }
 }
 
@@ -134,53 +136,78 @@ internal fun WelcomePage(onStart: () -> Unit) {
 internal fun ConnectionPage(
     url: String,
     onUrlChange: (String) -> Unit,
-    detectedServer: String?,
+    detectedServers: List<String>,
     probing: Boolean,
     error: String?,
+    discoveryRunning: Boolean,
+    discoveryError: Boolean,
+    onRetryDiscovery: () -> Unit,
+    onDetectedServer: (String) -> Unit,
     onBack: () -> Unit,
     onOAuth: () -> Unit,
     onLlat: () -> Unit,
 ) {
     StandardPage(
-        step = "01 · POŁĄCZENIE",
-        title = "Połącz panel z Home Assistant",
-        description = "Wybierz wykryty serwer albo wpisz jego adres ręcznie.",
+        step = stringResource(R.string.onboarding_step_connection),
+        title = stringResource(R.string.onboarding_connection_title),
+        description = stringResource(R.string.onboarding_connection_description),
         onBack = onBack,
     ) {
-        MockText("WYKRYTE W SIECI LOKALNEJ", 240.dp, 228.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
-        if (detectedServer == null) {
-            MockCard(240.dp, 260.dp, 800.dp, 58.dp)
-            MockText("Szukam Home Assistant w sieci lokalnej…", 265.dp, 277.dp, 750.dp, 18, OnboardingSoft)
-        } else {
-            MockCard(240.dp, 260.dp, 800.dp, 58.dp, selected = true)
-            MockText("Zapisany Home Assistant", 258.dp, 269.dp, 700.dp, 17, bold = true)
-            MockText(detectedServer, 258.dp, 294.dp, 700.dp, 13, OnboardingSoft)
-            MockText("✓", 985.dp, 272.dp, 30.dp, 18, OnboardingOrange, bold = true)
+        MockText(stringResource(R.string.onboarding_discovered_servers), 240.dp, 228.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
+        if (discoveryRunning) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.offset(815.dp, 222.dp).size(18.dp),
+                strokeWidth = 2.dp,
+                color = OnboardingOrange,
+            )
         }
-        MockText("LUB WPISZ ADRES RĘCZNIE", 240.dp, 390.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
+        MockButton(stringResource(R.string.onboarding_search_again), 845.dp, 212.dp, 195.dp, 36.dp, outlined = true, mutedOutline = true, onClick = onRetryDiscovery)
+        if (detectedServers.isEmpty()) {
+            MockCard(240.dp, 260.dp, 800.dp, 58.dp)
+            MockText(
+                stringResource(if (discoveryError) R.string.onboarding_search_failed else R.string.onboarding_searching),
+                265.dp,
+                277.dp,
+                750.dp,
+                18,
+                if (discoveryError) OnboardingRed else OnboardingSoft,
+            )
+        } else {
+            detectedServers.take(6).forEachIndexed { index, server ->
+                val col = index % 2
+                val row = index / 2
+                val x = (240 + col * 410).dp
+                val y = (250 + row * 48).dp
+                val detectedSelected = url == server || (url.isBlank() && index == 0)
+                MockCard(x, y, 390.dp, 42.dp, selected = detectedSelected, onClick = { onDetectedServer(server) })
+                MockText(server, x + 16.dp, y + 11.dp, 340.dp, 14, if (detectedSelected) OnboardingInk else OnboardingSoft, bold = detectedSelected)
+                if (detectedSelected) MockText("✓", x + 350.dp, y + 10.dp, 24.dp, 15, OnboardingOrange, bold = true)
+            }
+        }
+        MockText(stringResource(R.string.onboarding_manual_address), 240.dp, 410.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
         MockField(
             value = url,
             onValueChange = onUrlChange,
-            placeholder = "http://homeassistant.local:8123",
+            placeholder = stringResource(R.string.onboarding_url_placeholder),
             x = 240.dp,
-            y = 422.dp,
+            y = 442.dp,
             width = 800.dp,
             height = 58.dp,
             error = error != null,
         )
         MockButton(
-            if (probing) "ŁĄCZENIE…" else "POŁĄCZ ZA POMOCĄ HASŁA",
+            stringResource(if (probing) R.string.onboarding_connecting else R.string.onboarding_sign_in_ha),
             240.dp,
-            500.dp,
+            510.dp,
             800.dp,
             58.dp,
-            enabled = !probing && (url.isNotBlank() || detectedServer != null),
+            enabled = !probing && (url.isNotBlank() || detectedServers.isNotEmpty()),
             onClick = onOAuth,
         )
         MockButton(
-            "POŁĄCZ ZA POMOCĄ TOKENA DŁUGOTERMINOWEGO",
+            stringResource(R.string.onboarding_long_lived_token),
             240.dp,
-            570.dp,
+            580.dp,
             800.dp,
             58.dp,
             outlined = true,
@@ -197,7 +224,7 @@ internal fun AuthPage(
     onBack: () -> Unit,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    StandardPage("02 · LOGOWANIE", title, description, onBack, content)
+    StandardPage(stringResource(R.string.onboarding_step_sign_in), title, description, onBack, content)
 }
 
 @Composable
@@ -208,16 +235,16 @@ internal fun PanelNamePage(
     onContinue: () -> Unit,
 ) {
     StandardPage(
-        "03 · NAZWA PANELU",
-        "Jak nazwać ten tablet?",
-        "Nazwa pomoże rozpoznać panel w Home Assistant, MQTT i Hapanels Studio.",
+        stringResource(R.string.onboarding_step_panel_name),
+        stringResource(R.string.onboarding_panel_name_title),
+        stringResource(R.string.onboarding_panel_name_description),
         onBack,
     ) {
-        MockText("NAZWA URZĄDZENIA", 240.dp, 300.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
-        MockField(value, onValueChange, "Panel Hapanels", 240.dp, 332.dp, 800.dp, 74.dp, selected = true)
-        MockText("Android rozpoznał urządzenie jako: ${android.os.Build.MODEL}", 240.dp, 429.dp, 800.dp, 16, OnboardingSoft)
-        MockButton("ZAPISZ NAZWĘ I KONTYNUUJ", 420.dp, 580.dp, 440.dp, 68.dp, enabled = value.isNotBlank(), onClick = onContinue)
-        MockText("Nazwę można później zmienić w ustawieniach.", 0.dp, 674.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
+        MockText(stringResource(R.string.onboarding_device_name), 240.dp, 300.dp, 800.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
+        MockField(value, onValueChange, stringResource(R.string.onboarding_panel_name_placeholder), 240.dp, 332.dp, 800.dp, 74.dp, selected = true)
+        MockText(stringResource(R.string.onboarding_device_model, android.os.Build.MODEL), 240.dp, 429.dp, 800.dp, 16, OnboardingSoft)
+        MockButton(stringResource(R.string.onboarding_save_name), 420.dp, 580.dp, 440.dp, 68.dp, enabled = value.isNotBlank(), onClick = onContinue)
+        MockText(stringResource(R.string.onboarding_name_later), 0.dp, 674.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
     }
 }
 
@@ -233,22 +260,22 @@ internal fun AppearancePage(
     onContinue: () -> Unit,
 ) {
     StandardPage(
-        "04 · WYGLĄD",
-        "Dopasuj panel do siebie",
-        "Nie musisz decydować na zawsze — wszystko zmienisz później w ustawieniach.",
+        stringResource(R.string.onboarding_step_appearance),
+        stringResource(R.string.onboarding_appearance_title),
+        stringResource(R.string.onboarding_appearance_description),
         onBack,
     ) {
-        MockText("TRYB KOLORÓW", 120.dp, 226.dp, 600.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
-        ColorChoice("Jasny", false, dark, 120.dp) { onDarkChange(false) }
-        ColorChoice("Ciemny", true, dark, 400.dp) { onDarkChange(true) }
-        MockText("DOMYŚLNY WIDOK APLIKACJI", 120.dp, 367.dp, 900.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
+        MockText(stringResource(R.string.onboarding_color_mode), 120.dp, 226.dp, 600.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
+        ColorChoice(stringResource(R.string.onboarding_light), false, dark, 120.dp) { onDarkChange(false) }
+        ColorChoice(stringResource(R.string.onboarding_dark), true, dark, 400.dp) { onDarkChange(true) }
+        MockText(stringResource(R.string.onboarding_start_screen), 120.dp, 367.dp, 900.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.2f)
         ViewChoice(StartView.PANEL_GRID, startView, 120.dp, onStartViewChange)
         ViewChoice(StartView.CARDS, startView, 640.dp, onStartViewChange)
         if (error != null) {
             MockText(error, 120.dp, 548.dp, 1040.dp, 14, OnboardingRed, align = Alignment.CenterHorizontally)
         }
         MockButton(
-            if (error != null) "POMIŃ MOTYW I KONTYNUUJ" else "ZAPISZ I KONTYNUUJ",
+            stringResource(if (error != null) R.string.onboarding_continue_without_theme else R.string.onboarding_save_continue),
             420.dp,
             580.dp,
             440.dp,
@@ -263,24 +290,32 @@ internal fun AppearancePage(
 internal fun StudioPage(
     serverName: String,
     tabletName: String,
+    mqttConfigured: Boolean,
     infoOpen: Boolean,
     onInfoChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     onSkip: () -> Unit,
 ) {
     StandardPage(
-        "05 · HAPANELS STUDIO",
-        "Połącz panel z Hapanels Studio",
-        "Studio pozwala układać widoki panelu bez ręcznego edytowania konfiguracji.",
+        stringResource(R.string.onboarding_step_studio),
+        stringResource(R.string.onboarding_studio_title),
+        stringResource(R.string.onboarding_studio_description),
         onBack,
     ) {
         MockCard(240.dp, 264.dp, 800.dp, 134.dp)
         MockText("HOME ASSISTANT", 270.dp, 285.dp, 700.dp, 14, OnboardingSoft, bold = true, letterSpacing = 1.2f)
         MockText("$serverName · $tabletName", 270.dp, 313.dp, 700.dp, 23, bold = true)
-        MockText("Integracja Studio nie jest jeszcze skonfigurowana", 270.dp, 354.dp, 700.dp, 16, OnboardingSoft)
-        MockText("STUDIO", 915.dp, 313.dp, 93.dp, 18, OnboardingOrange, bold = true, align = Alignment.End)
         MockText(
-            "Po połączeniu ustawienia wyglądu i widoków będą dostępne bezpośrednio w Home Assistant.",
+            stringResource(if (mqttConfigured) R.string.onboarding_mqtt_connected else R.string.onboarding_mqtt_required),
+            270.dp,
+            354.dp,
+            700.dp,
+            16,
+            if (mqttConfigured) OnboardingGreen else OnboardingSoft,
+        )
+        MockText(if (mqttConfigured) stringResource(R.string.onboarding_online) else "MQTT", 915.dp, 313.dp, 93.dp, 18, if (mqttConfigured) OnboardingGreen else OnboardingOrange, bold = true, align = Alignment.End)
+        MockText(
+            stringResource(R.string.onboarding_studio_available),
             0.dp,
             435.dp,
             1280.dp,
@@ -288,40 +323,67 @@ internal fun StudioPage(
             OnboardingSoft,
             align = Alignment.CenterHorizontally,
         )
-        MockButton("PLANOWANE", 240.dp, 525.dp, 800.dp, 64.dp, enabled = false, onClick = {})
-        MockButton("POMIŃ NA RAZIE", 240.dp, 615.dp, 385.dp, 56.dp, outlined = true, mutedOutline = true, onClick = onSkip)
-        MockButton("DOWIEDZ SIĘ WIĘCEJ", 655.dp, 615.dp, 385.dp, 56.dp, outlined = true, onClick = { onInfoChange(true) })
-        MockText("Połączenie ze Studio można dodać później w ustawieniach.", 0.dp, 681.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
+        MockButton(
+            stringResource(if (mqttConfigured) R.string.onboarding_studio_ready else R.string.onboarding_mqtt_required),
+            240.dp,
+            525.dp,
+            800.dp,
+            64.dp,
+            enabled = false,
+            onClick = {},
+        )
+        MockButton(stringResource(R.string.onboarding_continue), 240.dp, 615.dp, 385.dp, 56.dp, outlined = true, mutedOutline = true, onClick = onSkip)
+        MockButton(stringResource(R.string.onboarding_learn_more), 655.dp, 615.dp, 385.dp, 56.dp, outlined = true, onClick = { onInfoChange(true) })
+        MockText(stringResource(R.string.onboarding_studio_later), 0.dp, 681.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
         if (infoOpen) StudioInfoPopup { onInfoChange(false) }
     }
 }
 
 @Composable
-internal fun MqttPage(onBack: () -> Unit, onSkip: () -> Unit) {
+internal fun MqttPage(
+    host: String,
+    port: String,
+    username: String,
+    password: String,
+    useTls: Boolean,
+    hostError: String?,
+    onHostChange: (String) -> Unit,
+    onUseHaHost: () -> Unit,
+    onPortChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onTlsChange: () -> Unit,
+    onBack: () -> Unit,
+    onSkip: () -> Unit,
+    onSave: () -> Unit,
+) {
     StandardPage(
-        "06 · MQTT · OPCJONALNIE",
-        "Dodaj broker MQTT",
-        "Hapanels może publikować stan panelu i odbierać polecenia przez MQTT.",
+        stringResource(R.string.onboarding_step_mqtt),
+        stringResource(R.string.onboarding_mqtt_title),
+        stringResource(R.string.onboarding_mqtt_description),
         onBack,
     ) {
-        MockText("ADRES BROKERA", 180.dp, 233.dp, 430.dp, 14, OnboardingSoft, bold = true)
-        MockField("", {}, "192.168.1.10", 180.dp, 263.dp, 430.dp, 58.dp, enabled = false)
-        MockButton("UŻYJ IP HA", 625.dp, 263.dp, 155.dp, 58.dp, outlined = true, enabled = false, onClick = {})
-        MockText("PORT", 810.dp, 233.dp, 290.dp, 14, OnboardingSoft, bold = true)
-        MockField("", {}, "1883", 810.dp, 263.dp, 290.dp, 58.dp, enabled = false)
-        MockText("UŻYTKOWNIK", 180.dp, 357.dp, 440.dp, 14, OnboardingSoft, bold = true)
-        MockField("", {}, "Opcjonalnie", 180.dp, 387.dp, 440.dp, 58.dp, enabled = false)
-        MockText("HASŁO", 650.dp, 357.dp, 450.dp, 14, OnboardingSoft, bold = true)
-        MockField("", {}, "Nie jest zapisywane", 650.dp, 387.dp, 450.dp, 58.dp, enabled = false)
-        MockButton("TLS WYŁĄCZONY", 180.dp, 482.dp, 230.dp, 54.dp, outlined = true, mutedOutline = true, enabled = false, onClick = {})
-        MockButton("POMIŃ MQTT I KONTYNUUJ", 420.dp, 580.dp, 440.dp, 68.dp, onClick = onSkip)
-        MockText("Konfigurację MQTT dodasz później, gdy bezpieczne przechowywanie będzie gotowe.", 0.dp, 681.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
+        MockText(stringResource(R.string.onboarding_broker_address), 180.dp, 233.dp, 430.dp, 14, OnboardingSoft, bold = true)
+        MockField(host, onHostChange, "192.168.1.10", 180.dp, 263.dp, 430.dp, 58.dp, error = hostError != null, selected = true)
+        MockButton(stringResource(R.string.onboarding_use_ha_host), 625.dp, 263.dp, 155.dp, 58.dp, outlined = true, onClick = onUseHaHost)
+        MockText(stringResource(R.string.onboarding_port), 810.dp, 233.dp, 290.dp, 14, OnboardingSoft, bold = true)
+        MockField(port, onPortChange, "1883", 810.dp, 263.dp, 290.dp, 58.dp, selected = true)
+        MockText(stringResource(R.string.onboarding_username), 180.dp, 357.dp, 440.dp, 14, OnboardingSoft, bold = true)
+        MockField(username, onUsernameChange, stringResource(R.string.onboarding_optional), 180.dp, 387.dp, 440.dp, 58.dp)
+        MockText(stringResource(R.string.onboarding_password), 650.dp, 357.dp, 450.dp, 14, OnboardingSoft, bold = true)
+        MockField(password, onPasswordChange, stringResource(R.string.onboarding_optional), 650.dp, 387.dp, 450.dp, 58.dp, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+        MockButton(stringResource(if (useTls) R.string.onboarding_tls_on else R.string.onboarding_tls_off), 180.dp, 482.dp, 230.dp, 54.dp, outlined = true, onClick = onTlsChange)
+        if (hostError != null) MockText(hostError, 180.dp, 548.dp, 920.dp, 14, OnboardingRed)
+        MockButton(stringResource(R.string.onboarding_save_continue), 420.dp, 580.dp, 440.dp, 68.dp, enabled = hostError == null, onClick = onSave)
+        MockText(stringResource(R.string.onboarding_mqtt_skip_hint), 0.dp, 681.dp, 1280.dp, 15, OnboardingSoft, align = Alignment.CenterHorizontally)
+        MockButton(stringResource(R.string.onboarding_skip), 240.dp, 615.dp, 120.dp, 56.dp, outlined = true, mutedOutline = true, onClick = onSkip)
     }
 }
 
 @Composable
 internal fun ChecklistPage(
     haConnected: Boolean,
+    mqttConfigured: Boolean,
     dark: Boolean,
     startView: StartView,
     onBack: () -> Unit,
@@ -329,17 +391,27 @@ internal fun ChecklistPage(
     onLaunch: () -> Unit,
 ) {
     StandardPage(
-        "07 · GOTOWE",
-        "Sprawdźmy, czy wszystko działa",
-        "Ostatnia kontrola przed uruchomieniem panelu.",
+        stringResource(R.string.onboarding_step_ready),
+        stringResource(R.string.onboarding_ready_title),
+        stringResource(R.string.onboarding_ready_description),
         onBack,
     ) {
-        ChecklistRow("HOME ASSISTANT", if (haConnected) "Połączenie działa" else "Oczekiwanie na połączenie", if (haConnected) OnboardingGreen else OnboardingOrange, 248.dp)
-        ChecklistRow("HAPANELS STUDIO", "Pominięto na tym urządzeniu", OnboardingSoft, 326.dp)
-        ChecklistRow("WYGLĄD", "${if (dark) "Ciemny" else "Jasny"} · ${if (startView == StartView.PANEL_GRID) "Hapanels Grid" else "Karty"}", OnboardingGreen, 404.dp)
-        ChecklistRow("MQTT", "Pominięto", OnboardingSoft, 482.dp)
+        ChecklistRow("HOME ASSISTANT", stringResource(if (haConnected) R.string.onboarding_connected else R.string.onboarding_waiting_connection), if (haConnected) OnboardingGreen else OnboardingOrange, 248.dp)
+        ChecklistRow(
+            "HAPANELS STUDIO",
+            stringResource(if (mqttConfigured) R.string.onboarding_configured_mqtt else R.string.onboarding_skipped_device),
+            if (mqttConfigured) OnboardingGreen else OnboardingSoft,
+            326.dp,
+        )
+        ChecklistRow(stringResource(R.string.onboarding_appearance), "${stringResource(if (dark) R.string.onboarding_dark else R.string.onboarding_light)} · ${if (startView == StartView.PANEL_GRID) "Hapanels Grid" else stringResource(R.string.onboarding_cards)}", OnboardingGreen, 404.dp)
+        ChecklistRow(
+            "MQTT",
+            stringResource(if (mqttConfigured) R.string.onboarding_broker_configured else R.string.onboarding_skipped),
+            if (mqttConfigured) OnboardingGreen else OnboardingSoft,
+            482.dp,
+        )
         MockButton(
-            if (haConnected) "URUCHOM HAPANELS" else "SPRAWDŹ PONOWNIE",
+            stringResource(if (haConnected) R.string.onboarding_start_hapanels else R.string.onboarding_try_again),
             420.dp,
             580.dp,
             440.dp,
@@ -382,10 +454,8 @@ internal fun ProgressEdge(progress: Float, successGlow: Float) {
 }
 
 @Composable
-internal fun LaunchSequence(progress: Float, tabletName: String, startView: StartView) {
+internal fun LaunchSequence(progress: Float) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        val panelAlpha = smoothStep(0.82f, 1f, progress)
-        if (panelAlpha > 0f) LaunchPanelPreview(tabletName, startView, panelAlpha)
         ScaledOnboardingPage {
             val logoAlpha = windowAlpha(progress, 0.15f, 0.36f, 0.76f, 0.84f)
             Image(
@@ -394,7 +464,7 @@ internal fun LaunchSequence(progress: Float, tabletName: String, startView: Star
                 modifier = Modifier.offset(510.dp, 134.dp).size(260.dp).alpha(logoAlpha),
             )
             MockText(
-                "Wszystko skonfigurowane!",
+                stringResource(R.string.onboarding_setup_complete),
                 0.dp,
                 427.dp,
                 1280.dp,
@@ -404,7 +474,7 @@ internal fun LaunchSequence(progress: Float, tabletName: String, startView: Star
                 align = Alignment.CenterHorizontally,
             )
             MockText(
-                "Witaj w swoim domu!",
+                stringResource(R.string.onboarding_welcome_home),
                 0.dp,
                 427.dp,
                 1280.dp,
@@ -431,56 +501,6 @@ internal fun LaunchSequence(progress: Float, tabletName: String, startView: Star
 }
 
 @Composable
-private fun BoxScope.LaunchPanelPreview(tabletName: String, startView: StartView, alpha: Float) {
-    ScaledOnboardingPage(Modifier.alpha(alpha)) {
-        Box(Modifier.fillMaxSize().background(OnboardingBg))
-        MockText(tabletName, 48.dp, 18.dp, 300.dp, 21, bold = true)
-        MockText("21:37", 1050.dp, 18.dp, 182.dp, 20, OnboardingSoft, bold = true, align = Alignment.End)
-        Box(Modifier.offset(470.dp, 0.dp).size(340.dp, 42.dp).background(OnboardingOrange))
-        MockText(
-            "TRYB MOCKUP · DANE DEMONSTRACYJNE",
-            470.dp,
-            16.dp,
-            340.dp,
-            14,
-            OnboardingBg,
-            bold = true,
-            align = Alignment.CenterHorizontally,
-            letterSpacing = 0.8f,
-        )
-        Box(Modifier.offset(48.dp, 58.dp).size(1184.dp, 2.dp).background(OnboardingOrange))
-        if (startView == StartView.PANEL_GRID) {
-            MockText("TWÓJ DOM", 48.dp, 91.dp, 300.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.5f)
-            val labels = listOf("OŚWIETLENIE", "TEMPERATURA", "ROLETY", "MEDIA", "ENERGIA", "OBECNOŚĆ")
-            val values = listOf("7 włączonych", "21,5 °C", "3 otwarte", "Salon · Spotify", "1,24 kW", "2 osoby w domu")
-            val accents = listOf(OnboardingOrange, Color(0xFF41BDF5), Color(0xFFAAAAAA), Color(0xFF659FFF), Color(0xFF52C77F), OnboardingOrange)
-            repeat(6) { index ->
-                val col = index % 3
-                val row = index / 3
-                val x = (48 + col * 400).dp
-                val y = (136 + row * 276).dp
-                MockCard(x, y, 368.dp, 244.dp)
-                Box(Modifier.offset(x, y).size(5.dp, 244.dp).background(accents[index]))
-                MockText(labels[index], x + 25.dp, y + 29.dp, 300.dp, 14, OnboardingSoft, bold = true, letterSpacing = 1.2f)
-                MockText(values[index], x + 25.dp, y + 75.dp, 320.dp, 24, bold = true)
-                MockText(if (index == 1) "KOMFORT" else "GOTOWE", x + 25.dp, y + 190.dp, 300.dp, 13, accents[index], bold = true, letterSpacing = 1f)
-            }
-        } else {
-            MockText("KARTY · 1 / 8", 48.dp, 91.dp, 300.dp, 15, OnboardingSoft, bold = true, letterSpacing = 1.5f)
-            MockCard(180.dp, 136.dp, 920.dp, 520.dp)
-            Box(Modifier.offset(180.dp, 136.dp).size(7.dp, 520.dp).background(OnboardingOrange))
-            MockText("SALON · OŚWIETLENIE", 225.dp, 174.dp, 700.dp, 15, OnboardingOrange, bold = true, letterSpacing = 1.5f)
-            MockText("Lampa stojąca", 225.dp, 218.dp, 700.dp, 28, bold = true)
-            MockText("72", 225.dp, 333.dp, 220.dp, 118, bold = true)
-            MockText("%", 390.dp, 357.dp, 100.dp, 36, OnboardingSoft)
-            Box(Modifier.offset(225.dp, 451.dp).size(705.dp, 13.dp).background(Color(0xFF373737)))
-            Box(Modifier.offset(225.dp, 451.dp).size(510.dp, 13.dp).background(OnboardingOrange))
-            MockButton("WYŁĄCZ", 790.dp, 506.dp, 245.dp, 78.dp, onClick = {})
-        }
-    }
-}
-
-@Composable
 private fun StandardPage(
     step: String,
     title: String,
@@ -490,7 +510,7 @@ private fun StandardPage(
 ) {
     ScaledOnboardingPage {
         Box(Modifier.fillMaxSize().background(OnboardingBg))
-        MockButton("‹  Cofnij", 48.dp, 38.dp, 128.dp, 54.dp, outlined = true, mutedOutline = true, onClick = onBack)
+        MockButton(stringResource(R.string.onboarding_back), 48.dp, 38.dp, 128.dp, 54.dp, outlined = true, mutedOutline = true, onClick = onBack)
         MockText(step, 240.dp, 96.dp, 800.dp, 16, OnboardingOrange, bold = true, letterSpacing = 1.5f)
         MockText(title, 240.dp, 123.dp, 850.dp, 36, bold = true)
         MockText(description, 240.dp, 178.dp, 900.dp, 17, OnboardingSoft)
@@ -503,17 +523,17 @@ private fun BoxScope.StudioInfoPopup(onClose: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.84f)).r1Pressable(onClick = {}))
     Box(Modifier.offset(160.dp, 92.dp).size(960.dp, 584.dp).background(OnboardingSurface).border(2.dp, OnboardingOrange))
     MockText("HAPANELS STUDIO", 210.dp, 132.dp, 600.dp, 15, OnboardingOrange, bold = true, letterSpacing = 1.5f)
-    MockText("Zarządzaj panelami z Home Assistant", 210.dp, 165.dp, 650.dp, 31, bold = true)
-    MockText("Studio synchronizuje widoki, ustawienia i stan panelu przez MQTT.", 210.dp, 221.dp, 650.dp, 18, OnboardingSoft)
-    MockText("• układaj ekrany bez edytowania plików", 210.dp, 282.dp, 560.dp, 18)
-    MockText("• zarządzaj wieloma tabletami w jednym miejscu", 210.dp, 321.dp, 560.dp, 18)
-    MockText("• wdrażaj zmiany bez dotykania każdego panelu", 210.dp, 358.dp, 560.dp, 18)
-    MockText("Dokumentacja i instalacja:", 210.dp, 426.dp, 500.dp, 16, OnboardingSoft, bold = true)
+    MockText(stringResource(R.string.onboarding_studio_manage), 210.dp, 165.dp, 650.dp, 31, bold = true)
+    MockText(stringResource(R.string.onboarding_studio_popup_description), 210.dp, 221.dp, 650.dp, 18, OnboardingSoft)
+    MockText(stringResource(R.string.onboarding_studio_bullet_screens), 210.dp, 282.dp, 560.dp, 18)
+    MockText(stringResource(R.string.onboarding_studio_bullet_tablets), 210.dp, 321.dp, 560.dp, 18)
+    MockText(stringResource(R.string.onboarding_studio_bullet_deploy), 210.dp, 358.dp, 560.dp, 18)
+    MockText(stringResource(R.string.onboarding_documentation), 210.dp, 426.dp, 500.dp, 16, OnboardingSoft, bold = true)
     MockText("tw-zs.github.io/Hapanels/", 210.dp, 456.dp, 500.dp, 20, OnboardingOrange, bold = true)
     Box(Modifier.offset(792.dp, 216.dp).size(272.dp).background(Color.White))
     Image(painterResource(R.drawable.hapanels_docs_qr), null, Modifier.offset(808.dp, 232.dp).size(240.dp))
-    MockText("ZESKANUJ KOD QR", 808.dp, 512.dp, 240.dp, 14, OnboardingSoft, bold = true, align = Alignment.CenterHorizontally)
-    MockButton("ZAMKNIJ", 420.dp, 576.dp, 440.dp, 60.dp, onClick = onClose)
+    MockText(stringResource(R.string.onboarding_scan_qr), 808.dp, 512.dp, 240.dp, 14, OnboardingSoft, bold = true, align = Alignment.CenterHorizontally)
+    MockButton(stringResource(R.string.onboarding_close), 420.dp, 576.dp, 440.dp, 60.dp, onClick = onClose)
     MockText("×", 1042.dp, 117.dp, 50.dp, 34, OnboardingSoft, align = Alignment.CenterHorizontally, onClick = onClose)
 }
 
@@ -524,7 +544,7 @@ private fun BoxScope.ColorChoice(label: String, value: Boolean, selectedValue: B
     Box(Modifier.offset(x + 16.dp, 274.dp).size(48.dp, 40.dp).background(if (value) Color(0xFF101010) else Color(0xFFEFEFEF)))
     MockText(if (value) "●" else "☀", x + 16.dp, 280.dp, 48.dp, 16, if (value) OnboardingInk else OnboardingOrange, bold = true, align = Alignment.CenterHorizontally)
     MockText(label, x + 82.dp, 273.dp, 140.dp, 19, bold = true)
-    if (selected) MockText("WYBRANY", x + 82.dp, 303.dp, 140.dp, 12, OnboardingOrange, bold = true)
+    if (selected) MockText(stringResource(R.string.onboarding_selected), x + 82.dp, 303.dp, 140.dp, 12, OnboardingOrange, bold = true)
 }
 
 @Composable
@@ -546,9 +566,9 @@ private fun BoxScope.ViewChoice(value: StartView, selectedValue: StartView, x: D
         Box(Modifier.offset(x + 51.dp, 451.dp).size(38.dp, 46.dp).background(OnboardingOrange))
         Box(Modifier.offset(x + 100.dp, 451.dp).size(38.dp, 16.dp).background(Color(0xFF464646)))
     }
-    MockText(if (value == StartView.PANEL_GRID) "Hapanels Grid" else "Karty", x + 194.dp, 433.dp, 250.dp, 22, bold = true)
-    MockText(if (value == StartView.PANEL_GRID) "Wszystko w jednym układzie" else "Jedno urządzenie na ekranie", x + 194.dp, 476.dp, 260.dp, 16, OnboardingSoft)
-    MockText(if (selected) "WYBRANY" else "WYBIERZ", x + 194.dp, 511.dp, 200.dp, 13, if (selected) OnboardingOrange else OnboardingSoft, bold = true)
+    MockText(if (value == StartView.PANEL_GRID) "Hapanels Grid" else stringResource(R.string.onboarding_cards), x + 194.dp, 433.dp, 250.dp, 22, bold = true)
+    MockText(stringResource(if (value == StartView.PANEL_GRID) R.string.onboarding_grid_description else R.string.onboarding_cards_description), x + 194.dp, 476.dp, 260.dp, 16, OnboardingSoft)
+    MockText(stringResource(if (selected) R.string.onboarding_selected else R.string.onboarding_select), x + 194.dp, 511.dp, 200.dp, 13, if (selected) OnboardingOrange else OnboardingSoft, bold = true)
 }
 
 @Composable

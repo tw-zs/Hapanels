@@ -68,6 +68,15 @@ class PanelMqttBridge(
                     }
             }
             launch {
+                settings.settings
+                    .map { it.tabletFriendlyName }
+                    .distinctUntilChanged()
+                    .collect { name ->
+                        tabletFriendlyName = name
+                        if (session?.isConnected == true) publishDashboardConfig()
+                    }
+            }
+            launch {
                 hardware.capabilities
                     .collect { capabilities ->
                         val signature = PanelDiscoverySignature.from(capabilities)

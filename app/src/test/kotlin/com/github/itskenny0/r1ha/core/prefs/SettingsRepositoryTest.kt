@@ -73,6 +73,30 @@ class SettingsRepositoryTest {
         }
     }
 
+    @Test fun mqttPreferencesPersist() = runTest {
+        val repo = newRepo()
+        repo.update {
+            it.copy(
+                advanced = it.advanced.copy(
+                    mqttHost = "192.168.1.17",
+                    mqttPort = 1883,
+                    mqttUsername = "panel",
+                    mqttPassword = "secret",
+                    mqttUseTls = true,
+                ),
+            )
+        }
+        repo.settings.test {
+            val settings = awaitItem()
+            assertThat(settings.advanced.mqttHost).isEqualTo("192.168.1.17")
+            assertThat(settings.advanced.mqttPort).isEqualTo(1883)
+            assertThat(settings.advanced.mqttUsername).isEqualTo("panel")
+            assertThat(settings.advanced.mqttPassword).isEqualTo("secret")
+            assertThat(settings.advanced.mqttUseTls).isTrue()
+            cancelAndConsumeRemainingEvents()
+        }
+    }
+
     @Test fun hardwareProviderModePersists() = runTest {
         val repo = newRepo()
         repo.update {

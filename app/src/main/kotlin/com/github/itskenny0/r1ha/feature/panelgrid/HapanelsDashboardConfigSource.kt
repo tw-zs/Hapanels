@@ -45,15 +45,21 @@ class HapanelsDashboardConfigSource(
 
     private fun loadOrSeedLocked(): HapanelsDashboardConfig {
         val file = dashboardFile()
-        val raw = if (file.exists()) file.readText() else SAMPLE_HAPANELS_DASHBOARD_JSON
+        val raw = if (file.exists()) file.readText() else configJson.encodeToString(emptyDashboardConfig())
         return runCatching { decodeCurrentConfig(raw) }
-            .onSuccess { config ->
-                if (!file.exists() || config.version != configJson.decodeFromString<HapanelsDashboardConfig>(raw).version) {
-                    writeConfig(file, config)
+            .map { config ->
+                val next = if (config.updatedBy == "homeassistant:hapanels_mock_editor") {
+                    emptyDashboardConfig().copy(revision = config.revision)
+                } else {
+                    config
                 }
+                if (!file.exists() || next != config) {
+                    writeConfig(file, next)
+                }
+                next
             }
             .getOrElse {
-                val fallback = sampleHapanelsDashboardConfig().migrateToCurrentSchema().also(HapanelsDashboardConfig::validateCurrentSchema)
+                val fallback = emptyDashboardConfig()
                 writeConfig(file, fallback)
                 fallback
             }
@@ -119,7 +125,10 @@ class HapanelsDashboardConfigSource(
 
     suspend fun resetToSample(): HapanelsDashboardConfig = fileMutex.withLock {
         withContext(Dispatchers.IO) {
-            val config = sampleHapanelsDashboardConfig().migrateToCurrentSchema().also(HapanelsDashboardConfig::validateCurrentSchema)
+            val config = sampleHapanelsDashboardConfig()
+                .copy(updatedBy = "hapanels:sample_reset")
+                .migrateToCurrentSchema()
+                .also(HapanelsDashboardConfig::validateCurrentSchema)
             writeConfig(dashboardFile(), config)
             _changes.tryEmit(Unit)
             config
@@ -127,6 +136,19 @@ class HapanelsDashboardConfigSource(
     }
 
     private fun dashboardFile(): File = File(context.filesDir, cacheFileName)
+
+    private fun emptyDashboardConfig(): HapanelsDashboardConfig = HapanelsDashboardConfig(
+        version = HAPANELS_DASHBOARD_SCHEMA_VERSION,
+        dashboardId = "home-panel-main",
+        revision = 0,
+        updatedBy = "hapanels:onboarding",
+        title = "Panel domowy",
+        layout = HapanelsDashboardLayout(
+            type = "fixed_grid",
+            columnsLandscape = 3,
+            columnsPortrait = 2,
+        ),
+    )
 
     private fun decodeCurrentConfig(raw: String): HapanelsDashboardConfig =
         configJson.decodeFromString<HapanelsDashboardConfig>(raw)

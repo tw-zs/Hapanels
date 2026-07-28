@@ -1,5 +1,6 @@
 package com.github.itskenny0.r1ha.feature.onboarding
 
+import android.content.res.Resources
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
@@ -9,7 +10,7 @@ import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
 import com.github.itskenny0.r1ha.core.prefs.TokenStore
 import com.github.itskenny0.r1ha.core.prefs.Tokens
 import com.github.itskenny0.r1ha.core.util.R1Log
-import com.github.itskenny0.r1ha.core.util.Toaster
+import com.github.itskenny0.r1ha.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -33,6 +34,7 @@ class OnboardingViewModel(
     private val http: OkHttpClient,
     private val settings: SettingsRepository,
     private val tokens: TokenStore,
+    private val resources: Resources,
 ) : ViewModel() {
 
     sealed interface State {
@@ -77,8 +79,7 @@ class OnboardingViewModel(
         authJob?.cancel()
         val baseUrl = normalizeUrl(rawUrl)
         if (baseUrl.isBlank()) {
-            _state.value = State.Error("Please enter your Home Assistant URL.")
-            Toaster.error("Empty URL")
+            _state.value = State.Error(resources.getString(R.string.onboarding_enter_ha_url))
             return
         }
         R1Log.i("Onboarding.probe", "start baseUrl=$baseUrl")
@@ -104,8 +105,7 @@ class OnboardingViewModel(
                 throw e
             } catch (e: Exception) {
                 R1Log.e("Onboarding.probe", "failed", e)
-                Toaster.error("Probe failed: ${e.message}")
-                _state.value = State.Error("Cannot reach server: ${e.message}")
+                _state.value = State.Error(resources.getString(R.string.onboarding_server_unreachable, e.message.orEmpty()))
             }
         }
     }
@@ -117,8 +117,7 @@ class OnboardingViewModel(
         if (serverUrl.isBlank()) {
             // Defensive: if the WebView screen couldn't extract a serverUrl, bail loudly rather
             // than POST to "/auth/token" (no host) and fail with a vague error.
-            _state.value = State.Error("Lost server URL during login; please retry.")
-            Toaster.error("Lost server URL")
+            _state.value = State.Error(resources.getString(R.string.onboarding_lost_server_url))
             return
         }
         _state.value = State.Exchanging
@@ -180,13 +179,11 @@ class OnboardingViewModel(
                 }
                 R1Log.i("Onboarding.exchange", "settings.update returned")
                 _state.value = State.Done
-                Toaster.show("Sign-in complete")
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 R1Log.e("Onboarding.exchange", "failed", e)
-                Toaster.error("Token exchange FAILED: ${e.message}")
-                _state.value = State.Error("Token exchange failed: ${e.message}")
+                _state.value = State.Error(resources.getString(R.string.onboarding_token_exchange_error, e.message.orEmpty()))
             }
         }
     }
@@ -231,10 +228,10 @@ class OnboardingViewModel(
     }
 
     companion object {
-        fun factory(http: OkHttpClient, settings: SettingsRepository, tokens: TokenStore) =
+        fun factory(http: OkHttpClient, settings: SettingsRepository, tokens: TokenStore, resources: Resources) =
             viewModelFactory {
                 initializer {
-                    OnboardingViewModel(http = http, settings = settings, tokens = tokens)
+                    OnboardingViewModel(http = http, settings = settings, tokens = tokens, resources = resources)
                 }
             }
     }

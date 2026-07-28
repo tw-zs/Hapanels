@@ -154,7 +154,7 @@
     <string name="onboarding_mqtt_title">Connect to an MQTT broker</string>
     <string name="onboarding_mqtt_description">MQTT connects this panel to Hapanels Studio and publishes its status.</string>
     <string name="onboarding_broker_address">BROKER ADDRESS</string>
-    <string name="onboarding_use_ha_host">USE HOME ASSISTANT HOST</string>
+    <string name="onboarding_use_ha_host">USE HA HOST</string>
     <string name="onboarding_username">USERNAME</string>
     <string name="onboarding_password">PASSWORD</string>
     <string name="onboarding_optional">Optional</string>

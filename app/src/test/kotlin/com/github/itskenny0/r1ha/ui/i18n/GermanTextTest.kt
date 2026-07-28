@@ -1,9 +1,13 @@
 package com.github.itskenny0.r1ha.ui.i18n
 
 import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.Truth.assertWithMessage
 import org.junit.jupiter.api.Test
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 class GermanTextTest {
+
     @Test
     fun `translates onboarding welcome and personalization to german`() {
         val expected = mapOf(
@@ -31,7 +35,7 @@ class GermanTextTest {
         )
 
         expected.forEach { (source, translation) ->
-            assertThat(translateUiText(source, language = "de")).isEqualTo(translation)
+            assertWithMessage("Source: '$source'").that(translateUiText(source, language = "de")).isEqualTo(translation)
         }
     }
 
@@ -42,5 +46,69 @@ class GermanTextTest {
         assertThat(translateUiText("SHUFFLE", language = "de")).isEqualTo("ZUFALLSWIEDERGABE")
         assertThat(translateUiText("REPEAT OFF", language = "de")).isEqualTo("WIEDERHOLUNG AUS")
         assertThat(translateUiText("PAUSE 2 MEDIA", language = "de")).isEqualTo("MEDIA PAUSIEREN: 2")
+    }
+
+    @Test
+    fun `translates reviewer highlighted messages to german`() {
+        assertThat(translateUiText("No data for light.kitchen", language = "de"))
+            .isEqualTo("Keine Daten für light.kitchen")
+        assertThat(translateUiText("Entity light.kitchen is unavailable", language = "de"))
+            .isEqualTo("Entität light.kitchen ist nicht verfügbar")
+    }
+
+    @Test
+    fun `no regression in polish translations`() {
+        assertThat(translateUiText("Welcome to Hapanels!", language = "pl")).isEqualTo("Witaj w Hapanels!")
+        assertThat(translateUiText("IDLE", language = "pl")).isEqualTo("BEZCZYNNE")
+    }
+
+    @Test
+    fun `xml string resource keys match between default, pl, and de`() {
+        val rootDir = File("src/main/res")
+        val enXml = File(rootDir, "values/strings.xml")
+        val plXml = File(rootDir, "values-pl/strings.xml")
+        val deXml = File(rootDir, "values-de/strings.xml")
+
+        assertThat(enXml.exists()).isTrue()
+        assertThat(plXml.exists()).isTrue()
+        assertThat(deXml.exists()).isTrue()
+
+        val dbf = DocumentBuilderFactory.newInstance()
+        val enDoc = dbf.newDocumentBuilder().parse(enXml)
+        val plDoc = dbf.newDocumentBuilder().parse(plXml)
+        val deDoc = dbf.newDocumentBuilder().parse(deXml)
+
+        fun parseKeys(doc: org.w3c.dom.Document): Map<String, String> {
+            val map = mutableMapOf<String, String>()
+            val nodes = doc.getElementsByTagName("string")
+            for (i in 0 until nodes.length) {
+                val elem = nodes.item(i) as org.w3c.dom.Element
+                val name = elem.getAttribute("name")
+                val translatable = elem.getAttribute("translatable")
+                if (translatable != "false") {
+                    map[name] = elem.textContent
+                }
+            }
+            return map
+        }
+
+        val enKeys = parseKeys(enDoc)
+        val plKeys = parseKeys(plDoc)
+        val deKeys = parseKeys(deDoc)
+
+        val missingInDe = enKeys.keys - deKeys.keys
+        assertWithMessage("Keys missing in German XML").that(missingInDe).isEmpty()
+
+        val extraInDe = deKeys.keys - enKeys.keys
+        assertWithMessage("Extra keys in German XML").that(extraInDe).isEmpty()
+
+        // Check placeholders match across EN, PL, and DE (%1$s, %2$d, etc.)
+        val placeholderRegex = Regex("%[0-9]+\\$[a-z]")
+        enKeys.forEach { (key, enText) ->
+            val deText = deKeys[key] ?: ""
+            val enPlaceholders = placeholderRegex.findAll(enText).map { it.value }.toList()
+            val dePlaceholders = placeholderRegex.findAll(deText).map { it.value }.toList()
+            assertWithMessage("German placeholders for key '$key'").that(dePlaceholders).isEqualTo(enPlaceholders)
+        }
     }
 }

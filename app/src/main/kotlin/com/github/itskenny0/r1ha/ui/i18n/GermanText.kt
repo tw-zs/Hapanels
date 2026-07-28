@@ -1,7 +1,5 @@
 package com.github.itskenny0.r1ha.ui.i18n
 
-import androidx.compose.ui.text.intl.Locale
-
 fun translateGerman(text: String): String {
     germanExact[text]?.let { return it }
 
@@ -14,516 +12,905 @@ fun translateGerman(text: String): String {
     return translated
 }
 
-private val germanExact = mapOf(
-    "Welcome to Hapanels!" to "Willkommen bei Hapanels!",
-    "Your home. One simple panel." to "Dein Zuhause. Ein einfaches Panel.",
-    "Control lights, temperature, blinds, and other devices from one screen." to "Steuere Licht, Temperatur, Jalousien und weitere Geräte auf einem Bildschirm.",
-    "Next, connect this panel to your home and choose what it should display." to "Verbinde als Nächstes dieses Panel mit deinem Zuhause und wähle die Anzeige.",
-    "Your home.\nOne simple panel." to "Dein Zuhause.\nEin einfaches Panel.",
-    "Connect Home Assistant, name this tablet, and choose what opens first." to "Verbinde Home Assistant, benenne das Tablet und wähle den Startbildschirm.",
-    "START SETUP" to "EINRICHTUNG STARTEN",
-    "‹  BACK" to "‹  ZURÜCK",
-    "01 · CONNECTION" to "01 · VERBINDUNG",
-    "Connect the panel to Home Assistant" to "Verbinde das Panel mit Home Assistant",
-    "Enter the server address. Protocol and port are optional." to "Gib die Serveradresse ein. Protokoll und Port sind optional.",
-    "CONNECT WITH HOME ASSISTANT" to "MIT HOME ASSISTANT VERBINDEN",
-    "CONNECT WITH LONG-LIVED TOKEN" to "MIT LANGLEBIGEM ZUGRIFFSTOKEN VERBINDEN",
-    "01 · LINK" to "01 · VERBINDUNG",
-    "02 · AUTHORISE" to "02 · AUTORISIERUNG",
-    "03 · PERSONALISE" to "03 · PERSONALISIERUNG",
-    "03 · PANEL NAME" to "03 · PANEL-NAME",
-    "What should this tablet be called?" to "Wie soll dieses Tablet heißen?",
-    "This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio." to "Dieser Name identifiziert das Panel in Home Assistant, MQTT und Hapanels Studio.",
-    "DEVICE NAME" to "GERÄTENAME",
-    "SAVE NAME AND CONTINUE" to "NAME SPEICHERN UND WEITER",
-    "You can change the name later in Settings." to "Du kannst den Namen später in den Einstellungen ändern.",
-    "04 · APPEARANCE" to "04 · ERSCHEINUNGSBILD",
-    "Make the panel yours" to "Pass das Panel an deine Wünsche an",
-    "Nothing is permanent. You can change every choice later in Settings." to "Nichts ist endgültig. Du kannst jede Wahl später in den Einstellungen ändern.",
-    "DEFAULT APP VIEW" to "STANDARD-APP-ANSICHT",
-    "Hapanels Grid" to "Hapanels Grid",
-    "PANEL GRID THEME" to "HAPANELS GRID-DESIGN",
-    "SAVE AND CONTINUE" to "SPEICHERN UND WEITER",
-    "Make it yours." to "Pass dein Panel an.",
-    "Connection saved. These choices can be changed later in Settings." to "Verbindung gespeichert. Diese Optionen können später in den Einstellungen geändert werden.",
-    "TABLET NAME" to "TABLET-NAME",
-    "Minimal dark" to "Minimal Dunkel",
-    "Pragmatic hybrid" to "Pragmatisch Hybrid",
-    "Colorful cards" to "Farbenfrohe Karten",
-    "START VIEW" to "STARTANSICHT",
-    "GRID" to "RASTER",
-    "OPEN HAPANELS" to "HAPANELS ÖFFNEN",
-    "SAVING..." to "SPEICHERN...",
-    "Point me at\nHome Assistant." to "Zeige auf\nHome Assistant.",
-    "OPEN IN BROWSER" to "IM BROWSER ÖFFNEN",
-    "CONNECT" to "VERBINDEN",
-    "PROBING…" to "PRÜFEN…",
-    "Exchanging tokens…" to "Tokens werden getauscht…",
-    "Swapping the authorisation code for an access token. This\nis a one-time round-trip; it usually takes a second." to "Autorisierungscode wird gegen Zugriffstoken getauscht. Das\nist ein einmaliger Vorgang und dauert kurz.",
-    "Use a long-lived token instead" to "Stattdessen langlebigen Zugriffstoken verwenden",
-    "Login didn't complete. Please try again." to "Anmeldung nicht abgeschlossen. Bitte erneut versuchen.",
-    "All at defaults" to "Alles auf Standard",
-    "(not connected)" to "(nicht verbunden)",
-    "Connecting…" to "Verbinden…",
-    "Disconnected" to "Getrennt",
-    "OPEN HA WEB UI" to "HA WEB-UI ÖFFNEN",
-    "CONFIRM · SIGN OUT" to "BESTÄTIGEN · ABMELDEN",
-    "SIGN OUT & RECONNECT" to "ABMELDEN & NEU VERBINDEN",
-    "Paste instead of OAuth" to "Einfügen statt OAuth",
-    "What's included" to "Was enthalten ist",
-    "EXPORT" to "EXPORTIEREN",
-    "CONFIRM RESET · TAP AGAIN" to "ZURÜCKSETZEN BESTÄTIGEN · ERNEUT TIPPEN",
-    "No actions" to "Keine Aktionen",
-    "On press" to "Beim Drücken",
-    "On release" to "Beim Loslassen",
-    "Short click" to "Kurzer Klick",
-    "Long press" to "Langes Drücken",
-    "Double click" to "Doppelklick",
-    "Triple click" to "Dreifachklick",
-    "LONG-LIVED TOKEN" to "LANGLEBIGER ZUGRIFFSTOKEN",
-    "ACCESS TOKEN" to "ZUGRIFFSTOKEN",
-    "HIDE" to "AUSBLENDEN",
-    "REVEAL" to "ANZEIGEN",
-    "SAVING…" to "SPEICHERN…",
-    "SAVE & CONNECT" to "SPEICHERN & VERBINDEN",
-    "Empty URL" to "Leere URL",
-    "Save failed" to "Speichern fehlgeschlagen",
-    "ABOUT" to "ÜBER DIE APP",
-    "ACCENT" to "AKZENT",
-    "ACTION" to "AKTION",
-    "ACTIONS" to "AKTIONEN",
-    "ADD" to "HINZUFÜGEN",
-    "ADD FAVOURITES" to "FAVORITEN HINZUFÜGEN",
-    "ADD PIN" to "PIN HINZUFÜGEN",
-    "ALL" to "ALLE",
-    "ALL-DAY" to "GANZTÄGIG",
-    "APPEARANCE" to "ERSCHEINUNGSBILD",
-    "APPLY" to "ANWENDEN",
-    "AREAS" to "BEREICHE",
-    "ASSIST" to "ASSIST",
-    "AUTO" to "AUTO",
-    "AUTOMATIONS" to "AUTOMATISIERUNGEN",
-    "BACK" to "ZURÜCK",
-    "BACKEND" to "BACKEND",
-    "BACKUP" to "BACKUP",
-    "BACKUP & RESTORE" to "BACKUP & WIEDERHERSTELLUNG",
-    "BACKUPS" to "BACKUPS",
-    "BATTERY" to "AKKU",
-    "BEHAVIOUR" to "VERHALTEN",
-    "BLINK" to "BLINKEN",
-    "BREATHE" to "PULSIEREN",
-    "BRIGHT" to "HELLIGKEIT",
-    "BROWSE" to "DURCHSUCHEN",
-    "CALENDARS" to "KALENDER",
-    "CAMERAS" to "KAMERAS",
-    "CANCEL" to "ABBRECHEN",
-    "CARD ACTIONS" to "KARTENAKTIONEN",
-    "CARD UI" to "KARTEN-UI",
-    "CARDS" to "KARTEN",
-    "CHANNEL CHANGE" to "KANALWECHSEL",
-    "CLEAR" to "LÖSCHEN",
-    "CLIMATE" to "KLIMA",
-    "CLOSE" to "SCHLIESSEN",
-    "CONFIGURE" to "KONFIGURIEREN",
-    "CONFIGURE ENTITY" to "ENTITÄT KONFIGURIEREN",
-    "CONNECTION" to "VERBINDUNG",
-    "CONTROLS" to "STEUERUNG",
-    "COPY" to "KOPIEREN",
-    "COULDN'T LOAD BACKUPS" to "BACKUPS KONNTEN NICHT GELADEN WERDEN",
-    "CREATE" to "ERSTELLEN",
-    "CREATE BACKUP NOW" to "JETZT BACKUP ERSTELLEN",
-    "CUSTOMIZE" to "ANPASSEN",
-    "DATA (JSON, optional)" to "DATEN (JSON, optional)",
-    "DELETE" to "LÖSCHEN",
-    "DEV MENU" to "ENTWICKLER-MENÜ",
-    "DEVICES" to "GERÄTE",
-    "DISMISS" to "VERWERFEN",
-    "DONE" to "FERTIG",
-    "DRAW" to "VERBRAUCH",
-    "DURATION" to "DAUER",
-    "EDIT" to "BEARBEITEN",
-    "EDIT FAVOURITES" to "FAVORITEN BEARBEITEN",
-    "EFFECTS" to "EFFEKTE",
-    "ENERGY" to "ENERGIE",
-    "ENTER PIN" to "PIN EINGEBEN",
-    "ERROR" to "FEHLER",
-    "EVENT TYPE" to "EREIGNISTYP",
-    "EVENT TYPE (blank = all)" to "EREIGNISTYP (leer = alle)",
-    "EXPORT" to "EXPORTIEREN",
-    "FAN" to "VENTILATOR",
-    "SWING" to "SCHWENKEN",
-    "FAVOURITES" to "FAVORITEN",
-    "FETCHING ENTITIES…" to "ENTITÄTEN WERDEN GELADEN…",
-    "FINISH EFFECT" to "EFFEKT BEENDEN",
-    "LOADING ENTITIES" to "ENTITÄTEN LADEN",
-    "FIND" to "SUCHEN",
-    "FLASHLIGHT" to "TASCHENLAMPE",
-    "FLOORS" to "ETAGEN",
-    "HA ASSIST" to "HA ASSIST",
-    "HA URL" to "HA-URL",
-    "HELPERS" to "HELFER",
-    "HISTORY" to "VERLAUF",
-    "HOME" to "ZUHAUSE",
-    "HUE" to "FARBTON",
-    "ICON" to "SYMBOL",
-    "IDLE" to "INAKTIV",
-    "LABELS" to "LABELS",
-    "LIGHT" to "LICHT",
-    "LOADING" to "LADEN",
-    "Loading…" to "Laden…",
-    "LOGBOOK" to "LOGBUCH",
-    "LOVELACE" to "LOVELACE",
-    "MEDIA BROWSE" to "MEDIEN DURCHSUCHEN",
-    "MEDIA" to "MEDIEN",
-    "MENU" to "MENÜ",
-    "MODE" to "MODUS",
-    "MODIFIED SETTINGS" to "GEÄNDERTE EINSTELLUNGEN",
-    "MOVE TO" to "VERSCHIEBEN NACH",
-    "MOWER" to "RASENMÄHER",
-    "NAME" to "NAME",
-    "NETWORK SECURITY" to "NETZWERKRICHTLINIE",
-    "NEW ENTITIES" to "NEUE ENTITÄTEN",
-    "NEXT" to "WEITER",
-    "NEXT RISE" to "NÄCHSTER AUFGANG",
-    "NEXT SET" to "NÄCHSTER UNTERGANG",
-    "NIGHT THEME" to "NACHTDESIGN",
-    "NIGHT WINDOW" to "NACHTZEITRAUM",
-    "NO SIGNAL" to "KEIN SIGNAL",
-    "NO ZIGBEE INTEGRATION" to "KEINE ZIGBEE-INTEGRATION",
-    "NOTES" to "NOTIZEN",
-    "NOTIFICATIONS" to "BENACHRICHTIGUNGEN",
-    "NOW" to "JETZT",
-    "NOW PLAYING" to "JETZT WIEDERGEGEBEN",
-    "NO FAVOURITES YET" to "NOCH KEINE FAVORITEN",
-    "OFF" to "AUS",
-    "OKAY" to "OK",
-    "ON" to "AN",
-    "COOL" to "KÜHLEN",
-    "DRY" to "ENTFEUCHTEN",
-    "HEAT" to "HEIZEN",
-    "FAN ONLY" to "NUR VENTILATOR",
-    "NONE" to "KEINE",
-    "COMFORT" to "KOMFORT",
-    "ECO" to "ÖKO",
-    "BOOST" to "BOOST",
-    "SLEEP" to "SCHLAFEN",
-    "AWAY" to "ABWESEND",
-    "SILENT" to "LEISE",
-    "LOW" to "NIEDRIG",
-    "MEDIUM" to "MITTEL",
-    "HIGH" to "HOCH",
-    "FULL" to "VOLL",
-    "VERTICAL" to "VERTIKAL",
-    "HORIZONTAL" to "HORIZONTAL",
-    "BOTH" to "BEIDE",
-    "OPEN" to "ÖFFNEN",
-    "OPEN SETTINGS" to "EINSTELLUNGEN ÖFFNEN",
-    "OPTIONS" to "OPTIONEN",
-    "PASTE" to "EINFÜGEN",
-    "PAUSE" to "PAUSE",
-    "PAUSED" to "PAUSIERT",
-    "PAYLOAD" to "NUTZLAST",
-    "PEOPLE" to "PERSONEN",
-    "PICK" to "WÄHLEN",
-    "PICK ENTITY" to "ENTITÄT WÄHLEN",
-    "PING" to "PING",
-    "PLAY" to "ABSPIELEN",
-    "PORT" to "PORT",
-    "PRESET" to "VOREINSTELLUNG",
-    "PREVIEW · HOLD" to "VORSCHAU · HALTEN",
-    "PROTECTED" to "GESCHÜTZT",
-    "PUBLISH" to "VERÖFFENTLICHEN",
-    "QUICK ACTIONS" to "SCHNELLAKTIONEN",
-    "QUICK SEARCH" to "SCHNELLSUCHE",
-    "RECENT" to "NEUESTE",
-    "RECENT ALERTS" to "NEUESTE WARNUNGEN",
-    "RECENT EVENTS" to "NEUESTE EREIGNISSE",
-    "REFRESH" to "AKTUALISIEREN",
-    "RELEASE NOTES" to "RELEASENOTIZEN",
-    "REMOVE" to "ENTFERNEN",
-    "REPAIRS" to "REPARATUREN",
-    "REPEAT ALL" to "ALLE WIEDERHOLEN",
-    "REPEAT OFF" to "WIEDERHOLUNG AUS",
-    "REPEAT ONE" to "EINEN WIEDERHOLEN",
-    "RESET" to "ZURÜCKSETZEN",
-    "RESET ORDER" to "REIHENFOLGE ZURÜCKSETZEN",
-    "RESUME" to "FORTSETZEN",
-    "REWIND" to "ZURÜCKSPULEN",
-    "RECONNECT NOW" to "JETZT NEU VERBINDEN",
-    "RUN" to "AUSFÜHREN",
-    "SAVE" to "SPEICHERN",
-    "SCENES" to "SZENEN",
-    "SCENES & SCRIPTS" to "SZENEN & SKRIPTE",
-    "SCREEN BRIGHTNESS" to "BILDSCHIRMHELLIGKEIT",
-    "SCREEN MANAGER" to "BILDSCHIRM-MANAGER",
-    "SEARCH" to "SUCHE",
-    "SECURITY" to "SICHERHEIT",
-    "SENSORS" to "SENSOREN",
-    "SERVER" to "SERVER",
-    "SERVICE CALLER" to "DIENST-AUFRUF",
-    "SERVICES" to "DIENSTE",
-    "SHARE" to "TEILEN",
-    "SHARE DEBUG BUNDLE" to "DIAGNOSE-PAKET TEILEN",
-    "SHUFFLE" to "ZUFALLSWIEDERGABE",
-    "SOURCE" to "QUELLE",
-    "SPEAK" to "SPRECHEN",
-    "SPEAKING" to "SPRICHT",
-    "START" to "START",
-    "STOP" to "STOPP",
-    "STOP COLOR LOOP" to "FARBLAUF STOPPEN",
-    "STOP EFFECT" to "EFFEKT STOPPEN",
-    "SUN" to "SONNE",
-    "SWITCH" to "SCHALTER",
-    "SYSTEM" to "SYSTEM",
-    "SYSTEM HEALTH" to "SYSTEMSTATUS",
-    "TAIL" to "VERFOLGEN",
-    "TAIL · ON" to "VERFOLGUNG · AN",
-    "TALK" to "SPRECHEN",
-    "TALK & FIRE" to "SPRECHEN & AUSFÜHREN",
-    "TAP AGAIN" to "ERNEUT TIPPEN",
-    "TEMPLATE (JINJA2)" to "VORLAGE (JINJA2)",
-    "TEMPLATES" to "VORLAGEN",
-    "TEXT SIZE" to "TEXTGRÖSSE",
-    "THEME" to "DESIGN",
-    "THEMES" to "DESIGNS",
-    "THINK" to "DENKEN",
-    "THINKING" to "DENKT NACH…",
-    "TIMERS" to "TIMER",
-    "TO-DO" to "TO-DO",
-    "TODAY" to "HEUTE",
-    "TOGGLE" to "UMSCHALTEN",
-    "TOP CONSUMERS" to "HAUPTVERBRAUCHER",
-    "TOPIC" to "TOPIC",
-    "TRY" to "TESTEN",
-    "TURN ALL OFF" to "ALLE AUSSCHALTEN",
-    "TURN ALL ON" to "ALLE EINSCHALTEN",
-    "TURN OFF" to "AUSSCHALTEN",
-    "TURN ON" to "EINSCHALTEN",
-    "UNAVAILABLE" to "NICHT VERFÜGBAR",
-    "UNKNOWN" to "UNBEKANNT",
-    "UNLOCK" to "ENTRIEGELN",
-    "UPDATES" to "UPDATES",
-    "USE DEFAULT" to "STANDARD VERWENDEN",
-    "VOICE" to "SPRACHE",
-    "VOICE SATELLITE" to "SPRACHSATELLIT",
-    "VACUUM" to "SAUGROBOTER",
-    "VALVE" to "VENTIL",
-    "WEATHER" to "WETTER",
-    "WEBHOOK" to "WEBHOOK",
-    "WATER HEATER" to "WARMWASSER",
-    "WHITE" to "WEISS",
-    "WHO'S HOME" to "WER IST ZUHAUSE",
-    "WIFI" to "WLAN",
-    "ZIGBEE PAIR" to "ZIGBEE-KOPPLUNG",
-    "ZONES" to "ZONEN",
-    "About" to "Über die App",
-    "Acceleration curve" to "Beschleunigungskurve",
-    "Actions" to "Aktionen",
-    "Advanced" to "Erweitert",
-    "Area" to "Bereich",
-    "Appearance" to "Erscheinungsbild",
-    "App version" to "App-Version",
-    "Assist" to "Assist",
-    "Assist auto-open keyboard" to "Assist öffnet Tastatur automatisch",
-    "Authenticating…" to "Authentifizierung…",
-    "Auth lost · sign in again" to "Authentifizierung verloren · erneut anmelden",
-    "Automations" to "Automatisierungen",
-    "Backups" to "Backups",
-    "Battery" to "Akku",
-    "Battery indicator on chrome" to "Akku-Anzeige in der Leiste",
-    "Behaviour" to "Verhalten",
-    "Browse" to "Durchsuchen",
-    "Camera detail polling" to "Kamera-Detailabfrage",
-    "Camera grid polling" to "Kamera-Rasterabfrage",
-    "Cameras default to grid" to "Kameras standardmäßig im Raster",
-    "Cameras" to "Kameras",
-    "Cancel" to "Abbrechen",
-    "Calendars" to "Kalender",
-    "Close" to "Schließen",
-    "Chrome buttons" to "Leisten-Schaltflächen",
-    "Connected" to "Verbunden",
-    "Connection" to "Verbindung",
-    "Controls" to "Steuerung",
-    "Conditions readout" to "Bedingungsanzeige",
-    "Dashboard refresh" to "Dashboard-Aktualisierung",
-    "Dev menu" to "Entwickler-Menü",
-    "Dashboard" to "Dashboard",
-    "Dimmed" to "Gedimmt",
-    "Display mode" to "Anzeigemodus",
-    "Devices" to "Geräte",
-    "Energy" to "Energie",
-    "Entities" to "Entitäten",
-    "Error" to "Fehler",
-    "Favorites" to "Favoriten",
-    "Favourites" to "Favoriten",
-    "Find any entity" to "Jede Entität finden",
-    "Fire instantly" to "Sofort ausführen",
-    "Follow device" to "Gerät folgen",
-    "Floors" to "Etagen",
-    "HA version" to "HA-Version",
-    "Haptics" to "Haptik",
-    "Helpers" to "Helfer",
-    "Hide system status bar" to "Systemstatusleiste ausblenden",
-    "History" to "Verlauf",
-    "Idle" to "Inaktiv",
-    "Infinite scroll" to "Endlos-Scrollen",
-    "Integrations" to "Integrationen",
-    "IMPORT" to "IMPORTIEREN",
-    "Import" to "Importieren",
-    "IMPORT .P12" to ".P12 IMPORTIEREN",
-    "Keystore password" to "Keystore-Passwort",
-    "Labels" to "Labels",
-    "Last event" to "Letztes Ereignis",
-    "LIST" to "LISTE",
-    "Loading" to "Laden",
-    "Logbook" to "Logbuch",
-    "Logbook refresh" to "Logbuch-Aktualisierung",
-    "Low-battery threshold" to "Schwellenwert für niedrigen Akkustand",
-    "Menu" to "Menü",
-    "Modified settings" to "Geänderte Einstellungen",
-    "Notifications refresh" to "Benachrichtigungs-Aktualisierung",
-    "No" to "Nein",
-    "No results" to "Keine Ergebnisse",
-    "Notifications" to "Benachrichtigungen",
-    "Off" to "Aus",
-    "On" to "An",
-    "Open" to "Öffnen",
-    "People" to "Personen",
-    "Repairs" to "Reparaturen",
-    "Save" to "Speichern",
-    "Scenes" to "Szenen",
-    "Scenes & Scripts" to "Szenen & Skripte",
-    "Search" to "Suche",
-    "Services" to "Dienste",
-    "Settings" to "Einstellungen",
-    "Status" to "Status",
-    "System Health" to "Systemstatus",
-    "Templates" to "Vorlagen",
-    "Theme" to "Design",
-    "Tile order" to "Kacheln-Reihenfolge",
-    "URL" to "URL",
-    "Updates" to "Updates",
-    "Use long-lived token" to "Langlebigen Zugriffstoken verwenden",
-    "Version" to "Version",
-    "Weather" to "Wetter",
-    "Who's home" to "Wer ist zuhause",
-    "RAW" to "ROH",
-    "RESET TO DEFAULTS" to "AUF STANDARD ZURÜCKSETZEN",
-    "STATUS VIEWS" to "STATUS-ANSICHTEN",
-    "POWER TOOLS" to "WERKZEUGE",
-    "NEXT EVENT PREVIEW" to "VORSCHAU NÄCHSTES EREIGNIS",
-    "Next event preview" to "Vorschau nächstes Ereignis",
-    "Recent Activity" to "Neueste Aktivität",
-    "HA persistent alerts" to "Dauerhafte HA-Meldungen",
-    "FETCH PINS FROM SERVER" to "PINS VOM SERVER ABRUFEN",
-    "FETCHING…" to "LADEN…",
-    "MTLS CLIENT CERTIFICATE" to "MTLS-KLIENTENZERTIFIKAT",
-    "NO CERTIFICATE IMPORTED" to "KEIN ZERTIFIKAT IMPORTIERT",
-    "(empty)" to "(leer)",
-    "Battery indicator" to "Akku-Anzeige",
-    "Assist mic" to "Assist-Mikrofon",
-    "PREVIEW" to "VORSCHAU",
-    "Yes" to "Ja",
-    "Zones" to "Zonen",
-    "unknown" to "unbekannt",
-    "unavailable" to "nicht verfügbar",
-    "connected" to "verbunden",
-    "disconnected" to "getrennt",
-    "just now" to "gerade eben",
-    "cool" to "kühlen",
-    "dry" to "entfeuchten",
-    "heat" to "heizen",
-    "fan only" to "nur ventilator",
-    "none" to "keine",
-    "comfort" to "komfort",
-    "eco" to "öko",
-    "boost" to "boost",
-    "sleep" to "schlafen",
-    "away" to "abwesend",
-    "silent" to "leise",
-    "low" to "niedrig",
-    "medium" to "mittel",
-    "high" to "hoch",
-    "full" to "voll",
-    "ALL LIGHTS OFF" to "ALLE LICHTER AUS",
-    "All lights off" to "Alle Lichter aus",
-    "READ ONLY  ·  TAP TO DISABLE" to "NUR LESEN  ·  TIPPEN ZUM DEAKTIVIEREN",
-    "STILL LOADING · TAP TO RETRY" to "LÄDT NOCH · TIPPEN ZUM ERNEUTEN VERSUCHEN",
-    "GENERATE FROM HA AREAS" to "AUS HA-BEREICHEN ERZEUGEN",
-    "REMOVE FROM PAGE" to "VON SEITE ENTFERNEN",
-    "OPEN IN HA" to "IN HA ÖFFNEN",
-    "OPEN SETTINGS →" to "EINSTELLUNGEN ÖFFNEN →",
-    "MOVE LEFT" to "NACH LINKS VERSCHIEBEN",
-    "MOVE RIGHT" to "NACH RECHTS VERSCHIEBEN",
-    "Configure entity" to "Entität konfigurieren",
-    "CONFIGURE ENTITY" to "ENTITÄT KONFIGURIEREN",
-    "PICK ENTITY" to "ENTITÄT WÄHLEN",
-    "Toggleable + action entities only" to "Nur schaltbare Entitäten + Aktionen",
-    "Living room ceiling light" to "Wohnzimmer Deckenleuchte",
-    "Workshop" to "Werkstatt",
-    "CREATE" to "ERSTELLEN",
-    "Saved" to "Gespeichert",
-    "Saved. Restart app to apply." to "Gespeichert. App neu starten zum Übernehmen.",
-    "CLEAR DONE" to "ERLEDIGTE LÖSCHEN",
-    "CLEAR ALL" to "ALLE LÖSCHEN",
-    "INSTALL" to "INSTALLIEREN",
-    "SKIP" to "ÜBERSPRINGEN",
-    "RELEASE NOTES" to "RELEASENOTIZEN",
-    "OPEN FULL CHANGELOG ↗" to "VOLLSTÄNDIGER CHANGELOG ↗",
-    "Recommended for HA Core / Supervisor / OS updates" to "Empfohlen für HA Core / Supervisor / OS Updates",
-    "Back up before installing" to "Vor Installation Backup erstellen",
-    "Back up first" to "Zuerst Backup erstellen",
-    "NO SIGNAL" to "KEIN SIGNAL",
-    "ALL-DAY" to "GANZTÄGIG",
-    "NOW" to "JETZT",
-    "TOP CONSUMERS" to "HAUPTVERBRAUCHER",
-    "DRAW" to "VERBRAUCH",
-    "PRODUCTION" to "PRODUKTION",
-    "DEVICE TRACKERS" to "GERÄTE-TRACKER",
-    "OUTSIDE" to "AUSSERHALB",
-    "RECENT ACTIVITY" to "NEUESTE AKTIVITÄT",
-    "NEW ENTITIES" to "NEUE ENTITÄTEN",
-    "ZIGBEE PAIR" to "ZIGBEE-KOPPLUNG",
-    "NO ZIGBEE INTEGRATION" to "KEINE ZIGBEE-INTEGRATION",
-    "Pairing window closed" to "Kopplungsfenster geschlossen",
-    "Permit window already open" to "Kopplungsfenster bereits geöffnet",
-    "VOICE SATELLITE" to "SPRACHSATELLIT",
-    "CONVERSATION AGENT" to "CONVERSATION AGENT",
-    "HA ASSIST" to "HA ASSIST",
-    "ask HA…" to "HA fragen…",
-    "USE DEFAULT" to "STANDARD VERWENDEN",
-    "Copied" to "Kopiert",
-    "Clipboard empty" to "Zwischenablage ist leer",
-    "RENDER" to "RENDERN",
-    "RENDERED" to "GERENDERT",
-    "RENDERING…" to "RENDERN…",
-    "TEMPLATE (JINJA2)" to "VORLAGE (JINJA2)",
-    "TEMPLATES" to "VORLAGEN",
-    "SERVICE CALLER" to "DIENST-AUFRUF",
-    "ERROR LOG (tail)" to "FEHLER-LOG (Ende)",
-    "NETWORK SECURITY" to "NETZWERKSICHERHEIT",
-    "SHARE DEBUG BUNDLE" to "DIAGNOSE-PAKET TEILEN",
-    "PANEL HARDWARE" to "PANEL-HARDWARE",
-    "LIVE STATE" to "LIVE-STATUS",
-    "PROVIDER" to "ANBIETER",
-    "SCREEN MANAGER" to "BILDSCHIRM-MANAGER",
-    "RECENT EVENTS" to "NEUESTE EREIGNISSE",
-    "LIVE SNAPSHOT" to "LIVE-SCHNAPPSCHUSS",
-    "MODIFIED SETTINGS" to "GEÄNDERTE EINSTELLUNGEN",
-    "No open repairs" to "Keine offenen Reparaturen",
-    "NO OPEN REPAIRS" to "KEINE OFFENEN REPARATUREN",
-    "COULDN'T LOAD REPAIRS" to "REPARATUREN KONNTEN NICHT GELADEN WERDEN",
-    "COULDN'T LOAD BACKUPS" to "BACKUPS KONNTEN NICHT GELADEN WERDEN",
-    "CREATE BACKUP NOW" to "JETZT BACKUP ERSTELLEN",
-    "No backups found" to "Keine Backups gefunden",
-    "(No backups found)" to "(Keine Backups gefunden)",
-    "Backup creation started" to "Backup-Erstellung gestartet",
-    "Backup failed to start" to "Backup-Erstellung konnte nicht gestartet werden",
-    "Backup saved" to "Backup gespeichert",
-    "Backup restored" to "Backup wiederhergestellt",
-    "Backup read failed" to "Fehler beim Lesen des Backups",
-    "Backup save failed" to "Fehler beim Speichern des Backups",
-)
+private fun populate_german_0(m: MutableMap<String, String>) {
+    m["(No backups found)"] = "(Keine Backups gefunden)"
+    m["(empty)"] = "(leer)"
+    m["(not connected)"] = "(nicht verbunden)"
+    m["(polled every 30 s). Useful so a low panel battery doesn't catch you off-guard."] = "(alle 30 s abgefragt). Nützlich, damit ein niedriger Akku dich nicht überrascht."
+    m["01 · CONNECTION"] = "01 · VERBINDUNG"
+    m["01 · LINK"] = "01 · VERBINDUNG"
+    m["02 · AUTHORISE"] = "02 · AUTORISIERUNG"
+    m["03 · PANEL NAME"] = "03 · PANEL-NAME"
+    m["03 · PERSONALISE"] = "03 · PERSONALISIERUNG"
+    m["04 · APPEARANCE"] = "04 · ERSCHEINUNGSBILD"
+    m["ABOUT"] = "ÜBER DIE APP"
+    m["ACCENT"] = "AKZENT"
+    m["ACCESS TOKEN"] = "ZUGRIFFSTOKEN"
+    m["ACTION"] = "AKTION"
+    m["ACTIONS"] = "AKTIONEN"
+    m["ADD"] = "HINZUFÜGEN"
+    m["ADD FAVOURITES"] = "FAVORITEN HINZUFÜGEN"
+    m["ADD PIN"] = "PIN HINZUFÜGEN"
+    m["ADJUST"] = "ANPASSEN"
+    m["ALL"] = "ALLE"
+    m["ALL LIGHTS OFF"] = "ALLE LICHTER AUS"
+    m["ALL-DAY"] = "GANZTÄGIG"
+    m["APPEARANCE"] = "ERSCHEINUNGSBILD"
+    m["APPLY"] = "ANWENDEN"
+    m["AREAS"] = "BEREICHE"
+    m["ASSIST"] = "ASSIST"
+    m["AUTO"] = "AUTO"
+    m["AUTOMATIONS"] = "AUTOMATISIERUNGEN"
+    m["AWAY"] = "ABWESEND"
+    m["About"] = "Über die App"
+    m["Acceleration"] = "Acceleration"
+    m["Acceleration curve"] = "Beschleunigungskurve"
+    m["Actions"] = "Aktionen"
+    m["Active"] = "Aktiv"
+    m["Advanced"] = "Erweitert"
+    m["Advertise iBeacon"] = "Advertise iBeacon"
+    m["After binding, pull down the notification shade twice → tap the pencil-edit icon → drag the 'HA Toggle' tile from the bottom row up to your active set."] = "After binding, pull down the notification shade twice → tap the pencil-edit icon → drag the 'HA Toggle' tile from the bottom row up to your active set."
+    m["Alarm settings"] = "Alarmeinstellungen"
+    m["All at defaults"] = "All at defaults"
+    m["All lights off"] = "Alle Lichter aus"
+    m["Also requires the system status bar hidden + battery-on-chrome opt-in"] = "Also requires the system status bar hidden + battery-on-chrome opt-in"
+    m["Ambient light"] = "Ambient light"
+    m["Android identified this device as:"] = "Android identified this device as:"
+    m["App version"] = "App-Version"
+    m["Appearance"] = "Erscheinungsbild"
+    m["Applied brightness"] = "Applied brightness"
+    m["Area"] = "Bereich"
+    m["Asks for BLUETOOTH_ADVERTISE on Android 12+."] = "Asks for BLUETOOTH_ADVERTISE on Android 12+."
+    m["Assist"] = "Assist"
+    m["Assist auto-open keyboard"] = "Assist öffnet Tastatur automatisch"
+    m["Assist mic"] = "Assist-Mikrofon"
+    m["Assist · open keyboard on entry"] = "Assist · Tastatur beim Öffnen anzeigen"
+    m["Auth lost · sign in again"] = "Authentifizierung verloren · erneut anmelden"
+    m["Auth lost; sign in again"] = "Auth lost; sign in again"
+    m["Authenticating…"] = "Authentifizierung…"
+    m["Authentication tokens missing. Open Settings → Sign out & reconnect."] = "Authentifizierungs-Tokens fehlen. Öffne Einstellungen → Abmelden & neu verbinden."
+    m["Auto brightness"] = "Automatische Helligkeit"
+    m["Auto brightness range"] = "Automatischer Helligkeitsbereich"
+    m["Auto night theme"] = "Automatisches Nachtdesign"
+    m["Auto selects Shelly on known Shelly builds, otherwise generic tablet."] = "Auto selects Shelly on known Shelly builds, otherwise generic tablet."
+    m["Auto selects Shelly on known Shelly builds, otherwise generic tablet. Shelly mode is currently a safe stub until the native port lands."] = "Auto selects Shelly on known Shelly builds, otherwise generic tablet. Shelly mode is currently a safe stub until the native port lands."
+    m["Automations"] = "Automatisierungen"
+    m["Available"] = "Verfügbar"
+    m["BACK"] = "ZURÜCK"
+    m["BACKEND"] = "BACKEND"
+    m["BACKUP"] = "BACKUP"
+    m["BACKUP & RESTORE"] = "BACKUP & WIEDERHERSTELLUNG"
+    m["BACKUPS"] = "BACKUPS"
+    m["BATTERY"] = "AKKU"
+    m["BEHAVIOUR"] = "VERHALTEN"
+    m["BLINK"] = "BLINKEN"
+    m["BOOST"] = "BOOST"
+    m["BOTH"] = "BEIDE"
+    m["BREATHE"] = "PULSIEREN"
+    m["BRIGHT"] = "HELLIGKEIT"
+    m["BRIGHTNESS"] = "HELLIGKEIT"
+    m["BROWSE"] = "DURCHSUCHEN"
+    m["BY KIND"] = "NACH TYP"
+    m["BY ROOM"] = "NACH BEREICH"
+    m["Back up before installing"] = "Back up before installing"
+    m["Back up first"] = "Back up first"
+    m["Background refresh"] = "Background refresh"
+    m["Backup creation started"] = "Backup-Erstellung gestartet"
+    m["Backup failed to start"] = "Backup-Erstellung konnte nicht gestartet werden"
+    m["Backup read failed"] = "Fehler beim Lesen des Backups"
+    m["Backup restored"] = "Backup wiederhergestellt"
+    m["Backup save failed"] = "Fehler beim Speichern des Backups"
+    m["Backup saved"] = "Backup gespeichert"
+    m["Backups"] = "Backups"
+    m["Baltic Dawn"] = "Ostsee bei Sonnenaufgang"
+    m["Bar in the chrome that shows current card position"] = "Bar in the chrome that shows current card position"
+    m["Battery"] = "Akku"
+    m["Battery indicator"] = "Akku-Anzeige"
+    m["Battery indicator on chrome"] = "Akku-Anzeige in der Leiste"
+    m["Behaviour"] = "Verhalten"
+    m["Bieszczady Sunset"] = "Bieszczady-Sonnenuntergang"
+    m["Blinds"] = "Jalousien"
+    m["Blinds & Shades"] = "Jalousien & Rollos"
+    m["Brak kafla"] = "Brak kafla"
+    m["Broadcast an iBeacon advertisement so HA's iBeacon integration picks the device up as a device_tracker."] = "Broadcast an iBeacon advertisement so HA's iBeacon integration picks the device up as a device_tracker."
+}
+
+private fun populate_german_1(m: MutableMap<String, String>) {
+    m["Broker host"] = "Broker host"
+    m["Broker stores the message and replays it to future subscribers of this topic."] = "Broker stores the message and replays it to future subscribers of this topic."
+    m["Broker used by the panel MQTT bridge. Empty host disables MQTT; changes persist immediately."] = "Broker used by the panel MQTT bridge. Empty host disables MQTT; changes persist immediately."
+    m["Browse"] = "Durchsuchen"
+    m["By kind"] = "Nach Typ"
+    m["By room"] = "Nach Bereich"
+    m["CALENDARS"] = "KALENDER"
+    m["CAMERAS"] = "KAMERAS"
+    m["CANCEL"] = "ABBRECHEN"
+    m["CARD ACTIONS"] = "KARTENAKTIONEN"
+    m["CARD UI"] = "KARTEN-UI"
+    m["CARDS"] = "KARTEN"
+    m["CHANNEL CHANGE"] = "KANALWECHSEL"
+    m["CHECKING…"] = "PRÜFEN…"
+    m["CLEAR"] = "LÖSCHEN"
+    m["CLEAR ALL"] = "ALLE LÖSCHEN"
+    m["CLEAR DONE"] = "ERLEDIGTE LÖSCHEN"
+    m["CLIMATE"] = "KLIMA"
+    m["CLOSE"] = "SCHLIESSEN"
+    m["COLOR"] = "FARBE"
+    m["COLOR LOOP"] = "FARBLAUF"
+    m["COLOR TEMP"] = "FARBTEMPERATUR"
+    m["COMFORT"] = "KOMFORT"
+    m["CONFIGURE"] = "KONFIGURIEREN"
+    m["CONFIGURE ENTITY"] = "ENTITÄT KONFIGURIEREN"
+    m["CONFIRM RESET · TAP AGAIN"] = "CONFIRM RESET · TAP AGAIN"
+    m["CONFIRM · SIGN OUT"] = "CONFIRM · SIGN OUT"
+    m["CONNECT"] = "VERBINDEN"
+    m["CONNECT WITH HOME ASSISTANT"] = "MIT HOME ASSISTANT VERBINDEN"
+    m["CONNECT WITH LONG-LIVED TOKEN"] = "MIT LANGLEBIGEM ZUGRIFFSTOKEN VERBINDEN"
+    m["CONNECTION"] = "VERBINDUNG"
+    m["CONTROLS"] = "STEUERUNG"
+    m["CONVERSATION AGENT"] = "CONVERSATION AGENT"
+    m["COOL"] = "KÜHLEN"
+    m["COPY"] = "KOPIEREN"
+    m["COULDN'T LOAD BACKUPS"] = "BACKUPS KONNTEN NICHT GELADEN WERDEN"
+    m["COULDN'T LOAD REPAIRS"] = "REPARATUREN KONNTEN NICHT GELADEN WERDEN"
+    m["COVER"] = "ABDECKUNG"
+    m["CREATE"] = "ERSTELLEN"
+    m["CREATE BACKUP NOW"] = "JETZT BACKUP ERSTELLEN"
+    m["CUSTOMIZE"] = "ANPASSEN"
+    m["Calendars"] = "Kalender"
+    m["Camera detail polling"] = "Kamera-Detailabfrage"
+    m["Camera grid polling"] = "Kamera-Rasterabfrage"
+    m["Camera list"] = "Kameraliste"
+    m["Cameras"] = "Kameras"
+    m["Cameras default to grid"] = "Kameras standardmäßig im Raster"
+    m["Cancel"] = "Abbrechen"
+    m["Choose panel grid or cards as the startup surface"] = "Choose panel grid or cards as the startup surface"
+    m["Chrome buttons"] = "Leisten-Schaltflächen"
+    m["Client ID"] = "Client ID"
+    m["Clipboard empty"] = "Clipboard empty"
+    m["Clock"] = "Uhr"
+    m["Close"] = "Schließen"
+    m["Colorful abstract"] = "Farbenfrohe Abstrakta"
+    m["Colorful cards"] = "Colorful cards"
+    m["Common for state topics."] = "Common for state topics."
+    m["Conditions readout"] = "Bedingungsanzeige"
+    m["Configure entity"] = "Entität konfigurieren"
+    m["Connect Home Assistant, name this tablet, and choose what opens first."] = "Verbinde Home Assistant, benenne das Tablet und wähle den Startbildschirm."
+    m["Connect the panel to Home Assistant"] = "Connect the panel to Home Assistant"
+    m["Connected"] = "Verbunden"
+    m["Connecting…"] = "Connecting…"
+    m["Connection"] = "Verbindung"
+    m["Connection saved. These choices can be changed later in Settings."] = "Connection saved. These choices can be changed later in Settings."
+    m["Control lights, temperature, blinds, and other devices from one screen."] = "Control lights, temperature, blinds, and other devices from one screen."
+    m["Controls"] = "Steuerung"
+    m["Cool, bright blue with light contrast."] = "Kühles, helles Blau mit leichtem Kontrast."
+    m["Copied"] = "Kopiert"
+    m["Copy"] = "Copy"
+    m["Create backup"] = "Create backup"
+    m["Current dark look of Hapanels panel."] = "Aktuelles dunkles Erscheinungsbild des Hapanels-Panels."
+    m["DATA (JSON, optional)"] = "DATEN (JSON, optional)"
+    m["DEFAULT APP VIEW"] = "DEFAULT APP VIEW"
+    m["DELETE"] = "LÖSCHEN"
+    m["DEV MENU"] = "ENTWICKLER-MENÜ"
+    m["DEVICE NAME"] = "GERÄTENAME"
+    m["DEVICE TRACKERS"] = "GERÄTE-TRACKER"
+    m["DEVICES"] = "GERÄTE"
+    m["DIRECT INPUT"] = "DIREKTEINGABE"
+    m["DISMISS"] = "VERWERFEN"
+    m["DONE"] = "FERTIG"
+    m["DRAW"] = "VERBRAUCH"
+    m["DRY"] = "ENTFEUCHTEN"
+    m["DURATION"] = "DAUER"
+    m["Dark premium look with neon magenta and electric blue."] = "Dunkles Premium-Erscheinungsbild mit Neon-Magenta und Elektroblau."
+    m["Dashboard"] = "Dashboard"
+    m["Dashboard refresh"] = "Dashboard-Aktualisierung"
+    m["Debounce (ms)"] = "Debounce (ms)"
+    m["Deep lake blue and night light."] = "Tiefes Seeblau und Nachtlicht."
+    m["Default appearance"] = "Standard-Erscheinungsbild"
+    m["Derive a pin manually:"] = "Derive a pin manually:"
+    m["Detail"] = "Detail"
+    m["Dev menu"] = "Entwickler-Menü"
+    m["Dev menu, modified settings, reset"] = "Entwickler-Menü, geänderte Einstellungen, Zurücksetzen"
+    m["Device"] = "Gerät"
+    m["Devices"] = "Geräte"
+    m["Dimmed"] = "Gedimmt"
+    m["Direct input flips non-scalar cards (locks, plain switches)"] = "Direct input flips non-scalar cards (locks, plain switches)"
+    m["Direct input toggles switches"] = "Direct input toggles switches"
+}
+
+private fun populate_german_2(m: MutableMap<String, String>) {
+    m["Disconnected"] = "Disconnected"
+    m["Discover available services"] = "Discover available services"
+    m["Display mode"] = "Anzeigemodus"
+    m["Doesn't look like a HA token. Generate one via your HA profile → Long-lived access tokens."] = "Doesn't look like a HA token. Generate one via your HA profile → Long-lived access tokens."
+    m["Double click"] = "Double click"
+    m["Drag-style reorder isn't available on the panel UI yet."] = "Drag-style reorder isn't available on the panel UI yet."
+    m["Drops every override, theme, UI, and behaviour preference. Keeps your account, favourites, and pages."] = "Drops every override, theme, UI, and behaviour preference. Keeps your account, favourites, and pages."
+    m["ECO"] = "ÖKO"
+    m["EDIT"] = "BEARBEITEN"
+    m["EDIT FAVOURITES"] = "FAVORITEN BEARBEITEN"
+    m["EFFECTS"] = "EFFEKTE"
+    m["EMPTY FILTER"] = "LEERER FILTER"
+    m["ENERGY"] = "ENERGIE"
+    m["ENTER PIN"] = "PIN EINGEBEN"
+    m["ERROR"] = "FEHLER"
+    m["ERROR LOG (tail)"] = "FEHLER-LOG (Ende)"
+    m["EVENT TYPE"] = "EREIGNISTYP"
+    m["EVENT TYPE (blank = all)"] = "EREIGNISTYP (leer = alle)"
+    m["EXPORT"] = "EXPORTIEREN"
+    m["Empty URL"] = "Empty URL"
+    m["Encja nie jest obecnie dostępna w Home Assistant."] = "Encja nie jest obecnie dostępna w Home Assistant."
+    m["End hour"] = "Endstunde"
+    m["Energy"] = "Energie"
+    m["Enter Home Assistant URL."] = "Gib die Home Assistant URL ein."
+    m["Enter long-lived access token"] = "Langlebigen Zugriffstoken eingeben"
+    m["Enter the server address. Protocol and port are optional."] = "Enter the server address. Protocol and port are optional."
+    m["Entities"] = "Entitäten"
+    m["Entries that differ from their constructor-default value. "] = "Entries that differ from their constructor-default value. "
+    m["Error"] = "Fehler"
+    m["Every registered setting is at its default value. "] = "Every registered setting is at its default value. "
+    m["Examples:\n• 192.168.1.10\n• homeassistant.local\n• ha.mydomain.com\n\nProtocol and port are optional. Local hosts default to http:// :8123; public domains default to https:// :443."] = "Examples:\n• 192.168.1.10\n• homeassistant.local\n• ha.mydomain.com\n\nProtocol and port are optional. Local hosts default to http:// :8123; public domains default to https:// :443."
+    m["Exchanging tokens…"] = "Exchanging tokens…"
+    m["External automation intent"] = "External automation intent"
+    m["FAN"] = "VENTILATOR"
+    m["FAN ONLY"] = "NUR VENTILATOR"
+    m["FAVOURITES"] = "FAVORITEN"
+    m["FETCH PINS FROM SERVER"] = "PINS VOM SERVER ABRUFEN"
+    m["FETCHING ENTITIES…"] = "ENTITÄTEN WERDEN GELADEN…"
+    m["FETCHING…"] = "LADEN…"
+    m["FIND"] = "SUCHEN"
+    m["FINISH EFFECT"] = "EFFEKT BEENDEN"
+    m["FLASHLIGHT"] = "TASCHENLAMPE"
+    m["FLOORS"] = "ETAGEN"
+    m["FULL"] = "VOLL"
+    m["FULLSCREEN"] = "VOLLBILD"
+    m["FX"] = "EFFEKTE"
+    m["Failed"] = "Failed"
+    m["Failed to connect."] = "Verbindung fehlgeschlagen."
+    m["Failed to rollback settings."] = "Einstellungen konnten nicht zurückgesetzt werden."
+    m["Failed to rollback token."] = "Token konnte nicht zurückgesetzt werden."
+    m["Failed to verify saved server."] = "Gespeicherter Server konnte nicht verifiziert werden."
+    m["Failed to verify saved token."] = "Gespeicherter Token konnte nicht verifiziert werden."
+    m["Favorites"] = "Favoriten"
+    m["Favourites"] = "Favoriten"
+    m["File a bug"] = "Fehler melden"
+    m["Find any entity"] = "Jede Entität finden"
+    m["Fire any service"] = "Fire any service"
+    m["Fire instantly"] = "Sofort ausführen"
+    m["Fires turn_off on every controllable entity on this page (lights, switches, fans, media_players, covers)."] = "Fires turn_off on every controllable entity on this page (lights, switches, fans, media_players, covers)."
+    m["Floors"] = "Etagen"
+    m["Follow device"] = "Gerät folgen"
+    m["Follow device (default): rotates with the sensor."] = "Follow device (default): rotates with the sensor."
+    m["Forest greens, calm and contrasting."] = "Ruhige und kontrastreiche Waldgrüntöne."
+    m["Fullscreen"] = "Vollbild"
+    m["GENERATE FROM HA AREAS"] = "AUS HA-BEREICHEN ERZEUGEN"
+    m["GRID"] = "RASTER"
+    m["Gate"] = "Tor"
+    m["Glassy aurora gradient with cool violet and cyan."] = "Gläserner Aurora-Verlauf mit kühlem Violett und Cyan."
+    m["Greeting"] = "Begrüßung"
+    m["Guest mode (read-only)"] = "Gastmodus (nur Lesen)"
+    m["HA ASSIST"] = "HA ASSIST"
+    m["HA URL"] = "HA-URL"
+    m["HA persistent alerts"] = "HA persistent alerts"
+    m["HA refresh tuning, cameras, defaults"] = "HA-Aktualisierung, Kameras, Standards"
+    m["HA version"] = "HA-Version"
+    m["HEAT"] = "HEIZEN"
+    m["HELPERS"] = "HELFER"
+    m["HIDE"] = "AUSBLENDEN"
+    m["HIDE TOKEN"] = "TOKEN AUSBLENDEN"
+    m["HIGH"] = "HOCH"
+    m["HISTORY"] = "VERLAUF"
+    m["HOME"] = "ZUHAUSE"
+    m["HOME ASSISTANT URL"] = "HOME ASSISTANT URL"
+    m["HORIZONTAL"] = "HORIZONTAL"
+    m["HUE"] = "FARBTON"
+    m["Hapanels Grid"] = "Hapanels Grid"
+    m["Haptic feedback"] = "Haptisches Feedback"
+    m["Haptics"] = "Haptik"
+    m["Helpers"] = "Helfer"
+    m["Hide card hint above current"] = "Hide card hint above current"
+    m["Hide card tail above current"] = "Hide card tail above current"
+    m["Hide status bar"] = "Statusleiste ausblenden"
+    m["Hide system status bar"] = "Systemstatusleiste ausblenden"
+    m["History"] = "Verlauf"
+    m["Hit RENDER to evaluate against live HA state."] = "Hit RENDER to evaluate against live HA state."
+    m["Home Assistant URL"] = "Home Assistant URL"
+    m["Home presence"] = "Anwesenheit zuhause"
+    m["ICON"] = "SYMBOL"
+    m["IDLE"] = "INAKTIV"
+    m["IMG CACHE"] = "IMG CACHE"
+}
+
+private fun populate_german_3(m: MutableMap<String, String>) {
+    m["IMPORT"] = "IMPORTIEREN"
+    m["IMPORT .P12"] = ".P12 IMPORTIEREN"
+    m["INPUT"] = "EINGABE"
+    m["INSTALL"] = "INSTALLIEREN"
+    m["Idle"] = "Inaktiv"
+    m["Import"] = "Import"
+    m["Inactive"] = "Inaktiv"
+    m["Infinite scroll"] = "Endlos-Scrollen"
+    m["Inline alert previews"] = "Inline-Warnungsvorschau"
+    m["Input acceleration"] = "Eingabebeschleunigung"
+    m["Input key source"] = "Eingabe-Tastenquelle"
+    m["Input rate window (ms)"] = "Eingaberatenfenster (ms)"
+    m["Input step"] = "Eingabeschritt"
+    m["Integrations"] = "Integrationen"
+    m["Invert direction"] = "Richtung umkehren"
+    m["Invert input direction"] = "Eingaberichtung umkehren"
+    m["Jasność ekranu"] = "Jasność ekranu"
+    m["Keep log buffer"] = "Keep log buffer"
+    m["Keep optimistic on failure"] = "Keep optimistic on failure"
+    m["Keep screen on"] = "Keep screen on"
+    m["Key source"] = "Key source"
+    m["Keystore password"] = "Keystore password"
+    m["LABELS"] = "LABELS"
+    m["LIGHT"] = "LICHT"
+    m["LIST"] = "LISTE"
+    m["LIVE SNAPSHOT"] = "LIVE-SCHNAPPSCHUSS"
+    m["LIVE STATE"] = "LIVE-STATUS"
+    m["LOADING"] = "LADEN"
+    m["LOADING ENTITIES"] = "ENTITÄTEN LADEN"
+    m["LOGBOOK"] = "LOGBUCH"
+    m["LONG-LIVED ACCESS TOKEN"] = "LANGLEBIGER ZUGRIFFSTOKEN"
+    m["LONG-LIVED TOKEN"] = "LANGLEBIGER ZUGRIFFSTOKEN"
+    m["LOVELACE"] = "LOVELACE"
+    m["LOW"] = "NIEDRIG"
+    m["Labels"] = "Labels"
+    m["Last event"] = "Letztes Ereignis"
+    m["Last sleep"] = "Last sleep"
+    m["Last sleep reason"] = "Last sleep reason"
+    m["Last wake"] = "Last wake"
+    m["Last wake reason"] = "Last wake reason"
+    m["Lighting"] = "Beleuchtung"
+    m["List, trigger, enable / disable"] = "List, trigger, enable / disable"
+    m["Listen for HA webhooks"] = "Listen for HA webhooks"
+    m["Live logs, fire-event, integrations panel"] = "Live logs, fire-event, integrations panel"
+    m["Live snapshots"] = "Live snapshots"
+    m["Living room ceiling light"] = "Living room ceiling light"
+    m["Loading"] = "Laden"
+    m["Loading…"] = "Laden…"
+    m["Local: brightness, volume, flashlight"] = "Local: brightness, volume, flashlight"
+    m["Logbook"] = "Logbuch"
+    m["Logbook feed"] = "Logbook feed"
+    m["Logbook refresh"] = "Logbuch-Aktualisierung"
+    m["Login didn't complete. Please try again."] = "Login didn't complete. Please try again."
+    m["Long press"] = "Long press"
+    m["Long-lived token"] = "Langlebiger Zugriffstoken"
+    m["Lovelace (WebView)"] = "Lovelace (WebView)"
+    m["Low-battery alerts"] = "Warnungen bei niedrigem Akkustand"
+    m["Low-battery threshold"] = "Schwellenwert für niedrigen Akkustand"
+    m["MEDIA"] = "MEDIEN"
+    m["MEDIA BROWSE"] = "MEDIEN DURCHSUCHEN"
+    m["MEDIUM"] = "MITTEL"
+    m["MENU"] = "MENÜ"
+    m["MODE"] = "MODUS"
+    m["MODIFIED SETTINGS"] = "GEÄNDERTE EINSTELLUNGEN"
+    m["MOVE LEFT"] = "NACH LINKS VERSCHIEBEN"
+    m["MOVE RIGHT"] = "NACH RECHTS VERSCHIEBEN"
+    m["MOVE RIGHT  ▶"] = "NACH RECHTS VERSCHIEBEN  ▶"
+    m["MOVE TO"] = "VERSCHIEBEN NACH"
+    m["MOWER"] = "RASENMÄHER"
+    m["MTLS CLIENT CERTIFICATE"] = "MTLS-KLIENTENZERTIFIKAT"
+    m["Make it yours."] = "Pass dein Panel an."
+    m["Make the panel yours"] = "Make the panel yours"
+    m["Maps ambient light sensor lux to per-window screen brightness."] = "Maps ambient light sensor lux to per-window screen brightness."
+    m["Masurian Nights"] = "Masurische Nächte"
+    m["Max cards per step during fast direct input."] = "Max cards per step during fast direct input."
+    m["Max interval (ms)"] = "Max interval (ms)"
+    m["Maximum"] = "Maximum"
+    m["Media Browse"] = "Medien durchsuchen"
+    m["Media rows shown"] = "Angezeigte Medienzeilen"
+    m["Menu"] = "Menü"
+    m["Metrics row"] = "Metrikzeile"
+    m["Minimal dark"] = "Minimal dark"
+    m["Minimum"] = "Minimum"
+    m["Mirror HA notifications"] = "Mirror HA notifications"
+    m["Mode"] = "Modus"
+    m["Model"] = "Model"
+    m["Modified settings"] = "Geänderte Einstellungen"
+    m["Monochrome appearance"] = "Monochromes Erscheinungsbild"
+    m["More information"] = "Mehr Informationen"
+    m["NAME"] = "NAME"
+    m["NETWORK SECURITY"] = "NETZWERKSICHERHEIT"
+    m["NEW ENTITIES"] = "NEUE ENTITÄTEN"
+    m["NEXT"] = "WEITER"
+    m["NEXT EVENT PREVIEW"] = "VORSCHAU NÄCHSTES EREIGNIS"
+    m["NEXT RISE"] = "NÄCHSTER AUFGANG"
+    m["NEXT SET"] = "NÄCHSTER UNTERGANG"
+    m["NFC tag scanner"] = "NFC tag scanner"
+    m["NIGHT THEME"] = "NACHTDESIGN"
+    m["NIGHT WINDOW"] = "NACHTZEITRAUM"
+    m["NO CERTIFICATE IMPORTED"] = "KEIN ZERTIFIKAT IMPORTIERT"
+}
+
+private fun populate_german_4(m: MutableMap<String, String>) {
+    m["NO CONTROL HERE · SWIPE OR TAP THE PIP"] = "HIER KEINE STEUERUNG · WISCHEN ODER PUNKT TIPPEN"
+    m["NO FAVOURITES"] = "KEINE FAVORITEN"
+    m["NO FAVOURITES YET"] = "NOCH KEINE FAVORITEN"
+    m["NO OPEN REPAIRS"] = "KEINE OFFENEN REPARATUREN"
+    m["NO SIGNAL"] = "KEIN SIGNAL"
+    m["NO SUPPORTED ENTITIES"] = "KEINE UNTERSTÜTZTEN ENTITÄTEN"
+    m["NO ZIGBEE INTEGRATION"] = "KEINE ZIGBEE-INTEGRATION"
+    m["NONE"] = "KEINE"
+    m["NOTES"] = "NOTIZEN"
+    m["NOTIFICATIONS"] = "BENACHRICHTIGUNGEN"
+    m["NOW"] = "JETZT"
+    m["NOW PLAYING"] = "JETZT WIEDERGEGEBEN"
+    m["NUMBERS"] = "ZAHLEN"
+    m["Nav step cap"] = "Nav step cap"
+    m["Next event"] = "Nächstes Ereignis"
+    m["Next event preview"] = "Vorschau nächstes Ereignis"
+    m["Next, connect this panel to your home and choose what it should display."] = "Next, connect this panel to your home and choose what it should display."
+    m["No"] = "Nein"
+    m["No HA server configured. Sign in via Settings → SERVER first."] = "Kein HA-Server konfiguriert. Melde dich zuerst unter Einstellungen → SERVER an."
+    m["No actions"] = "No actions"
+    m["No additional attributes."] = "Keine zusätzlichen Attribute."
+    m["No areas defined in HA. Settings → Areas in HA's web UI."] = "Keine Bereiche in HA definiert. Einstellungen → Bereiche in der HA Web-UI."
+    m["No automations defined. Settings → Automations in HA's web UI."] = "Keine Automatisierungen in HA definiert. Einstellungen → Automatisierungen in der HA Web-UI."
+    m["No backups found"] = "No backups found"
+    m["No calendar entities in HA. Add a calendar integration to see them here."] = "Keine Kalender-Entitäten in HA. Füge eine Kalender-Integration hinzu."
+    m["No cameras in HA. Add a camera integration to see them here."] = "Keine Kameras in HA. Füge eine Kamera-Integration hinzu."
+    m["No data"] = "Keine Daten"
+    m["No events in the next 14 days."] = "No events in the next 14 days."
+    m["No favourites yet"] = "No favourites yet"
+    m["No floors defined in HA. Settings → Areas & Zones → Floors."] = "Keine Etagen in HA definiert. Einstellungen → Bereiche & Zonen → Etagen."
+    m["No hardware events yet. The generic tablet provider emits lifecycle events at app start."] = "No hardware events yet. The generic tablet provider emits lifecycle events at app start."
+    m["No labels defined in HA. Settings → Labels in HA's web UI."] = "Keine Labels in HA definiert. Einstellungen → Labels in der HA Web-UI."
+    m["No log output (HA returned an empty body)."] = "No log output (HA returned an empty body)."
+    m["No open repairs"] = "Keine offenen Reparaturen"
+    m["No other pages yet. Add one with the '+' chip on the tab strip."] = "No other pages yet. Add one with the '+' chip on the tab strip."
+    m["No people or device trackers in HA. Add a person integration to see them here."] = "Keine Personen oder Geräte-Tracker in HA. Füge eine Personen-Integration hinzu."
+    m["No persistent notifications in HA. All clear."] = "Keine dauerhaften Benachrichtigungen in HA. Alles erledigt."
+    m["No results"] = "Keine Ergebnisse"
+    m["No tile"] = "Keine Kachel"
+    m["No toggleable entities loaded yet. Sign in or wait for the registry to catch up."] = "No toggleable entities loaded yet. Sign in or wait for the registry to catch up."
+    m["No weather entities in HA. Add a weather integration to see them here."] = "Keine Wetter-Entitäten in HA. Füge eine Wetter-Integration hinzu."
+    m["No zones defined. Settings → Areas & Zones in HA's web UI."] = "Keine Zonen definiert. Einstellungen → Bereiche & Zonen in der HA Web-UI."
+    m["None"] = "None"
+    m["Nothing for HA's integrations to flag."] = "Nichts zu melden für HA-Integrationen."
+    m["Nothing is permanent. You can change every choice later in Settings."] = "Nothing is permanent. You can change every choice later in Settings."
+    m["Notifications"] = "Benachrichtigungen"
+    m["Notifications refresh"] = "Benachrichtigungs-Aktualisierung"
+    m["Now Playing"] = "Jetzt wiedergegeben"
+    m["OFF"] = "AUS"
+    m["OKAY"] = "OK"
+    m["ON"] = "AN"
+    m["OPEN"] = "ÖFFNEN"
+    m["OPEN FULL CHANGELOG ↗"] = "OPEN FULL CHANGELOG ↗"
+    m["OPEN HA WEB UI"] = "HA WEB-UI ÖFFNEN"
+    m["OPEN HAPANELS"] = "HAPANELS ÖFFNEN"
+    m["OPEN IN BROWSER"] = "IM BROWSER ÖFFNEN"
+    m["OPEN IN HA"] = "IN HA ÖFFNEN"
+    m["OPEN SETTINGS"] = "EINSTELLUNGEN ÖFFNEN"
+    m["OPEN SETTINGS →"] = "EINSTELLUNGEN ÖFFNEN →"
+    m["OPTIONS"] = "OPTIONEN"
+    m["OUTSIDE"] = "AUSSERHALB"
+    m["Off"] = "Aus"
+    m["Off (default): arc shows whatever brightness HA reported"] = "Off (default): arc shows whatever brightness HA reported"
+    m["Off (default): tapping into Assist shows the screen but leaves the keyboard closed; useful on phones where the IME popping up otherwise re-centers the empty state jarringly. On: opening Assist focuses the input field immediately. Voice input (🎤) works regardless of this setting."] = "Off (default): tapping into Assist shows the screen but leaves the keyboard closed; useful on phones where the IME popping up otherwise re-centers the empty state jarringly. On: opening Assist focuses the input field immediately. Voice input (🎤) works regardless of this setting."
+    m["Off (default): the whole-card tap is inert so a miss while aiming for the chrome buttons doesn't accidentally turn the entity on. On: tap anywhere on the card to flip it."] = "Off (default): the whole-card tap is inert so a miss while aiming for the chrome buttons doesn't accidentally turn the entity on. On: tap anywhere on the card to flip it."
+    m["Off by default."] = "Off by default."
+    m["Off by default: turning on without a known-good keystore configured will brick every request."] = "Off by default: turning on without a known-good keystore configured will brick every request."
+    m["On"] = "An"
+    m["On press"] = "On press"
+    m["On release"] = "On release"
+    m["On: arc is always blank (0%) for off entities."] = "On: arc is always blank (0%) for off entities."
+    m["Open"] = "Öffnen"
+    m["Open Dashboard, Assist, Scenes, etc."] = "Dashboard, Assist, Szenen etc. öffnen"
+    m["Open HA in browser"] = "Open HA in browser"
+    m["Open settings"] = "Einstellungen öffnen"
+    m["Opens HA Assist from anywhere on the card stack"] = "Opens HA Assist from anywhere on the card stack"
+    m["PANEL CONTROLS"] = "PANEL-STEUERUNG"
+    m["PANEL GRID THEME"] = "PANEL GRID THEME"
+    m["PANEL HARDWARE"] = "PANEL-HARDWARE"
+    m["PASTE"] = "EINFÜGEN"
+    m["PAUSE"] = "PAUSE"
+    m["PAUSED"] = "PAUSIERT"
+    m["PAYLOAD"] = "NUTZLAST"
+    m["PEOPLE"] = "PERSONEN"
+    m["PERCENT"] = "PROZENT"
+    m["PICK"] = "WÄHLEN"
+    m["PICK ENTITY"] = "ENTITÄT WÄHLEN"
+    m["PING"] = "PING"
+    m["PINNING OFF · TRUSTS THE SYSTEM CERTIFICATE STORE"] = "PINNING AUS · VERTRAUT DEM SYSTEM-ZERTIFIKATSSPEICHER"
+    m["PLAY"] = "ABSPIELEN"
+    m["PORT"] = "PORT"
+    m["POWER TOOLS"] = "WERKZEUGE"
+    m["PRESET"] = "VOREINSTELLUNG"
+    m["PREVIEW"] = "VORSCHAU"
+    m["PREVIEW · HOLD"] = "VORSCHAU · HALTEN"
+    m["PROBING…"] = "PROBING…"
+    m["PRODUCTION"] = "PRODUKTION"
+    m["PROTECTED"] = "GESCHÜTZT"
+    m["PROVIDER"] = "ANBIETER"
+    m["PUBLISH"] = "VERÖFFENTLICHEN"
+}
+
+private fun populate_german_5(m: MutableMap<String, String>) {
+    m["Pairing window closed"] = "Pairing window closed"
+    m["Panel Hardware"] = "Panel-Hardware"
+    m["Panel hardware"] = "Panel-Hardware"
+    m["Panel hardware provider"] = "Panel-Hardware-Anbieter"
+    m["Password"] = "Passwort"
+    m["Paste instead of OAuth"] = "Paste instead of OAuth"
+    m["Paste long-lived access token."] = "Langlebigen Zugriffstoken einfügen."
+    m["Paste token from Home Assistant profile"] = "Token aus dem Home Assistant Profil einfügen"
+    m["People"] = "Personen"
+    m["People + device trackers"] = "Personen + Geräte-Tracker"
+    m["Permit window already open"] = "Permit window already open"
+    m["Persist cache to disk"] = "Persist cache to disk"
+    m["Physical buttons"] = "Physische Tasten"
+    m["Pick entities to control from your HA setup."] = "Pick entities to control from your HA setup."
+    m["Pick the lights, fans, covers, and media players you want\non this panel."] = "Pick the lights, fans, covers, and media players you want\non this panel."
+    m["Pin at least two values (current key + backup) so a normal cert rotation doesn't lock you out."] = "Pin at least two values (current key + backup) so a normal cert rotation doesn't lock you out."
+    m["Pin optimistic"] = "Pin optimistic"
+    m["Podgląd na żywo"] = "Podgląd na żywo"
+    m["Point me at\nHome Assistant."] = "Point me at\nHome Assistant."
+    m["Polish inspirations"] = "Polnische Inspirationen"
+    m["Portrait only"] = "Nur Hochformat"
+    m["Portrait only: locks to portrait regardless of rotation."] = "Portrait only: locks to portrait regardless of rotation."
+    m["Pragmatic hybrid"] = "Pragmatic hybrid"
+    m["Presence"] = "Anwesenheit"
+    m["Present client certificate"] = "Klientenzertifikat bereitstellen"
+    m["Pressed button ids"] = "Gedrückte Tasten-IDs"
+    m["Pressed buttons"] = "Gedrückte Tasten"
+    m["Provider"] = "Anbieter"
+    m["Proximity distance"] = "Näherungsabstand"
+    m["Proximity near distance"] = "Nahabstand für Näherung"
+    m["Proximity wake"] = "Aktivierung durch Näherung"
+    m["Przejdź do ustawień aplikacji"] = "Przejdź do ustawień aplikacji"
+    m["Pull to refresh"] = "Pull to refresh"
+    m["QUICK ACTIONS"] = "SCHNELLAKTIONEN"
+    m["QUICK SEARCH"] = "SCHNELLSUCHE"
+    m["Quick Search"] = "Schnellsuche"
+    m["Quick Search result cap"] = "Ergebnisbegrenzung der Schnellsuche"
+    m["Quick Settings"] = "Schnelleinstellungen"
+    m["Quick Settings tile"] = "Schnelleinstellungen-Kachel"
+    m["Quick Settings tile · slot B"] = "Schnelleinstellungen-Kachel · Slot B"
+    m["Quick Settings tile · slot C"] = "Schnelleinstellungen-Kachel · Slot C"
+    m["Quick Settings tile · slot D"] = "Schnelleinstellungen-Kachel · Slot D"
+    m["RAW"] = "ROH"
+    m["READ ONLY  ·  TAP TO DISABLE"] = "NUR LESEN  ·  TIPPEN ZUM DEAKTIVIEREN"
+    m["READOUT"] = "MESSWERT"
+    m["RECENT"] = "NEUESTE"
+    m["RECENT ACTIVITY"] = "NEUESTE AKTIVITÄT"
+    m["RECENT ALERTS"] = "NEUESTE WARNUNGEN"
+    m["RECENT EVENTS"] = "NEUESTE EREIGNISSE"
+    m["RECONNECT NOW"] = "JETZT NEU VERBINDEN"
+    m["REFRESH"] = "AKTUALISIEREN"
+    m["RELEASE NOTES"] = "RELEASENOTIZEN"
+    m["REMOVE"] = "ENTFERNEN"
+    m["REMOVE FROM PAGE"] = "VON SEITE ENTFERNEN"
+    m["RENDER"] = "RENDERN"
+    m["RENDERED"] = "GERENDERT"
+    m["RENDERING…"] = "RENDERN…"
+    m["REPAIRS"] = "REPARATUREN"
+    m["REPEAT ALL"] = "ALLE WIEDERHOLEN"
+    m["REPEAT OFF"] = "WIEDERHOLUNG AUS"
+    m["REPEAT ONE"] = "EINEN WIEDERHOLEN"
+    m["RESET"] = "ZURÜCKSETZEN"
+    m["RESET ORDER"] = "REIHENFOLGE ZURÜCKSETZEN"
+    m["RESET TO DEFAULTS"] = "AUF STANDARD ZURÜCKSETZEN"
+    m["REST timeout (s)"] = "REST timeout (s)"
+    m["RESUME"] = "FORTSETZEN"
+    m["REVEAL"] = "ANZEIGEN"
+    m["REVEAL TOKEN"] = "TOKEN ANZEIGEN"
+    m["REWIND"] = "ZURÜCKSPULEN"
+    m["RUN"] = "AUSFÜHREN"
+    m["Recent Activity"] = "Neueste Aktivität"
+    m["Recommended for HA Core / Supervisor / OS updates"] = "Recommended for HA Core / Supervisor / OS updates"
+    m["Reconnect backoff cap (s)"] = "Reconnect backoff cap (s)"
+    m["Reconnecting…"] = "Reconnecting…"
+    m["Refresh"] = "Refresh"
+    m["Reject any TLS certificate the server presents whose SHA-256 SPKI hash isn't in the list below."] = "Reject any TLS certificate the server presents whose SHA-256 SPKI hash isn't in the list below."
+    m["Relays"] = "Relais"
+    m["Release notes"] = "Releasenotizen"
+    m["Remove"] = "Entfernen"
+    m["Reorder with ↑ / ↓ chips and toggle visibility per button."] = "Reihenfolge mit ↑ / ↓ Chips ändern und Sichtbarkeit pro Taste umschalten."
+    m["Repairs"] = "Reparaturen"
+    m["Retain"] = "Retain"
+    m["Right choice for narrow panels and one-handed phone use."] = "Right choice for narrow panels and one-handed phone use."
+    m["Right-cluster button order + visibility"] = "Right-cluster button order + visibility"
+    m["Run a foreground HTTP server on the device."] = "Run a foreground HTTP server on the device."
+    m["SAVE"] = "SPEICHERN"
+    m["SAVE & CONNECT"] = "SPEICHERN & VERBINDEN"
+    m["SAVE AND CONTINUE"] = "SPEICHERN UND WEITER"
+    m["SAVE NAME AND CONTINUE"] = "NAME SPEICHERN UND WEITER"
+    m["SAVING..."] = "SPEICHERN..."
+    m["SAVING…"] = "SPEICHERN…"
+    m["SCENES"] = "SZENEN"
+    m["SCENES & SCRIPTS"] = "SZENEN & SKRIPTE"
+    m["SCREEN BRIGHTNESS"] = "BILDSCHIRMHELLIGKEIT"
+    m["SCREEN MANAGER"] = "BILDSCHIRM-MANAGER"
+    m["SEARCH"] = "SUCHE"
+    m["SECURITY"] = "SICHERHEIT"
+    m["SELECTS"] = "AUSWAHLEN"
+    m["SENDING…"] = "SENDEN…"
+    m["SENSORS"] = "SENSOREN"
+}
+
+private fun populate_german_6(m: MutableMap<String, String>) {
+    m["SERVER"] = "SERVER"
+    m["SERVICE CALLER"] = "DIENST-AUFRUF"
+    m["SERVICES"] = "DIENSTE"
+    m["SHARE"] = "TEILEN"
+    m["SHARE DEBUG BUNDLE"] = "DIAGNOSE-PAKET TEILEN"
+    m["SHUFFLE"] = "ZUFALLSWIEDERGABE"
+    m["SIGN OUT & RECONNECT"] = "SIGN OUT & RECONNECT"
+    m["SILENT"] = "LEISE"
+    m["SKIP"] = "ÜBERSPRINGEN"
+    m["SLEEP"] = "SCHLAFEN"
+    m["SOURCE"] = "QUELLE"
+    m["SPEAK"] = "SPRECHEN"
+    m["SPEAKING"] = "SPRICHT"
+    m["START"] = "START"
+    m["START SETUP"] = "EINRICHTUNG STARTEN"
+    m["START VIEW"] = "STARTANSICHT"
+    m["STATUS VIEWS"] = "STATUS-ANSICHTEN"
+    m["STILL LOADING · TAP TO RETRY"] = "LÄDT NOCH · TIPPEN ZUM ERNEUTEN VERSUCHEN"
+    m["STOP"] = "STOPP"
+    m["STOP COLOR LOOP"] = "FARBLAUF STOPPEN"
+    m["STOP EFFECT"] = "EFFEKT STOPPEN"
+    m["SUN"] = "SONNE"
+    m["SWING"] = "SCHWENKEN"
+    m["SWITCH"] = "SCHALTER"
+    m["SYSTEM"] = "SYSTEM"
+    m["SYSTEM HEALTH"] = "SYSTEMSTATUS"
+    m["Save"] = "Speichern"
+    m["Save failed"] = "Save failed"
+    m["Saved"] = "Gespeichert"
+    m["Saved. Restart app to apply."] = "Gespeichert. App neu starten zum Übernehmen."
+    m["Scenes"] = "Szenen"
+    m["Scenes & Scripts"] = "Szenen & Skripte"
+    m["Screen brightness"] = "Bildschirmhelligkeit"
+    m["Screen orientation"] = "Bildschirmausrichtung"
+    m["Screensaver"] = "Bildschirmschoner"
+    m["Screensaver timeout"] = "Bildschirmschoner-Timeout"
+    m["Scrolling past the last card wraps to the first"] = "Scrolling past the last card wraps to the first"
+    m["Sea blue, mist, and pink dawn."] = "Meeresblau, Nebel und rosa Morgenröte."
+    m["Search"] = "Suche"
+    m["Sensor decimals"] = "Sensor-Dezimalstellen"
+    m["Sensor history hours"] = "Sensor history hours"
+    m["Sensor history length"] = "Sensor-Verlaufslänge"
+    m["Server URL · pages · favourites · all settings (no tokens)"] = "Server URL · pages · favourites · all settings (no tokens)"
+    m["Server config, ping, error log"] = "Server-Konfiguration, Ping, Fehler-Log"
+    m["Server, security, backup & restore"] = "Server, Sicherheit, Backup & Wiederherstellung"
+    m["Service Caller"] = "Dienst-Aufruf"
+    m["Services"] = "Dienste"
+    m["Services Browser"] = "Dienste-Browser"
+    m["Settings"] = "Einstellungen"
+    m["Share"] = "Teilen"
+    m["Shelly hardware buttons. Press/release actions fire immediately. Short click is best for normal automations; it stays instant unless double or triple click is configured for the same button."] = "Shelly hardware buttons. Press/release actions fire immediately. Short click is best for normal automations; it stays instant unless double or triple click is configured for the same button."
+    m["Shelly hardware buttons. Press/release actions fire immediately; short click waits only when needed for multi-click mappings."] = "Shelly hardware buttons. Press/release actions fire immediately; short click waits only when needed for multi-click mappings."
+    m["Shelly mode is currently a safe stub until the native port lands."] = "Shelly mode is currently a safe stub until the native port lands."
+    m["Shopping lists, tasks"] = "Shopping lists, tasks"
+    m["Short click"] = "Short click"
+    m["Show 0% arc when entity is off"] = "0%-Bogen anzeigen, wenn Entität aus ist"
+    m["Show a native dim clock overlay after the panel is idle."] = "Show a native dim clock overlay after the panel is idle."
+    m["Show area label"] = "Bereichslabel anzeigen"
+    m["Show debug strip"] = "Show debug strip"
+    m["Show entity_id on cards"] = "Show entity_id on cards"
+    m["Show on/off pill"] = "An/Aus-Badge anzeigen"
+    m["Show position pip"] = "Positionspunkt anzeigen"
+    m["Sign in"] = "Anmelden"
+    m["Skip OAuth: paste an HA long-lived access token. Generate one from HA Profile → Long-Lived Access Tokens. Stored encrypted at rest (AndroidKeystore-wrapped AES-256-GCM) just like the OAuth path."] = "Skip OAuth: paste an HA long-lived access token. Generate one from HA Profile → Long-Lived Access Tokens. Stored encrypted at rest (AndroidKeystore-wrapped AES-256-GCM) just like the OAuth path."
+    m["Skip preflight refresh"] = "Skip preflight refresh"
+    m["Slow pager transitions"] = "Slow pager transitions"
+    m["Soft, luxurious mix of plum, gold, and indigo."] = "Sanfte, luxuriöse Mischung aus Pflaume, Gold und Indigo."
+    m["Solid chrome backdrop covers the previous card's tail"] = "Solid chrome backdrop covers the previous card's tail"
+    m["Something went wrong"] = "Something went wrong"
+    m["Source code"] = "Quellcode"
+    m["Start hour"] = "Startstunde"
+    m["Start view"] = "Startansicht"
+    m["State"] = "Status"
+    m["Status"] = "Status"
+    m["Step size"] = "Schrittgröße"
+    m["Stop direct stepping"] = "Direkte Schritte stoppen"
+    m["Strict entity decode"] = "Strict entity decode"
+    m["Sun card"] = "Sonnenkarte"
+    m["Swapping the authorisation code for an access token. This\nis a one-time round-trip; it usually takes a second."] = "Swapping the authorisation code for an access token. This\nis a one-time round-trip; it usually takes a second."
+    m["Swipe down to peek the bar; auto-hides after release"] = "Swipe down to peek the bar; auto-hides after release"
+    m["System Health"] = "Systemstatus"
+    m["TABLET NAME"] = "TABLET-NAME"
+    m["TAIL"] = "VERFOLGEN"
+    m["TAIL · ON"] = "VERFOLGUNG · AN"
+    m["TALK"] = "SPRECHEN"
+    m["TALK & FIRE"] = "SPRECHEN & AUSFÜHREN"
+    m["TAP AGAIN"] = "ERNEUT TIPPEN"
+    m["TAP JUMP · LONG-PRESS DRAG · '…' MENU · SCROLL LIST"] = "TAP JUMP · LONG-PRESS DRAG · '…' MENU · SCROLL LIST"
+    m["TAP ON WINDOW TO ADJUST"] = "TAP ON WINDOW TO ADJUST"
+    m["TEMPLATE (JINJA2)"] = "VORLAGE (JINJA2)"
+    m["TEMPLATES"] = "VORLAGEN"
+    m["TEXT SIZE"] = "TEXTGRÖSSE"
+    m["THEME"] = "DESIGN"
+    m["THEMES"] = "DESIGNS"
+    m["THINK"] = "DENKEN"
+    m["THINKING"] = "DENKT NACH…"
+    m["TIMERS"] = "TIMER"
+    m["TLS certificate pinning"] = "TLS-Zertifikats-Pinning"
+    m["TO-DO"] = "TO-DO"
+    m["TODAY"] = "HEUTE"
+}
+
+private fun populate_german_7(m: MutableMap<String, String>) {
+    m["TOGGLE"] = "UMSCHALTEN"
+    m["TOP CONSUMERS"] = "HAUPTVERBRAUCHER"
+    m["TOPIC"] = "TOPIC"
+    m["TRY"] = "TESTEN"
+    m["TURN ALL OFF"] = "ALLE AUSSCHALTEN"
+    m["TURN ALL ON"] = "ALLE EINSCHALTEN"
+    m["TURN OFF"] = "AUSSCHALTEN"
+    m["TURN ON"] = "EINSCHALTEN"
+    m["Takes effect on next app launch."] = "Takes effect on next app launch."
+    m["Talk to HA"] = "Talk to HA"
+    m["Tap FIRE to dispatch the service. State changes (if any) are listed here."] = "Tap FIRE to dispatch the service. State changes (if any) are listed here."
+    m["Tap a result to fire"] = "Tap a result to fire"
+    m["Tap anywhere to dismiss"] = "Tap anywhere to dismiss"
+    m["Tap to check"] = "Tap to check"
+    m["Tap to open app"] = "Tap to open app"
+    m["Tap to stop"] = "Tap to stop"
+    m["Tap to talk again"] = "Tap to talk again"
+    m["Tap to talk to Home Assistant"] = "Tap to talk to Home Assistant"
+    m["Tap to toggle"] = "Tap to toggle"
+    m["Target brightness"] = "Zielhelligkeit"
+    m["Temperature"] = "Temperatur"
+    m["Temperature unit"] = "Temperatureinheit"
+    m["Templates"] = "Templates"
+    m["The service holds a persistent notification while active."] = "The service holds a persistent notification while active."
+    m["Theme"] = "Design"
+    m["Theme, card UI, dashboard"] = "Theme, card UI, dashboard"
+    m["This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio."] = "This name identifies the panel in Home Assistant, MQTT, and Hapanels Studio."
+    m["Tile order"] = "Tile order"
+    m["Timers"] = "Timer"
+    m["Tiny percent pill on the right of the chrome row"] = "Kleine Prozent-Pille rechts in der Leiste"
+    m["To-do lists"] = "To-Do-Listen"
+    m["Toast log level"] = "Toast-Log-Stufe"
+    m["Toggleable + action entities only"] = "Toggleable + action entities only"
+    m["Token saved · connecting…"] = "Token gespeichert · Verbinden…"
+    m["Token will be checked by Home Assistant before saving."] = "Token wird vor dem sicheren Speichern von Home Assistant geprüft."
+    m["Token will not appear in logs and remains encrypted on device."] = "Token erscheint nicht in Logs und bleibt auf dem Gerät verschlüsselt."
+    m["Top consumers"] = "Hauptverbraucher"
+    m["Touch, haptics, quick tiles"] = "Touch, Haptik, Schnellkacheln"
+    m["Triple click"] = "Triple click"
+    m["Turn off all"] = "Alle ausschalten"
+    m["Turn off cameras"] = "Kameras ausschalten"
+    m["Turn on cameras"] = "Kameras einschalten"
+    m["Type a media_player.* entity_id first"] = "Type a media_player.* entity_id first"
+    m["Type a name, entity_id, or area to find."] = "Type a name, entity_id, or area to find."
+    m["Type below or tap one of these prompts to start."] = "Type below or tap one of these prompts to start."
+    m["UNAVAILABLE"] = "NICHT VERFÜGBAR"
+    m["UNKNOWN"] = "UNBEKANNT"
+    m["UNLOCK"] = "ENTRIEGELN"
+    m["UPDATES"] = "UPDATES"
+    m["URL"] = "URL"
+    m["USE DEFAULT"] = "STANDARD VERWENDEN"
+    m["Unavailable"] = "Nicht verfügbar"
+    m["Unknown error"] = "Unbekannter Fehler"
+    m["Updated"] = "Aktualisiert"
+    m["Updates"] = "Updates"
+    m["Use a long-lived token instead"] = "Stattdessen langlebigen Zugriffstoken verwenden"
+    m["Use direct stepping for this value"] = "Use direct stepping for this value"
+    m["Use long-lived token"] = "Langlebigen Zugriffstoken verwenden"
+    m["Use port 8883 for the standard mqtts:// endpoint."] = "Use port 8883 for the standard mqtts:// endpoint."
+    m["Use the arrows to nudge each tile up or down."] = "Use the arrows to nudge each tile up or down."
+    m["Use the imported PKCS12 keystore for mutual TLS."] = "Use the imported PKCS12 keystore for mutual TLS."
+    m["Useful for bulbs that store pre-off brightness in HA so a dark bulb doesn't show 75% on its card."] = "Useful for bulbs that store pre-off brightness in HA so a dark bulb doesn't show 75% on its card."
+    m["Useful for wall-mounted / kiosk panels."] = "Useful for wall-mounted / kiosk panels."
+    m["Username"] = "Benutzername"
+    m["VACUUM"] = "VACUUM"
+    m["VACUUMS"] = "SAUGROBOTER"
+    m["VALVE"] = "VALVE"
+    m["VALVES"] = "VENTILE"
+    m["VERTICAL"] = "VERTIKAL"
+    m["VOICE"] = "SPRACHE"
+    m["VOICE SATELLITE"] = "SPRACHSATELLIT"
+    m["Verbose HTTP"] = "Verbose HTTP"
+    m["Verbose WebSocket"] = "Verbose WebSocket"
+    m["Verbose service calls"] = "Verbose service calls"
+    m["Version"] = "Version"
+    m["Version, source, file a bug"] = "Version, Quellcode, Fehler melden"
+    m["Vibration on input steps and taps"] = "Vibration bei Eingabeschritten und Tippen"
+    m["Voice Satellite"] = "Sprachsatellit"
+    m["WATER HEATER"] = "WARMWASSER"
+    m["WEATHER"] = "WETTER"
+    m["WEBHOOK"] = "WEBHOOK"
+    m["WHITE"] = "WEISS"
+    m["WHO'S HOME"] = "WER IST ZUHAUSE"
+    m["WIFI"] = "WLAN"
+    m["WS ping interval (s)"] = "WS-Ping-Intervall (s)"
+    m["Wake control"] = "Aktivierungssteuerung"
+    m["Wake the panel from the screensaver when the proximity sensor reports near presence."] = "Wake the panel from the screensaver when the proximity sensor reports near presence."
+    m["Warm sand and amber."] = "Warmer Sand und Bernstein."
+    m["Warm sunset over mountain meadows."] = "Warmer Sonnenuntergang über Bergwiesen."
+    m["Watering"] = "Bewässerung"
+    m["Weather"] = "Wetter"
+    m["Weather card"] = "Wetterkarte"
+    m["Weather · People · Next event"] = "Wetter · Personen · Nächstes Ereignis"
+    m["Welcome to Hapanels!"] = "Willkommen bei Hapanels!"
+    m["What should this tablet be called?"] = "What should this tablet be called?"
+    m["What's included"] = "Was enthalten ist"
+    m["When on, the app refuses every outbound service call. Lights, locks, scripts: everything is blocked until you turn this off. Hand the device to a guest without worrying they'll toggle something."] = "When on, the app refuses every outbound service call. Lights, locks, scripts: everything is blocked until you turn this off. Hand the device to a guest without worrying they'll toggle something."
+    m["Whether direct hardware input acts on this card. INHERIT follows the per-domain default. ON forces direct input active; OFF disables it so an accidental gesture can't change the entity."] = "Whether direct hardware input acts on this card. INHERIT follows the per-domain default. ON forces direct input active; OFF disables it so an accidental gesture can't change the entity."
+    m["Who's home"] = "Wer ist zuhause"
+    m["Workshop"] = "Workshop"
+}
+
+private fun populate_german_8(m: MutableMap<String, String>) {
+    m["Wrap the socket in SSL."] = "Wrap the socket in SSL."
+    m["Yes"] = "Ja"
+    m["You can change the name later in Settings."] = "You can change the name later in Settings."
+    m["Your home. One simple panel."] = "Dein Zuhause. Ein einfaches Panel."
+    m["Your home.\nOne simple panel."] = "Dein Zuhause.\nEin einfaches Panel."
+    m["ZIGBEE PAIR"] = "ZIGBEE-KOPPLUNG"
+    m["ZONES"] = "ZONEN"
+    m["Zigbee pair"] = "Zigbee-Kopplung"
+    m["Zones"] = "Zonen"
+    m["active"] = "aktiv"
+    m["ask HA…"] = "ask HA…"
+    m["away"] = "away"
+    m["boost"] = "boost"
+    m["clear"] = "keine"
+    m["comfort"] = "comfort"
+    m["connected"] = "verbunden"
+    m["cool"] = "cool"
+    m["detected"] = "erkannt"
+    m["disconnected"] = "getrennt"
+    m["dry"] = "dry"
+    m["eco"] = "eco"
+    m["failed"] = "fehlgeschlagen"
+    m["fan only"] = "fan only"
+    m["full"] = "full"
+    m["heat"] = "heat"
+    m["high"] = "high"
+    m["input_*, counter, timer"] = "input_*, counter, timer"
+    m["just now"] = "gerade eben"
+    m["loaded"] = "geladen"
+    m["low"] = "low"
+    m["medium"] = "medium"
+    m["never"] = "nie"
+    m["none"] = "none"
+    m["optional"] = "optional"
+    m["or toggle"] = "or toggle"
+    m["silent"] = "silent"
+    m["sleep"] = "sleep"
+    m["stopped"] = "gestoppt"
+    m["system default"] = "Systemstandard"
+    m["unavailable"] = "unavailable"
+    m["unknown"] = "unbekannt"
+    m["unknown error"] = "unbekannter Fehler"
+    m["unsupported"] = "nicht unterstützt"
+    m["waiting"] = "warten"
+    m["· ON/OFF"] = "· ON/OFF"
+    m["· TRIGGER"] = "· TRIGGER"
+    m["Ładowanie panelu..."] = "Ładowanie panelu..."
+    m["‹  BACK"] = "‹  ZURÜCK"
+    m["← UP"] = "← UP"
+    m["↑ COLLAPSE"] = "↑ COLLAPSE"
+    m["↓ EXPAND"] = "↓ EXPAND"
+    m["▶ ACTIVATE"] = "▶ ACTIVATE"
+    m["▶ TAP TO EXPAND"] = "▶ TAP TO EXPAND"
+    m["▼ TAP TO COLLAPSE"] = "▼ TAP TO COLLAPSE"
+    m["◀  MOVE LEFT"] = "◀  NACH LINKS VERSCHIEBEN"
+    m["○ OFF"] = "○ OFF"
+    m["● FIRED"] = "● FIRED"
+    m["● ON"] = "● ON"
+    m["★ FAVS"] = "★ FAVS"
+}
+
+private val germanExact: Map<String, String> by lazy {
+    val map = HashMap<String, String>(909)
+    populate_german_0(map)
+    populate_german_1(map)
+    populate_german_2(map)
+    populate_german_3(map)
+    populate_german_4(map)
+    populate_german_5(map)
+    populate_german_6(map)
+    populate_german_7(map)
+    populate_german_8(map)
+    map
+}
 
 private val germanRegex = listOf(
     Regex("^(.+) VOLUME$") to "LAUTSTÄRKE $1",
@@ -561,34 +948,10 @@ private val germanRegex = listOf(
     Regex("^(\\d+) active$") to "$1 aktiv",
     Regex("^(\\d+) modified$") to "$1 geändert",
     Regex("^SUMMARY · (.*)$") to "ZUSAMMENFASSUNG · $1",
+    Regex("^No data for (.*)$") to "Keine Daten für $1",
+    Regex("^Entity (.*) is unavailable$") to "Entität $1 ist nicht verfügbar",
+    Regex("^No tiles in popup. In Studio set Panel to: (.*)$") to "Keine Kacheln im Popup. In Studio Panel einstellen auf: $1",
 )
 
-private val germanFragments = listOf(
-    "Tap anywhere to dismiss" to "Zum Schließen überall tippen",
-    "Tap to toggle" to "Tippen zum Umschalten",
-    "Tap to open app" to "Tippen zum Öffnen der App",
-    "Tap to stop" to "Tippen zum Stoppen",
-    "Tap to talk again" to "Tippen zum erneuten Sprechen",
-    "Tap to talk to Home Assistant" to "Tippen, um mit Home Assistant zu sprechen",
-    "No favourites yet" to "Noch keine Favoriten",
-    "Pick entities to control from your HA setup." to "Wähle Entitäten aus deiner HA-Konfiguration zum Steuern aus.",
-    "Pull to refresh" to "Zum Aktualisieren ziehen",
-    "Something went wrong" to "Etwas ist schiefgelaufen",
-    "Auth lost; sign in again" to "Authentifizierung verloren; erneut anmelden",
-    "Connecting…" to "Verbinden…",
-    "Reconnecting…" to "Neu verbinden…",
-    "Disconnected" to "Getrennt",
-    "Home Assistant URL" to "Home Assistant URL",
-    "Sign in" to "Anmelden",
-    "Open HA in browser" to "HA im Browser öffnen",
-    "Use a long-lived token instead" to "Stattdessen langlebigen Zugriffstoken verwenden",
-    "Long-lived token" to "Langlebiger Zugriffstoken",
-    "Refresh" to "Aktualisieren",
-    "Copy" to "Kopieren",
-    "Share" to "Teilen",
-    "Remove" to "Entfernen",
-    "Create backup" to "Backup erstellen",
-    "Release notes" to "Releasenotizen",
-    "Source code" to "Quellcode",
-    "File a bug" to "Fehler melden",
+private val germanFragments = listOf<Pair<String, String>>(
 )

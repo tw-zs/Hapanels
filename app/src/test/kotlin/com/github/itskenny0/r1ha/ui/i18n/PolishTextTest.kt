@@ -27,7 +27,7 @@ class PolishTextTest {
             "CARDS" to "KARTY",
             "OPEN HAPANELS" to "OTWÓRZ HAPANELS",
             "SAVE AND CONTINUE" to "ZAPISZ I KONTYNUUJ",
-            "Use a long-lived token instead" to "Użyj tokena długoterminowego",
+            "Use a long-lived token instead" to "Użyj długoterminowego tokena dostępu",
         )
 
         expected.forEach { (source, translation) ->

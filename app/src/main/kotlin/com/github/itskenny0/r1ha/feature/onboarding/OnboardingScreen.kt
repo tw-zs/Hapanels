@@ -131,7 +131,7 @@ fun OnboardingScreen(
         mqttUseTls = appSettings.advanced.mqttUseTls
     }
     DisposableEffect(context, discoveryAttempt) {
-        val nsd = context.getSystemService(Context.NSD_SERVICE) as? NsdManager
+        val nsd = context.applicationContext.getSystemService(Context.NSD_SERVICE) as? NsdManager
         val listener = nsd?.let { manager ->
             HaNsdDiscovery(
                 nsd = manager,

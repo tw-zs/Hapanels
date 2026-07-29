@@ -57,6 +57,15 @@ class GermanTextTest {
     }
 
     @Test
+    fun `translates settings root groups to german`() {
+        assertThat(translateUiText("Connection", language = "de")).isEqualTo("Verbindung")
+        assertThat(translateUiText("Theme, card UI, dashboard", language = "de"))
+            .isEqualTo("Design, Kartenoberfläche, Dashboard")
+        assertThat(translateUiText("Search, Assist, scenes and tools", language = "de"))
+            .isEqualTo("Suche, Assist, Szenen und Werkzeuge")
+    }
+
+    @Test
     fun `no regression in polish translations`() {
         assertThat(translateUiText("Welcome to Hapanels!", language = "pl")).isEqualTo("Witaj w Hapanels!")
         assertThat(translateUiText("IDLE", language = "pl")).isEqualTo("BEZCZYNNE")

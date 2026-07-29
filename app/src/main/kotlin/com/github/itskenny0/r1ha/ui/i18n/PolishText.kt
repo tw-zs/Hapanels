@@ -714,6 +714,7 @@ private val polishExact = mapOf(
     "Scrolling past the last card wraps to the first" to "Przewinięcie za ostatnią kartą wraca do pierwszej",
     "Sea blue, mist, and pink dawn." to "Morski błękit, mgła i różowy świt.",
     "Search" to "Szukaj",
+    "Search, Assist, scenes and tools" to "Wyszukiwanie, Assist, sceny i narzędzia",
     "Sensor decimals" to "Miejsca dziesiętne czujników",
     "Sensor history hours" to "Godziny historii czujników",
     "Sensor history length" to "Długość historii czujnika",

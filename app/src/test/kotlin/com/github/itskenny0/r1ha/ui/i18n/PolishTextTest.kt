@@ -56,6 +56,15 @@ class PolishTextTest {
     }
 
     @Test
+    fun `translates settings root groups`() {
+        assertThat(translateUiText("Connection", language = "pl")).isEqualTo("Połączenie")
+        assertThat(translateUiText("Theme, card UI, dashboard", language = "pl"))
+            .isEqualTo("Motyw, UI kart, pulpit")
+        assertThat(translateUiText("Search, Assist, scenes and tools", language = "pl"))
+            .isEqualTo("Wyszukiwanie, Assist, sceny i narzędzia")
+    }
+
+    @Test
     fun `static compose text literals have polish translations`() {
         val untranslatedNames = setOf(
             "Hapanels",

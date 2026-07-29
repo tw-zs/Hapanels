@@ -84,10 +84,9 @@ import com.github.itskenny0.r1ha.feature.panelgrid.HapanelsTileSize
 import com.github.itskenny0.r1ha.feature.panelgrid.PanelIcons
 import com.github.itskenny0.r1ha.nav.AppNavGraph
 import com.github.itskenny0.r1ha.nav.startupDestination
-import java.time.LocalDate
+import com.github.itskenny0.r1ha.ui.i18n.formatPanelDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
 
 private data class StartupState(val settings: AppSettings, val destination: String)
@@ -750,12 +749,7 @@ private fun AodClock(
     modifier: Modifier,
     style: HapanelsAodClockStyle = HapanelsAodClockStyle.DEFAULT,
 ) {
-    val today = LocalDate.now()
-    val dateText = buildString {
-        append(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("pl", "PL")))
-        append(", ")
-        append(today.format(DateTimeFormatter.ofPattern("dd MMMM", Locale("pl", "PL"))))
-    }
+    val dateText = formatPanelDate(java.time.LocalDate.now())
     val timeText = now.format(DateTimeFormatter.ofPattern("HH:mm"))
     val monoton = FontFamily(Font(R.font.monoton_regular))
     val zaklad = FontFamily(Font(R.font.zaklad_regular))
@@ -1011,7 +1005,7 @@ private fun AodClock(
                 ElectricAodTime(timeText, timeSize, glassAntiqua, alpha)
                 Box(modifier = Modifier.background(Color(0xFFE93391).copy(alpha = alpha)).padding(horizontal = 22.dp, vertical = 5.dp)) {
                     com.github.itskenny0.r1ha.ui.i18n.Text(
-                        text = dateText.uppercase(Locale("pl", "PL")),
+                        text = dateText.uppercase(Locale.getDefault()),
                         style = R1.body.copy(fontSize = dateSize, fontWeight = FontWeight.Black, letterSpacing = 2.sp),
                         color = Color.Black.copy(alpha = alpha),
                         maxLines = 1,

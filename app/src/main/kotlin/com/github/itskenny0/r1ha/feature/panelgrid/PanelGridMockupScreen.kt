@@ -81,6 +81,7 @@ import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
 import androidx.compose.ui.res.stringResource
 import com.github.itskenny0.r1ha.ui.i18n.Text
+import com.github.itskenny0.r1ha.ui.i18n.formatPanelDate
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -88,10 +89,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlin.math.abs
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
 import java.util.Locale
 import org.json.JSONObject
 
@@ -124,12 +123,7 @@ fun PanelGridMockupScreen(
     val compact = cfg.screenWidthDp < 820
     val systemDark = (cfg.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
     val now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-    val today = LocalDate.now()
-    val dateText = buildString {
-        append(today.dayOfWeek.getDisplayName(TextStyle.FULL, Locale("pl", "PL")))
-        append(", ")
-        append(today.format(DateTimeFormatter.ofPattern("dd MMMM", Locale("pl", "PL"))))
-    }
+    val dateText = formatPanelDate(java.time.LocalDate.now())
     val context = LocalContext.current.applicationContext
     val renderConfig by produceState<HapanelsPanelRenderConfig?>(initialValue = null, key1 = context, key2 = systemDark) {
         val changes = Channel<Unit>(Channel.CONFLATED)

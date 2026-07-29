@@ -32,7 +32,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.itskenny0.r1ha.R
 import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.ha.ToDoItem
 import com.github.itskenny0.r1ha.core.ha.ToDoList
@@ -128,18 +130,13 @@ fun ToDoScreen(
                         ui.loadingLists && ui.lists.isEmpty() ->
                             CenteredSpinner()
                         ui.lists.isEmpty() ->
-                            EmptyText(
-                                "No to-do lists found.\n\n" +
-                                "Add one in Home Assistant: Settings → Devices & services " +
-                                "→ Add integration → Local To-do. Or install one of the " +
-                                "Google Tasks / CalDAV / Shopping List integrations.",
-                            )
+                            EmptyText(stringResource(R.string.todo_no_lists))
                         ui.activeEntityId == null ->
-                            EmptyText("Pick a list to view items.")
+                            EmptyText(stringResource(R.string.todo_pick_list))
                         ui.loadingItems && ui.items.isEmpty() ->
                             CenteredSpinner()
                         ui.items.isEmpty() ->
-                            EmptyText("List is empty.")
+                            EmptyText(stringResource(R.string.todo_empty_list))
                         else ->
                             androidx.compose.material3.pulltorefresh.PullToRefreshBox(
                                 isRefreshing = ui.loadingItems,

@@ -79,9 +79,9 @@ fun LongLivedTokenScreen(
             scope.launch {
                 try {
                     val normalisedUrl = com.github.itskenny0.r1ha.feature.onboarding.normalizeServerUrl(url)
-                    require(normalisedUrl.isNotBlank()) { "Wpisz adres Home Assistant." }
+                    require(normalisedUrl.isNotBlank()) { "Enter Home Assistant URL." }
                     val cleanedToken = token.filterNot(Char::isWhitespace)
-                    require(cleanedToken.isNotBlank()) { "Wklej token długoterminowy." }
+                    require(cleanedToken.isNotBlank()) { "Paste long-lived access token." }
                     validateLongLivedToken(http, normalisedUrl, cleanedToken)
 
                     val previousSettings = settings.settings.first()
@@ -89,7 +89,7 @@ fun LongLivedTokenScreen(
                     val savedTokens = Tokens(cleanedToken, "", Long.MAX_VALUE)
                     try {
                         tokens.save(savedTokens)
-                        check(tokens.load() == savedTokens) { "Nie udało się potwierdzić zapisu tokena." }
+                        check(tokens.load() == savedTokens) { "Failed to verify saved token." }
                         settings.update {
                             it.copy(
                                 server = ServerConfig(normalisedUrl),
@@ -101,12 +101,12 @@ fun LongLivedTokenScreen(
                                 it.server?.url == normalisedUrl &&
                                     (!onboardingMode || it.onboardingStage == OnboardingStage.PANEL_NAME)
                             },
-                        ) { "Nie udało się potwierdzić zapisu serwera." }
+                        ) { "Failed to verify saved server." }
                     } catch (t: Throwable) {
                         withContext(NonCancellable) {
                             runCatching {
                                 if (previousTokens == null) tokens.clear() else tokens.save(previousTokens)
-                                check(tokens.load() == previousTokens) { "Nie udało się przywrócić poprzedniego tokena." }
+                                check(tokens.load() == previousTokens) { "Failed to rollback token." }
                             }.onFailure { R1Log.e("LLAT", "token rollback failed", it) }
                             runCatching {
                                 settings.update {
@@ -120,19 +120,19 @@ fun LongLivedTokenScreen(
                                         it.server == previousSettings.server &&
                                             it.onboardingStage == previousSettings.onboardingStage
                                     },
-                                ) { "Nie udało się przywrócić poprzednich ustawień." }
+                                ) { "Failed to rollback settings." }
                             }.onFailure { R1Log.e("LLAT", "settings rollback failed", it) }
                         }
                         throw t
                     }
                     haRepository.reconnectNow(force = true)
-                    Toaster.show("Token zapisany · łączenie…")
+                    Toaster.show("Token saved · connecting…")
                     onBack()
                 } catch (t: CancellationException) {
                     throw t
                 } catch (t: Throwable) {
                     R1Log.w("LLAT", "validation or save failed: ${t::class.simpleName}")
-                    error = t.message ?: "Nie udało się połączyć."
+                    error = t.message ?: "Failed to connect."
                 } finally {
                     saving = false
                 }
@@ -142,20 +142,20 @@ fun LongLivedTokenScreen(
 
     Box(Modifier.fillMaxSize().background(OnboardingBg)) {
         AuthPage(
-            title = "Wprowadź token długoterminowy",
-            description = "Token zostanie sprawdzony przez Home Assistant przed bezpiecznym zapisem.",
+            title = "Enter long-lived access token",
+            description = "Token will be checked by Home Assistant before saving.",
             onBack = onBack,
         ) {
         val tokenTop = if (onboardingMode && initialUrl.isNotBlank()) 278.dp else 356.dp
         if (!onboardingMode || initialUrl.isBlank()) {
-            MockText("ADRES HOME ASSISTANT", 240.dp, 238.dp, 800.dp, 15, com.github.itskenny0.r1ha.feature.onboarding.OnboardingSoft, bold = true)
+            MockText("HOME ASSISTANT URL", 240.dp, 238.dp, 800.dp, 15, com.github.itskenny0.r1ha.feature.onboarding.OnboardingSoft, bold = true)
             MockField(url, { url = it; error = null }, "http://homeassistant.local:8123", 240.dp, 255.dp, 800.dp, 58.dp)
         }
-        MockText("TOKEN DŁUGOTERMINOWY", 240.dp, tokenTop - 31.dp, 800.dp, 15, com.github.itskenny0.r1ha.feature.onboarding.OnboardingSoft, bold = true)
+        MockText("LONG-LIVED ACCESS TOKEN", 240.dp, tokenTop - 31.dp, 800.dp, 15, com.github.itskenny0.r1ha.feature.onboarding.OnboardingSoft, bold = true)
         MockField(
             value = token,
             onValueChange = { token = it; error = null },
-            placeholder = "Wklej token z profilu Home Assistant",
+            placeholder = "Paste token from Home Assistant profile",
             x = 240.dp,
             y = tokenTop,
             width = 620.dp,
@@ -164,7 +164,7 @@ fun LongLivedTokenScreen(
             visualTransformation = if (revealed) VisualTransformation.None else PasswordVisualTransformation(),
         )
         MockButton(
-            text = "WKLEJ",
+            text = "PASTE",
             x = 880.dp,
             y = tokenTop,
             width = 160.dp,
@@ -176,7 +176,7 @@ fun LongLivedTokenScreen(
             },
         )
         MockButton(
-            text = if (revealed) "UKRYJ TOKEN" else "POKAŻ TOKEN",
+            text = if (revealed) "HIDE TOKEN" else "REVEAL TOKEN",
             x = 240.dp,
             y = tokenTop + 142.dp,
             width = 190.dp,
@@ -187,7 +187,7 @@ fun LongLivedTokenScreen(
         )
         error?.let { MockText(it, 450.dp, tokenTop + 149.dp, 590.dp, 14, com.github.itskenny0.r1ha.feature.onboarding.OnboardingRed) }
         MockButton(
-            text = if (saving) "SPRAWDZANIE…" else "DALEJ",
+            text = if (saving) "CHECKING…" else "CONTINUE",
             x = 420.dp,
             y = 556.dp,
             width = 440.dp,
@@ -196,7 +196,7 @@ fun LongLivedTokenScreen(
             onClick = save,
         )
         MockText(
-            "Token nie pojawi się w logach i pozostanie zaszyfrowany na urządzeniu.",
+            "Token will not appear in logs and remains encrypted on device.",
             0.dp,
             674.dp,
             1280.dp,

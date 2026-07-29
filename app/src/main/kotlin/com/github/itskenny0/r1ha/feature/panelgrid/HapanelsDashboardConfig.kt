@@ -361,30 +361,30 @@ const val SAMPLE_HAPANELS_DASHBOARD_JSON = """
     },
     "entity_ids": [],
     "tiles": [
-      { "id": "aod_clock", "kind": "clock", "size": "large", "label": "Zegar", "icon": "clock", "accent": "white", "order": 0 },
-      { "id": "aod_presence", "kind": "entity", "size": "small", "label": "Obecność", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 1 },
-      { "id": "aod_temperature", "kind": "entity", "size": "small", "label": "Temperatura", "entity_id": "sensor.outside_temperature", "icon": "home_thermometer", "accent": "orange", "order": 2 }
+      { "id": "aod_clock", "kind": "clock", "size": "large", "label": "Clock", "icon": "clock", "accent": "white", "order": 0 },
+      { "id": "aod_presence", "kind": "entity", "size": "small", "label": "Presence", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 1 },
+      { "id": "aod_temperature", "kind": "entity", "size": "small", "label": "Temperature", "entity_id": "sensor.outside_temperature", "icon": "home_thermometer", "accent": "orange", "order": 2 }
     ]
   },
   "people": [
-    { "id": "person.michal", "name": "Michał", "state": "poza domem", "status": "away" },
-    { "id": "person.bartek", "name": "Bartek", "state": "poza domem", "status": "away" },
-    { "id": "person.marcin", "name": "Marcin", "state": "nieznany", "status": "unknown" },
-    { "id": "person.tomek", "name": "Tomek", "state": "w domu", "status": "home" }
+    { "id": "person.michal", "name": "Michał", "state": "away", "status": "away" },
+    { "id": "person.bartek", "name": "Bartek", "state": "away", "status": "away" },
+    { "id": "person.marcin", "name": "Marcin", "state": "unknown", "status": "unknown" },
+    { "id": "person.tomek", "name": "Tomek", "state": "home", "status": "home" }
   ],
   "tiles": [
-    { "id": "all_lights_off", "kind": "action", "size": "action", "label": "Zgaś wszystko", "icon": "lightbulb_off", "accent": "white", "order": 0 },
-    { "id": "alarm_settings", "kind": "action", "size": "action", "label": "Ustawienia alarmu", "short_label": "Alarm", "icon": "shield_lock", "accent": "white", "order": 1 },
-    { "id": "lights", "kind": "category", "size": "large", "label": "Oświetlenie", "entity_id": "group.all_lights", "icon": "lightbulb", "order": 10 },
-    { "id": "covers", "kind": "cover", "size": "large", "label": "Rolety i żaluzje", "short_label": "Rolety", "entity_id": "cover.all_covers", "icon": "blinds", "order": 11, "cover_visual": "blind", "cover_direction": "top" },
-    { "id": "climate", "kind": "category", "size": "large", "label": "Klimat", "entity_id": "climate.home", "icon": "home_thermometer", "order": 12 },
-    { "id": "cameras", "kind": "camera", "size": "large", "label": "Monitoring", "entity_id": "camera.front", "icon": "cctv", "order": 13 },
-    { "id": "gate", "kind": "category", "size": "large", "label": "Brama", "entity_id": "cover.gate", "icon": "gate", "order": 14 },
-    { "id": "energy", "kind": "entity", "size": "small", "label": "Energia", "entity_id": "sensor.home_power", "icon": "home_lightning", "accent": "red", "order": 20 },
-    { "id": "presence", "kind": "entity", "size": "small", "label": "Obecność w domu", "short_label": "Obecność", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 21 },
-    { "id": "watering", "kind": "entity", "size": "small", "label": "Podlewanie", "entity_id": "switch.garden_watering", "icon": "sprinkler", "order": 22 },
-    { "id": "settings", "kind": "action", "size": "small", "label": "Otwórz ustawienia", "short_label": "Ustawienia", "icon": "cog", "order": 23, "tap_action": { "type": "navigate", "destination": "settings" } }
+    { "id": "all_lights_off", "kind": "action", "size": "action", "label": "Turn off all", "icon": "lightbulb_off", "accent": "white", "order": 0 },
+    { "id": "alarm_settings", "kind": "action", "size": "action", "label": "Alarm settings", "short_label": "Alarm", "icon": "shield_lock", "accent": "white", "order": 1 },
+    { "id": "lights", "kind": "category", "size": "large", "label": "Lighting", "entity_id": "group.all_lights", "icon": "lightbulb", "order": 10 },
+    { "id": "covers", "kind": "cover", "size": "large", "label": "Blinds & Shades", "short_label": "Blinds", "entity_id": "cover.all_covers", "icon": "blinds", "order": 11, "cover_visual": "blind", "cover_direction": "top" },
+    { "id": "climate", "kind": "category", "size": "large", "label": "Climate", "entity_id": "climate.home", "icon": "home_thermometer", "order": 12 },
+    { "id": "cameras", "kind": "camera", "size": "large", "label": "Cameras", "entity_id": "camera.front", "icon": "cctv", "order": 13 },
+    { "id": "gate", "kind": "category", "size": "large", "label": "Gate", "entity_id": "cover.gate", "icon": "gate", "order": 14 },
+    { "id": "energy", "kind": "entity", "size": "small", "label": "Energy", "entity_id": "sensor.home_power", "icon": "home_lightning", "accent": "red", "order": 20 },
+    { "id": "presence", "kind": "entity", "size": "small", "label": "Home presence", "short_label": "Presence", "entity_id": "binary_sensor.presence_home", "icon": "motion_sensor", "order": 21 },
+    { "id": "watering", "kind": "entity", "size": "small", "label": "Watering", "entity_id": "switch.garden_watering", "icon": "sprinkler", "order": 22 },
+    { "id": "settings", "kind": "action", "size": "small", "label": "Open settings", "short_label": "Settings", "icon": "cog", "order": 23, "tap_action": { "type": "navigate", "destination": "settings" } }
   ],
-  "camera_actions": ["Lista kamer", "Pełny ekran"]
+  "camera_actions": ["Camera list", "Fullscreen"]
 }
 """

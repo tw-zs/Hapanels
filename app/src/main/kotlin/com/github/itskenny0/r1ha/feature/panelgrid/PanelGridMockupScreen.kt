@@ -79,6 +79,7 @@ import com.github.itskenny0.r1ha.ui.components.R1Button
 import com.github.itskenny0.r1ha.ui.components.R1ButtonVariant
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
 import com.github.itskenny0.r1ha.ui.components.r1RowPressable
+import androidx.compose.ui.res.stringResource
 import com.github.itskenny0.r1ha.ui.i18n.Text
 import com.github.itskenny0.r1ha.core.util.Toaster
 import kotlinx.coroutines.channels.Channel
@@ -201,7 +202,7 @@ fun PanelGridMockupScreen(
             val target = targetText.toEntityIdOrNull()
             val targetState = target?.let(displayedEntities::get)
             if (action.type in setOf("entity_default", "more_info") && target != null && targetState?.isAvailable != true) {
-                Toaster.error(if (targetState == null) "Brak danych dla ${target.value}" else "Encja ${target.value} jest niedostępna")
+                Toaster.error(if (targetState == null) "No data for ${target.value}" else "Entity ${target.value} is unavailable")
             } else when (action.type) {
                 "none" -> Unit
                 "navigate" -> action.destination?.let(onNavigate)
@@ -235,7 +236,7 @@ fun PanelGridMockupScreen(
                 HapanelsTileKind.POPUP -> { popupTile = tile; popupOpen = true }
                 else -> tile.legacyTapAction(displayedEntities)?.let { call ->
                     val state = displayedEntities[call.target]
-                    if (state?.isAvailable != true) Toaster.error(if (state == null) "Brak danych dla ${call.target.value}" else "Encja ${call.target.value} jest niedostępna")
+                    if (state?.isAvailable != true) Toaster.error(if (state == null) "No data for ${call.target.value}" else "Entity ${call.target.value} is unavailable")
                     else {
                         state.optimisticFor(call)?.let { showOptimistic(it, liveEntities[call.target]) }
                         scope.launch { haRepository.call(call) }
@@ -350,7 +351,7 @@ private fun LoadingPanelConfig() {
     val theme = LocalHapanelsTheme.current
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
-            "Ładowanie panelu...",
+            stringResource(R.string.panel_loading),
             color = theme.textPrimary.copy(alpha = 0.78f),
             style = R1.body.copy(
                 fontSize = 18.sp,
@@ -436,8 +437,8 @@ private fun WidePanel(
                         onSetPercent = { onSetCoverPercent(largeTiles[3], it) },
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PanelTextAction(config.cameraActions.getOrElse(0) { "Wyłącz kamery" }, modifier = Modifier.weight(1f))
-                        PanelTextAction(config.cameraActions.getOrElse(1) { "Włącz kamery" }, modifier = Modifier.weight(1f))
+                        PanelTextAction(config.cameraActions.getOrElse(0) { "Turn off cameras" }, modifier = Modifier.weight(1f))
+                        PanelTextAction(config.cameraActions.getOrElse(1) { "Turn on cameras" }, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -622,14 +623,14 @@ private fun EmptyPanelMessage(onOpenSettings: (() -> Unit)? = null) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                "Wejdź do Home Assistanta i w integracji Hapanels Studio dodaj swój pierwszy kafel.",
+                stringResource(R.string.panel_first_tile_hint),
                 color = theme.textPrimary.copy(alpha = 0.78f),
                 style = R1.body.copy(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 textAlign = TextAlign.Center,
             )
             onOpenSettings?.let {
                 R1Button(
-                    text = "Przejdź do ustawień aplikacji",
+                    text = stringResource(R.string.panel_go_to_settings),
                     onClick = it,
                     textStyle = R1.body.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 )
@@ -837,22 +838,22 @@ private fun PanelEntityMoreInfo(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            state?.friendlyName ?: "Więcej informacji",
+                            state?.friendlyName ?: stringResource(R.string.panel_more_info),
                             color = theme.textPrimary,
                             style = R1.body.copy(fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                         )
-                        Text(state?.id?.value ?: "Brak danych", color = theme.textMuted, style = R1.labelMicro)
+                        Text(state?.id?.value ?: stringResource(R.string.panel_no_data), color = theme.textMuted, style = R1.labelMicro)
                     }
-                    R1Button(text = "Zamknij", onClick = onClose, variant = R1ButtonVariant.Outlined, accent = theme.accentOrange)
+                    R1Button(text = stringResource(R.string.dialog_close), onClick = onClose, variant = R1ButtonVariant.Outlined, accent = theme.accentOrange)
                 }
                 if (state == null) {
-                    Text("Encja nie jest obecnie dostępna w Home Assistant.", color = theme.accentRed, style = R1.body)
+                    Text(stringResource(R.string.panel_entity_unavailable), color = theme.accentRed, style = R1.body)
                 } else if (state.id.domain == com.github.itskenny0.r1ha.core.ha.Domain.LIGHT) {
                     PanelLightMoreInfo(state, onCall)
                 } else {
-                    Text(state.rawState?.uppercase(Locale.getDefault()) ?: "BRAK DANYCH", color = state.statusColor(theme), style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold))
+                    Text(state.rawState?.uppercase(Locale.getDefault()) ?: stringResource(R.string.panel_no_data), color = state.statusColor(theme), style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold))
                     Text(
-                        state.attributesJson?.toString() ?: "Brak dodatkowych atrybutów.",
+                        state.attributesJson?.toString() ?: stringResource(R.string.panel_no_extra_attrs),
                         color = theme.textMuted,
                         style = R1.labelMicro.copy(fontSize = 12.sp),
                         maxLines = 14,
@@ -872,27 +873,27 @@ private fun PanelLightMoreInfo(state: EntityState, onCall: (ServiceCall) -> Unit
     var kelvin by remember(state.id, state.colorTempK) { mutableFloatStateOf((state.colorTempK ?: 2700).toFloat()) }
     val colorModes = state.supportedColorModes
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(if (state.isOn) "Włączone" else "Wyłączone", color = state.statusColor(theme), style = R1.body.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+        Text(if (state.isOn) "ON" else "OFF", color = state.statusColor(theme), style = R1.body.copy(fontSize = 20.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
         R1Button(
-            text = if (state.isOn) "Wyłącz" else "Włącz",
+            text = if (state.isOn) "TURN OFF" else "TURN ON",
             onClick = { onCall(ServiceCall.tapAction(state.id, state.isOn)) },
             accent = if (state.isOn) theme.accentRed else theme.accentGreen,
         )
     }
     if (state.supportsScalar) {
-        PanelMoreInfoSlider("Jasność", "${brightness.toInt()}%", brightness, 1f..100f, {
+        PanelMoreInfoSlider("BRIGHTNESS", "${brightness.toInt()}%", brightness, 1f..100f, {
             brightness = it
         }) { onCall(ServiceCall.setPercent(state.id, brightness.toInt())) }
     }
     if (colorModes.any { it in setOf("hs", "rgb", "rgbw", "rgbww", "xy") }) {
-        PanelMoreInfoSlider("Kolor", "${hue.toInt()}°", hue, 0f..360f, { hue = it }) {
+        PanelMoreInfoSlider("COLOR", "${hue.toInt()}°", hue, 0f..360f, { hue = it }) {
             onCall(ServiceCall.setLightHue(state.id, hue.toDouble(), brightness.toInt().coerceAtLeast(1)))
         }
     }
     if ("color_temp" in colorModes) {
         val minimum = (state.minColorTempK ?: 2000).toFloat()
         val maximum = (state.maxColorTempK ?: 6500).toFloat().coerceAtLeast(minimum + 1f)
-        PanelMoreInfoSlider("Temperatura barwowa", "${kelvin.toInt()} K", kelvin.coerceIn(minimum, maximum), minimum..maximum, { kelvin = it }) {
+        PanelMoreInfoSlider("COLOR TEMP", "${kelvin.toInt()} K", kelvin.coerceIn(minimum, maximum), minimum..maximum, { kelvin = it }) {
             onCall(ServiceCall.setLightColorTemp(state.id, kelvin.toInt(), brightness.toInt().coerceAtLeast(1)))
         }
     }
@@ -953,7 +954,7 @@ private fun PanelPopup(
             ) {
                 Text(tile.displayLabel(), color = theme.textPrimary, style = R1.body.copy(fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont))
                 if (tiles.isEmpty()) {
-                    Text("Brak kafli w popupie. W Studio ustaw Panel na: ${tile.panelId.orEmpty()}", color = theme.textMuted, style = R1.body)
+                    Text("No tiles in popup. In Studio set Panel to: ${tile.panelId.orEmpty()}", color = theme.textMuted, style = R1.body)
                 } else if (tiles.any { it.hasGridCell() }) {
                     PopupGrid(tiles, liveEntities, now, dateText, Modifier.weight(1f).fillMaxWidth(), onTileClick, onSetCoverPercent)
                 } else {
@@ -1024,15 +1025,15 @@ private fun PanelCameraTile(
                     maxLines = 1,
                 )
                 Text(
-                    text = "Podgląd na żywo",
+                    text = stringResource(R.string.panel_live_preview),
                     color = theme.textPrimary.copy(alpha = 0.72f),
                     style = R1.labelMicro.copy(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = NunitoPanelFont),
                 )
             }
             val cameraState = when {
-                liveState == null -> "PODGLĄD"
-                !liveState.isAvailable -> "NIEDOSTĘPNA"
-                else -> liveState.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "PODGLĄD"
+                liveState == null -> "PREVIEW"
+                !liveState.isAvailable -> "UNAVAILABLE"
+                else -> liveState.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "PREVIEW"
             }
             Text(
                 text = cameraState,
@@ -1067,8 +1068,8 @@ private fun PanelCameraTile(
         }
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PanelTextAction(cameraActions.getOrElse(0) { "Lista kamer" }, modifier = Modifier.weight(1f))
-            PanelTextAction(cameraActions.getOrElse(1) { "Pełny ekran" }, modifier = Modifier.weight(1f))
+            PanelTextAction(cameraActions.getOrElse(0) { "CAMERAS" }, modifier = Modifier.weight(1f))
+            PanelTextAction(cameraActions.getOrElse(1) { "FULLSCREEN" }, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -1324,7 +1325,7 @@ private fun PanelActionTile(
 private fun PanelLiveStatus(tile: HapanelsTileConfig, liveState: EntityState?, compact: Boolean) {
     val theme = LocalHapanelsTheme.current
     val pending = tile.entityId in LocalPendingTileEntities.current
-    val label = if (pending) "wysyłanie…" else tile.liveLabel(liveState) ?: return
+    val label = if (pending) "SENDING…" else tile.liveLabel(liveState) ?: return
     Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
     Text(
         label,
@@ -1550,15 +1551,15 @@ private fun HapanelsTileConfig.legacyTapAction(liveEntities: Map<EntityId, Entit
 
 private fun HapanelsTileConfig.liveLabel(liveState: EntityState?): String? {
     if (entityId.isNullOrBlank()) return null
-    val entity = entityId.toEntityIdOrNull() ?: return "niewspierane"
-    val state = liveState ?: return "oczekiwanie"
-    if (!state.isAvailable) return "niedostępne"
+    val entity = entityId.toEntityIdOrNull() ?: return "unsupported"
+    val state = liveState ?: return "waiting"
+    if (!state.isAvailable) return "unavailable"
     return when (entity.domain) {
         com.github.itskenny0.r1ha.core.ha.Domain.LIGHT,
         com.github.itskenny0.r1ha.core.ha.Domain.SWITCH,
         com.github.itskenny0.r1ha.core.ha.Domain.INPUT_BOOLEAN,
         com.github.itskenny0.r1ha.core.ha.Domain.AUTOMATION,
-        -> if (state.isOn) "włączone" else "wyłączone"
+        -> if (state.isOn) "on" else "off"
         com.github.itskenny0.r1ha.core.ha.Domain.COVER,
         com.github.itskenny0.r1ha.core.ha.Domain.VALVE,
         -> state.percent?.let { "$it%" } ?: state.rawState.orUnknown()
@@ -1568,18 +1569,18 @@ private fun HapanelsTileConfig.liveLabel(liveState: EntityState?): String? {
             state.climateHvacMode?.uppercase(Locale.getDefault()),
             state.climateCurrentTemperature?.let { "${it.formatPanelNumber()}°" }
                 ?: state.climateTargetTemperature?.let { "${it.formatPanelNumber()}°" },
-        ).joinToString(" ").ifBlank { "nieznane" }
+        ).joinToString(" ").ifBlank { "unknown" }
         com.github.itskenny0.r1ha.core.ha.Domain.MEDIA_PLAYER,
-        -> state.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "nieznane"
+        -> state.rawState?.uppercase(Locale.getDefault())?.takeIf { it.isNotBlank() } ?: "unknown"
         com.github.itskenny0.r1ha.core.ha.Domain.SENSOR,
         com.github.itskenny0.r1ha.core.ha.Domain.NUMBER,
         com.github.itskenny0.r1ha.core.ha.Domain.INPUT_NUMBER,
-        -> listOfNotNull(state.rawState, state.unit).joinToString(" ").ifBlank { "nieznane" }
+        -> listOfNotNull(state.rawState, state.unit).joinToString(" ").ifBlank { "unknown" }
         else -> state.rawState.orUnknown()
     }
 }
 
-private fun String?.orUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "nieznane"
+private fun String?.orUnknown(): String = this?.takeIf { it.isNotBlank() } ?: "unknown"
 
 private fun Double.formatPanelNumber(): String =
     if (this % 1.0 == 0.0) toInt().toString() else String.format(Locale.US, "%.1f", this)
@@ -1621,7 +1622,7 @@ private fun List<HapanelsTileConfig>.padPanelTiles(tileSize: HapanelsTileSize, c
             id = "placeholder_${tileSize.name.lowercase()}_$index",
             kind = HapanelsTileKind.ENTITY,
             size = tileSize,
-            label = "Brak kafla",
+            label = "No tile",
             icon = "mdi:cog",
             accent = HapanelsTileAccent.WHITE,
             order = Int.MAX_VALUE,

@@ -227,4 +227,52 @@
     <string name="loading">Loading…</string>
     <string name="empty_no_results">No results</string>
     <string name="error_generic">Something went wrong</string>
+
+    <!-- To-do lists -->
+    <string name="todo_no_lists">No to-do lists found.\n\nAdd one in Home Assistant: Settings → Devices &amp; services → Add integration → Local To-do. Or install one of the Google Tasks / CalDAV / Shopping List integrations.</string>
+    <string name="todo_pick_list">Pick a list to view items.</string>
+    <string name="todo_empty_list">List is empty.</string>
+
+    <!-- Updates screen -->
+    <string name="updates_empty">No update entities. HA exposes update.* entries once the Supervisor / add-ons / integrations are installed and configured to report versions.</string>
+    <string name="updates_load_failed">Updates load failed: %1$s</string>
+
+    <!-- Settings search & controls -->
+    <string name="settings_no_match">No settings match \"%1$s\".</string>
+    <string name="settings_search_placeholder">Search settings…</string>
+
+    <!-- ZHA Pairing -->
+    <string name="zha_instruction_idle">Tap PERMIT JOIN to open the Zigbee network. Power your new device on while the timer is counting; HA will discover it and surface it here.</string>
+    <string name="zha_waiting_devices">Waiting for devices… new entities will appear here as HA discovers them.</string>
+    <string name="zha_pairing_closed">Pairing window closed; no new entities detected yet. Some devices take 30-60 s to enrol after joining.</string>
+
+    <!-- Favorites picker -->
+    <string name="favorites_sort">SORT</string>
+    <string name="favorites_change_sort">Change sort order</string>
+    <string name="favorites_no_results_query">NO RESULTS FOR \"%1$s\"</string>
+    <string name="favorites_no_results_hint">Try another word. Search works across friendly names and entity_ids.</string>
+    <string name="favorites_no_supported_entities">NO SUPPORTED ENTITIES</string>
+    <string name="favorites_no_supported_hint">Home Assistant returned no controllable entities.</string>
+    <string name="favorites_no_favorites">NO FAVOURITES</string>
+    <string name="favorites_no_favorites_hint">Pick a filter above, then tap an entity to add it to favourites.</string>
+    <string name="favorites_empty_filter">EMPTY FILTER</string>
+    <string name="favorites_empty_filter_hint">Tap ALL above to see every entity.</string>
+    <string name="favorites_search">SEARCH</string>
+    <string name="favorites_search_placeholder">kitchen, .door, scene, ...</string>
+    <string name="favorites_preview_hold">PREVIEW · HOLD</string>
+    <string name="favorites_tap_to_dismiss">Tap anywhere to dismiss</string>
+    <string name="favorites_fetching_entities">FETCHING ENTITIES…</string>
+    <string name="favorites_error_reconnect">Open Settings → Sign out &amp; reconnect.</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+
+    <!-- Panel grid mockup -->
+    <string name="panel_loading">Loading panel…</string>
+    <string name="panel_first_tile_hint">Go to Home Assistant and add your first tile in Hapanels Studio.</string>
+    <string name="panel_go_to_settings">Go to app settings</string>
+    <string name="panel_more_info">More information</string>
+    <string name="panel_no_data">No data</string>
+    <string name="panel_entity_unavailable">Entity is not currently available in Home Assistant.</string>
+    <string name="panel_no_extra_attrs">No additional attributes.</string>
+    <string name="panel_live_preview">Live preview</string>
 </resources>

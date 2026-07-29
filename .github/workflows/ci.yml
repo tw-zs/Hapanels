@@ -45,3 +45,8 @@ jobs:
 
       - name: Build MkDocs documentation
         run: mkdocs build --strict
+
+      - name: Verify localized routes
+        run: |
+          grep -q 'href="/Hapanels/en/"' site/index.html
+          grep -q 'href="/Hapanels/"' site/en/index.html

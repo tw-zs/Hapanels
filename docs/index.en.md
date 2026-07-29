@@ -3,7 +3,7 @@
   <h1 style="font-size: 2.5rem; font-weight: 700; margin: 0 0 1.2rem; padding: 0; color: var(--md-default-fg-color); letter-spacing: -0.03em;">Hapanels</h1>
   <p style="font-size: 0.9rem; font-weight: 300; max-width: 552px; line-height: 1.6; color: var(--md-default-fg-color); margin: 0 0 2.5rem; opacity: 0.85;">
     An Android application for wall-mounted touch panels with a dedicated Home Assistant integration.
-    Offers direct support for Shelly Wall Display devices, integrating built-in relays, physical buttons, and proximity sensors.
+    Offers direct support for Shelly Wall Display devices, integrating the built-in relay, physical buttons, and proximity sensors.
   </p>
 
   <!-- Section separator -->

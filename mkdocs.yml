@@ -49,15 +49,16 @@ plugins:
   - search
   - i18n:
       docs_structure: suffix
-      fallback_to_default: true
+      fallback_to_default: false
       languages:
         - locale: pl
           name: Polski
+          link: /Hapanels/
           default: true
           build: true
         - locale: en
           name: English
-          link: /en/
+          link: /Hapanels/en/
           site_description: Native Home Assistant panel app for Shelly Wall Display and Android tablets.
           build: true
           theme:

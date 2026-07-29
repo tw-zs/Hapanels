@@ -223,37 +223,50 @@ Verification:
 
 Goal: panel appliance behavior suitable for wall mounting.
 
-Status: done for practical proximity, brightness, and native AOD foundation.
+Status: foundation started; brightness/screen manager diagnostics are usable, full screensaver/AOD renderer remains pending.
 
 Tasks:
 
-- `PanelScreenManager` lifecycle is wired from app startup.
-- Manual screen brightness control works through HA/MQTT and Shelly sysfs, with diagnostics for applied brightness.
-- Auto-brightness settings, smoothing, hysteresis, and HA/MQTT switch control are in place.
-- Screen mode, target brightness, and applied brightness are published as MQTT diagnostics.
-- `WRITE_SETTINGS` is requested/allowed for Shelly so Android does not override hardware brightness writes.
-- Proximity wake settings and threshold handling are wired through `PanelScreenManager`.
-- Screensaver/AOD timeout, mode state, user activity wake, and last wake/sleep reasons are tracked.
-- Native AOD renderer supports clock-only mode and AOD tile mode through the dashboard config model.
-- AOD clock style selection is persisted as `always_on_display.clock_style` and can be patched over MQTT/Studio.
-- AOD clock style pack is expanded to 13 unique styles, fully integrated with both the client app and Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient and streaks), Electric Stained Glass (stained glass and multi-colored numbers), and Poznan Goats (Amber typography with clock-offset and optimized Poznan goats artwork).
+- Port/adapt proximity wake behavior.
+- Add screensaver modes:
+  - black/off
+  - clock
+  - clock + date
+  - HA summary card
+- Add auto-brightness from light sensor.
+- Add brightness curve settings: min, max, smoothing, night mode.
+- Add inactivity timeout and wake reasons.
+- Evaluate `j-a-n/lovelace-wallpanel` before finalizing AOD/screensaver UX. Check which concepts should be ported as native Hapanels behavior: idle timer, fullscreen/chrome hiding, wake lock, motion/wake triggers, photo/video slideshow sources, and overlay cards/status widgets. Treat it as design/config inspiration, not as a Lovelace/WebView dependency.
 
-Next:
-- Optional polish: tune proximity and idle behavior on real mounted Shelly hardware after longer use.
-- Optional polish: add richer AOD sources later, such as photo/video slideshow or selected native status widgets, without making Hapanels depend on Lovelace/WebView.
+Verification:
+
+- Screen wakes on proximity.
+- Screensaver engages after timeout.
+- Brightness changes smoothly with ambient light.
+- Regular tablets without proximity still work with timeout/touch wake.
+- Manual and auto-brightness MQTT controls have been smoke-tested on the Shelly Wall Display.
+- AOD has a dashboard-config placeholder (`always_on_display`) for the future native renderer.
 
 ### Milestone 7: Production Hardening
 
-Goal: ship a maintainable panel appliance.
+Goal: make Hapanels installable and maintainable.
 
-Next:
-- Fix Shelly/Android system shade race: after leaving Hapanels Studio, a fast tap near the top-left hamburger can open Android `NotificationShade` and look like a black screen before the app/AOD view returns. Current evidence: app stays foreground, no crash, no FavoritesPicker navigation, `mExpandedPanel=NotificationShade`. Evaluate proper immersive/kiosk handling or a robust top-gesture guard instead of relying on layout padding.
-- Boot/autostart.
+Tasks:
+
+- Boot receiver/autostart option.
 - Kiosk mode options.
-- Floating return-to-app button when Hapanels is backgrounded or hidden.
-- Diagnostics export.
+- Backup/restore Hapanels settings.
+- Crash and diagnostic bundle export.
 - Hardware compatibility matrix.
-- Release workflow hardening and signed APK handling.
+- Release workflow and signed APK handling.
+- Manual test checklist for Shelly Wall Display.
+
+Verification:
+
+- Fresh install setup works.
+- Upgrade preserves settings.
+- Reboot autostarts when enabled.
+- Debug bundle gives enough data to troubleshoot hardware/MQTT/HA issues.
 
 ### Milestone 8: Native Panel Dashboard And HA Config Sync
 
@@ -297,76 +310,6 @@ Verification:
 - Grid and fullscreen camera views poll snapshots without stalling the rest of the panel.
 - Dashboard mockup shows a dedicated camera tile/section.
 - Camera browsing stays usable on both tablets and wall panels.
-
-### Milestone 10: First-Run Setup
-
-Goal: make first launch feel like a real device onboarding flow instead of a raw app start.
-
-Status: done for the production onboarding foundation.
-
-Done:
-- Guided first-run welcome, Home Assistant connection, authorization, and personalization screens.
-- Home Assistant OAuth sign-in with server probing and token exchange.
-- Long-lived access token setup remains available as an onboarding alternative to OAuth.
-- Tablet name persists into app settings and HA/MQTT-facing panel identity.
-- Panel Grid theme preset selection patches the persisted dashboard config without replacing its light/dark mode, AOD configuration, or tiles.
-- Startup choice is limited to `GRID` and `CARDS`, persists across restart, and replaces legacy Today/dashboard startup preferences and launcher links.
-
-Verification:
-
-- Startup stays in onboarding until both a server and non-blank access token are present.
-- OAuth and long-lived token paths can complete setup.
-- Tablet name, Panel Grid theme, and `GRID` / `CARDS` start view persist after restart.
-- Legacy start-view settings and backups migrate compatibly; startup and launcher shortcuts never open Today.
-- Onboarding strings have focused Polish localization coverage.
-
-### Milestone 11: Secure MQTT And Studio Onboarding
-
-Goal: include real MQTT and Hapanels Studio setup in first-run onboarding without storing credentials insecurely or showing simulated connection states.
-
-Status: planned.
-
-Tasks:
-
-- Move MQTT credentials from regular DataStore into encrypted storage.
-- Migrate existing MQTT credentials and remove plaintext values after successful migration.
-- Add MQTT onboarding for host, port, TLS, username, password, connection test, and optional skip.
-- Report real broker connection status and actionable connection errors.
-- Add Hapanels Studio setup based on actual MQTT/config-sync availability.
-- Detect and display real Studio readiness instead of a simulated connected state.
-- Add MQTT and Studio results to the final onboarding checklist.
-
-Verification:
-
-- MQTT password never persists in plaintext settings.
-- Valid broker credentials establish a real connection.
-- Invalid credentials and unreachable brokers show useful errors.
-- Studio status reflects actual configuration-sync availability.
-- Both steps can be skipped without blocking onboarding.
-
-### Milestone 12: Adaptive Display Brightness
-
-Goal: keep AOD readable during the day and keep both AOD and the active panel comfortable at night.
-
-Status: planned.
-
-Tasks:
-
-- Replace separate AOD and panel brightness behavior with one ambient-light controller.
-- Add independently tunable AOD and active-panel brightness curves with calibrated minimum and maximum levels.
-- Smooth noisy lux readings and use hysteresis, dwell time, and gradual transitions to prevent visible brightness jumps.
-- Prevent feedback where screen brightness changes alter the panel's own ambient-light reading.
-- Preserve manual brightness as an explicit override with a clear path back to adaptive mode.
-- Expose calibration and diagnostics in Hapanels Studio, including lux, filtered lux, target brightness, applied brightness, and active override source.
-- Tune day, evening, and night behavior on mounted Shelly Wall Display hardware.
-
-Verification:
-
-- AOD remains readable in a bright room without running at unnecessary full brightness.
-- AOD and the active panel do not dazzle in a dark room.
-- Walking toward the panel and leaving AOD produces no flash, dip, or oscillation.
-- Rapid or screen-induced lux changes do not cause repeated brightness writes.
-- Behavior remains predictable with auto-brightness disabled or the ambient-light sensor unavailable.
 
 ## Major Risks
 

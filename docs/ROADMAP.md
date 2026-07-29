@@ -11,6 +11,7 @@ Goal: make the app feel like a wall panel/tablet app instead of a small-screen c
 Status: done for runtime product shell.
 
 Done:
+
 - Branding, icon, README, and panel diagnostics entry points.
 - Tablet-first dashboard default for fresh installs.
 - Panel hardware/provider mode settings.
@@ -20,6 +21,7 @@ Done:
 - Non-runtime comments were swept so product-shell documentation describes Hapanels as a panel app.
 
 Next:
+
 - Optional future cleanup: migrate inherited package/internal type names if the cost is justified.
 
 ## Milestone 2: Hardware Abstraction Layer
@@ -29,6 +31,7 @@ Goal: introduce a clean hardware boundary that can run on normal Android tablets
 Status: done for the HAL foundation.
 
 Done:
+
 - `PanelHardware` interface.
 - `AndroidTabletHardware` fallback provider.
 - `ShellyWallDisplayHardware` safe stub provider.
@@ -41,6 +44,7 @@ Done:
 - Shelly-native button and relay runtime state now flows through the same HAL boundary.
 
 Next:
+
 - Optional polish: localize all remaining hardware diagnostics labels.
 - Optional polish: add richer diagnostics around provider start/stop failures.
 
@@ -51,6 +55,7 @@ Goal: physical Shelly buttons produce reliable button events and can trigger loc
 Status: done for current Shelly Wall Display hardware.
 
 Done:
+
 - Shared button event model.
 - Pressed-button runtime state field.
 - `PanelButtonPressDetector` for short, long, double, and triple presses.
@@ -68,6 +73,7 @@ Done:
 - `PanelMqttBridge` publishes button pressed state and click event topics for HA discovery/state surfaces.
 
 Next:
+
 - Optional future polish: let button action rows choose relay id once more than one relay is supported.
 - Optional future polish: add built-in navigation/screen action targets if they prove useful on the mounted panel.
 
@@ -78,6 +84,7 @@ Goal: Shelly relay and sensor state works locally and appears in Hapanels diagno
 Status: done for relay 1, real ambient-light exposure, and capability-based panel control tiles.
 
 Done:
+
 - Relay 1 sysfs state read/write helper with unit coverage.
 - `ShellyWallDisplayHardware` keeps relay 1 state in `PanelHardwareRuntimeState` after local writes.
 - Ambient light and proximity runtime readings are sanitized so invalid sensor values are treated as missing.
@@ -89,6 +96,7 @@ Done:
 - Local panel tiles can render relay 1, screen brightness, auto-brightness, ambient light, and panel status without fake sensor data.
 
 Next:
+
 - Add temperature/humidity only when a reliable hardware or integration source exists.
 
 ## Milestone 5: MQTT Discovery
@@ -98,6 +106,7 @@ Goal: Home Assistant discovers the panel as a device with relays, buttons, senso
 Status: done and smoke-tested against the user's Home Assistant MQTT broker.
 
 Done:
+
 - MQTT settings for host, port, TLS, username, password, and client id.
 - Lightweight MQTT v3.1.1 session with publish, subscribe, ping, and disconnect.
 - Discovery config publisher for relays, button pressed state, button click event sensors, and screen brightness.
@@ -117,6 +126,7 @@ Done:
 - Real Home Assistant smoke tests for relay 1, brightness, auto-brightness, availability, diagnostics, and dashboard metadata.
 
 Next:
+
 - Add Home Assistant device metadata refinements if HA UI naming needs polish.
 
 ## Milestone 6: Proximity, Brightness, AOD
@@ -126,6 +136,7 @@ Goal: make Hapanels useful as an always-mounted wall panel.
 Status: done for practical proximity, brightness, and native AOD foundation.
 
 Done:
+
 - `PanelScreenManager` lifecycle is wired from app startup.
 - Manual screen brightness control works through HA/MQTT and Shelly sysfs, with diagnostics for applied brightness.
 - Auto-brightness settings, smoothing, hysteresis, and HA/MQTT switch control are in place.
@@ -135,9 +146,10 @@ Done:
 - Screensaver/AOD timeout, mode state, user activity wake, and last wake/sleep reasons are tracked.
 - Native AOD renderer supports clock-only mode and AOD tile mode through the dashboard config model.
 - AOD clock style selection is persisted as `always_on_display.clock_style` and can be patched over MQTT/Studio.
-- AOD clock style pack is expanded to 13 unical styles, fully integrated with both the client app and Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient and streaks), Electric Stained Glass (stained glass and multi-colored numbers), and Poznan Goats (Amber typography with clock-offset and optimized Poznan goats artwork).
+- AOD clock style pack is expanded to 13 unique styles, fully integrated with both the client app and Hapanels Studio: default, modern, Warsaw Zaklad, Cyberpunk Korpo, Zew Puszczy, popart, Fabryka Koloru, Italic Editorial, Szeroki, wide bold, Neon Baltic (gradient and streaks), Electric Stained Glass (stained glass and multi-colored numbers), and Poznan Goats (Amber typography with clock-offset and optimized Poznan goats artwork).
 
 Next:
+
 - Optional polish: tune proximity and idle behavior on real mounted Shelly hardware after longer use.
 - Optional polish: add richer AOD sources later, such as photo/video slideshow or selected native status widgets, without making Hapanels depend on Lovelace/WebView.
 
@@ -146,6 +158,7 @@ Next:
 Goal: ship a maintainable panel appliance.
 
 Next:
+
 - Fix Shelly/Android system shade race: after leaving Hapanels Studio, a fast tap near the top-left hamburger can open Android `NotificationShade` and look like a black screen before the app/AOD view returns. Current evidence: app stays foreground, no crash, no FavoritesPicker navigation, `mExpandedPanel=NotificationShade`. Evaluate proper immersive/kiosk handling or a robust top-gesture guard instead of relying on layout padding.
 - Boot/autostart.
 - Kiosk mode options.
@@ -161,6 +174,7 @@ Goal: let Home Assistant manage Hapanels dashboard configuration while Hapanels 
 Status: started.
 
 Done:
+
 - Native dark panel-grid mockup route in Compose.
 - Tablet-oriented grid with clock, people, action tiles, large room tiles, and compact status tiles.
 - Local Nunito font resources for the new panel dashboard.
@@ -179,6 +193,7 @@ Done:
 - Hapanels Studio can select AOD clock styles and apply them via dashboard patch commands.
 
 Next:
+
 - Add drilldown panels: `panel_id` opens a native panel, backed by a persisted panel/card schema in dashboard config.
 - Continue Hapanels Studio layout polish after the editor rebuild, especially icon picker sizing and mobile wrapping.
 - Improve Hapanels Studio preview fidelity: match the Compose tablet renderer more closely for tile geometry, clock/person section, camera/action tiles, spacing, typography, and responsive behavior. Current HTML preview is useful for editing but not pixel-perfect.
@@ -192,6 +207,7 @@ Goal: bring camera viewing into the native panel experience in a way that feels 
 Status: planned.
 
 Tasks:
+
 - Add a native camera browser with list/grid modes and live snapshot polling.
 - Add fullscreen camera overlay/detail with fast refresh tuning.
 - Extend the dashboard mockup with camera-focused tiles and quick actions.
@@ -199,6 +215,7 @@ Tasks:
 - Use Phylax as inspiration for camera browsing, live status presentation, and touch-friendly camera detail flows.
 
 Verification:
+
 - Camera entities from HA appear in the native camera browser.
 - Grid and fullscreen camera views poll snapshots without stalling the rest of the panel.
 - Dashboard mockup shows a dedicated camera tile/section.
@@ -214,6 +231,7 @@ Goal: make first launch feel like a real device onboarding flow instead of a raw
 Status: done for the production onboarding foundation.
 
 Done:
+
 - Guided first-run welcome, Home Assistant connection, authorization, and personalization screens.
 - Home Assistant OAuth sign-in with server probing and token exchange.
 - Long-lived access token setup remains available as an onboarding alternative to OAuth.
@@ -222,6 +240,7 @@ Done:
 - Startup choice is limited to `GRID` and `CARDS`, persists across restart, and replaces legacy Today/dashboard startup preferences and launcher links.
 
 Verification:
+
 - Startup stays in onboarding until both a server and non-blank access token are present.
 - OAuth and long-lived token paths can complete setup.
 - Tablet name, Panel Grid theme, and `GRID` / `CARDS` start view persist after restart.
@@ -235,6 +254,7 @@ Goal: include real MQTT and Hapanels Studio setup in first-run onboarding withou
 Status: planned.
 
 Tasks:
+
 - Move MQTT credentials from regular DataStore into encrypted storage.
 - Migrate existing MQTT credentials and remove plaintext values after successful migration.
 - Add MQTT onboarding for host, port, TLS, username, password, connection test, and optional skip.
@@ -244,6 +264,7 @@ Tasks:
 - Add MQTT and Studio results to the final onboarding checklist.
 
 Verification:
+
 - MQTT password never persists in plaintext settings.
 - Valid broker credentials establish a real connection.
 - Invalid credentials and unreachable brokers show useful errors.
@@ -257,6 +278,7 @@ Goal: keep AOD readable during the day and keep both AOD and the active panel co
 Status: planned.
 
 Tasks:
+
 - Replace separate AOD and panel brightness behavior with one ambient-light controller.
 - Add independently tunable AOD and active-panel brightness curves with calibrated minimum and maximum levels.
 - Smooth noisy lux readings and use hysteresis, dwell time, and gradual transitions to prevent visible brightness jumps.
@@ -266,6 +288,7 @@ Tasks:
 - Tune day, evening, and night behavior on mounted Shelly Wall Display hardware.
 
 Verification:
+
 - AOD remains readable in a bright room without running at unnecessary full brightness.
 - AOD and the active panel do not dazzle in a dark room.
 - Walking toward the panel and leaving AOD produces no flash, dip, or oscillation.

@@ -45,3 +45,11 @@ adb shell appops set com.github.twzs.hapanels android:write_settings allow
 ### **Krok 3. Połącz z Home Assistant**
 1. **Zaloguj się:** Otwórz aplikację na urządzeniu i połącz się ze swoją instancją Home Assistant przez OAuth (adres powrotny logowania to `r1ha://auth-callback`).
 2. **Włącz MQTT (Opcjonalnie):** Jeśli masz uruchomiony broker MQTT w Home Assistant, Hapanels automatycznie wykryje panel i doda jego fizyczny przekaźnik oraz czujniki do Twojego systemu.
+
+## Konfiguracja Hapanels
+
+<div class="screenshot-grid screenshot-grid--three">
+  <figure><img loading="lazy" src="../assets/onboarding/onboarding-pl-01-welcome.png" alt=""><figcaption>Start konfiguracji</figcaption></figure>
+  <figure><img loading="lazy" src="../assets/onboarding/onboarding-pl-04-mqtt.png" alt=""><figcaption>Połączenie MQTT</figcaption></figure>
+  <figure><img loading="lazy" src="../assets/onboarding/onboarding-pl-05-studio.png" alt=""><figcaption>Hapanels Studio</figcaption></figure>
+</div>

@@ -92,7 +92,7 @@ Done:
 - Temperature/humidity are intentionally not exposed until the hardware provides reliable readings.
 - Relay 1 read/write was smoke-tested on real Shelly Wall Display hardware through Home Assistant MQTT.
 - Shelly screen brightness writes use the real sysfs backlight path while HA/MQTT keeps a stable 0-100% contract.
-- Favorites picker has a `Kontrola panelu` section for local panel tiles, filtered by current hardware capabilities.
+- Favorites picker has a `Panel controls` section for local panel tiles, filtered by current hardware capabilities.
 - Local panel tiles can render relay 1, screen brightness, auto-brightness, ambient light, and panel status without fake sensor data.
 
 Next:

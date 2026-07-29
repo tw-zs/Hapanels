@@ -28,3 +28,25 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew test
+
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install documentation dependencies
+        run: pip install -r requirements-docs.txt
+
+      - name: Build MkDocs documentation
+        run: mkdocs build --strict
+
+      - name: Verify localized routes
+        run: |
+          grep -q 'href="/Hapanels/en/"' site/index.html
+          grep -q 'href="/Hapanels/"' site/en/index.html

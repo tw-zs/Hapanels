@@ -61,6 +61,7 @@ fun Text(
 }
 
 fun translateUiText(text: String, language: String = Locale.current.language): String {
+    if (language == "de") return translateGerman(text)
     if (language != "pl") return text
     polishExact[text]?.let { return it }
 

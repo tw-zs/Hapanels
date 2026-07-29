@@ -43,11 +43,41 @@ extra_css:
 extra:
   alternate:
     - name: Polski
-      link: ./
+      link: /
       lang: pl
+    - name: English
+      link: /en/
+      lang: en
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/tw-zs/Hapanels
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      languages:
+        - locale: pl
+          name: Polski
+          default: true
+          build: true
+        - locale: en
+          name: English
+          link: /en/
+          build: true
+          nav:
+            - Home: index.md
+            - Installation:
+                - Installation Options: installation.md
+                - Shelly Guide: installation-shelly.md
+                - Tablet Guide: installation-tablet.md
+            - Home Assistant Integration: home-assistant-integration.md
+            - Panel Hardware: hardware.md
+            - Development: development.md
+            - Attributions & Licenses: attribution.md
+            - Roadmap: ROADMAP.md
+            - Production Plan: PRODUCTION_PLAN.md
 
 nav:
   - Strona główna: index.md

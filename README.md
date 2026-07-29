@@ -15,6 +15,10 @@ It is not a Lovelace WebView wrapper. The app renders its own Compose UI, talks 
 
 Docs site: <https://tw-zs.github.io/Hapanels/>
 
+<p align="center">
+  <img src="docs/assets/hapanels-fullscreen-en.png" alt="Hapanels_onboarding" width="560">
+</p>
+
 ## What Works Now
 
 - Native Home Assistant entity cards and a panel-style dashboard.

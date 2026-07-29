@@ -53,12 +53,12 @@ plugins:
       languages:
         - locale: pl
           name: Polski
-          link: /Hapanels/
+          link: /
           default: true
           build: true
         - locale: en
           name: English
-          link: /Hapanels/en/
+          link: /en/
           site_description: Native Home Assistant panel app for Shelly Wall Display and Android tablets.
           build: true
           theme:
@@ -77,6 +77,7 @@ plugins:
                   name: Dark mode
           nav:
             - Home: index.md
+            - Gallery: screenshots.md
             - Installation:
                 - Installation Options: installation.md
                 - Shelly Guide: installation-shelly.md
@@ -90,6 +91,7 @@ plugins:
 
 nav:
   - Strona główna: index.md
+  - Galeria: screenshots.md
   - Instalacja:
       - Opcje instalacji: installation.md
       - Instrukcja dla Shelly: installation-shelly.md

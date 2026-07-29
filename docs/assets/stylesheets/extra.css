@@ -138,8 +138,39 @@ div[style*="display: grid"] a:hover {
   max-height: 2.5rem;
 }
 
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2rem;
+}
+
+.screenshot-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.screenshot-grid figure {
+  margin: 0;
+}
+
+.screenshot-grid img {
+  display: block;
+  width: 100%;
+  border-radius: 0.7rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+}
+
+.screenshot-grid figcaption {
+  padding-top: 0.45rem;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
 @media (max-width: 700px) {
-  .app-cards {
+  .app-cards,
+  .screenshot-grid,
+  .screenshot-grid--three {
     grid-template-columns: 1fr;
   }
 }

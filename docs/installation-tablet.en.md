@@ -26,3 +26,11 @@ adb shell appops set com.github.twzs.hapanels android:write_settings allow
 ### **Step 3. Connect to Home Assistant**
 1. **Sign in:** Open the application on the tablet and connect to your Home Assistant instance via OAuth (the OAuth redirect URI is `r1ha://auth-callback`).
 2. **Enable MQTT (Optional):** If you run an MQTT broker in Home Assistant, Hapanels will automatically detect the panel and add its basic states and screen parameters to your system.
+
+## In-app setup
+
+<div class="screenshot-grid screenshot-grid--three">
+  <figure><img loading="lazy" src="../../assets/onboarding/onboarding-en-02-connection.png" alt=""><figcaption>Home Assistant connection</figcaption></figure>
+  <figure><img loading="lazy" src="../../assets/onboarding/onboarding-en-06-appearance.png" alt=""><figcaption>Panel appearance</figcaption></figure>
+  <figure><img loading="lazy" src="../../assets/onboarding/onboarding-en-07-ready.png" alt=""><figcaption>Ready to launch</figcaption></figure>
+</div>

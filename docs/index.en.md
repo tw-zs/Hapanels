@@ -1,10 +1,12 @@
 <div class="main-hero" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 65vh; text-align: center; padding: 0 1rem; margin-top: -3rem;">
-  <img src="assets/hapanels_logo_clean.svg" alt="Hapanels Logo" class="logo-img" style="width: 192px; height: 192px; margin-bottom: -1rem;">
+  <img src="../assets/hapanels_logo_clean.svg" alt="Hapanels Logo" class="logo-img" style="width: 192px; height: 192px; margin-bottom: -1rem;">
   <h1 style="font-size: 2.5rem; font-weight: 700; margin: 0 0 1.2rem; padding: 0; color: var(--md-default-fg-color); letter-spacing: -0.03em;">Hapanels</h1>
   <p style="font-size: 0.9rem; font-weight: 300; max-width: 552px; line-height: 1.6; color: var(--md-default-fg-color); margin: 0 0 2.5rem; opacity: 0.85;">
     An Android application for wall-mounted touch panels with a dedicated Home Assistant integration.
     Offers direct support for Shelly Wall Display devices, integrating the built-in relay, physical buttons, and proximity sensors.
   </p>
+
+  <img src="../assets/screenshots/hapanels-en-hero.png" alt="Hapanels Grid home dashboard" style="width: 100%; max-width: 920px; border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);">
 
   <!-- Section separator -->
   <div style="width: 100%; max-width: 552px; border-top: 1px solid rgba(128, 128, 128, 0.15); margin: 1.5rem 0 2rem;"></div>

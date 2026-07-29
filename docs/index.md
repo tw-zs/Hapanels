@@ -6,6 +6,8 @@
     Oferuje bezpośrednią obsługę urządzeń Shelly Wall Display, integrując wbudowany przekaźnik, fizyczne przyciski oraz czujniki zbliżeniowe.
   </p>
 
+  <img src="assets/screenshots/hapanels-en-hero.png" alt="Ekran główny Hapanels Grid" style="width: 100%; max-width: 920px; border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);">
+
   <!-- Separator sekcji -->
   <div style="width: 100%; max-width: 552px; border-top: 1px solid rgba(128, 128, 128, 0.15); margin: 1.5rem 0 2rem;"></div>
 

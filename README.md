@@ -16,19 +16,21 @@ It is not a Lovelace WebView wrapper. The app renders its own Compose UI, talks 
 Docs site: <https://tw-zs.github.io/Hapanels/>
 
 <p align="center">
-  <img src="docs/assets/hapanels-fullscreen-en.png" alt="Hapanels_onboarding" width="560">
+  <img src="docs/assets/screenshots/hapanels-en-hero.png" alt="Hapanels Grid home dashboard" width="960">
 </p>
 
-### Onboarding
+### App Preview
 
 <p align="center">
   <img src="docs/assets/onboarding/onboarding-pl-01-welcome.png" alt="Polish onboarding welcome screen" width="48%">
-  <img src="docs/assets/onboarding/onboarding-pl-02-connection.png" alt="Polish Home Assistant connection screen" width="48%">
+  <img src="docs/assets/onboarding/onboarding-en-01-welcome.png" alt="English onboarding welcome screen" width="48%">
 </p>
 <p align="center">
-  <img src="docs/assets/onboarding/onboarding-pl-06-appearance.png" alt="Polish appearance setup screen" width="48%">
-  <img src="docs/assets/onboarding/onboarding-pl-07-ready.png" alt="Polish onboarding readiness checklist" width="48%">
+  <img src="docs/assets/onboarding/onboarding-de-01-welcome.png" alt="German onboarding welcome screen" width="48%">
+  <img src="docs/assets/screenshots/settings-en-01-overview.png" alt="Hapanels settings overview" width="48%">
 </p>
+
+[View the complete screenshot gallery](https://tw-zs.github.io/Hapanels/en/screenshots/).
 
 ## What Works Now
 
@@ -87,6 +89,7 @@ Run the screen-manager regression tests:
 
 - [Roadmap](docs/ROADMAP.md)
 - [Production plan](docs/PRODUCTION_PLAN.md)
+- [Screenshot gallery](docs/screenshots.en.md)
 - [Milestone 6 agent brief](docs/MILESTONE_6_AGENT_BRIEF.md)
 - [GitHub Pages site](https://tw-zs.github.io/Hapanels/)
 

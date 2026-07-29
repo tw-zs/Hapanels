@@ -129,7 +129,7 @@ Example AOD patch:
   "tile_updates": [
     {
       "id": "aod_temperature",
-      "label": "Na zewnątrz",
+      "label": "Outside",
       "order": 2
     }
   ]

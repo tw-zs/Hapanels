@@ -41,13 +41,6 @@ extra_css:
   - assets/stylesheets/extra.css
 
 extra:
-  alternate:
-    - name: Polski
-      link: /
-      lang: pl
-    - name: English
-      link: /en/
-      lang: en
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/tw-zs/Hapanels
@@ -65,7 +58,22 @@ plugins:
         - locale: en
           name: English
           link: /en/
+          site_description: Native Home Assistant panel app for Shelly Wall Display and Android tablets.
           build: true
+          theme:
+            palette:
+              - scheme: slate
+                primary: deep orange
+                accent: amber
+                toggle:
+                  icon: material/weather-sunny
+                  name: Light mode
+              - scheme: default
+                primary: deep orange
+                accent: amber
+                toggle:
+                  icon: material/weather-night
+                  name: Dark mode
           nav:
             - Home: index.md
             - Installation:

@@ -19,6 +19,17 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
   <img src="docs/assets/hapanels-fullscreen-en.png" alt="Hapanels_onboarding" width="560">
 </p>
 
+### Onboarding
+
+<p align="center">
+  <img src="docs/assets/onboarding/onboarding-pl-01-welcome.png" alt="Polish onboarding welcome screen" width="48%">
+  <img src="docs/assets/onboarding/onboarding-pl-02-connection.png" alt="Polish Home Assistant connection screen" width="48%">
+</p>
+<p align="center">
+  <img src="docs/assets/onboarding/onboarding-pl-06-appearance.png" alt="Polish appearance setup screen" width="48%">
+  <img src="docs/assets/onboarding/onboarding-pl-07-ready.png" alt="Polish onboarding readiness checklist" width="48%">
+</p>
+
 ## What Works Now
 
 - Native Home Assistant entity cards and a panel-style dashboard.

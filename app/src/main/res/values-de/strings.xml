@@ -125,14 +125,14 @@
     <string name="onboarding_mqtt_title">Mit einem MQTT-Broker verbinden</string>
     <string name="onboarding_mqtt_description">MQTT verbindet dieses Panel mit Hapanels Studio und überträgt seinen Status.</string>
     <string name="onboarding_broker_address">BROKER-ADRESSE</string>
-    <string name="onboarding_use_ha_host">HA-HOST VERWENDEN</string>
+    <string name="onboarding_use_ha_host">HA-HOST</string>
     <string name="onboarding_username">BENUTZERNAME</string>
     <string name="onboarding_password">PASSWORT</string>
     <string name="onboarding_optional">Optional</string>
     <string name="onboarding_tls_on">TLS AN</string>
     <string name="onboarding_tls_off">TLS AUS</string>
     <string name="onboarding_save_continue">SPEICHERN UND WEITER</string>
-    <string name="onboarding_skip">ÜBERSPRINGEN</string>
+    <string name="onboarding_skip">AUSLASSEN</string>
     <string name="onboarding_mqtt_skip_hint">Du kannst MQTT überspringen, aber das Panel erscheint erst in Studio, wenn ein Broker konfiguriert ist.</string>
     <string name="onboarding_mqtt_host_error">Gib die MQTT-Broker-Adresse ein oder überspringe diesen Schritt.</string>
     <string name="onboarding_mqtt_port_error">Der Port muss zwischen 1 und 65535 liegen.</string>

@@ -486,56 +486,56 @@ fun SettingsScreen(
                     names.sumOf { sectionModifiedCount[it] ?: 0 }
                 item {
                     GroupCard(
-                        title = "Połączenie",
-                        subtitle = "Serwer, bezpieczeństwo, kopia i przywracanie",
+                        title = "Connection",
+                        subtitle = "Server, security, backup & restore",
                         modifiedCount = groupBadge("SERVER", "BACKUP & RESTORE", "SECURITY"),
                         onClick = { onOpenCategory(SettingsCategory.CONNECTION) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Wygląd",
-                        subtitle = "Motyw, kafle i dashboard",
+                        title = "Appearance",
+                        subtitle = "Theme, card UI, dashboard",
                         modifiedCount = groupBadge("APPEARANCE", "CARD UI", "DASHBOARD"),
                         onClick = { onOpenCategory(SettingsCategory.APPEARANCE) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Zachowanie",
-                        subtitle = "Dotyk, wibracje i szybkie kafelki",
+                        title = "Behaviour",
+                        subtitle = "Touch, haptics, quick tiles",
                         modifiedCount = groupBadge("BEHAVIOUR"),
                         onClick = { onOpenCategory(SettingsCategory.BEHAVIOUR) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Integracje",
-                        subtitle = "Odświeżanie HA, kamery i domyślne widoki",
+                        title = "Integrations",
+                        subtitle = "HA refresh tuning, cameras, defaults",
                         modifiedCount = groupBadge("INTEGRATIONS"),
                         onClick = { onOpenCategory(SettingsCategory.INTEGRATIONS) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Zaawansowane",
-                        subtitle = "Menu dev, zmienione ustawienia i reset",
+                        title = "Advanced",
+                        subtitle = "Dev menu, modified settings, reset",
                         modifiedCount = 0,
                         onClick = { onOpenCategory(SettingsCategory.ADVANCED) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "Przeglądaj",
-                        subtitle = "Wyszukiwanie, Assist, sceny i narzędzia",
+                        title = "Browse",
+                        subtitle = "Search, Assist, scenes and tools",
                         modifiedCount = 0,
                         onClick = { onOpenCategory(SettingsCategory.BROWSE) },
                     )
                 }
                 item {
                     GroupCard(
-                        title = "O aplikacji",
-                        subtitle = "Wersja, kod źródłowy i zgłaszanie błędów",
+                        title = "About",
+                        subtitle = "Version, source, file a bug",
                         modifiedCount = 0,
                         onClick = onOpenAbout,
                     )

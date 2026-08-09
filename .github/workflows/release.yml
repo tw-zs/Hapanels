@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      # Accept either the date-only form (hapanels-YYYYMMDD) or the
-      # date + UTC time-of-day form (hapanels-YYYYMMDD-HHmm) so same-day reships
-      # produce strictly distinct versionNames / versionCodes.
+      # Accept date-only and UTC time-of-day tags for stable and alpha releases.
       - 'hapanels-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
       - 'hapanels-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
+      - 'hapanels-alpha-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'hapanels-alpha-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
 
 jobs:
   release:
@@ -23,7 +23,7 @@ jobs:
       - name: Parse version from tag
         id: version
         run: |
-          # Tag forms: hapanels-YYYYMMDD or hapanels-YYYYMMDD-HHmm. We always parse a
+          # Tag forms: hapanels[-alpha]-YYYYMMDD or hapanels[-alpha]-YYYYMMDD-HHmm. We always parse a
           # date AND a time; the legacy date-only form defaults to 0000 UTC so
           # the resulting versionName / versionCode are stable across the
           # one-tag-per-day historical regime. The versionCode is minutes-since-
@@ -31,6 +31,11 @@ jobs:
           # reship within the same day produces a higher code than the previous.
           TAG="${GITHUB_REF_NAME}"
           REST="${TAG#hapanels-}"
+          PRERELEASE=false
+          if [[ "$REST" == alpha-* ]]; then
+            REST="${REST#alpha-}"
+            PRERELEASE=true
+          fi
           YYYYMMDD="${REST:0:8}"
           if [ "${#REST}" -ge 13 ] && [ "${REST:8:1}" = "-" ]; then
             HHMM="${REST:9:4}"
@@ -56,6 +61,7 @@ jobs:
           VERSION_NAME="${YYYY}.${MM}.${DD}.${HHMM}"
           echo "version_code=${VERSION_CODE}" >> "$GITHUB_OUTPUT"
           echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -67,10 +73,29 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Prepare release signing key
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.HAPANELS_RELEASE_KEYSTORE_B64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.HAPANELS_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.HAPANELS_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.HAPANELS_RELEASE_KEY_PASSWORD }}
+        run: |
+          test -n "$RELEASE_KEYSTORE_B64"
+          test -n "$RELEASE_STORE_PASSWORD"
+          test -n "$RELEASE_KEY_ALIAS"
+          test -n "$RELEASE_KEY_PASSWORD"
+          echo "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/hapanels-release.p12"
+          keytool -list -keystore "$RUNNER_TEMP/hapanels-release.p12" \
+            -storepass "$RELEASE_STORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" >/dev/null
+
       - name: Build APKs (both flavours, release type)
         env:
           APP_VERSION_CODE: ${{ steps.version.outputs.version_code }}
           APP_VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          RELEASE_STORE_FILE: ${{ runner.temp }}/hapanels-release.p12
+          RELEASE_STORE_PASSWORD: ${{ secrets.HAPANELS_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.HAPANELS_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.HAPANELS_RELEASE_KEY_PASSWORD }}
         # Two product flavours land in this workflow:
         #   - github  → default; ships with the in-app self-updater (the APK this
         #               same workflow attaches to GitHub Releases and the in-app
@@ -84,11 +109,8 @@ jobs:
         #
         # We build the RELEASE variant rather than debug so R8 minification + resource
         # shrinking apply. The resulting APK is ~5 MB instead of ~70 MB, which keeps
-        # us well under IzzyOnDroid's 30 MB cap. The release signingConfig falls back
-        # to the committed debug.keystore when no release keystore is wired through
-        # local.properties (the case for CI), so the signature stays consistent with
-        # the existing user base from prior tag builds — direct-install upgrades work
-        # without uninstall.
+        # us well under IzzyOnDroid's 30 MB cap. CI injects a protected release key;
+        # builds fail if that key is unavailable.
         run: ./gradlew :app:assembleGithubRelease :app:assembleFdroidRelease
 
       - name: Rename APKs
@@ -108,6 +130,11 @@ jobs:
             NOTES=$(git log --pretty=format:"- %s")
           fi
           echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.version.outputs.prerelease }}" = "true" ]; then
+            echo "## Alpha release" >> "$GITHUB_OUTPUT"
+            echo "This build is for early testers. See [known issues](https://github.com/tw-zs/Hapanels/blob/main/KNOWN_ISSUES.md) before installing." >> "$GITHUB_OUTPUT"
+            echo >> "$GITHUB_OUTPUT"
+          fi
           echo "$NOTES" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
@@ -118,7 +145,7 @@ jobs:
           name: ${{ github.ref_name }}
           body: ${{ steps.notes.outputs.notes }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
           files: |
             hapanels-${{ steps.version.outputs.version_name }}.apk
             hapanels-fdroid-${{ steps.version.outputs.version_name }}.apk

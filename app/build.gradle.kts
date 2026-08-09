@@ -60,26 +60,23 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            // Stable debug keystore committed at repo root so every CI release
-            // signs with the same SHA-1 and `adb install -r` works for updates.
-            storeFile = rootProject.file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        // Release config is read from local.properties / gradle.properties if present.
-        // If not present, release builds will fail explicitly rather than ship unsigned.
+        // Release credentials come from CI environment variables or local.properties.
+        // Public builds must never fall back to the committed debug key.
         val keystorePropsFile = rootProject.file("local.properties")
-        if (keystorePropsFile.exists()) {
-            val props = Properties().apply { keystorePropsFile.inputStream().use { load(it) } }
-            if (props.getProperty("RELEASE_STORE_FILE") != null) {
-                create("release") {
-                    storeFile = file(props.getProperty("RELEASE_STORE_FILE"))
-                    storePassword = props.getProperty("RELEASE_STORE_PASSWORD")
-                    keyAlias = props.getProperty("RELEASE_KEY_ALIAS")
-                    keyPassword = props.getProperty("RELEASE_KEY_PASSWORD")
-                }
+        val props = Properties().apply {
+            if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+        }
+        fun releaseProperty(name: String): String? = System.getenv(name) ?: props.getProperty(name)
+        val releaseStoreFile = releaseProperty("RELEASE_STORE_FILE")
+        val releaseStorePassword = releaseProperty("RELEASE_STORE_PASSWORD")
+        val releaseKeyAlias = releaseProperty("RELEASE_KEY_ALIAS")
+        val releaseKeyPassword = releaseProperty("RELEASE_KEY_PASSWORD")
+        if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }) {
+            create("release") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -92,7 +89,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 
@@ -179,6 +176,16 @@ android {
         disable += setOf("NullSafeMutableLiveData")
         abortOnError = false
         checkReleaseBuilds = false
+    }
+}
+
+tasks.configureEach {
+    if (name.matches(Regex("(assemble|bundle).+Release"))) {
+        doFirst {
+            check(android.signingConfigs.findByName("release") != null) {
+                "Release signing credentials are required. Set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, and RELEASE_KEY_PASSWORD."
+            }
+        }
     }
 }
 

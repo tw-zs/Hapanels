@@ -52,8 +52,7 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
 ## AI Usage
 
 - AI helps with coding, review, docs, and release notes.
-- Every change is still checked by hand and verified with builds or tests.
-- AI output is treated as draft material, not source of truth.
+- Mostly used GPT for coding, Gemini for Studio frontend and Mistral helped a bit with translations. 
 
 ## Install
 
@@ -89,7 +88,6 @@ Run the screen-manager regression tests:
 
 - [Roadmap](docs/ROADMAP.md)
 - [Screenshot gallery](docs/screenshots.en.md)
-- [Milestone 6 agent brief](docs/MILESTONE_6_AGENT_BRIEF.md)
 - [GitHub Pages site](https://tw-zs.github.io/Hapanels/)
 
 ## Attribution

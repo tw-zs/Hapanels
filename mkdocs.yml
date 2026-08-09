@@ -87,7 +87,6 @@ plugins:
             - Development: development.md
             - Attributions & Licenses: attribution.md
             - Roadmap: ROADMAP.md
-            - Production Plan: PRODUCTION_PLAN.md
 
 nav:
   - Strona główna: index.md
@@ -101,7 +100,6 @@ nav:
   - Development: development.md
   - Podziękowania i Licencje: attribution.md
   - Roadmap: ROADMAP.md
-  - Plan produkcyjny: PRODUCTION_PLAN.md
 
 markdown_extensions:
   - admonition

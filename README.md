@@ -59,6 +59,8 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
 
 Download the latest APK from [GitHub Releases](https://github.com/tw-zs/Hapanels/releases).
 
+For early testing, use the latest **Alpha** prerelease and read [known issues](KNOWN_ISSUES.md) first.
+
 For Shelly Wall Display testing, install the GitHub APK and grant write-settings access after install if brightness control is needed:
 
 ```bash

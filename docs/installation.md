@@ -24,4 +24,4 @@ Wybierz typ swojego urządzenia, aby przejść do odpowiedniej instrukcji instal
 </div>
 
 !!! note "Pełne działanie"
-    Aby korzystać z pełnej integracji z Home Assistant, autodetekcji MQTT, sterowania panelem i Hapanels Studio, zainstaluj także [integrację Hapanels](../home-assistant-integration/).
+    Aby korzystać z pełnej integracji z Home Assistant, autodetekcji MQTT, sterowania panelem i Hapanels Studio, zainstaluj także [integrację Hapanels](../home-assistant-integration.md).

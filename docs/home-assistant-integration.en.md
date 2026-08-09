@@ -1,53 +1,76 @@
 # Home Assistant Integration
 
-Hapanels features a dedicated custom integration `custom_components/hapanels`. This is the first step toward Hapanels Studio: the Home Assistant panel reads tablet states, detects configuration conflicts, and pushes dashboard/AOD changes over MQTT.
+Hapanels connects wall panels and Android tablets to Home Assistant in two parts:
 
-## MVP Status
+- **Hapanels app** runs on the panel and displays the native dashboard.
+- **Hapanels integration** runs in Home Assistant and manages panel discovery and dashboard synchronization.
 
-Currently, the integration performs the minimum required before building the visual editor:
+The app uses Home Assistant's native REST/WebSocket connection for the dashboard. MQTT is optional for the local dashboard, but required for panel hardware discovery and Hapanels Studio synchronization.
 
-- adds the `Hapanels` config flow,
-- adds a `Hapanels` panel to the Home Assistant sidebar,
-- subscribes to the retained MQTT topic `hapanels/+/dashboard/config/sync/state`,
-- creates a `Dashboard sync` sensor for each discovered panel,
-- displays discovered panels and synchronization status in a simple web view,
-- provides services for publishing full configurations and patches.
+## What You Need
 
-## Developer Installation
+- Home Assistant. Add an MQTT broker if you want hardware discovery or dashboard synchronization.
+- An Android 9+ tablet or Shelly Wall Display.
+- The Hapanels APK from [GitHub Releases](https://github.com/tw-zs/Hapanels/releases).
+- This repository, if installing the custom integration manually.
 
-Copy the directory:
+## Installation
 
-```text
-custom_components/hapanels
-```
+### 1. Install the app on the panel
 
-to your Home Assistant directory:
+Choose the guide for your hardware:
 
-```text
-/config/custom_components/hapanels
-```
+- [Android tablet installation](installation-tablet.md)
+- [Shelly Wall Display installation](installation-shelly.md)
 
-Then restart Home Assistant and add the integration via the UI:
-
-```text
-Settings -> Devices & Services -> Add Integration -> Hapanels
-```
-
-The default base topic is:
+Open Hapanels, connect it to Home Assistant, and complete onboarding. If you use MQTT, configure the broker in the app. The default MQTT base topic is:
 
 ```text
 hapanels
 ```
 
-## MQTT Sync State
+### 2. Install the Home Assistant integration
 
-The tablet publishes a retained synchronization status:
+Copy this directory from the repository:
+
+```text
+custom_components/hapanels
+```
+
+to your Home Assistant configuration directory:
+
+```text
+/config/custom_components/hapanels
+```
+
+Restart Home Assistant. Then open:
+
+```text
+Settings -> Devices & services -> Add integration -> Hapanels
+```
+
+Complete the config flow and keep the base topic as `hapanels` unless you changed it in the app.
+
+## What Happens Next
+
+When the panel publishes its MQTT discovery and state, Home Assistant receives:
+
+- the panel's hardware entities when supported by the active hardware provider;
+- availability and connection diagnostics;
+- dashboard synchronization status from the custom integration;
+- the current dashboard revision and last editor.
+
+The Hapanels panel appears in the Home Assistant sidebar. It lists discovered panels and exposes whether each panel is `synced`, `conflict`, `invalid`, or `unknown`.
+
+## Dashboard Synchronization
+
+The app publishes retained synchronization state to:
 
 ```text
 hapanels/<device>/dashboard/config/sync/state
 ```
 
-Example `synced`:
+Example:
 
 ```json
 {
@@ -58,89 +81,25 @@ Example `synced`:
 }
 ```
 
-Example `conflict`:
+If the app reports that a patch used an old revision, the integration exposes `conflict` instead of hiding that state.
 
-```json
-{
-  "status": "conflict",
-  "dashboard_id": "home-panel-main",
-  "revision": 44,
-  "updated_by": "tablet:local_editor",
-  "current_revision": 44,
-  "attempted_base_revision": 43
-}
-```
+## Hapanels Studio
 
-The integration maps this payload into a sensor with attributes `revision`, `dashboard_id`, `updated_by`, `current_revision`, and `attempted_base_revision`.
+Hapanels Studio is the Home Assistant panel for managing the native dashboard. It is used to:
 
-## Hapanels Panel
+- preview the dashboard and AOD screen;
+- edit tiles and labels;
+- publish full dashboard configurations or small patches;
+- detect and resolve stale revisions.
 
-After adding the integration, a panel appears in the sidebar:
+This is a native Hapanels dashboard workflow, not a Lovelace WebView wrapper.
 
-```text
-Hapanels
-```
+## Troubleshooting
 
-The initial version displays:
+If the panel does not appear:
 
-- list of discovered panels,
-- `synced/conflict/invalid/unknown` status,
-- current revision,
-- author of the last change,
-- conflict revision if a patch was based on a stale revision.
-
-This is not yet a full visual editor. It is the foundation for Hapanels Studio.
-
-## Services
-
-### `hapanels.set_dashboard_config`
-
-Publishes a full dashboard config to:
-
-```text
-hapanels/<device>/dashboard/config/set
-```
-
-Fields:
-
-- `device`: device name from the MQTT topic, e.g. `Blake`, `shelly_wall_display`.
-- `config`: full dashboard config object.
-
-### `hapanels.patch_dashboard_config`
-
-Publishes a patch to:
-
-```text
-hapanels/<device>/dashboard/config/patch/set
-```
-
-Fields:
-
-- `device`: device name from the MQTT topic.
-- `patch`: patch object containing `base_revision`, `updated_by`, `surface`, and `tile_updates`.
-
-Example AOD patch:
-
-```json
-{
-  "base_revision": 44,
-  "updated_by": "homeassistant:hapanels_studio",
-  "surface": "aod",
-  "tile_updates": [
-    {
-      "id": "aod_temperature",
-      "label": "Outside",
-      "order": 2
-    }
-  ]
-}
-```
-
-## Next Step
-
-The next phase is the `Hapanels Studio` frontend panel in the Home Assistant sidebar:
-
-- `Dashboard` and `AOD` preview,
-- tile editing,
-- patch publishing,
-- `conflict` resolution from `dashboard/config/sync/state`.
+1. Confirm that the panel is connected to Home Assistant.
+2. If you use MQTT, confirm that the broker is running and configured in Hapanels.
+3. Check that both sides use base topic `hapanels`.
+4. Restart Home Assistant after copying or updating `custom_components/hapanels`.
+5. Check MQTT logs for a topic containing `hapanels/<device>/dashboard/config/sync/state`.

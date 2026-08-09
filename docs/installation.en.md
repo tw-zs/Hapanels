@@ -22,3 +22,6 @@ Select your device type to proceed to the corresponding installation guide:
   </a>
 
 </div>
+
+!!! note "Full experience"
+    For full Home Assistant integration, MQTT discovery, panel controls, and Hapanels Studio, also install the [Hapanels integration](home-assistant-integration.md).

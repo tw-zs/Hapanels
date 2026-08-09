@@ -1,105 +1,74 @@
-# Home Assistant Integration
+# Install Hapanels Integration
 
-Hapanels connects wall panels and Android tablets to Home Assistant in two parts:
+This page covers only the **Hapanels custom integration for Home Assistant**.
 
-- **Hapanels app** runs on the panel and displays the native dashboard.
-- **Hapanels integration** runs in Home Assistant and manages panel discovery and dashboard synchronization.
+## Requirements
 
-The app uses Home Assistant's native REST/WebSocket connection for the dashboard. MQTT is optional for the local dashboard, but required for panel hardware discovery and Hapanels Studio synchronization.
+- Home Assistant with the MQTT integration configured.
+- Access to your Home Assistant `/config` directory.
+- The Hapanels repository or a downloaded copy of its `custom_components/hapanels` folder.
 
-## What You Need
+## 1. Copy the Integration
 
-- Home Assistant. Add an MQTT broker if you want hardware discovery or dashboard synchronization.
-- An Android 9+ tablet or Shelly Wall Display.
-- The Hapanels APK from [GitHub Releases](https://github.com/tw-zs/Hapanels/releases).
-- This repository, if installing the custom integration manually.
-
-## Installation
-
-### 1. Install the app on the panel
-
-Choose the guide for your hardware:
-
-- [Android tablet installation](installation-tablet.md)
-- [Shelly Wall Display installation](installation-shelly.md)
-
-Open Hapanels, connect it to Home Assistant, and complete onboarding. If you use MQTT, configure the broker in the app. The default MQTT base topic is:
-
-```text
-hapanels
-```
-
-### 2. Install the Home Assistant integration
-
-Copy this directory from the repository:
+Copy the complete `hapanels` folder from:
 
 ```text
 custom_components/hapanels
 ```
 
-to your Home Assistant configuration directory:
+to this directory in Home Assistant:
 
 ```text
 /config/custom_components/hapanels
 ```
 
-Restart Home Assistant. Then open:
+The final path must contain the integration files directly, for example:
 
 ```text
-Settings -> Devices & services -> Add integration -> Hapanels
+/config/custom_components/hapanels/manifest.json
+/config/custom_components/hapanels/__init__.py
+/config/custom_components/hapanels/config_flow.py
 ```
 
-Complete the config flow and keep the base topic as `hapanels` unless you changed it in the app.
-
-## What Happens Next
-
-When the panel publishes its MQTT discovery and state, Home Assistant receives:
-
-- the panel's hardware entities when supported by the active hardware provider;
-- availability and connection diagnostics;
-- dashboard synchronization status from the custom integration;
-- the current dashboard revision and last editor.
-
-The Hapanels panel appears in the Home Assistant sidebar. It lists discovered panels and exposes whether each panel is `synced`, `conflict`, `invalid`, or `unknown`.
-
-## Dashboard Synchronization
-
-The app publishes retained synchronization state to:
+Do not create an extra nested folder such as:
 
 ```text
-hapanels/<device>/dashboard/config/sync/state
+/config/custom_components/hapanels/custom_components/hapanels
 ```
 
-Example:
+## 2. Restart Home Assistant
 
-```json
-{
-  "status": "synced",
-  "dashboard_id": "home-panel-main",
-  "revision": 44,
-  "updated_by": "homeassistant:hapanels_studio"
-}
+Restart Home Assistant after copying the files. The integration is loaded during startup.
+
+## 3. Add the Integration
+
+In Home Assistant, open:
+
+```text
+Settings -> Devices & services -> Add integration
 ```
 
-If the app reports that a patch used an old revision, the integration exposes `conflict` instead of hiding that state.
+Search for **Hapanels** and open the integration.
 
-## Hapanels Studio
+Enter the MQTT base topic used by your panels. The default is:
 
-Hapanels Studio is the Home Assistant panel for managing the native dashboard. It is used to:
+```text
+hapanels
+```
 
-- preview the dashboard and AOD screen;
-- edit tiles and labels;
-- publish full dashboard configurations or small patches;
-- detect and resolve stale revisions.
+Use the same topic in the Hapanels app. Finish the setup flow.
 
-This is a native Hapanels dashboard workflow, not a Lovelace WebView wrapper.
+## 4. Confirm Installation
+
+After setup, **Hapanels** should appear in the Home Assistant sidebar.
+
+When a panel publishes its MQTT state, the integration creates a `Dashboard sync` sensor and shows the panel's synchronization status.
 
 ## Troubleshooting
 
-If the panel does not appear:
+- **Hapanels is missing from Add integration:** check that `manifest.json` is directly inside `/config/custom_components/hapanels`, then restart Home Assistant.
+- **No panel appears:** confirm that MQTT is connected and the panel uses the same base topic, normally `hapanels`.
+- **Integration does not load:** check **Settings -> System -> Logs** for `hapanels` errors.
+- **Files changed but nothing updated:** restart Home Assistant again; custom integrations are loaded at startup.
 
-1. Confirm that the panel is connected to Home Assistant.
-2. If you use MQTT, confirm that the broker is running and configured in Hapanels.
-3. Check that both sides use base topic `hapanels`.
-4. Restart Home Assistant after copying or updating `custom_components/hapanels`.
-5. Check MQTT logs for a topic containing `hapanels/<device>/dashboard/config/sync/state`.
+The Android app is installed separately. Use the [tablet installation guide](installation-tablet.md) or [Shelly Wall Display installation guide](installation-shelly.md).

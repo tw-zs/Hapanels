@@ -88,7 +88,6 @@ Run the screen-manager regression tests:
 ## Documentation
 
 - [Roadmap](docs/ROADMAP.md)
-- [Production plan](docs/PRODUCTION_PLAN.md)
 - [Screenshot gallery](docs/screenshots.en.md)
 - [Milestone 6 agent brief](docs/MILESTONE_6_AGENT_BRIEF.md)
 - [GitHub Pages site](https://tw-zs.github.io/Hapanels/)

@@ -730,8 +730,7 @@ Każdy etap kończy się działającym pionowym wycinkiem w obecnym stacku. Nie 
 
 | Źródło | Użyte fakty |
 |---|---|
-| `docs/ROADMAP.md` (Milestones 8–10) | natywny Compose, config sync, Studio, foldery/panele, camera, GRID/CARDS, AOD |
-| `docs/PRODUCTION_PLAN.md` (Milestones 8–9) | native-first, tablet/wall-panel, MQTT config, camera browser/fullscreen |
+| `docs/ROADMAP.md` | natywny Compose, config sync, Studio, panele, kamery, GRID/CARDS, AOD, priorytety i status projektu |
 | `app/src/main/kotlin/com/github/itskenny0/r1ha/feature/panelgrid/HapanelsDashboardConfig.kt` | current schema, kind/size/accent enums, AOD, patch/revision |
 | `app/src/main/kotlin/com/github/itskenny0/r1ha/feature/panelgrid/PanelGridMockupScreen.kt` | renderer geometry, breakpoint 820, popup, cover drag, live labels, current flat panel behavior |
 | `app/src/main/kotlin/com/github/itskenny0/r1ha/feature/panelgrid/HapanelsPanelTheme.kt` | token roles, presets, light/dark/system, default palette |

@@ -13,6 +13,8 @@ Hapanels is a native Android Home Assistant wall-panel app for Shelly Wall Displ
 
 It is not a Lovelace WebView wrapper. The app renders its own Compose UI, talks to Home Assistant through the native REST/WebSocket APIs, and exposes panel hardware back to Home Assistant through MQTT discovery.
 
+And be aware - bugs will be present!
+
 Docs site: <https://tw-zs.github.io/Hapanels/>
 
 <p align="center">

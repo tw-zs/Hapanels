@@ -27,7 +27,3 @@ hapanels/<device>/screen/auto_brightness/set
 hapanels/<device>/dashboard/config/set
 hapanels/<device>/dashboard/config/patch/set
 ```
-
-## Bez fikcyjnych sensorów
-
-Jeśli hardware nie daje wiarygodnej wartości, Hapanels jej nie wystawia. Proximity na Shelly Blake/XL jest traktowane jako obecność przy panelu, nie jako dokładne centymetry.

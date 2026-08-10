@@ -29,7 +29,17 @@
         Wizualny edytor zintegrowany z Home Assistant. Umożliwia wygodne projektowanie układu ekranu, edycję kafelków oraz natychmiastową synchronizację z panelami.
       </p>
     </div>
+    <div style="border: 1px solid rgba(30, 144, 255, 0.4); border-radius: 12px; padding: 1.25rem; background: var(--md-code-bg-color); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+      <h3 style="font-size: 1.05rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--md-default-fg-color);">Easy Install</h3>
+      <p style="font-size: 0.85rem; font-weight: 300; line-height: 1.55; color: var(--md-default-fg-color); opacity: 0.85; margin: 0 0 0.75rem;">
+        Skorzystaj z gotowego promptu dla agenta AI, aby zainstalować APK na Shelly przez ADB i wdrożyć Studio do Home Assistant.
+      </p>
+      <a href="https://github.com/tw-zs/Hapanels#install-with-an-ai-agent" style="font-size: 0.85rem; font-weight: 500; color: #1E90FF; text-decoration: none;">Otwórz instrukcję →</a>
+    </div>
   </div>
+
+  <img src="assets/screenshots/studio-en-layout.png" alt="Edytor układu Hapanels Studio" style="width: 100%; max-width: 920px; border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); margin-bottom: 1rem;">
+  <p style="font-size: 0.85rem; font-weight: 300; max-width: 700px; line-height: 1.55; color: var(--md-default-fg-color); margin: 0 0 2.5rem; opacity: 0.85;">Hapanels Studio pozwala układać kafle, zarządzać panelem bocznym i zapisywać zmiany bezpośrednio w Home Assistant.</p>
 
   <!-- Nawigacja - Estetyczne przyciski konturowe -->
   <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; max-width: 750px; width: 100%; border-top: 1px solid rgba(128, 128, 128, 0.15); padding-top: 2rem;">

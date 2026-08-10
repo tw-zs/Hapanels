@@ -31,6 +31,18 @@ class AppUpdaterTest {
         assertThat(later - midnight).isEqualTo(849L)
     }
 
+    @Test fun `alpha tag uses the same versionCode as its dated release`() {
+        assertThat(AppUpdater.versionCodeFromTag("hapanels-alpha-20260809-2342"))
+            .isEqualTo(AppUpdater.versionCodeFromTag("hapanels-20260809-2342"))
+    }
+
+    @Test fun `auto channel follows installed alpha while stable remains opt in`() {
+        assertThat(includesAlpha(UpdateChannel.AUTO, installedIsAlpha = false)).isFalse()
+        assertThat(includesAlpha(UpdateChannel.AUTO, installedIsAlpha = true)).isTrue()
+        assertThat(includesAlpha(UpdateChannel.STABLE, installedIsAlpha = true)).isFalse()
+        assertThat(includesAlpha(UpdateChannel.ALPHA, installedIsAlpha = false)).isTrue()
+    }
+
     @Test fun `malformed tag returns null instead of throwing`() {
         assertThat(AppUpdater.versionCodeFromTag("not-a-hapanels-tag")).isNull()
         assertThat(AppUpdater.versionCodeFromTag("r1ha-NOPE")).isNull()

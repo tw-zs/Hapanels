@@ -1,6 +1,7 @@
 package com.github.itskenny0.r1ha.core.prefs
 
 import androidx.compose.runtime.Stable
+import com.github.itskenny0.r1ha.core.update.UpdateChannel
 
 enum class ThemeId { MINIMAL_DARK, PRAGMATIC_HYBRID, COLORFUL_CARDS }
 
@@ -773,4 +774,6 @@ data class AppSettings(
     /** Friendly tablet name shown in Hapanels Studio and HA device metadata.
      *  Empty = derived from panel device id. */
     val tabletFriendlyName: String = "",
+    /** AUTO follows the installed release type: stable builds stay stable, alpha builds follow alpha. */
+    val updateChannel: UpdateChannel = UpdateChannel.AUTO,
 )

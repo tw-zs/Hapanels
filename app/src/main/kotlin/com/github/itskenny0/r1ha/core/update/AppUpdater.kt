@@ -14,7 +14,7 @@ import okhttp3.Request
 import java.io.File
 
 /**
- * Self-update via the GitHub Releases API. Queries `/repos/<owner>/<repo>/releases/latest`
+ * Self-update via the GitHub Releases API. Queries `/repos/<owner>/<repo>/releases`
  * (unauthenticated — the repository is public), parses the response for an .apk asset,
  * and downloads it to the app's cache so the package installer can pick it up.
  *
@@ -39,7 +39,7 @@ import java.io.File
  */
 class AppUpdater(
     private val http: OkHttpClient,
-    private val releasesUrl: String = "https://api.github.com/repos/tw-zs/Hapanels/releases/latest",
+    private val releasesUrl: String = "https://api.github.com/repos/tw-zs/Hapanels/releases?per_page=30",
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -66,7 +66,7 @@ class AppUpdater(
         data class Failed(val message: String, val cause: Throwable? = null) : CheckResult
     }
 
-    suspend fun checkForUpdate(): CheckResult = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(channel: UpdateChannel = UpdateChannel.AUTO): CheckResult = withContext(Dispatchers.IO) {
         val req = Request.Builder()
             .url(releasesUrl)
             .header("Accept", "application/vnd.github+json")
@@ -91,11 +91,13 @@ class AppUpdater(
             R1Log.w("Updater.check", "network failure: $msg")
             return@withContext CheckResult.Failed("Network: $msg", t)
         }
-        val release = runCatching { json.decodeFromString<GhRelease>(body) }
+        val releases = runCatching { json.decodeFromString<List<GhRelease>>(body) }
             .getOrElse { t ->
                 R1Log.w("Updater.check", "JSON parse failure: ${t.message}")
                 return@withContext CheckResult.Failed("Bad release JSON", t)
             }
+        val release = selectRelease(releases, channel, BuildConfig.VERSION_CODE)
+            ?: return@withContext CheckResult.Failed("No compatible GitHub release")
         // Strip the app prefix and parse the tag's date+time into minutes-
         // since-2020-01-01-UTC, then add the 100M floor that the workflow
         // applies. This must stay in lock-step with `.github/workflows/release.yml`.
@@ -193,6 +195,8 @@ class AppUpdater(
         val name: String? = null,
         val body: String? = null,
         val assets: List<GhAsset> = emptyList(),
+        val prerelease: Boolean = false,
+        val draft: Boolean = false,
     )
 
     @Serializable
@@ -215,6 +219,7 @@ class AppUpdater(
          */
         internal fun versionCodeFromTag(tag: String): Long? {
             val rest = when {
+                tag.startsWith("hapanels-alpha-") -> tag.removePrefix("hapanels-alpha-")
                 tag.startsWith("hapanels-") -> tag.removePrefix("hapanels-")
                 tag.startsWith("r1ha-") -> tag.removePrefix("r1ha-")
                 else -> return null
@@ -242,14 +247,42 @@ class AppUpdater(
         }
 
         private fun canonicalGithubApkNameFromTag(tag: String): String? {
-            if (!tag.startsWith("hapanels-")) return null
-            val rest = tag.removePrefix("hapanels-")
+            val rest = when {
+                tag.startsWith("hapanels-alpha-") -> tag.removePrefix("hapanels-alpha-")
+                tag.startsWith("hapanels-") -> tag.removePrefix("hapanels-")
+                else -> return null
+            }
             if (rest.length < 13 || rest[8] != '-') return null
             val yyyymmdd = rest.substring(0, 8)
             val hhmm = rest.substring(9, 13)
             return "hapanels-${yyyymmdd.substring(0, 4)}.${yyyymmdd.substring(4, 6)}.${yyyymmdd.substring(6, 8)}.$hhmm.apk"
         }
     }
+
+    private fun selectRelease(
+        releases: List<GhRelease>,
+        channel: UpdateChannel,
+        installedVersionCode: Int,
+    ): GhRelease? {
+        val installedIsAlpha = releases.any {
+            it.prerelease && versionCodeFromTag(it.tag_name) == installedVersionCode.toLong()
+        }
+        val includeAlpha = includesAlpha(channel, installedIsAlpha)
+        return releases
+            .asSequence()
+            .filter { !it.draft && (includeAlpha || !it.prerelease) }
+            .mapNotNull { release -> versionCodeFromTag(release.tag_name)?.let { it to release } }
+            .maxByOrNull { it.first }
+            ?.second
+    }
+}
+
+enum class UpdateChannel { AUTO, STABLE, ALPHA }
+
+internal fun includesAlpha(channel: UpdateChannel, installedIsAlpha: Boolean): Boolean = when (channel) {
+    UpdateChannel.AUTO -> installedIsAlpha
+    UpdateChannel.STABLE -> false
+    UpdateChannel.ALPHA -> true
 }
 
 /**

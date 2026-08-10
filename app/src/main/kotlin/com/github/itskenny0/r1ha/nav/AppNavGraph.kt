@@ -285,6 +285,9 @@ fun AppNavGraph(
                 onOpenDevMenu = {
                     navController.navigate(Routes.DEV_MENU) { launchSingleTop = true }
                 },
+                onOpenUpdates = {
+                    navController.navigate(Routes.UPDATES) { launchSingleTop = true }
+                },
                 onBack = { navController.popBackStack() },
             )
         }

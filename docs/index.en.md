@@ -29,7 +29,17 @@
         Visual editor integrated with Home Assistant. Enables convenient screen layout design, tile editing, and instant synchronization with panels.
       </p>
     </div>
+    <div style="border: 1px solid rgba(30, 144, 255, 0.4); border-radius: 12px; padding: 1.25rem; background: var(--md-code-bg-color); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+      <h3 style="font-size: 1.05rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--md-default-fg-color);">Easy Install</h3>
+      <p style="font-size: 0.85rem; font-weight: 300; line-height: 1.55; color: var(--md-default-fg-color); opacity: 0.85; margin: 0 0 0.75rem;">
+        Use the ready-made AI agent prompt to install the APK on Shelly through ADB and deploy Studio to Home Assistant.
+      </p>
+      <a href="https://github.com/tw-zs/Hapanels#install-with-an-ai-agent" style="font-size: 0.85rem; font-weight: 500; color: #1E90FF; text-decoration: none;">Open the guide →</a>
+    </div>
   </div>
+
+  <img src="../assets/screenshots/studio-en-layout.png" alt="Hapanels Studio layout editor" style="width: 100%; max-width: 920px; border-radius: 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28); margin-bottom: 1rem;">
+  <p style="font-size: 0.85rem; font-weight: 300; max-width: 700px; line-height: 1.55; color: var(--md-default-fg-color); margin: 0 0 2.5rem; opacity: 0.85;">Hapanels Studio lets you arrange tiles, manage the side tray, and save changes directly to Home Assistant.</p>
 
   <!-- Navigation buttons -->
   <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; max-width: 750px; width: 100%; border-top: 1px solid rgba(128, 128, 128, 0.15); padding-top: 2rem;">

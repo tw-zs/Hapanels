@@ -1853,7 +1853,7 @@ fun SettingsScreen(
             item {
                 NavRow(
                     label = "Updates",
-                    value = "HA Core, add-ons, integrations",
+                    value = "Hapanels app, HA Core, add-ons, integrations",
                     onClick = onOpenUpdates,
                 )
             }

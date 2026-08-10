@@ -34,6 +34,12 @@ Docs site: <https://tw-zs.github.io/Hapanels/>
 
 [View the complete screenshot gallery](https://tw-zs.github.io/Hapanels/en/screenshots/).
 
+### Hapanels Studio
+
+<p align="center">
+  <img src="docs/assets/screenshots/studio-en-layout.png" alt="Hapanels Studio layout editor" width="960">
+</p>
+
 ## What Works Now
 
 - Native Home Assistant entity cards and a panel-style dashboard.
@@ -100,3 +106,27 @@ Run the screen-manager regression tests:
 - Shelly hardware reference: [ShellyElevate](https://github.com/RapierXbox/ShellyElevate), Apache-2.0.
 
 See [NOTICE.md](NOTICE.md) for details.
+
+## Install With An AI Agent
+
+Use this prompt with OpenCode or another agent that has access to this repository, Android Platform Tools, and your Home Assistant host:
+
+```text
+Install or update Hapanels on a Shelly Wall Display, then deploy Hapanels Studio to Home Assistant.
+
+Repository: https://github.com/tw-zs/Hapanels
+Releases: https://github.com/tw-zs/Hapanels/releases
+Integration guide: https://tw-zs.github.io/Hapanels/home-assistant-integration/
+Android Platform Tools: https://developer.android.com/tools/releases/platform-tools
+Android package id: com.github.twzs.hapanels
+
+1. Inspect `adb devices -l`. Continue only after identifying the intended Shelly device.
+2. Download the GitHub APK named `hapanels-YYYY.MM.DD.HHmm.apk`. Never install the `hapanels-fdroid-*.apk` when in-app OTA is wanted.
+3. Check the installed package and APK signatures before updating. Run `adb install -r <apk>` only for a compatible signing key. Do not use `-d` and do not uninstall an existing app without explicit confirmation and a backup plan.
+4. After a successful install, run:
+   `adb shell appops set com.github.twzs.hapanels android:write_settings allow`
+   Then launch the app and verify its version in About.
+5. Deploy Studio by copying this repository's `custom_components/hapanels` directory to `/config/custom_components/hapanels` on Home Assistant. Do not edit `.storage` files. Back up an existing target directory before replacing it, exclude `__pycache__`, and preserve no secrets in shell history or logs.
+6. Restart Home Assistant, then add or reload the Hapanels integration from Settings > Devices & services. Hard-refresh the browser before opening the Hapanels Studio sidebar panel.
+7. Verify that Studio loads, the panel is discovered over MQTT, and the dashboard sync sensor appears. Report every command run, app version, integration version, and any blocker. Never print Home Assistant tokens, MQTT passwords, private URLs, or keystores.
+```

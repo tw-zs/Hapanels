@@ -43,6 +43,7 @@ import com.github.itskenny0.r1ha.ui.components.R1ButtonVariant
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
 import com.github.itskenny0.r1ha.ui.components.r1Pressable
+import com.github.itskenny0.r1ha.feature.about.HapanelsUpdateSection
 
 /**
  * Lists every `update.*` entity HA exposes — HA Core, Supervisor, OS,
@@ -109,6 +110,8 @@ fun UpdatesScreen(
             },
         )
         com.github.itskenny0.r1ha.ui.layout.AdaptiveContent(modifier = Modifier.weight(1f)) {
+            HapanelsUpdateSection(settings)
+            Spacer(Modifier.height(12.dp))
             // Summary band — gives an at-a-glance answer to "is there anything
             // I need to install right now?" before the user even scrolls. Hidden
             // during the initial load so the band doesn't briefly read "0

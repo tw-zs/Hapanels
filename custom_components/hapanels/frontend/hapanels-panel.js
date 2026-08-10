@@ -342,6 +342,7 @@ const STUDIO_TRANSLATIONS_EN = {
   "Dashboard": "Dashboard",
   "Dashboard ID": "Dashboard ID",
   "Rewizja": "Revision",
+  "rewizja": "revision",
   "Zmienił": "Changed by",
   "Ostatnia zmiana": "Last change",
   "Rozdzielczość": "Resolution",
@@ -547,6 +548,7 @@ const STUDIO_TRANSLATIONS_EN = {
   "Niezapisane zmiany": "Unsaved changes",
   "Zapisano": "Saved",
   "Układ zapisany": "Layout saved",
+  "Nie udało się zapisać układu:": "Could not save layout:",
   "Cofnij zmianę (Ctrl+Z)": "Undo change (Ctrl+Z)",
   "Ponów zmianę (Ctrl+Y lub Ctrl+Shift+Z)": "Redo change (Ctrl+Y or Ctrl+Shift+Z)",
   "Odrzuca niezapisane zmiany i przywraca aktualnie zapisany układ": "Discards unsaved changes and restores the currently saved layout",
@@ -1795,6 +1797,10 @@ class HapanelsStudioPanel extends HTMLElement {
     });
   }
 
+  _tr(text) {
+    return this._language === "en" ? STUDIO_TRANSLATIONS_EN[text] || text : text;
+  }
+
   _header() {
     return `
       <section class="hero">
@@ -1914,7 +1920,7 @@ class HapanelsStudioPanel extends HTMLElement {
           <div>
             <button id="back" class="secondary small">← Tablety</button>
             <h2 style="margin-top:16px">${this._escape(this._panelLabel(panel))}</h2>
-            <div class="sub"><span class="pill ${status}">${this._statusLabel(panel.status)}</span> Dashboard ${this._escape(panel.dashboard_id || "-")} · rewizja ${this._escape(panel.revision ?? "-")}</div>
+            <div class="sub"><span class="pill ${status}">${this._statusLabel(panel.status)}</span> Dashboard ${this._escape(panel.dashboard_id || "-")} · ${this._tr("rewizja")} ${this._escape(panel.revision ?? "-")}</div>
           </div>
           <div class="actions">
             <button id="refresh-detail" class="secondary">Odśwież</button>
@@ -3104,7 +3110,7 @@ class HapanelsStudioPanel extends HTMLElement {
       return saved;
     } catch (err) {
       this._layoutSaveStatus[device] = { state: "error" };
-      this._error = `Nie udało się zapisać układu: ${err?.message || err}`;
+      this._error = `${this._tr("Nie udało się zapisać układu:")} ${err?.message || err}`;
       this._render();
       return false;
     }

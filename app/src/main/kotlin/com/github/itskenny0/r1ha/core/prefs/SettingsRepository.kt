@@ -14,6 +14,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.github.itskenny0.r1ha.core.util.R1Log
 import com.github.itskenny0.r1ha.core.util.Toaster
+import com.github.itskenny0.r1ha.core.update.UpdateChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -150,6 +151,7 @@ class SettingsRepository private constructor(
         val behaviorToastLogLevel = stringPreferencesKey("behavior.toast_log_level")
         val mqttPanelDeviceId = stringPreferencesKey("mqtt.panel_device_id")
         val tabletFriendlyName = stringPreferencesKey("tablet.friendly_name")
+        val updateChannel = stringPreferencesKey("updates.channel")
         /** entity_id bound to the Android Quick Settings tile. Empty
          *  string sentinel = unbound (a null-equivalent that the
          *  preferences API can store; we map empty → null at read
@@ -331,6 +333,9 @@ class SettingsRepository private constructor(
                 entityOverrides = decodeEntityOverrides(p[K.entityOverrides]),
                 mqttPanelDeviceId = p[K.mqttPanelDeviceId]?.takeIf { it.isNotBlank() }.orEmpty(),
                 tabletFriendlyName = tabletName?.takeIf { it.isNotBlank() }.orEmpty(),
+                updateChannel = p[K.updateChannel]
+                    ?.let { runCatching { UpdateChannel.valueOf(it) }.getOrNull() }
+                    ?: UpdateChannel.AUTO,
                 advanced = p[K.advancedJson]
                     ?.let {
                         runCatching {
@@ -452,6 +457,7 @@ class SettingsRepository private constructor(
                 p[K.behaviorAssistAgentId] = next.behavior.assistAgentId.orEmpty()
                 p[K.mqttPanelDeviceId] = next.mqttPanelDeviceId
                 p[K.tabletFriendlyName] = next.tabletFriendlyName
+                p[K.updateChannel] = next.updateChannel.name
                 p[K.behaviorAssistMacros] = next.behavior.assistMacros
                     .filter { it.isNotBlank() }
                     .joinToString("\n") { line ->

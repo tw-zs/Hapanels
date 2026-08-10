@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import com.github.itskenny0.r1ha.core.update.UpdateChannel
 
 /**
  * Portable backup of every user-tunable setting + favourites list. JSON-encoded
@@ -70,6 +71,7 @@ data class AppBackup(
     val behaviorStartOnBoot: Boolean = false,
     val mqttPanelDeviceId: String = "",
     val tabletFriendlyName: String = "",
+    val updateChannel: UpdateChannel = UpdateChannel.AUTO,
     val behaviorWheelTogglesSwitches: Boolean = true,
     val behaviorToastLogLevel: ToastLogLevel = ToastLogLevel.OFF,
 
@@ -142,6 +144,7 @@ fun AppSettings.toBackup(createdAt: String): AppBackup = AppBackup(
     behaviorStartOnBoot = behavior.startOnBoot,
     mqttPanelDeviceId = mqttPanelDeviceId,
     tabletFriendlyName = tabletFriendlyName,
+    updateChannel = updateChannel,
     behaviorWheelTogglesSwitches = behavior.wheelTogglesSwitches,
     behaviorToastLogLevel = behavior.toastLogLevel,
     advanced = advanced,
@@ -218,6 +221,7 @@ fun AppBackup.applyOnto(prev: AppSettings): AppSettings {
         entityOverrides = entityOverrides,
         mqttPanelDeviceId = mqttPanelDeviceId,
         tabletFriendlyName = tabletFriendlyName,
+        updateChannel = updateChannel,
     )
 }
 

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,7 @@ import com.github.itskenny0.r1ha.core.ha.HaRepository
 import com.github.itskenny0.r1ha.core.input.WheelInput
 import com.github.itskenny0.r1ha.core.prefs.AppSettings
 import com.github.itskenny0.r1ha.core.prefs.SettingsRepository
+import com.github.itskenny0.r1ha.core.update.UpdateChannel
 import com.github.itskenny0.r1ha.core.theme.R1
 import com.github.itskenny0.r1ha.ui.components.R1TopBar
 import com.github.itskenny0.r1ha.ui.components.WheelScrollFor
@@ -52,6 +54,7 @@ fun AboutScreen(
     settings: SettingsRepository,
     wheelInput: WheelInput,
     onOpenDevMenu: () -> Unit = {},
+    onOpenUpdates: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -101,22 +104,13 @@ fun AboutScreen(
                         },
                     )
                 }
-                // Self-updater is omitted on the F-Droid flavour — F-Droid users get
-                // update notifications from the F-Droid client and shouldn't see a
-                // duplicate in-app affordance. The github flavour keeps it so direct-
-                // install users (downloading the APK from GitHub Releases) have a
-                // discoverable update path. Gated at composition time so the gradle
-                // R8 pass drops the entire UpdaterRow + AppUpdater wiring from the
-                // F-Droid APK rather than just hiding it at runtime.
-                if (!BuildConfig.IS_FDROID_BUILD) {
-                    item { UpdaterRow() }
-                } else {
-                    // F-Droid builds intentionally strip the self-updater (the
-                    // REQUEST_INSTALL_PACKAGES permission would trip the F-Droid
-                    // anti-feature scanner). Surface a one-line hint so users know
-                    // where to get the next release rather than wondering why the
-                    // GitHub UpdaterRow they read about online isn't here.
-                    item { FdroidUpdateHint() }
+                item {
+                    LinkRow(
+                        label = "Updates",
+                        url = "",
+                        displayUrl = "Hapanels app, HA Core, add-ons, integrations",
+                        onOpen = onOpenUpdates,
+                    )
                 }
                 // File-a-bug link — drops the user straight into the GitHub issue
                 // tracker pre-filled with the app version. Lowers the friction for
@@ -516,7 +510,7 @@ private fun FdroidUpdateHint() {
         Text(text = "UPDATES", style = R1.labelMicro, color = R1.InkSoft)
         androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
         Text(
-            text = "F-Droid distribution: install updates via your F-Droid client. GitHub Releases also publishes the same APK.",
+            text = "F-Droid distribution: install updates via your F-Droid client. GitHub Releases also publishes a direct-install build.",
             style = R1.body,
             color = R1.InkMuted,
         )
@@ -524,10 +518,15 @@ private fun FdroidUpdateHint() {
 }
 
 @Composable
-private fun UpdaterRow() {
+internal fun HapanelsUpdateSection(settings: SettingsRepository) {
+    if (BuildConfig.IS_FDROID_BUILD) {
+        FdroidUpdateHint()
+        return
+    }
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val appSettings by settings.settings.collectAsStateWithLifecycle(initialValue = AppSettings())
     val state = androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf<UpdaterState>(UpdaterState.Idle)
     }
@@ -540,7 +539,7 @@ private fun UpdaterRow() {
     fun requestCheck() {
         state.value = UpdaterState.Checking
         scope.launch {
-            state.value = when (val r = updater.checkForUpdate()) {
+            state.value = when (val r = updater.checkForUpdate(appSettings.updateChannel)) {
                 is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Available -> UpdaterState.Available(r.info)
                 is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.UpToDate -> UpdaterState.UpToDate
                 is com.github.itskenny0.r1ha.core.update.AppUpdater.CheckResult.Failed -> UpdaterState.Error(r.message)
@@ -556,7 +555,7 @@ private fun UpdaterRow() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    androidx.compose.runtime.LaunchedEffect(appSettings.updateChannel) {
         requestCheck()
     }
     androidx.compose.runtime.LaunchedEffect(refreshTick.intValue) {
@@ -587,7 +586,7 @@ private fun UpdaterRow() {
             .padding(horizontal = 22.dp, vertical = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Updates", style = R1.bodyEmph, color = R1.Ink)
+            Text("Hapanels app", style = R1.bodyEmph, color = R1.Ink)
             Spacer(Modifier.weight(1f))
             val pillText = when (val s = state.value) {
                 UpdaterState.Idle -> "CHECK FOR UPDATES"
@@ -667,6 +666,32 @@ private fun UpdaterRow() {
                 }
             }
         }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            UpdateChannel.entries.forEach { channel ->
+                val selected = channel == appSettings.updateChannel
+                Box(
+                    modifier = Modifier
+                        .background(if (selected) R1.AccentWarm.copy(alpha = 0.18f) else R1.SurfaceMuted, R1.ShapeS)
+                        .border(1.dp, if (selected) R1.AccentWarm else R1.Hairline, R1.ShapeS)
+                        .r1Pressable(onClick = {
+                            scope.launch { settings.update { it.copy(updateChannel = channel) } }
+                        })
+                        .padding(horizontal = 9.dp, vertical = 5.dp),
+                ) {
+                    Text(channel.name, style = R1.labelMicro, color = if (selected) R1.AccentWarm else R1.InkSoft)
+                }
+            }
+        }
+        Text(
+            text = when (appSettings.updateChannel) {
+                UpdateChannel.AUTO -> "AUTO follows the installed release type"
+                UpdateChannel.STABLE -> "Stable releases only"
+                UpdateChannel.ALPHA -> "Stable and alpha prereleases"
+            },
+            style = R1.labelMicro,
+            color = R1.InkMuted,
+        )
         Spacer(Modifier.height(6.dp))
         Text(
             text = releaseStatusLine(),

@@ -305,6 +305,7 @@ private fun populate_german_2(m: MutableMap<String, String>) {
     m["HORIZONTAL"] = "HORIZONTAL"
     m["HUE"] = "FARBTON"
     m["Hapanels Grid"] = "Hapanels Grid"
+    m["Hapanels app"] = "Hapanels-App"
     m["Haptic feedback"] = "Haptisches Feedback"
     m["Haptics"] = "Haptik"
     m["Helpers"] = "Helfer"

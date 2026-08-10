@@ -361,6 +361,7 @@ private val polishExact = mapOf(
     "HORIZONTAL" to "POZIOMY",
     "HUE" to "KOLOR",
     "Hapanels Grid" to "Hapanels Grid",
+    "Hapanels app" to "Aplikacja Hapanels",
     "Haptic feedback" to "Wibracje dotykowe",
     "Haptics" to "Haptyka",
     "Helpers" to "Pomocnicy",

@@ -11,6 +11,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import okio.ByteString
+import okio.ByteString.Companion.toByteString
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -19,10 +26,9 @@ import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.URI
 import java.net.Socket
-import java.security.MessageDigest
-import java.security.SecureRandom
-import java.util.Base64
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLSocketFactory
 
 class MqttSession(
@@ -196,15 +202,8 @@ private fun openConnection(host: String, port: Int, useTls: Boolean, timeoutMs: 
         return MqttConnection(socket.getInputStream(), socket.getOutputStream(), { socket.soTimeout = it }, socket::close)
     }
     val websocketUri = requireNotNull(uri)
-    val websocketHost = websocketUri.host ?: error("WSS URL must include a host")
-    val socket = openSocket(websocketHost, if (websocketUri.port == -1) if (websocketUri.scheme == "wss") 443 else 80 else websocketUri.port, websocketUri.scheme == "wss", timeoutMs)
-    socket.soTimeout = timeoutMs
-    val rawInput = socket.getInputStream()
-    val rawOutput = socket.getOutputStream()
-    websocketHandshake(rawInput, rawOutput, websocketHost, websocketUri.rawPath.orEmpty().ifBlank { "/" }.let { path -> path + (websocketUri.rawQuery?.let { "?$it" }.orEmpty()) })
-    val websocketOutput = WebSocketOutputStream(rawOutput)
-    val websocketInput = WebSocketInputStream(rawInput, websocketOutput)
-    return MqttConnection(websocketInput, websocketOutput, { socket.soTimeout = it }, socket::close)
+    check(!websocketUri.host.isNullOrBlank()) { "WSS URL must include a host" }
+    return openWebSocketConnection(websocketUri.toString(), timeoutMs)
 }
 
 private fun openSocket(host: String, port: Int, useTls: Boolean, timeoutMs: Int): Socket =
@@ -215,30 +214,45 @@ private fun openSocket(host: String, port: Int, useTls: Boolean, timeoutMs: Int)
         Socket().apply { connect(InetSocketAddress(host, port), timeoutMs) }
     }
 
-private fun websocketHandshake(input: InputStream, output: OutputStream, host: String, path: String) {
-    val nonce = ByteArray(16).also(SecureRandom()::nextBytes)
-    val key = Base64.getEncoder().encodeToString(nonce)
-    output.write(("GET $path HTTP/1.1\r\nHost: $host\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: $key\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Protocol: mqtt\r\n\r\n").toByteArray())
-    output.flush()
-    val headers = generateSequence { input.readHttpLine() }.takeWhile { it.isNotEmpty() }.toList()
-    check(headers.firstOrNull()?.contains(" 101 ") == true) { "WSS upgrade rejected: ${headers.firstOrNull().orEmpty()}" }
-    val accept = headers.firstOrNull { it.startsWith("Sec-WebSocket-Accept:", ignoreCase = true) }?.substringAfter(':')?.trim()
-    val expected = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").toByteArray()))
-    check(accept == expected) { "WSS server returned an invalid handshake" }
-}
+private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection {
+    val input = java.io.PipedInputStream(1_048_576)
+    val inputWriter = java.io.PipedOutputStream(input)
+    val opened = CountDownLatch(1)
+    var failure: Throwable? = null
+    val client = OkHttpClient.Builder().build()
+    lateinit var webSocket: WebSocket
+    val listener = object : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
+            opened.countDown()
+        }
 
-private fun InputStream.readHttpLine(): String? {
-    val bytes = ByteArrayOutputStream()
-    while (true) {
-        val value = read()
-        if (value < 0) return if (bytes.size() == 0) null else bytes.toString(Charsets.UTF_8.name())
-        if (value == '\n'.code) return bytes.toString(Charsets.UTF_8.name()).trimEnd('\r')
-        bytes.write(value)
-        check(bytes.size() <= 8_192) { "WSS response header is too large" }
+        override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+            synchronized(inputWriter) { inputWriter.write(bytes.toByteArray()) }
+        }
+
+        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            failure = t
+            opened.countDown()
+            runCatching { inputWriter.close() }
+        }
+
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            runCatching { inputWriter.close() }
+        }
     }
+    webSocket = client.newWebSocket(Request.Builder().url(url).header("Sec-WebSocket-Protocol", "mqtt").build(), listener)
+    check(opened.await(timeoutMs.toLong(), TimeUnit.MILLISECONDS)) { "WSS connection timed out" }
+    failure?.let { throw it }
+    val output = OkHttpWebSocketOutputStream(webSocket)
+    return MqttConnection(input, output, {}, {
+        webSocket.close(1000, null)
+        runCatching { inputWriter.close() }
+        client.dispatcher.executorService.shutdown()
+        client.connectionPool.evictAll()
+    })
 }
 
-private class WebSocketOutputStream(private val output: OutputStream) : OutputStream() {
+private class OkHttpWebSocketOutputStream(private val webSocket: WebSocket) : OutputStream() {
     private val pending = ByteArrayOutputStream()
 
     override fun write(value: Int) = pending.write(value)
@@ -248,86 +262,7 @@ private class WebSocketOutputStream(private val output: OutputStream) : OutputSt
     override fun flush() {
         val payload = pending.toByteArray()
         pending.reset()
-        if (payload.isNotEmpty()) writeFrame(0x2, payload)
-        output.flush()
-    }
-
-    @Synchronized
-    fun pong(payload: ByteArray) {
-        writeFrame(0xA, payload)
-        output.flush()
-    }
-
-    private fun writeFrame(opcode: Int, payload: ByteArray) {
-        output.write(0x80 or opcode)
-        when {
-            payload.size < 126 -> output.write(0x80 or payload.size)
-            payload.size <= 0xFFFF -> {
-                output.write(0x80 or 126)
-                output.write(payload.size ushr 8)
-                output.write(payload.size)
-            }
-            else -> error("WSS MQTT frame is too large")
-        }
-        val mask = ByteArray(4).also(SecureRandom()::nextBytes)
-        output.write(mask)
-        output.write(ByteArray(payload.size) { index -> (payload[index].toInt() xor mask[index % 4].toInt()).toByte() })
-    }
-}
-
-private class WebSocketInputStream(
-    private val input: InputStream,
-    private val output: WebSocketOutputStream,
-) : InputStream() {
-    private var payload = ByteArray(0)
-    private var position = 0
-
-    override fun read(): Int {
-        if (position == payload.size && !readFrame()) return -1
-        return payload[position++].toInt() and 0xFF
-    }
-
-    override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
-        if (length == 0) return 0
-        if (position == payload.size && !readFrame()) return -1
-        val count = minOf(length, payload.size - position)
-        payload.copyInto(bytes, offset, position, position + count)
-        position += count
-        return count
-    }
-
-    private fun readFrame(): Boolean {
-        while (true) {
-            val first = input.read()
-            if (first < 0) return false
-            val second = input.read()
-            check(second >= 0) { "WSS frame ended unexpectedly" }
-            val opcode = first and 0x0F
-            var length = second and 0x7F
-            if (length == 126) length = (input.read() shl 8) or input.read()
-            check(length in 0..1_048_576) { "WSS frame is too large" }
-            val mask = if ((second and 0x80) != 0) ByteArray(4).also { input.readFully(it) } else null
-            val frame = ByteArray(length).also { input.readFully(it) }
-            if (mask != null) frame.indices.forEach { frame[it] = (frame[it].toInt() xor mask[it % 4].toInt()).toByte() }
-            when (opcode) {
-                0x2, 0x0 -> {
-                    payload = frame
-                    position = 0
-                    return true
-                }
-                0x8 -> return false
-                0x9 -> output.pong(frame)
-            }
-        }
-    }
-}
-
-private fun InputStream.readFully(bytes: ByteArray) {
-    var offset = 0
-    while (offset < bytes.size) {
-        val count = read(bytes, offset, bytes.size - offset)
-        check(count > 0) { "WSS frame ended unexpectedly" }
-        offset += count
+        check(payload.isEmpty() || webSocket.send(payload.toByteString())) { "WSS MQTT send failed" }
     }
 }
 

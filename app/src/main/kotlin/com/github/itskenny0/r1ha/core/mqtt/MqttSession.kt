@@ -21,6 +21,7 @@ import okio.ByteString.Companion.toByteString
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.InterruptedIOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
@@ -28,6 +29,7 @@ import java.net.URI
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLSocketFactory
 
@@ -215,8 +217,7 @@ private fun openSocket(host: String, port: Int, useTls: Boolean, timeoutMs: Int)
     }
 
 private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection {
-    val input = java.io.PipedInputStream(1_048_576)
-    val inputWriter = java.io.PipedOutputStream(input)
+    val input = OkHttpWebSocketInputStream()
     val opened = CountDownLatch(1)
     var failure: Throwable? = null
     val client = OkHttpClient.Builder().build()
@@ -227,17 +228,17 @@ private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-            synchronized(inputWriter) { inputWriter.write(bytes.toByteArray()) }
+            input.offer(bytes.toByteArray())
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             failure = t
             opened.countDown()
-            runCatching { inputWriter.close() }
+            input.close()
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            runCatching { inputWriter.close() }
+            input.close()
         }
     }
     webSocket = client.newWebSocket(Request.Builder().url(url).header("Sec-WebSocket-Protocol", "mqtt").build(), listener)
@@ -246,10 +247,54 @@ private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection
     val output = OkHttpWebSocketOutputStream(webSocket)
     return MqttConnection(input, output, {}, {
         webSocket.close(1000, null)
-        runCatching { inputWriter.close() }
+        input.close()
         client.dispatcher.executorService.shutdown()
         client.connectionPool.evictAll()
     })
+}
+
+private class OkHttpWebSocketInputStream : InputStream() {
+    private val frames = LinkedBlockingQueue<ByteArray>()
+    private var payload = ByteArray(0)
+    private var position = 0
+    @Volatile private var closed = false
+
+    fun offer(bytes: ByteArray) {
+        if (!closed) frames.offer(bytes)
+    }
+
+    override fun read(): Int {
+        if (!ensurePayload()) return -1
+        return payload[position++].toInt() and 0xFF
+    }
+
+    override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
+        if (length == 0) return 0
+        if (!ensurePayload()) return -1
+        val count = minOf(length, payload.size - position)
+        payload.copyInto(bytes, offset, position, position + count)
+        position += count
+        return count
+    }
+
+    override fun close() {
+        closed = true
+        frames.offer(ByteArray(0))
+    }
+
+    private fun ensurePayload(): Boolean {
+        while (position == payload.size) {
+            payload = try {
+                frames.take()
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw InterruptedIOException("WSS read interrupted").apply { initCause(e) }
+            }
+            position = 0
+            if (payload.isEmpty()) return false
+        }
+        return true
+    }
 }
 
 private class OkHttpWebSocketOutputStream(private val webSocket: WebSocket) : OutputStream() {

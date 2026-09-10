@@ -18,6 +18,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
@@ -313,6 +314,7 @@ fun OnboardingScreen(
                         description = stringResource(R.string.onboarding_sign_in_description),
                         onBack = vm::resetError,
                     ) {
+                        val isPortrait = usePortraitOnboardingLayout()
                         when (val current = authState) {
                             is OnboardingViewModel.State.ReadyToAuth -> OAuthWebView(
                                 authorizeUrl = current.authorizeUrl,
@@ -320,10 +322,27 @@ fun OnboardingScreen(
                                 onMissingCode = { vm.failOnboarding(context.getString(R.string.onboarding_sign_in_canceled)) },
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(start = 240.dp, top = authTopPadding, end = 240.dp, bottom = 16.dp),
+                                    .padding(
+                                        start = if (isPortrait) 16.dp else 240.dp,
+                                        top = if (isPortrait) (if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 0.dp else 190.dp) else authTopPadding,
+                                        end = if (isPortrait) 16.dp else 240.dp,
+                                        bottom = 16.dp,
+                                    ),
                             )
                             else -> {
-                                Box(Modifier.offset(240.dp, 250.dp).size(800.dp, 300.dp).background(OnboardingSurface), contentAlignment = Alignment.Center) {
+                                Box(
+                                    modifier = if (isPortrait) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 24.dp)
+                                            .padding(top = 210.dp)
+                                            .height(260.dp)
+                                            .background(OnboardingSurface)
+                                    } else {
+                                        Modifier.offset(240.dp, 250.dp).size(800.dp, 300.dp).background(OnboardingSurface)
+                                    },
+                                    contentAlignment = Alignment.Center,
+                                ) {
                                     CircularProgressIndicator(color = OnboardingOrange)
                                     Text(stringResource(R.string.onboarding_completing_sign_in), color = OnboardingSoft, fontSize = 18.sp, modifier = Modifier.offset(y = 50.dp))
                                 }

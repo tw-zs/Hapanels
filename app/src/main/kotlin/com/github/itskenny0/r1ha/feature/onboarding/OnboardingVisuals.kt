@@ -5,9 +5,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -15,7 +21,10 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -30,6 +39,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -103,6 +113,10 @@ internal fun ScaledOnboardingPage(
 
 @Composable
 internal fun WelcomePage(onStart: () -> Unit) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitWelcomePage(onStart)
+        return
+    }
     ScaledOnboardingPage {
         Image(
             painter = painterResource(R.drawable.hapanels_logo),
@@ -147,6 +161,10 @@ internal fun ConnectionPage(
     onOAuth: () -> Unit,
     onLlat: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitConnectionPage(url, onUrlChange, detectedServers, probing, error, discoveryRunning, discoveryError, onRetryDiscovery, onDetectedServer, onBack, onOAuth, onLlat)
+        return
+    }
     StandardPage(
         step = stringResource(R.string.onboarding_step_connection),
         title = stringResource(R.string.onboarding_connection_title),
@@ -225,10 +243,24 @@ internal fun AuthPage(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(Modifier.fillMaxSize().imePadding().background(OnboardingBg)) {
-        MockButton(stringResource(R.string.onboarding_back), 48.dp, 38.dp, 128.dp, 54.dp, outlined = true, mutedOutline = true, onClick = onBack)
-        MockText(stringResource(R.string.onboarding_step_sign_in), 240.dp, 96.dp, 800.dp, 16, OnboardingOrange, bold = true, letterSpacing = 1.5f)
-        MockText(title, 240.dp, 123.dp, 850.dp, 36, bold = true)
-        MockText(description, 240.dp, 178.dp, 900.dp, 17, OnboardingSoft)
+        if (usePortraitOnboardingLayout()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                PortraitAction(stringResource(R.string.onboarding_back), outlined = true, onClick = onBack)
+                Text(stringResource(R.string.onboarding_step_sign_in), color = OnboardingOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                Text(title, color = OnboardingInk, fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold)
+                Text(description, color = OnboardingSoft, fontSize = 15.sp, lineHeight = 20.sp)
+            }
+        } else {
+            MockButton(stringResource(R.string.onboarding_back), 48.dp, 38.dp, 128.dp, 54.dp, outlined = true, mutedOutline = true, onClick = onBack)
+            MockText(stringResource(R.string.onboarding_step_sign_in), 240.dp, 96.dp, 800.dp, 16, OnboardingOrange, bold = true, letterSpacing = 1.5f)
+            MockText(title, 240.dp, 123.dp, 850.dp, 36, bold = true)
+            MockText(description, 240.dp, 178.dp, 900.dp, 17, OnboardingSoft)
+        }
         content()
     }
 }
@@ -240,6 +272,10 @@ internal fun PanelNamePage(
     onBack: () -> Unit,
     onContinue: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitPanelNamePage(value, onValueChange, onBack, onContinue)
+        return
+    }
     StandardPage(
         stringResource(R.string.onboarding_step_panel_name),
         stringResource(R.string.onboarding_panel_name_title),
@@ -265,6 +301,10 @@ internal fun AppearancePage(
     onBack: () -> Unit,
     onContinue: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitAppearancePage(dark, startView, loading, error, onDarkChange, onStartViewChange, onBack, onContinue)
+        return
+    }
     StandardPage(
         stringResource(R.string.onboarding_step_appearance),
         stringResource(R.string.onboarding_appearance_title),
@@ -302,6 +342,10 @@ internal fun StudioPage(
     onBack: () -> Unit,
     onSkip: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitStudioPage(serverName, tabletName, mqttConfigured, infoOpen, onInfoChange, onBack, onSkip)
+        return
+    }
     StandardPage(
         stringResource(R.string.onboarding_step_studio),
         stringResource(R.string.onboarding_studio_title),
@@ -363,6 +407,10 @@ internal fun MqttPage(
     onSkip: () -> Unit,
     onSave: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitMqttPage(host, port, username, password, useTls, hostError, onHostChange, onUseHaHost, onPortChange, onUsernameChange, onPasswordChange, onTlsChange, onBack, onSkip, onSave)
+        return
+    }
     StandardPage(
         stringResource(R.string.onboarding_step_mqtt),
         stringResource(R.string.onboarding_mqtt_title),
@@ -396,6 +444,10 @@ internal fun ChecklistPage(
     onRetry: () -> Unit,
     onLaunch: () -> Unit,
 ) {
+    if (usePortraitOnboardingLayout()) {
+        PortraitChecklistPage(haConnected, mqttConfigured, dark, startView, onBack, onRetry, onLaunch)
+        return
+    }
     StandardPage(
         stringResource(R.string.onboarding_step_ready),
         stringResource(R.string.onboarding_ready_title),
@@ -521,6 +573,210 @@ private fun StandardPage(
         MockText(title, 240.dp, 123.dp, 850.dp, 36, bold = true)
         MockText(description, 240.dp, 178.dp, 900.dp, 17, OnboardingSoft)
         content()
+    }
+}
+
+@Composable
+internal fun usePortraitOnboardingLayout(): Boolean {
+    val configuration = LocalConfiguration.current
+    return configuration.screenHeightDp > configuration.screenWidthDp
+}
+
+@Composable
+private fun PortraitPage(
+    step: String,
+    title: String,
+    description: String,
+    onBack: (() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        if (onBack != null) PortraitAction(stringResource(R.string.onboarding_back), outlined = true, onClick = onBack)
+        Text(step, color = OnboardingOrange, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+        Text(title, color = OnboardingInk, fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold)
+        Text(description, color = OnboardingSoft, fontSize = 16.sp, lineHeight = 22.sp)
+        Spacer(Modifier.height(4.dp))
+        content()
+        Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun PortraitAction(
+    text: String,
+    outlined: Boolean = false,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .background(if (outlined || !enabled) OnboardingSurface else OnboardingOrange)
+            .then(if (outlined || !enabled) Modifier.border(if (outlined) 2.dp else 1.dp, if (outlined) OnboardingOrange else OnboardingRule) else Modifier)
+            .alpha(if (enabled) 1f else 0.7f)
+            .then(if (enabled) Modifier.r1Pressable(onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = if (outlined || !enabled) OnboardingInk else OnboardingBg, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun PortraitField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    error: Boolean = false,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .background(OnboardingSurface)
+            .border(2.dp, if (error) OnboardingRed else OnboardingOrange)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = TextStyle(color = OnboardingInk, fontSize = 17.sp, fontFamily = FontFamily.SansSerif),
+            visualTransformation = visualTransformation,
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                if (value.isEmpty()) Text(placeholder, color = OnboardingSoft, fontSize = 17.sp)
+                inner()
+            },
+        )
+    }
+}
+
+@Composable
+private fun PortraitWelcomePage(onStart: () -> Unit) {
+    PortraitPage("HAPANELS", stringResource(R.string.onboarding_welcome_title), stringResource(R.string.onboarding_welcome_tagline)) {
+        Image(painterResource(R.drawable.hapanels_logo), "Hapanels", Modifier.fillMaxWidth().height(132.dp))
+        Text(stringResource(R.string.onboarding_welcome_body), color = OnboardingInk, fontSize = 17.sp, lineHeight = 24.sp)
+        Text(stringResource(R.string.onboarding_welcome_hint), color = OnboardingSoft, fontSize = 15.sp, lineHeight = 21.sp)
+        PortraitAction(stringResource(R.string.onboarding_start_setup), onClick = onStart)
+    }
+}
+
+@Composable
+private fun PortraitConnectionPage(
+    url: String, onUrlChange: (String) -> Unit, detectedServers: List<String>, probing: Boolean,
+    error: String?, discoveryRunning: Boolean, discoveryError: Boolean, onRetryDiscovery: () -> Unit,
+    onDetectedServer: (String) -> Unit, onBack: () -> Unit, onOAuth: () -> Unit, onLlat: () -> Unit,
+) {
+    PortraitPage(stringResource(R.string.onboarding_step_connection), stringResource(R.string.onboarding_connection_title), stringResource(R.string.onboarding_connection_description), onBack) {
+        Text(stringResource(R.string.onboarding_discovered_servers), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        if (detectedServers.isEmpty()) {
+            Text(stringResource(if (discoveryError) R.string.onboarding_search_failed else R.string.onboarding_searching), color = if (discoveryError) OnboardingRed else OnboardingSoft)
+        } else {
+            detectedServers.take(6).forEach { server -> PortraitAction(server, outlined = true) { onDetectedServer(server) } }
+        }
+        PortraitAction(stringResource(R.string.onboarding_search_again), outlined = true, onClick = onRetryDiscovery)
+        if (discoveryRunning) CircularProgressIndicator(color = OnboardingOrange, modifier = Modifier.size(24.dp).align(Alignment.CenterHorizontally))
+        Text(stringResource(R.string.onboarding_manual_address), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(url, onUrlChange, stringResource(R.string.onboarding_url_placeholder), error != null)
+        error?.let { Text(it, color = OnboardingRed, fontSize = 14.sp) }
+        PortraitAction(stringResource(if (probing) R.string.onboarding_connecting else R.string.onboarding_sign_in_ha), enabled = !probing && (url.isNotBlank() || detectedServers.isNotEmpty()), onClick = onOAuth)
+        PortraitAction(stringResource(R.string.onboarding_long_lived_token), outlined = true, onClick = onLlat)
+    }
+}
+
+@Composable
+private fun PortraitPanelNamePage(value: String, onValueChange: (String) -> Unit, onBack: () -> Unit, onContinue: () -> Unit) {
+    PortraitPage(stringResource(R.string.onboarding_step_panel_name), stringResource(R.string.onboarding_panel_name_title), stringResource(R.string.onboarding_panel_name_description), onBack) {
+        Text(stringResource(R.string.onboarding_device_name), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(value, onValueChange, stringResource(R.string.onboarding_panel_name_placeholder))
+        Text(stringResource(R.string.onboarding_device_model, android.os.Build.MODEL), color = OnboardingSoft)
+        PortraitAction(stringResource(R.string.onboarding_save_name), enabled = value.isNotBlank(), onClick = onContinue)
+        Text(stringResource(R.string.onboarding_name_later), color = OnboardingSoft, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun PortraitAppearancePage(
+    dark: Boolean, startView: StartView, loading: Boolean, error: String?, onDarkChange: (Boolean) -> Unit,
+    onStartViewChange: (StartView) -> Unit, onBack: () -> Unit, onContinue: () -> Unit,
+) {
+    PortraitPage(stringResource(R.string.onboarding_step_appearance), stringResource(R.string.onboarding_appearance_title), stringResource(R.string.onboarding_appearance_description), onBack) {
+        Text(stringResource(R.string.onboarding_color_mode), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitAction(stringResource(R.string.onboarding_light), outlined = !dark) { onDarkChange(false) }
+        PortraitAction(stringResource(R.string.onboarding_dark), outlined = dark) { onDarkChange(true) }
+        Text(stringResource(R.string.onboarding_start_screen), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitAction("Hapanels Grid", outlined = startView != StartView.PANEL_GRID) { onStartViewChange(StartView.PANEL_GRID) }
+        PortraitAction(stringResource(R.string.onboarding_cards), outlined = startView != StartView.CARDS) { onStartViewChange(StartView.CARDS) }
+        error?.let { Text(it, color = OnboardingRed, fontSize = 14.sp) }
+        PortraitAction(stringResource(if (error != null) R.string.onboarding_continue_without_theme else R.string.onboarding_save_continue), enabled = !loading, onClick = onContinue)
+    }
+}
+
+@Composable
+private fun PortraitStudioPage(
+    serverName: String, tabletName: String, mqttConfigured: Boolean, infoOpen: Boolean,
+    onInfoChange: (Boolean) -> Unit, onBack: () -> Unit, onSkip: () -> Unit,
+) {
+    PortraitPage(stringResource(R.string.onboarding_step_studio), stringResource(R.string.onboarding_studio_title), stringResource(R.string.onboarding_studio_description), onBack) {
+        Text("HOME ASSISTANT", color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text("$serverName · $tabletName", color = OnboardingInk, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(if (mqttConfigured) R.string.onboarding_mqtt_connected else R.string.onboarding_mqtt_required), color = if (mqttConfigured) OnboardingGreen else OnboardingSoft)
+        if (infoOpen) {
+            Text(stringResource(R.string.onboarding_studio_popup_description), color = OnboardingSoft, lineHeight = 22.sp)
+            PortraitAction(stringResource(R.string.onboarding_close), outlined = true) { onInfoChange(false) }
+        } else {
+            PortraitAction(stringResource(R.string.onboarding_learn_more), outlined = true) { onInfoChange(true) }
+        }
+        PortraitAction(stringResource(R.string.onboarding_continue), onClick = onSkip)
+        Text(stringResource(R.string.onboarding_studio_later), color = OnboardingSoft, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun PortraitMqttPage(
+    host: String, port: String, username: String, password: String, useTls: Boolean, hostError: String?,
+    onHostChange: (String) -> Unit, onUseHaHost: () -> Unit, onPortChange: (String) -> Unit,
+    onUsernameChange: (String) -> Unit, onPasswordChange: (String) -> Unit, onTlsChange: () -> Unit,
+    onBack: () -> Unit, onSkip: () -> Unit, onSave: () -> Unit,
+) {
+    PortraitPage(stringResource(R.string.onboarding_step_mqtt), stringResource(R.string.onboarding_mqtt_title), stringResource(R.string.onboarding_mqtt_description), onBack) {
+        Text(stringResource(R.string.onboarding_broker_address), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(host, onHostChange, "192.168.1.10", hostError != null)
+        PortraitAction(stringResource(R.string.onboarding_use_ha_host), outlined = true, onClick = onUseHaHost)
+        Text(stringResource(R.string.onboarding_port), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(port, onPortChange, "1883")
+        Text(stringResource(R.string.onboarding_username), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(username, onUsernameChange, stringResource(R.string.onboarding_optional))
+        Text(stringResource(R.string.onboarding_password), color = OnboardingSoft, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        PortraitField(password, onPasswordChange, stringResource(R.string.onboarding_optional), visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+        PortraitAction(stringResource(if (useTls) R.string.onboarding_tls_on else R.string.onboarding_tls_off), outlined = true, onClick = onTlsChange)
+        hostError?.let { Text(it, color = OnboardingRed, fontSize = 14.sp) }
+        PortraitAction(stringResource(R.string.onboarding_save_continue), enabled = hostError == null, onClick = onSave)
+        PortraitAction(stringResource(R.string.onboarding_skip), outlined = true, onClick = onSkip)
+    }
+}
+
+@Composable
+private fun PortraitChecklistPage(
+    haConnected: Boolean, mqttConfigured: Boolean, dark: Boolean, startView: StartView,
+    onBack: () -> Unit, onRetry: () -> Unit, onLaunch: () -> Unit,
+) {
+    PortraitPage(stringResource(R.string.onboarding_step_ready), stringResource(R.string.onboarding_ready_title), stringResource(R.string.onboarding_ready_description), onBack) {
+        Text("HOME ASSISTANT · ${stringResource(if (haConnected) R.string.onboarding_connected else R.string.onboarding_waiting_connection)}", color = if (haConnected) OnboardingGreen else OnboardingOrange)
+        Text("HAPANELS STUDIO · ${stringResource(if (mqttConfigured) R.string.onboarding_configured_mqtt else R.string.onboarding_skipped_device)}", color = if (mqttConfigured) OnboardingGreen else OnboardingSoft)
+        Text("${stringResource(R.string.onboarding_appearance)} · ${stringResource(if (dark) R.string.onboarding_dark else R.string.onboarding_light)} · ${if (startView == StartView.PANEL_GRID) "Hapanels Grid" else stringResource(R.string.onboarding_cards)}", color = OnboardingGreen)
+        Text("MQTT · ${stringResource(if (mqttConfigured) R.string.onboarding_broker_configured else R.string.onboarding_skipped)}", color = if (mqttConfigured) OnboardingGreen else OnboardingSoft)
+        PortraitAction(stringResource(if (haConnected) R.string.onboarding_start_hapanels else R.string.onboarding_try_again), onClick = if (haConnected) onLaunch else onRetry)
     }
 }
 

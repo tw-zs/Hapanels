@@ -2684,7 +2684,7 @@ private fun AdvancedMqttSettings(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Broker używany przez most MQTT panelu. Pusty host wyłącza MQTT; zmiany zapisują się po chwili.",
+                text = "Broker MQTT albo URL wss://host/sciezka dla zdalnego dostępu. Pusty host wyłącza MQTT.",
                 style = R1.labelMicro,
                 color = R1.InkMuted,
                 modifier = Modifier.weight(1f),
@@ -2698,17 +2698,17 @@ private fun AdvancedMqttSettings(
                 )
             }
         }
-        LabeledControl(label = "Broker host") {
+        LabeledControl(label = "Broker host / WSS URL") {
             R1TextField(
                 value = hostDraft,
                 onValueChange = { hostDraft = it },
-                placeholder = "192.168.1.10",
+                placeholder = "192.168.1.10 lub wss://mqtt.example.com/mqtt",
                 monospace = true,
             )
         }
         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 2.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Port", style = R1.bodyEmph, color = R1.Ink)
+                Text("Port (TCP/TLS)", style = R1.bodyEmph, color = R1.Ink)
                 Spacer(Modifier.height(8.dp))
                 R1TextField(
                     value = portDraft,

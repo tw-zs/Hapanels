@@ -220,7 +220,7 @@ private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection
     val input = OkHttpWebSocketInputStream()
     val opened = CountDownLatch(1)
     var failure: Throwable? = null
-    val client = OkHttpClient.Builder().build()
+    val client = OkHttpClient.Builder().pingInterval(20, TimeUnit.SECONDS).build()
     lateinit var webSocket: WebSocket
     val listener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
@@ -234,10 +234,12 @@ private fun openWebSocketConnection(url: String, timeoutMs: Int): MqttConnection
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             failure = t
             opened.countDown()
+            R1Log.w("MqttSession", "WSS connection failed: ${t.message}")
             input.close()
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            R1Log.i("MqttSession", "WSS connection closed code=$code reason=$reason")
             input.close()
         }
     }

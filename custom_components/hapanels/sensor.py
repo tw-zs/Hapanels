@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import clear_pending_if_synced
-from .const import CONF_BASE_TOPIC, DATA_CONFIGS, DATA_PANELS, DATA_PENDING_PATCHES, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
+from .const import CONF_BASE_TOPIC, DATA_CONFIG_ERRORS, DATA_CONFIG_REQUESTED, DATA_CONFIGS, DATA_PANELS, DATA_PENDING_PATCHES, DATA_UNSUB, DEFAULT_BASE_TOPIC, DOMAIN
 from .schema import validate_dashboard_config
 
 
@@ -59,6 +59,10 @@ async def async_setup_entry(
             state.status,
             state.revision,
         )
+        entry_data = hass.data[DOMAIN][entry.entry_id]
+        if device not in entry_data[DATA_CONFIGS] and device not in entry_data[DATA_CONFIG_REQUESTED]:
+            entry_data[DATA_CONFIG_REQUESTED].add(device)
+            hass.async_create_task(mqtt.async_publish(hass, f"{base_topic}/{device}/dashboard/config/get", "", qos=0, retain=False))
 
     unsub = await mqtt.async_subscribe(
         hass,
@@ -75,7 +79,9 @@ async def async_setup_entry(
             return
         try:
             configs[device] = validate_dashboard_config(json.loads(msg.payload))
-        except (json.JSONDecodeError, ValueError):
+            hass.data[DOMAIN][entry.entry_id][DATA_CONFIG_ERRORS].pop(device, None)
+        except (json.JSONDecodeError, ValueError) as err:
+            hass.data[DOMAIN][entry.entry_id][DATA_CONFIG_ERRORS][device] = str(err)
             return
 
     config_unsub = await mqtt.async_subscribe(

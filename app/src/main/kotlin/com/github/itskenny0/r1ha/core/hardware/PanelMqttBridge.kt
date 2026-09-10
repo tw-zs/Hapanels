@@ -601,6 +601,7 @@ class PanelMqttBridge(
         subscribe("$baseTopic/screen/auto_brightness/set")
         subscribe("$baseTopic/dashboard/config/set")
         subscribe("$baseTopic/dashboard/config/patch/set")
+        subscribe("$baseTopic/dashboard/config/get")
         publishMqttDiagnostics()
     }
 
@@ -620,6 +621,7 @@ class PanelMqttBridge(
             is PanelMqttCommand.SetAutoBrightness -> setAutoBrightness(command.enabled)
             is PanelMqttCommand.SetDashboardConfig -> importDashboardConfig(command.rawJson)
             is PanelMqttCommand.PatchDashboardConfig -> patchDashboardConfig(command.rawJson)
+            PanelMqttCommand.GetDashboardConfig -> publishDashboardConfig()
             null -> R1Log.w("PanelMqttBridge", "ignored command topic=$topic payload=${payload.toString(Charsets.UTF_8).trim()}")
         }
     }
@@ -754,9 +756,11 @@ internal sealed interface PanelMqttCommand {
     data class SetAutoBrightness(val enabled: Boolean) : PanelMqttCommand
     data class SetDashboardConfig(val rawJson: String) : PanelMqttCommand
     data class PatchDashboardConfig(val rawJson: String) : PanelMqttCommand
+    data object GetDashboardConfig : PanelMqttCommand
 
     companion object {
         fun parse(baseTopic: String, topic: String, payload: String): PanelMqttCommand? {
+            if (topic == "$baseTopic/dashboard/config/get") return GetDashboardConfig
             val text = payload.trim()
             val relayMatch = Regex("^${Regex.escape(baseTopic)}/relay/(\\d+)/set$").matchEntire(topic)
             if (relayMatch != null) {

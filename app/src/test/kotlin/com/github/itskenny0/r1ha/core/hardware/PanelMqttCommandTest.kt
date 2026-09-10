@@ -59,6 +59,12 @@ class PanelMqttCommandTest {
     }
 
     @Test
+    fun `parses dashboard config request`() {
+        assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/dashboard/config/get", ""))
+            .isEqualTo(PanelMqttCommand.GetDashboardConfig)
+    }
+
+    @Test
     fun `rejects unknown command payloads and topics`() {
         assertThat(PanelMqttCommand.parse("hapanels/panel", "hapanels/panel/relay/1/set", "toggle"))
             .isNull()

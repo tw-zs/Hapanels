@@ -18,6 +18,8 @@ from .const import (
     ATTR_PATCH,
     CONF_BASE_TOPIC,
     DATA_CONFIGS,
+    DATA_CONFIG_ERRORS,
+    DATA_CONFIG_REQUESTED,
     DATA_PENDING_PATCHES,
     DATA_PANELS,
     DATA_UNSUB,
@@ -46,6 +48,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {}).setdefault(entry.entry_id, {
         DATA_PANELS: {},
         DATA_CONFIGS: {},
+        DATA_CONFIG_ERRORS: {},
+        DATA_CONFIG_REQUESTED: set(),
         DATA_PENDING_PATCHES: {},
         DATA_UNSUB: [],
     })
@@ -133,10 +137,15 @@ async def websocket_get_dashboard_config(hass: HomeAssistant, connection, msg) -
             connection.send_result(msg["id"], {
                 "device": device,
                 "config": entry_data[DATA_CONFIGS][device],
+                "config_error": entry_data.get(DATA_CONFIG_ERRORS, {}).get(device),
                 "pending_patch": pending_patch,
             })
             return
-    connection.send_result(msg["id"], {"device": device, "config": None})
+    for entry_data in hass.data.get(DOMAIN, {}).values():
+        if isinstance(entry_data, dict) and device in entry_data.get(DATA_CONFIG_ERRORS, {}):
+            connection.send_result(msg["id"], {"device": device, "config": None, "config_error": entry_data[DATA_CONFIG_ERRORS][device]})
+            return
+    connection.send_result(msg["id"], {"device": device, "config": None, "config_error": None})
 
 
 async def _register_panel(hass: HomeAssistant) -> None:

@@ -622,6 +622,7 @@ class HapanelsStudioPanel extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._panels = [];
     this._configs = {};
+    this._configErrors = {};
     this._pendingPatches = {};
     this._error = null;
     this._selectedDevice = null;
@@ -728,6 +729,7 @@ class HapanelsStudioPanel extends HTMLElement {
     const result = await this._hass.callWS({ type: "hapanels/get_dashboard_config", device });
     const config = normalizeDashboardConfig(result.config);
     this._configs[device] = config;
+    this._configErrors[device] = result.config_error || null;
     this._pendingPatches[device] = result.pending_patch || null;
     const saveStatus = this._layoutSaveStatus[device];
     if (saveStatus?.state === "pending" && Number(config?.revision) >= saveStatus.expectedRevision) {
@@ -1988,7 +1990,7 @@ class HapanelsStudioPanel extends HTMLElement {
   }
 
   _tabContent(device, config, panel = null) {
-    if (!config) return `<div class="empty-box">Brak pobranej konfiguracji dashboardu.</div>`;
+    if (!config) return `<div class="empty-box">Brak pobranej konfiguracji dashboardu.${this._configErrors[device] ? `<br><br><b>Odrzucony payload:</b> ${this._escape(this._configErrors[device])}` : ""}</div>`;
     if (this._activeTab === "aod") return this._aodView(device, config);
     if (this._activeTab === "settings") return this._tabletInfoView(config, panel);
     if (this._activeTab === "preview") return this._previewView(device, config);
